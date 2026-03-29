@@ -5,32 +5,30 @@ import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
-import { useSinnerInfo, useSinnerLastEvents, useSinnerNextEvents } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT, getEventStatus } from "@/lib/dateUtils";
+import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useSportsData";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function SinnerPage() {
   const { seasons, setSeason } = useSeasonPreferences();
   const { data: playerInfo } = useSinnerInfo();
-  const { data: lastEvents, isLoading: lastLoading, error: lastError, refetch: lastRefetch } = useSinnerLastEvents(seasons.sinner);
-  const { data: nextEvents, isLoading: nextLoading, error: nextError, refetch: nextRefetch } = useSinnerNextEvents();
+  const { data: results, isLoading: resLoading, error: resError, refetch: resRefetch } = useSinnerResults(seasons.sinner);
+  const { data: schedule, isLoading: schLoading, error: schError, refetch: schRefetch } = useSinnerSchedule(seasons.sinner);
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="Jannik Sinner" subtitle="Tutti i match della stagione — Dati da TheSportsDB" />
+      <SectionHeader title="Jannik Sinner" subtitle="Dati da ATP Tour" />
 
       {/* Player info card */}
       {playerInfo && (
         <div className="mb-6 flex items-center gap-4 rounded-xl border border-border bg-card p-4">
-          {playerInfo.thumb && (
-            <img src={playerInfo.thumb} alt={playerInfo.name} className="h-16 w-16 rounded-full object-cover" />
-          )}
+          <div className="flex h-14 w-14 items-center justify-center rounded-full gold-gradient text-xl font-heading font-bold text-primary-foreground">
+            {playerInfo.ranking || '1'}
+          </div>
           <div>
             <h2 className="font-heading text-xl font-bold">{playerInfo.name}</h2>
             <p className="text-sm text-muted-foreground">
-              {playerInfo.nationality} · {playerInfo.sport}
-              {playerInfo.height && ` · ${playerInfo.height}`}
+              🇮🇹 {playerInfo.nationality} · {playerInfo.height} · {playerInfo.weight} · {playerInfo.birthPlace}
             </p>
           </div>
         </div>
@@ -40,64 +38,49 @@ export default function SinnerPage() {
         <SeasonSelector currentSeason={seasons.sinner} onSelect={(y) => setSeason("sinner", y)} minYear={2020} />
       </div>
 
-      <Tabs defaultValue="prossimi" className="w-full">
+      <Tabs defaultValue="risultati" className="w-full">
         <TabsList className="mb-6 bg-muted">
-          <TabsTrigger value="prossimi" className="font-heading text-xs tracking-wider uppercase">Prossimi</TabsTrigger>
           <TabsTrigger value="risultati" className="font-heading text-xs tracking-wider uppercase">Risultati</TabsTrigger>
+          <TabsTrigger value="tornei" className="font-heading text-xs tracking-wider uppercase">Tornei</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="prossimi">
-          {nextLoading && <LoadingState message="Caricamento prossimi match..." />}
-          {nextError && <ErrorState message="Errore nel caricamento dei prossimi match" onRetry={() => nextRefetch()} />}
-          {!nextLoading && !nextError && (!nextEvents || nextEvents.length === 0) && (
-            <EmptyState message="Nessun match programmato al momento. I dati dipendono dalla disponibilità della fonte." />
+        <TabsContent value="risultati">
+          {resLoading && <LoadingState message="Caricamento risultati da ATP Tour..." />}
+          {resError && <ErrorState message="Errore nel caricamento dei risultati" onRetry={() => resRefetch()} />}
+          {!resLoading && !resError && (!results || results.length === 0) && (
+            <EmptyState message={`Nessun risultato disponibile per la stagione ${seasons.sinner}. Lo scraping ATP potrebbe essere limitato.`} />
           )}
-          {nextEvents && nextEvents.length > 0 && (
+          {results && results.length > 0 && (
             <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-              {nextEvents.map((e: any, i: number) => (
+              {results.map((r: any, i: number) => (
                 <EventCard
-                  key={e.id || i}
-                  sport={e.league || "Tennis"}
-                  title={e.name}
-                  subtitle={e.round ? `Round ${e.round}` : undefined}
-                  date={formatDateIT(e.date)}
-                  time={e.time ? formatTimeIT(e.time, e.date) : undefined}
-                  status="prossimo"
-                />
+                  key={i}
+                  sport={r.tournament || 'ATP'}
+                  title={r.opponent ? `vs. ${r.opponent}` : r.tournament}
+                  date={r.date || '—'}
+                  status="completato"
+                >
+                  {r.score && <p className="text-sm font-heading font-bold text-primary">{r.score}</p>}
+                </EventCard>
               ))}
             </motion.div>
           )}
         </TabsContent>
 
-        <TabsContent value="risultati">
-          {lastLoading && <LoadingState message="Caricamento risultati..." />}
-          {lastError && <ErrorState message="Errore nel caricamento dei risultati" onRetry={() => lastRefetch()} />}
-          {!lastLoading && !lastError && (!lastEvents || lastEvents.length === 0) && (
-            <EmptyState message={`Nessun risultato disponibile per la stagione ${seasons.sinner}`} />
+        <TabsContent value="tornei">
+          {schLoading && <LoadingState message="Caricamento programma da ATP Tour..." />}
+          {schError && <ErrorState message="Errore nel caricamento del programma" onRetry={() => schRefetch()} />}
+          {!schLoading && !schError && (!schedule || schedule.length === 0) && (
+            <EmptyState message={`Nessun torneo disponibile per la stagione ${seasons.sinner}`} />
           )}
-          {lastEvents && lastEvents.length > 0 && (
-            <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-              {lastEvents.map((e: any, i: number) => (
-                <EventCard
-                  key={e.id || i}
-                  sport={e.league || "Tennis"}
-                  title={e.name || `${e.homeTeam} vs ${e.awayTeam}`}
-                  subtitle={e.round ? `Round ${e.round}` : undefined}
-                  date={formatDateIT(e.date)}
-                  time={e.time ? formatTimeIT(e.time, e.date) : undefined}
-                  status="completato"
-                >
-                  {(e.homeScore !== null && e.homeScore !== undefined) && (
-                    <p className="text-sm font-heading font-bold text-primary">
-                      {e.homeScore} – {e.awayScore}
-                    </p>
-                  )}
-                  {e.result && (
-                    <p className="text-sm text-muted-foreground">{e.result}</p>
-                  )}
-                </EventCard>
+          {schedule && schedule.length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {schedule.map((t: any, i: number) => (
+                <div key={i} className="rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-all">
+                  <p className="font-semibold text-sm">{t.name}</p>
+                </div>
               ))}
-            </motion.div>
+            </div>
           )}
         </TabsContent>
       </Tabs>
