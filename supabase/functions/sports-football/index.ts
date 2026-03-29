@@ -3,10 +3,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// football-data.org free tier - Juventus team ID: 109, Serie A competition: SA
-const FOOTBALL_DATA_BASE = 'https://api.football-data.org/v4';
-const JUVENTUS_TEAM_ID = 109;
-const SERIE_A_CODE = 'SA';
+// Sky Sport Italia internal widget endpoints
+const SKY_BASE = 'https://sport.sky.it';
+const SERIE_A_COMP_ID = '21';
+
+function unescapeHtml(text: string): string {
+  return text
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
+function extractWidgetModel(html: string): any {
+  const modelMatch = html.match(/model="(\{.*?\})"/s);
+  if (!modelMatch) return null;
+  try {
+    const unescaped = unescapeHtml(modelMatch[1]);
+    return JSON.parse(unescaped);
+  } catch (e) {
+    console.error('Failed to parse model JSON:', e);
+    return null;
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -16,123 +37,133 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
-    const season = url.searchParams.get('season') || new Date().getFullYear().toString();
-
-    const apiKey = Deno.env.get('FOOTBALL_DATA_API_KEY');
-    const fetchHeaders: Record<string, string> = {};
-    if (apiKey) {
-      fetchHeaders['X-Auth-Token'] = apiKey;
-    }
+    const season = url.searchParams.get('season') || '2025';
 
     let data: any;
 
     switch (action) {
-      case 'next-match': {
-        const res = await fetch(
-          `${FOOTBALL_DATA_BASE}/teams/${JUVENTUS_TEAM_ID}/matches?status=SCHEDULED&limit=5`,
-          { headers: fetchHeaders }
-        );
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`football-data.org error [${res.status}]: ${errText}`);
-        }
-        const json = await res.json();
-        data = (json.matches || []).map((m: any) => ({
-          id: m.id,
-          competition: m.competition?.name || '',
-          homeTeam: m.homeTeam?.name || '',
-          awayTeam: m.awayTeam?.name || '',
-          date: m.utcDate,
-          status: m.status,
-          matchday: m.matchday,
-          venue: m.venue || '',
-        }));
-        break;
-      }
-
-      case 'last-matches': {
-        const res = await fetch(
-          `${FOOTBALL_DATA_BASE}/teams/${JUVENTUS_TEAM_ID}/matches?status=FINISHED&limit=10`,
-          { headers: fetchHeaders }
-        );
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`football-data.org error [${res.status}]: ${errText}`);
-        }
-        const json = await res.json();
-        data = (json.matches || []).map((m: any) => ({
-          id: m.id,
-          competition: m.competition?.name || '',
-          homeTeam: m.homeTeam?.name || '',
-          awayTeam: m.awayTeam?.name || '',
-          homeScore: m.score?.fullTime?.home,
-          awayScore: m.score?.fullTime?.away,
-          date: m.utcDate,
-          status: m.status,
-          matchday: m.matchday,
-        }));
-        break;
-      }
-
       case 'standings': {
-        const res = await fetch(
-          `${FOOTBALL_DATA_BASE}/competitions/${SERIE_A_CODE}/standings?season=${season}`,
-          { headers: fetchHeaders }
-        );
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`football-data.org error [${res.status}]: ${errText}`);
+        const widgetUrl = `${SKY_BASE}/football/competition-ranking/${season}/${SERIE_A_COMP_ID}/widget.html`;
+        console.log('Fetching Sky Sport standings:', widgetUrl);
+        const res = await fetch(widgetUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible)' },
+        });
+        if (!res.ok) throw new Error(`Sky Sport error: ${res.status}`);
+        const html = await res.text();
+        const model = extractWidgetModel(html);
+        if (!model?.rankingLists?.[0]?.teams) {
+          throw new Error('Dati classifica non trovati nella pagina Sky Sport');
         }
-        const json = await res.json();
-        const table = json.standings?.find((s: any) => s.type === 'TOTAL')?.table || [];
-        data = table.map((t: any) => ({
+        data = model.rankingLists[0].teams.map((t: any) => ({
           position: t.position,
-          team: t.team?.name || '',
-          teamCrest: t.team?.crest || '',
-          played: t.playedGames,
-          wins: t.won,
-          draws: t.draw,
-          losses: t.lost,
-          goalsFor: t.goalsFor,
-          goalsAgainst: t.goalsAgainst,
-          goalDiff: t.goalDifference,
+          team: t.teamName,
+          teamUrl: t.teamUrl,
+          logoUrl: t.logoUrl,
+          played: t.games,
+          wins: t.gamesWon,
+          draws: t.gamesDraw,
+          losses: t.gamesLost,
+          goalsFor: t.goalsScored,
+          goalsAgainst: t.goalsConceded,
+          goalDiff: t.goalsDifference,
           points: t.points,
+          trend: t.trend,
+          qualification: t.qualification,
+          lastMatches: (t.lastMatchesTrend || []).map((m: any) => ({
+            result: m.label,
+            home: m.home,
+            away: m.away,
+          })),
         }));
         break;
       }
 
-      case 'season-matches': {
-        const res = await fetch(
-          `${FOOTBALL_DATA_BASE}/teams/${JUVENTUS_TEAM_ID}/matches?season=${season}`,
-          { headers: fetchHeaders }
-        );
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`football-data.org error [${res.status}]: ${errText}`);
+      case 'calendar': {
+        const widgetUrl = `${SKY_BASE}/football/competition-calendar-results/${season}/${SERIE_A_COMP_ID}/widget.html`;
+        console.log('Fetching Sky Sport calendar:', widgetUrl);
+        const res = await fetch(widgetUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible)' },
+        });
+        if (!res.ok) throw new Error(`Sky Sport error: ${res.status}`);
+        const html = await res.text();
+        const model = extractWidgetModel(html);
+        if (!model) {
+          throw new Error('Dati calendario non trovati nella pagina Sky Sport');
         }
-        const json = await res.json();
-        data = (json.matches || []).map((m: any) => ({
-          id: m.id,
-          competition: m.competition?.name || '',
-          homeTeam: m.homeTeam?.name || '',
-          awayTeam: m.awayTeam?.name || '',
-          homeScore: m.score?.fullTime?.home,
-          awayScore: m.score?.fullTime?.away,
-          date: m.utcDate,
-          status: m.status,
-          matchday: m.matchday,
-        }));
+
+        // Extract matches from calendar model - filter Juventus matches
+        const allRounds = model.rounds || model.matchDays || [];
+        const juventusMatches: any[] = [];
+
+        for (const round of allRounds) {
+          const matches = round.matches || round.events || [];
+          for (const match of matches) {
+            const home = match.homeTeam?.name || match.home?.name || '';
+            const away = match.awayTeam?.name || match.away?.name || '';
+            if (home.toLowerCase().includes('juventus') || away.toLowerCase().includes('juventus')) {
+              juventusMatches.push({
+                matchday: round.name || round.roundName || round.matchDay,
+                homeTeam: home,
+                awayTeam: away,
+                homeScore: match.homeTeam?.score ?? match.home?.score ?? null,
+                awayScore: match.awayTeam?.score ?? match.away?.score ?? null,
+                date: match.date || match.startDate,
+                time: match.time || match.startTime,
+                status: match.status || match.state,
+                venue: match.venue || match.stadium,
+                competition: 'Serie A',
+              });
+            }
+          }
+        }
+
+        data = juventusMatches;
+        break;
+      }
+
+      case 'next-match': {
+        // Get standings page to find Juventus position and next match info
+        const widgetUrl = `${SKY_BASE}/football/competition-ranking/${season}/${SERIE_A_COMP_ID}/widget.html`;
+        const res = await fetch(widgetUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible)' },
+        });
+        if (!res.ok) throw new Error(`Sky Sport error: ${res.status}`);
+        const html = await res.text();
+        const model = extractWidgetModel(html);
+        if (!model?.rankingLists?.[0]?.teams) {
+          throw new Error('Dati non trovati');
+        }
+        const juve = model.rankingLists[0].teams.find((t: any) =>
+          t.teamName?.toLowerCase().includes('juventus')
+        );
+        data = juve ? {
+          position: juve.position,
+          team: juve.teamName,
+          points: juve.points,
+          played: juve.games,
+          wins: juve.gamesWon,
+          draws: juve.gamesDraw,
+          losses: juve.gamesLost,
+          goalsFor: juve.goalsScored,
+          goalsAgainst: juve.goalsConceded,
+          goalDiff: juve.goalsDifference,
+          lastMatches: (juve.lastMatchesTrend || []).map((m: any) => ({
+            result: m.label,
+            home: m.home,
+            away: m.away,
+          })),
+        } : null;
         break;
       }
 
       default:
-        return new Response(JSON.stringify({ error: 'Azione non valida. Usa: next-match, last-matches, standings, season-matches' }), {
+        return new Response(JSON.stringify({ error: 'Azione non valida. Usa: standings, calendar, next-match' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data }), {
+    return new Response(JSON.stringify({ success: true, data, source: 'Sky Sport Italia' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
