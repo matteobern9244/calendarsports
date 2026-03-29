@@ -1,0 +1,59 @@
+/** Format UTC date string to Italian locale date */
+export function formatDateIT(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "Europe/Rome",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+/** Format UTC time string (HH:mm:ssZ) to Italian local time */
+export function formatTimeIT(timeStr?: string | null, dateStr?: string): string {
+  if (!timeStr) return "";
+  try {
+    const fullDate = dateStr ? `${dateStr}T${timeStr}` : `2026-01-01T${timeStr}`;
+    const date = new Date(fullDate);
+    return date.toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Rome",
+    });
+  } catch {
+    return timeStr;
+  }
+}
+
+/** Format full datetime to Italian locale */
+export function formatDateTimeIT(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Rome",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+/** Determine event status based on date */
+export function getEventStatus(dateStr: string): "prossimo" | "in_corso" | "completato" {
+  const now = new Date();
+  const eventDate = new Date(dateStr);
+  const diffMs = eventDate.getTime() - now.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  
+  if (diffHours < -3) return "completato";
+  if (diffHours < 3 && diffHours > -3) return "in_corso";
+  return "prossimo";
+}

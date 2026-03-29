@@ -1,99 +1,137 @@
 import SectionHeader from "@/components/common/SectionHeader";
 import SeasonSelector from "@/components/common/SeasonSelector";
 import EventCard from "@/components/common/EventCard";
+import LoadingState from "@/components/common/LoadingState";
+import ErrorState from "@/components/common/ErrorState";
+import EmptyState from "@/components/common/EmptyState";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
+import { useJuventusLastMatches, useJuventusNextMatch, useSerieAStandings } from "@/hooks/useSportsData";
+import { formatDateTimeIT, formatDateIT } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-const sampleMatches = [
-  { comp: "Serie A", round: "Giornata 36", opponent: "Napoli", venue: "Allianz Stadium", date: "11 Mag 2026", time: "18:00", status: "completato" as const, score: "2–1" },
-  { comp: "Serie A", round: "Giornata 37", opponent: "Inter", venue: "San Siro", date: "18 Mag 2026", time: "20:45", status: "completato" as const, score: "1–1" },
-  { comp: "Serie A", round: "Giornata 38", opponent: "Milan", venue: "Allianz Stadium", date: "25 Mag 2026", time: "20:45", status: "prossimo" as const },
-  { comp: "Champions League", round: "Semifinale", opponent: "Barcelona", venue: "Allianz Stadium", date: "30 Apr 2026", time: "21:00", status: "completato" as const, score: "3–2" },
-];
-
-const standings = [
-  { pos: 1, team: "Juventus", pts: 82, g: 37, v: 25, n: 7, p: 5 },
-  { pos: 2, team: "Inter", pts: 79, g: 37, v: 24, n: 7, p: 6 },
-  { pos: 3, team: "Napoli", pts: 76, g: 37, v: 23, n: 7, p: 7 },
-  { pos: 4, team: "Milan", pts: 70, g: 37, v: 21, n: 7, p: 9 },
-  { pos: 5, team: "Atalanta", pts: 68, g: 37, v: 20, n: 8, p: 9 },
-];
-
 export default function JuventusPage() {
   const { seasons, setSeason } = useSeasonPreferences();
+  const { data: nextMatches, isLoading: nextLoading, error: nextError, refetch: nextRefetch } = useJuventusNextMatch();
+  const { data: lastMatches, isLoading: lastLoading, error: lastError, refetch: lastRefetch } = useJuventusLastMatches();
+  const { data: standings, isLoading: standingsLoading, error: standingsError, refetch: standingsRefetch } = useSerieAStandings(seasons.juventus);
+
+  const apiMissing = nextError || lastError || standingsError;
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="Juventus" subtitle="Calendario, risultati e classifiche" />
+      <SectionHeader title="Juventus" subtitle="Calendario, risultati e classifiche Serie A" />
 
       <div className="mb-6">
-        <SeasonSelector currentSeason={seasons.juventus} onSelect={(y) => setSeason("juventus", y)} />
+        <SeasonSelector currentSeason={seasons.juventus} onSelect={(y) => setSeason("juventus", y)} minYear={2020} />
       </div>
 
-      <Tabs defaultValue="calendario" className="w-full">
-        <TabsList className="mb-6 bg-muted">
-          <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">Calendario</TabsTrigger>
+      {apiMissing && (
+        <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <p className="text-xs text-muted-foreground">
+            ⚠️ Per i dati reali della Juventus, è necessaria una chiave API gratuita da{" "}
+            <a href="https://www.football-data.org/" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+              football-data.org
+            </a>
+            . Registrati gratuitamente e aggiungi la chiave come secret <code className="text-primary">FOOTBALL_DATA_API_KEY</code>.
+          </p>
+        </div>
+      )}
+
+      <Tabs defaultValue="prossime" className="w-full">
+        <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="prossime" className="font-heading text-xs tracking-wider uppercase">Prossime</TabsTrigger>
+          <TabsTrigger value="risultati" className="font-heading text-xs tracking-wider uppercase">Risultati</TabsTrigger>
           <TabsTrigger value="classifica" className="font-heading text-xs tracking-wider uppercase">Classifica</TabsTrigger>
-          <TabsTrigger value="rosa" className="font-heading text-xs tracking-wider uppercase">Rosa</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="calendario">
-          <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-            {sampleMatches.map((m, i) => (
-              <EventCard
-                key={i}
-                sport={m.comp}
-                title={`Juventus vs ${m.opponent}`}
-                subtitle={`${m.round} · ${m.venue}`}
-                date={m.date}
-                time={m.time}
-                status={m.status}
-              >
-                {m.score && (
-                  <p className="text-lg font-heading font-bold text-primary">{m.score}</p>
-                )}
-              </EventCard>
-            ))}
-          </motion.div>
+        <TabsContent value="prossime">
+          {nextLoading && <LoadingState message="Caricamento prossime partite..." />}
+          {nextError && <ErrorState message="Configura la chiave API per vedere le prossime partite" onRetry={() => nextRefetch()} />}
+          {!nextLoading && !nextError && (!nextMatches || nextMatches.length === 0) && <EmptyState message="Nessuna partita programmata" />}
+          {nextMatches && nextMatches.length > 0 && (
+            <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
+              {nextMatches.map((m: any) => (
+                <EventCard
+                  key={m.id}
+                  sport={m.competition}
+                  title={`${m.homeTeam} vs ${m.awayTeam}`}
+                  subtitle={m.matchday ? `Giornata ${m.matchday}` : undefined}
+                  date={formatDateIT(m.date)}
+                  status="prossimo"
+                >
+                  {m.venue && <p className="text-xs text-muted-foreground">{m.venue}</p>}
+                </EventCard>
+              ))}
+            </motion.div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="risultati">
+          {lastLoading && <LoadingState message="Caricamento risultati..." />}
+          {lastError && <ErrorState message="Configura la chiave API per vedere i risultati" onRetry={() => lastRefetch()} />}
+          {!lastLoading && !lastError && (!lastMatches || lastMatches.length === 0) && <EmptyState message="Nessun risultato disponibile" />}
+          {lastMatches && lastMatches.length > 0 && (
+            <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
+              {lastMatches.map((m: any) => (
+                <EventCard
+                  key={m.id}
+                  sport={m.competition}
+                  title={`${m.homeTeam} vs ${m.awayTeam}`}
+                  subtitle={m.matchday ? `Giornata ${m.matchday}` : undefined}
+                  date={formatDateIT(m.date)}
+                  status="completato"
+                >
+                  <p className="text-lg font-heading font-bold text-primary">
+                    {m.homeScore} – {m.awayScore}
+                  </p>
+                </EventCard>
+              ))}
+            </motion.div>
+          )}
         </TabsContent>
 
         <TabsContent value="classifica">
-          <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">Pos</TableHead>
-                  <TableHead className="font-heading text-xs tracking-wider uppercase">Squadra</TableHead>
-                  <TableHead className="text-center font-heading text-xs tracking-wider uppercase">G</TableHead>
-                  <TableHead className="text-center font-heading text-xs tracking-wider uppercase">V</TableHead>
-                  <TableHead className="text-center font-heading text-xs tracking-wider uppercase">N</TableHead>
-                  <TableHead className="text-center font-heading text-xs tracking-wider uppercase">P</TableHead>
-                  <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Pts</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {standings.map((s) => (
-                  <TableRow key={s.pos} className={s.team === "Juventus" ? "bg-primary/5 font-bold" : ""}>
-                    <TableCell className="font-heading">{s.pos}</TableCell>
-                    <TableCell className={s.team === "Juventus" ? "text-primary font-heading font-bold" : ""}>{s.team}</TableCell>
-                    <TableCell className="text-center">{s.g}</TableCell>
-                    <TableCell className="text-center">{s.v}</TableCell>
-                    <TableCell className="text-center">{s.n}</TableCell>
-                    <TableCell className="text-center">{s.p}</TableCell>
-                    <TableCell className="text-center font-bold">{s.pts}</TableCell>
+          {standingsLoading && <LoadingState message="Caricamento classifica..." />}
+          {standingsError && <ErrorState message="Configura la chiave API per vedere la classifica" onRetry={() => standingsRefetch()} />}
+          {standings && standings.length > 0 && (
+            <div className="rounded-xl border border-border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">Pos</TableHead>
+                    <TableHead className="font-heading text-xs tracking-wider uppercase">Squadra</TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">G</TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">V</TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">N</TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">P</TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase hidden sm:table-cell">DR</TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Pts</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="rosa">
-          <div className="rounded-xl border border-border p-8 text-center text-sm text-muted-foreground">
-            Rosa stagione {seasons.juventus} — Collega le API per dati reali
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {standings.map((s: any) => {
+                    const isJuve = s.team?.toLowerCase().includes("juventus");
+                    return (
+                      <TableRow key={s.position} className={isJuve ? "bg-primary/5" : ""}>
+                        <TableCell className="font-heading font-bold">{s.position}</TableCell>
+                        <TableCell className={isJuve ? "text-primary font-heading font-bold" : "font-semibold"}>
+                          {s.team}
+                        </TableCell>
+                        <TableCell className="text-center">{s.played}</TableCell>
+                        <TableCell className="text-center">{s.wins}</TableCell>
+                        <TableCell className="text-center">{s.draws}</TableCell>
+                        <TableCell className="text-center">{s.losses}</TableCell>
+                        <TableCell className="text-center hidden sm:table-cell">{s.goalDiff > 0 ? `+${s.goalDiff}` : s.goalDiff}</TableCell>
+                        <TableCell className="text-center font-bold">{s.points}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
