@@ -34,23 +34,7 @@ export function useF1NextRace() {
   });
 }
 
-// === Football Hooks ===
-export function useJuventusNextMatch() {
-  return useQuery({
-    queryKey: ["juventus", "next-match"],
-    queryFn: () => footballApi.getNextMatch(),
-    staleTime: 60 * 1000,
-  });
-}
-
-export function useJuventusLastMatches() {
-  return useQuery({
-    queryKey: ["juventus", "last-matches"],
-    queryFn: () => footballApi.getLastMatches(),
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
+// === Football/Juventus Hooks (Sky Sport) ===
 export function useSerieAStandings(season: number) {
   return useQuery({
     queryKey: ["juventus", "standings", season],
@@ -59,15 +43,23 @@ export function useSerieAStandings(season: number) {
   });
 }
 
-export function useJuventusSeasonMatches(season: number) {
+export function useJuventusCalendar(season: number) {
   return useQuery({
-    queryKey: ["juventus", "season-matches", season],
-    queryFn: () => footballApi.getSeasonMatches(season),
+    queryKey: ["juventus", "calendar", season],
+    queryFn: () => footballApi.getCalendar(season),
     staleTime: 5 * 60 * 1000,
   });
 }
 
-// === Tennis Hooks ===
+export function useJuventusInfo(season: number) {
+  return useQuery({
+    queryKey: ["juventus", "info", season],
+    queryFn: () => footballApi.getJuventusInfo(season),
+    staleTime: 60 * 1000,
+  });
+}
+
+// === Tennis/Sinner Hooks ===
 export function useSinnerInfo() {
   return useQuery({
     queryKey: ["sinner", "info"],
@@ -76,19 +68,19 @@ export function useSinnerInfo() {
   });
 }
 
-export function useSinnerLastEvents(season: number) {
+export function useSinnerSchedule(season: number) {
   return useQuery({
-    queryKey: ["sinner", "last-events", season],
-    queryFn: () => tennisApi.getLastEvents(season),
+    queryKey: ["sinner", "schedule", season],
+    queryFn: () => tennisApi.getSchedule(season),
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useSinnerNextEvents() {
+export function useSinnerResults(season: number) {
   return useQuery({
-    queryKey: ["sinner", "next-events"],
-    queryFn: () => tennisApi.getNextEvents(),
-    staleTime: 60 * 1000,
+    queryKey: ["sinner", "results", season],
+    queryFn: () => tennisApi.getResults(season),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
