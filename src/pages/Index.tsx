@@ -1,9 +1,7 @@
 import EventCard from "@/components/common/EventCard";
 import SectionHeader from "@/components/common/SectionHeader";
-import LoadingState from "@/components/common/LoadingState";
-import ErrorState from "@/components/common/ErrorState";
 import { motion } from "framer-motion";
-import { useF1NextRace, useJuventusNextMatch, useSinnerNextEvents, useMotoGPNextEvent } from "@/hooks/useSportsData";
+import { useF1NextRace, useJuventusInfo, useSinnerInfo, useMotoGPNextEvent } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus } from "@/lib/dateUtils";
 
 const container = {
@@ -12,14 +10,13 @@ const container = {
 };
 
 function F1NextCard() {
-  const { data, isLoading, error, refetch } = useF1NextRace();
+  const { data, isLoading, error } = useF1NextRace();
   if (isLoading) return <div className="rounded-xl border border-border bg-card p-5 animate-pulse h-48" />;
   if (error || !data) return (
     <EventCard sport="Formula 1" title="Prossimo GP" date="—" status="prossimo">
       <p className="text-xs text-destructive">Dati non disponibili</p>
     </EventCard>
   );
-
   return (
     <EventCard
       sport="Formula 1"
@@ -32,24 +29,10 @@ function F1NextCard() {
       <div className="space-y-1.5">
         <p className="text-xs font-medium text-foreground">Sessioni del weekend:</p>
         <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-          {data.firstPractice && (
-            <span>PL1: {formatDateIT(data.firstPractice.date).split(' ').slice(0,2).join(' ')} {formatTimeIT(data.firstPractice.time, data.firstPractice.date)}</span>
-          )}
-          {data.secondPractice && (
-            <span>PL2: {formatDateIT(data.secondPractice.date).split(' ').slice(0,2).join(' ')} {formatTimeIT(data.secondPractice.time, data.secondPractice.date)}</span>
-          )}
-          {data.thirdPractice && (
-            <span>PL3: {formatDateIT(data.thirdPractice.date).split(' ').slice(0,2).join(' ')} {formatTimeIT(data.thirdPractice.time, data.thirdPractice.date)}</span>
-          )}
-          {data.sprint && (
-            <span>Sprint: {formatDateIT(data.sprint.date).split(' ').slice(0,2).join(' ')} {formatTimeIT(data.sprint.time, data.sprint.date)}</span>
-          )}
-          {data.qualifying && (
-            <span>Qualifiche: {formatDateIT(data.qualifying.date).split(' ').slice(0,2).join(' ')} {formatTimeIT(data.qualifying.time, data.qualifying.date)}</span>
-          )}
-          <span className="col-span-2 font-semibold text-primary">
-            Gara: {formatDateIT(data.date)} {formatTimeIT(data.time, data.date)}
-          </span>
+          {data.firstPractice && <span>PL1: {formatTimeIT(data.firstPractice.time, data.firstPractice.date)}</span>}
+          {data.sprint && <span>Sprint: {formatTimeIT(data.sprint.time, data.sprint.date)}</span>}
+          {data.qualifying && <span>Qual: {formatTimeIT(data.qualifying.time, data.qualifying.date)}</span>}
+          <span className="col-span-2 font-semibold text-primary">Gara: {formatDateIT(data.date)} {formatTimeIT(data.time, data.date)}</span>
         </div>
       </div>
     </EventCard>
@@ -57,71 +40,75 @@ function F1NextCard() {
 }
 
 function JuventusNextCard() {
-  const { data, isLoading, error } = useJuventusNextMatch();
+  const { data, isLoading, error } = useJuventusInfo(2025);
   if (isLoading) return <div className="rounded-xl border border-border bg-card p-5 animate-pulse h-32" />;
-  if (error || !data || data.length === 0) return (
-    <EventCard sport="Calcio · Juventus" title="Prossima partita" date="—" status="prossimo">
-      <p className="text-xs text-muted-foreground">
-        {error ? "Configura la chiave API football-data.org per dati reali" : "Nessun match programmato"}
-      </p>
+  if (error || !data) return (
+    <EventCard sport="Calcio · Juventus" title="Juventus" date="—" status="prossimo">
+      <p className="text-xs text-muted-foreground">Dati non disponibili al momento</p>
     </EventCard>
   );
-
-  const match = data[0];
   return (
     <EventCard
-      sport={`Calcio · ${match.competition}`}
-      title={`${match.homeTeam} vs ${match.awayTeam}`}
-      subtitle={match.matchday ? `Giornata ${match.matchday}` : undefined}
-      date={formatDateIT(match.date)}
-      time={formatTimeIT(match.date?.split('T')[1], match.date?.split('T')[0])}
+      sport="Calcio · Serie A"
+      title={`Juventus — ${data.position}° posto`}
+      subtitle={`${data.points} punti · ${data.wins}V ${data.draws}N ${data.losses}P`}
+      date={`${data.played} partite giocate`}
       status="prossimo"
     >
-      {match.venue && <p className="text-xs text-muted-foreground">{match.venue}</p>}
+      {data.lastMatches && data.lastMatches.length > 0 && (
+        <div className="flex gap-1.5">
+          <span className="text-xs text-muted-foreground mr-1">Ultime:</span>
+          {data.lastMatches.map((m: any, i: number) => (
+            <span key={i} className={`inline-flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold ${
+              m.result === 'V' ? 'bg-green-500/20 text-green-600' :
+              m.result === 'P' ? 'bg-red-500/20 text-red-600' :
+              'bg-yellow-500/20 text-yellow-600'
+            }`}>{m.result}</span>
+          ))}
+        </div>
+      )}
     </EventCard>
   );
 }
 
 function SinnerNextCard() {
-  const { data, isLoading, error } = useSinnerNextEvents();
+  const { data, isLoading, error } = useSinnerInfo();
   if (isLoading) return <div className="rounded-xl border border-border bg-card p-5 animate-pulse h-32" />;
-  if (error || !data || data.length === 0) return (
-    <EventCard sport="Tennis · Jannik Sinner" title="Prossimo match" date="—" status="prossimo">
-      <p className="text-xs text-muted-foreground">Nessun match programmato al momento</p>
+  if (error || !data) return (
+    <EventCard sport="Tennis · Jannik Sinner" title="Jannik Sinner" date="—" status="prossimo">
+      <p className="text-xs text-muted-foreground">Dati non disponibili al momento</p>
     </EventCard>
   );
-
-  const event = data[0];
   return (
     <EventCard
-      sport={`Tennis · ${event.league || "ATP"}`}
-      title={event.name}
-      subtitle={event.round ? `Round ${event.round}` : undefined}
-      date={formatDateIT(event.date)}
-      time={event.time ? formatTimeIT(event.time, event.date) : undefined}
+      sport="Tennis · ATP"
+      title={data.name}
+      subtitle={`Ranking ATP: #${data.ranking || '1'} · ${data.nationality}`}
+      date={`Nato: ${data.birthDate}`}
       status="prossimo"
-    />
+    >
+      <p className="text-xs text-muted-foreground">
+        {data.height} · {data.weight} · Pro dal {data.turnedPro}
+      </p>
+    </EventCard>
   );
 }
 
 function MotoGPNextCard() {
   const { data, isLoading, error } = useMotoGPNextEvent();
   if (isLoading) return <div className="rounded-xl border border-border bg-card p-5 animate-pulse h-32" />;
-  if (error || !data || data.length === 0) return (
+  if (error || !data) return (
     <EventCard sport="MotoGP" title="Prossimo GP" date="—" status="prossimo">
-      <p className="text-xs text-muted-foreground">Nessun evento programmato al momento</p>
+      <p className="text-xs text-muted-foreground">Dati non disponibili al momento</p>
     </EventCard>
   );
-
-  const event = data[0];
   return (
     <EventCard
       sport="MotoGP"
-      title={event.name}
-      subtitle={event.venue || event.city}
-      date={formatDateIT(event.date)}
-      time={event.time ? formatTimeIT(event.time, event.date) : undefined}
-      status={getEventStatus(event.date)}
+      title={data.name}
+      subtitle={[data.circuit, data.country].filter(Boolean).join(' · ')}
+      date={data.dateStart ? formatDateIT(data.dateStart) : '—'}
+      status={data.dateStart ? getEventStatus(data.dateStart) : 'prossimo'}
     />
   );
 }
@@ -131,15 +118,9 @@ export default function HomePage() {
     <div className="container py-8 sm:py-12">
       <SectionHeader
         title="Prossimi Eventi"
-        subtitle="Segui gli eventi sportivi più importanti in tempo reale"
+        subtitle="Dati reali da Jolpica (F1), Sky Sport Italia (Juventus), ATP Tour (Sinner), MotoGP.com"
       />
-
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid gap-5 sm:grid-cols-2"
-      >
+      <motion.div variants={container} initial="hidden" animate="show" className="grid gap-5 sm:grid-cols-2">
         <SinnerNextCard />
         <JuventusNextCard />
         <F1NextCard />

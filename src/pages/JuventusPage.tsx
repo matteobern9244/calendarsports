@@ -5,96 +5,34 @@ import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
-import { useJuventusLastMatches, useJuventusNextMatch, useSerieAStandings } from "@/hooks/useSportsData";
-import { formatDateTimeIT, formatDateIT } from "@/lib/dateUtils";
+import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function JuventusPage() {
   const { seasons, setSeason } = useSeasonPreferences();
-  const { data: nextMatches, isLoading: nextLoading, error: nextError, refetch: nextRefetch } = useJuventusNextMatch();
-  const { data: lastMatches, isLoading: lastLoading, error: lastError, refetch: lastRefetch } = useJuventusLastMatches();
-  const { data: standings, isLoading: standingsLoading, error: standingsError, refetch: standingsRefetch } = useSerieAStandings(seasons.juventus);
-
-  const apiMissing = nextError || lastError || standingsError;
+  const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useSerieAStandings(seasons.juventus);
+  const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useJuventusCalendar(seasons.juventus);
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="Juventus" subtitle="Calendario, risultati e classifiche Serie A" />
+      <SectionHeader title="Juventus" subtitle="Dati reali da Sky Sport Italia" />
 
       <div className="mb-6">
-        <SeasonSelector currentSeason={seasons.juventus} onSelect={(y) => setSeason("juventus", y)} minYear={2020} />
+        <SeasonSelector currentSeason={seasons.juventus} onSelect={(y) => setSeason("juventus", y)} minYear={2019} />
       </div>
 
-      {apiMissing && (
-        <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
-          <p className="text-xs text-muted-foreground">
-            ⚠️ Per i dati reali della Juventus, è necessaria una chiave API gratuita da{" "}
-            <a href="https://www.football-data.org/" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-              football-data.org
-            </a>
-            . Registrati gratuitamente e aggiungi la chiave come secret <code className="text-primary">FOOTBALL_DATA_API_KEY</code>.
-          </p>
-        </div>
-      )}
-
-      <Tabs defaultValue="prossime" className="w-full">
+      <Tabs defaultValue="classifica" className="w-full">
         <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="prossime" className="font-heading text-xs tracking-wider uppercase">Prossime</TabsTrigger>
-          <TabsTrigger value="risultati" className="font-heading text-xs tracking-wider uppercase">Risultati</TabsTrigger>
           <TabsTrigger value="classifica" className="font-heading text-xs tracking-wider uppercase">Classifica</TabsTrigger>
+          <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">Calendario</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="prossime">
-          {nextLoading && <LoadingState message="Caricamento prossime partite..." />}
-          {nextError && <ErrorState message="Configura la chiave API per vedere le prossime partite" onRetry={() => nextRefetch()} />}
-          {!nextLoading && !nextError && (!nextMatches || nextMatches.length === 0) && <EmptyState message="Nessuna partita programmata" />}
-          {nextMatches && nextMatches.length > 0 && (
-            <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-              {nextMatches.map((m: any) => (
-                <EventCard
-                  key={m.id}
-                  sport={m.competition}
-                  title={`${m.homeTeam} vs ${m.awayTeam}`}
-                  subtitle={m.matchday ? `Giornata ${m.matchday}` : undefined}
-                  date={formatDateIT(m.date)}
-                  status="prossimo"
-                >
-                  {m.venue && <p className="text-xs text-muted-foreground">{m.venue}</p>}
-                </EventCard>
-              ))}
-            </motion.div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="risultati">
-          {lastLoading && <LoadingState message="Caricamento risultati..." />}
-          {lastError && <ErrorState message="Configura la chiave API per vedere i risultati" onRetry={() => lastRefetch()} />}
-          {!lastLoading && !lastError && (!lastMatches || lastMatches.length === 0) && <EmptyState message="Nessun risultato disponibile" />}
-          {lastMatches && lastMatches.length > 0 && (
-            <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-              {lastMatches.map((m: any) => (
-                <EventCard
-                  key={m.id}
-                  sport={m.competition}
-                  title={`${m.homeTeam} vs ${m.awayTeam}`}
-                  subtitle={m.matchday ? `Giornata ${m.matchday}` : undefined}
-                  date={formatDateIT(m.date)}
-                  status="completato"
-                >
-                  <p className="text-lg font-heading font-bold text-primary">
-                    {m.homeScore} – {m.awayScore}
-                  </p>
-                </EventCard>
-              ))}
-            </motion.div>
-          )}
-        </TabsContent>
-
         <TabsContent value="classifica">
-          {standingsLoading && <LoadingState message="Caricamento classifica..." />}
-          {standingsError && <ErrorState message="Configura la chiave API per vedere la classifica" onRetry={() => standingsRefetch()} />}
+          {stLoading && <LoadingState message="Caricamento classifica Serie A da Sky Sport..." />}
+          {stError && <ErrorState message="Errore nel caricamento della classifica da Sky Sport" onRetry={() => stRefetch()} />}
+          {!stLoading && !stError && (!standings || standings.length === 0) && <EmptyState message="Classifica non disponibile" />}
           {standings && standings.length > 0 && (
             <div className="rounded-xl border border-border overflow-hidden">
               <Table>
@@ -112,12 +50,15 @@ export default function JuventusPage() {
                 </TableHeader>
                 <TableBody>
                   {standings.map((s: any) => {
-                    const isJuve = s.team?.toLowerCase().includes("juventus");
+                    const isJuve = s.team?.toLowerCase().includes('juventus');
                     return (
                       <TableRow key={s.position} className={isJuve ? "bg-primary/5" : ""}>
                         <TableCell className="font-heading font-bold">{s.position}</TableCell>
                         <TableCell className={isJuve ? "text-primary font-heading font-bold" : "font-semibold"}>
-                          {s.team}
+                          <div className="flex items-center gap-2">
+                            {s.logoUrl && <img src={s.logoUrl} alt={s.team} className="h-5 w-5 object-contain" />}
+                            {s.team}
+                          </div>
                         </TableCell>
                         <TableCell className="text-center">{s.played}</TableCell>
                         <TableCell className="text-center">{s.wins}</TableCell>
@@ -130,7 +71,35 @@ export default function JuventusPage() {
                   })}
                 </TableBody>
               </Table>
+              <div className="p-3 border-t border-border text-center">
+                <p className="text-[10px] text-muted-foreground">Fonte: Sky Sport Italia</p>
+              </div>
             </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="calendario">
+          {calLoading && <LoadingState message="Caricamento calendario da Sky Sport..." />}
+          {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
+          {!calLoading && !calError && (!calendar || calendar.length === 0) && <EmptyState message="Calendario partite non disponibile" />}
+          {calendar && calendar.length > 0 && (
+            <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
+              {calendar.map((m: any, i: number) => (
+                <EventCard
+                  key={i}
+                  sport={m.competition || 'Serie A'}
+                  title={`${m.homeTeam} vs ${m.awayTeam}`}
+                  subtitle={m.matchday ? `Giornata ${m.matchday}` : undefined}
+                  date={m.date || '—'}
+                  time={m.time}
+                  status={m.homeScore !== null ? 'completato' : 'prossimo'}
+                >
+                  {m.homeScore !== null && (
+                    <p className="text-lg font-heading font-bold text-primary">{m.homeScore} – {m.awayScore}</p>
+                  )}
+                </EventCard>
+              ))}
+            </motion.div>
           )}
         </TabsContent>
       </Tabs>
