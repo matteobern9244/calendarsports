@@ -1,19 +1,8 @@
-import { supabase } from "@/integrations/supabase/client";
-
 async function callEdgeFunction(functionName: string, params: Record<string, string>) {
   const queryString = new URLSearchParams(params).toString();
-  const { data, error } = await supabase.functions.invoke(functionName, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    body: null,
-  });
-
-  // supabase.functions.invoke doesn't support query params well for GET
-  // Use fetch directly with the project URL
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  
+
   const url = `${supabaseUrl}/functions/v1/${functionName}?${queryString}`;
   const response = await fetch(url, {
     headers: {
