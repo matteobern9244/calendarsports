@@ -17,8 +17,8 @@ function unescapeHtml(text: string): string {
 }
 
 function extractWidgetModel(html: string): any {
-  // The model attribute uses &quot; for inner quotes, so [^"] captures everything
-  const modelMatch = html.match(/model="([^"]*)"/);
+  // Try both single and double quote delimiters
+  const modelMatch = html.match(/model='([^']*)'/) || html.match(/model="([^"]*)"/);
   if (!modelMatch) {
     console.error('No model attribute found. HTML length:', html.length, 'First 500 chars:', html.substring(0, 500));
     return null;
