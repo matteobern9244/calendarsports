@@ -3,7 +3,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Sky Sport Italia internal widget endpoints
 const SKY_BASE = 'https://sport.sky.it';
 const SERIE_A_COMP_ID = '21';
 
@@ -18,8 +17,12 @@ function unescapeHtml(text: string): string {
 }
 
 function extractWidgetModel(html: string): any {
-  const modelMatch = html.match(/model="(\{.*?\})"/s);
-  if (!modelMatch) return null;
+  // The model attribute uses &quot; for inner quotes, so [^"] captures everything
+  const modelMatch = html.match(/model="([^"]*)"/);
+  if (!modelMatch) {
+    console.error('No model attribute found. HTML length:', html.length, 'First 500 chars:', html.substring(0, 500));
+    return null;
+  }
   try {
     const unescaped = unescapeHtml(modelMatch[1]);
     return JSON.parse(unescaped);
@@ -44,12 +47,13 @@ Deno.serve(async (req) => {
     switch (action) {
       case 'standings': {
         const widgetUrl = `${SKY_BASE}/football/competition-ranking/${season}/${SERIE_A_COMP_ID}/widget.html`;
-        console.log('Fetching Sky Sport standings:', widgetUrl);
+        console.log('Fetching:', widgetUrl);
         const res = await fetch(widgetUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible)' },
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
         });
         if (!res.ok) throw new Error(`Sky Sport error: ${res.status}`);
         const html = await res.text();
+        console.log('HTML length:', html.length);
         const model = extractWidgetModel(html);
         if (!model?.rankingLists?.[0]?.teams) {
           throw new Error('Dati classifica non trovati nella pagina Sky Sport');
@@ -80,26 +84,26 @@ Deno.serve(async (req) => {
 
       case 'calendar': {
         const widgetUrl = `${SKY_BASE}/football/competition-calendar-results/${season}/${SERIE_A_COMP_ID}/widget.html`;
-        console.log('Fetching Sky Sport calendar:', widgetUrl);
+        console.log('Fetching:', widgetUrl);
         const res = await fetch(widgetUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible)' },
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
         });
         if (!res.ok) throw new Error(`Sky Sport error: ${res.status}`);
         const html = await res.text();
+        console.log('Calendar HTML length:', html.length);
         const model = extractWidgetModel(html);
         if (!model) {
           throw new Error('Dati calendario non trovati nella pagina Sky Sport');
         }
 
-        // Extract matches from calendar model - filter Juventus matches
         const allRounds = model.rounds || model.matchDays || [];
         const juventusMatches: any[] = [];
 
         for (const round of allRounds) {
           const matches = round.matches || round.events || [];
           for (const match of matches) {
-            const home = match.homeTeam?.name || match.home?.name || '';
-            const away = match.awayTeam?.name || match.away?.name || '';
+            const home = match.homeTeam?.name || match.home?.name || match.homeTeam?.teamName || '';
+            const away = match.awayTeam?.name || match.away?.name || match.awayTeam?.teamName || '';
             if (home.toLowerCase().includes('juventus') || away.toLowerCase().includes('juventus')) {
               juventusMatches.push({
                 matchday: round.name || round.roundName || round.matchDay,
@@ -122,10 +126,9 @@ Deno.serve(async (req) => {
       }
 
       case 'next-match': {
-        // Get standings page to find Juventus position and next match info
         const widgetUrl = `${SKY_BASE}/football/competition-ranking/${season}/${SERIE_A_COMP_ID}/widget.html`;
         const res = await fetch(widgetUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible)' },
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
         });
         if (!res.ok) throw new Error(`Sky Sport error: ${res.status}`);
         const html = await res.text();
@@ -147,6 +150,7 @@ Deno.serve(async (req) => {
           goalsFor: juve.goalsScored,
           goalsAgainst: juve.goalsConceded,
           goalDiff: juve.goalsDifference,
+          logoUrl: juve.logoUrl,
           lastMatches: (juve.lastMatchesTrend || []).map((m: any) => ({
             result: m.label,
             home: m.home,
