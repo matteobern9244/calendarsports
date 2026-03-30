@@ -96,27 +96,33 @@ Deno.serve(async (req) => {
           throw new Error('Dati calendario non trovati nella pagina Sky Sport');
         }
 
-        const allRounds = model.rounds || model.matchDays || [];
+        const rounds = model.competitionMatchList || [];
         const juventusMatches: any[] = [];
 
-        for (const round of allRounds) {
-          const matches = round.matches || round.events || [];
-          for (const match of matches) {
-            const home = match.homeTeam?.name || match.home?.name || match.homeTeam?.teamName || '';
-            const away = match.awayTeam?.name || match.away?.name || match.awayTeam?.teamName || '';
-            if (home.toLowerCase().includes('juventus') || away.toLowerCase().includes('juventus')) {
-              juventusMatches.push({
-                matchday: round.name || round.roundName || round.matchDay,
-                homeTeam: home,
-                awayTeam: away,
-                homeScore: match.homeTeam?.score ?? match.home?.score ?? null,
-                awayScore: match.awayTeam?.score ?? match.away?.score ?? null,
-                date: match.date || match.startDate,
-                time: match.time || match.startTime,
-                status: match.status || match.state,
-                venue: match.venue || match.stadium,
-                competition: 'Serie A',
-              });
+        for (const round of rounds) {
+          const roundNum = round.round;
+          const matchDayList = round.matchDayList || [];
+          for (const matchDay of matchDayList) {
+            const matchList = matchDay.matchList || [];
+            for (const match of matchList) {
+              const homeName = match.home?.name || '';
+              const awayName = match.away?.name || '';
+              if (homeName.toLowerCase().includes('juventus') || awayName.toLowerCase().includes('juventus')) {
+                const isFinished = match.status === 'FullTime';
+                juventusMatches.push({
+                  matchday: roundNum,
+                  homeTeam: homeName,
+                  awayTeam: awayName,
+                  homeLogo: match.home?.logoUrl || null,
+                  awayLogo: match.away?.logoUrl || null,
+                  homeScore: isFinished ? match.home?.goal : null,
+                  awayScore: isFinished ? match.away?.goal : null,
+                  date: match.date,
+                  status: match.status,
+                  competition: 'Serie A',
+                  link: match.link || null,
+                });
+              }
             }
           }
         }
