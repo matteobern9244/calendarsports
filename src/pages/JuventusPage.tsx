@@ -83,22 +83,52 @@ export default function JuventusPage() {
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
           {!calLoading && !calError && (!calendar || calendar.length === 0) && <EmptyState message="Calendario partite non disponibile" />}
           {calendar && calendar.length > 0 && (
-            <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-              {calendar.map((m: any, i: number) => (
-                <EventCard
-                  key={i}
-                  sport={m.competition || 'Serie A'}
-                  title={`${m.homeTeam} vs ${m.awayTeam}`}
-                  subtitle={m.matchday ? `Giornata ${m.matchday}` : undefined}
-                  date={m.date || '—'}
-                  time={m.time}
-                  status={m.homeScore !== null ? 'completato' : 'prossimo'}
-                >
-                  {m.homeScore !== null && (
-                    <p className="text-lg font-heading font-bold text-primary">{m.homeScore} – {m.awayScore}</p>
-                  )}
-                </EventCard>
-              ))}
+            <motion.div className="grid gap-3 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
+              {calendar.map((m: any, i: number) => {
+                const isFinished = m.status === 'FullTime';
+                const isJuveHome = m.homeTeam?.toLowerCase().includes('juventus');
+                const opponent = isJuveHome ? m.awayTeam : m.homeTeam;
+                const opponentLogo = isJuveHome ? m.awayLogo : m.homeLogo;
+                const juveGoals = isJuveHome ? m.homeScore : m.awayScore;
+                const oppGoals = isJuveHome ? m.awayScore : m.homeScore;
+                const result = isFinished
+                  ? juveGoals > oppGoals ? 'V' : juveGoals < oppGoals ? 'S' : 'P'
+                  : null;
+                const resultColor = result === 'V' ? 'text-green-500' : result === 'S' ? 'text-red-500' : 'text-yellow-500';
+                const dateStr = m.date ? new Date(m.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/Rome' }) : '—';
+                const timeStr = m.date ? new Date(m.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }) : '';
+
+                return (
+                  <motion.div
+                    key={i}
+                    variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+                    className="rounded-xl border border-border bg-card p-4 flex items-center gap-3"
+                  >
+                    <div className="flex-shrink-0 w-8">
+                      <span className="text-xs text-muted-foreground font-heading">G{m.matchday}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {opponentLogo && <img src={opponentLogo} alt={opponent} className="h-6 w-6 object-contain flex-shrink-0" />}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">
+                          {isJuveHome ? 'vs' : '@'} {opponent}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">{dateStr} · {timeStr}</p>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      {isFinished ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-heading font-bold">{m.homeScore} - {m.awayScore}</span>
+                          <span className={`text-xs font-bold ${resultColor}`}>{result}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </motion.div>
           )}
         </TabsContent>
