@@ -72,9 +72,11 @@ function JuventusNextCard() {
 }
 
 function SinnerNextCard() {
-  const { data, isLoading, error } = useSinnerInfo();
+  const { data: info, isLoading: infoLoading } = useSinnerInfo();
+  const { data: nextEvent, isLoading: eventLoading } = useSinnerNextEvent();
+  const isLoading = infoLoading || eventLoading;
   if (isLoading) return <div className="rounded-xl border border-border bg-card p-5 animate-pulse h-32" />;
-  if (error || !data) return (
+  if (!info && !nextEvent) return (
     <EventCard sport="Tennis · Jannik Sinner" title="Jannik Sinner" date="—" status="prossimo">
       <p className="text-xs text-muted-foreground">Dati non disponibili al momento</p>
     </EventCard>
@@ -82,14 +84,21 @@ function SinnerNextCard() {
   return (
     <EventCard
       sport="Tennis · ATP"
-      title={data.name}
-      subtitle={`Ranking ATP: #${data.ranking || '1'} · ${data.nationality}`}
-      date={`Nato: ${data.birthDate}`}
-      status="prossimo"
+      title={info?.name || 'Jannik Sinner'}
+      subtitle={`Ranking ATP: #${info?.ranking || '2'} · Record 2026: ${info?.seasonRecord || '—'}`}
+      date={nextEvent ? `Prossimo: ${nextEvent.name}` : '—'}
+      status={nextEvent ? 'prossimo' : 'prossimo'}
     >
-      <p className="text-xs text-muted-foreground">
-        {data.height} · {data.weight} · Pro dal {data.turnedPro}
-      </p>
+      {nextEvent && (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">
+            {nextEvent.tier} · {nextEvent.surface} · {nextEvent.location}
+          </p>
+          <p className="text-xs font-semibold text-primary">
+            {formatDateIT(nextEvent.date)}
+          </p>
+        </div>
+      )}
     </EventCard>
   );
 }
