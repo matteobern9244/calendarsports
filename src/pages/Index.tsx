@@ -1,7 +1,7 @@
 import EventCard from "@/components/common/EventCard";
 import SectionHeader from "@/components/common/SectionHeader";
 import { motion } from "framer-motion";
-import { useF1NextRace, useJuventusInfo, useSinnerInfo, useMotoGPNextEvent } from "@/hooks/useSportsData";
+import { useF1NextRace, useJuventusInfo, useSinnerInfo, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus } from "@/lib/dateUtils";
 
 const container = {
