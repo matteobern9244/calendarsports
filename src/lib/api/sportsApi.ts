@@ -51,6 +51,8 @@ export const footballApi = {
 export const tennisApi = {
   getPlayerInfo: () =>
     callEdgeFunction("sports-tennis", { action: "player-info" }),
+  getNextEvent: () =>
+    callEdgeFunction("sports-tennis", { action: "next-event" }),
   getSchedule: (season: number) =>
     callEdgeFunction("sports-tennis", { action: "schedule", season: String(season) }),
   getResults: (season: number) =>

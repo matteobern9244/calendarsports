@@ -68,6 +68,14 @@ export function useSinnerInfo() {
   });
 }
 
+export function useSinnerNextEvent() {
+  return useQuery({
+    queryKey: ["sinner", "next-event"],
+    queryFn: () => tennisApi.getNextEvent(),
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useSinnerSchedule(season: number) {
   return useQuery({
     queryKey: ["sinner", "schedule", season],

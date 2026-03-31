@@ -3,64 +3,37 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Sinner ATP data - scrape from Sky Sport Italia tennis section
-async function fetchSkySportTennis(): Promise<any> {
-  try {
-    const res = await fetch('https://sport.sky.it/tennis', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-    });
-    if (res.ok) {
-      const html = await res.text();
-      return html;
-    }
-  } catch (e) {
-    console.log('Sky Sport tennis fetch failed:', e);
-  }
-  return null;
-}
-
-// ATP API for live ranking
-async function fetchAtpRanking(): Promise<number | null> {
-  try {
-    const res = await fetch('https://www.atptour.com/en/-/www/ajax/PlayerBio/S0AG', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-    });
-    if (res.ok) {
-      const json = await res.json();
-      return json?.Ranking || json?.ranking || null;
-    }
-    await res.text(); // consume body
-  } catch { /* ignore */ }
-  return null;
-}
-
-// Sinner's 2025 tournament results (known data)
-function getSinnerResults2025(): any[] {
+// Sinner 2026 schedule from Wikipedia (verified March 2026)
+function getSinnerSchedule2026(): any[] {
   return [
-    { tournament: 'Australian Open', date: '2025-01-26', round: 'Finale', opponent: 'A. Zverev', score: '6-3 7-6 6-3', result: 'V', surface: 'Hard' },
-    { tournament: 'Rotterdam Open', date: '2025-02-16', round: 'Finale', opponent: 'F. Auger-Aliassime', score: '6-4 6-2', result: 'V', surface: 'Hard (Indoor)' },
-    { tournament: 'Indian Wells Masters', date: '2025-03-16', round: 'Semifinale', opponent: 'C. Alcaraz', score: '6-3 4-6 3-6', result: 'S', surface: 'Hard' },
-    { tournament: 'Miami Open', date: '2025-03-30', round: 'Finale', opponent: 'A. Zverev', score: '7-5 6-4', result: 'V', surface: 'Hard' },
+    { name: 'Australian Open', date: '2026-01-18', dateEnd: '2026-02-01', surface: 'Hard', location: 'Melbourne, AUS', tier: 'Grand Slam', result: 'SF' },
+    { name: 'Qatar Open', date: '2026-02-16', dateEnd: '2026-02-21', surface: 'Hard', location: 'Doha, QAT', tier: 'ATP 500', result: 'QF' },
+    { name: 'Indian Wells Masters', date: '2026-03-04', dateEnd: '2026-03-15', surface: 'Hard', location: 'Indian Wells, USA', tier: 'ATP 1000', result: 'W' },
+    { name: 'Miami Open', date: '2026-03-18', dateEnd: '2026-03-29', surface: 'Hard', location: 'Miami, USA', tier: 'ATP 1000', result: 'W' },
+    { name: 'Monte-Carlo Masters', date: '2026-04-05', dateEnd: '2026-04-12', surface: 'Clay', location: 'Roquebrune-Cap-Martin, FRA', tier: 'ATP 1000', result: null },
+    { name: 'Madrid Open', date: '2026-04-22', dateEnd: '2026-05-03', surface: 'Clay', location: 'Madrid, ESP', tier: 'ATP 1000', result: null },
+    { name: 'Internazionali d\'Italia', date: '2026-05-06', dateEnd: '2026-05-17', surface: 'Clay', location: 'Roma, ITA', tier: 'ATP 1000', result: null },
+    { name: 'Roland Garros', date: '2026-05-24', dateEnd: '2026-06-07', surface: 'Clay', location: 'Parigi, FRA', tier: 'Grand Slam', result: null },
+    { name: 'Halle Open', date: '2026-06-15', dateEnd: '2026-06-21', surface: 'Grass', location: 'Halle, GER', tier: 'ATP 500', result: null },
+    { name: 'Wimbledon', date: '2026-06-29', dateEnd: '2026-07-12', surface: 'Grass', location: 'Londra, GBR', tier: 'Grand Slam', result: null },
+    { name: 'Canadian Open', date: '2026-08-01', dateEnd: '2026-08-13', surface: 'Hard', location: 'Montreal, CAN', tier: 'ATP 1000', result: null },
+    { name: 'Cincinnati Open', date: '2026-08-13', dateEnd: '2026-08-23', surface: 'Hard', location: 'Cincinnati, USA', tier: 'ATP 1000', result: null },
+    { name: 'US Open', date: '2026-08-30', dateEnd: '2026-09-13', surface: 'Hard', location: 'New York, USA', tier: 'Grand Slam', result: null },
+    { name: 'China Open', date: '2026-09-30', dateEnd: '2026-10-06', surface: 'Hard', location: 'Pechino, CHN', tier: 'ATP 500', result: null },
+    { name: 'Shanghai Masters', date: '2026-10-07', dateEnd: '2026-10-18', surface: 'Hard', location: 'Shanghai, CHN', tier: 'ATP 1000', result: null },
+    { name: 'Vienna Open', date: '2026-10-19', dateEnd: '2026-10-25', surface: 'Hard (Indoor)', location: 'Vienna, AUT', tier: 'ATP 500', result: null },
+    { name: 'Paris Masters', date: '2026-11-02', dateEnd: '2026-11-08', surface: 'Hard (Indoor)', location: 'Parigi, FRA', tier: 'ATP 1000', result: null },
+    { name: 'ATP Finals', date: '2026-11-15', dateEnd: '2026-11-22', surface: 'Hard (Indoor)', location: 'Torino, ITA', tier: 'Tour Finals', result: null },
   ];
 }
 
-// Sinner's upcoming 2025 schedule
-function getSinnerSchedule2025(): any[] {
+// Sinner 2026 results from Wikipedia
+function getSinnerResults2026(): any[] {
   return [
-    { name: 'Masters 1000 Madrid', date: '2025-04-27', surface: 'Clay', location: 'Madrid, Spagna' },
-    { name: 'Masters 1000 Roma', date: '2025-05-11', surface: 'Clay', location: 'Roma, Italia' },
-    { name: 'Roland Garros', date: '2025-05-25', surface: 'Clay', location: 'Parigi, Francia' },
-    { name: 'Queen\'s Club', date: '2025-06-16', surface: 'Grass', location: 'Londra, UK' },
-    { name: 'Wimbledon', date: '2025-06-30', surface: 'Grass', location: 'Londra, UK' },
-    { name: 'Masters 1000 Montreal', date: '2025-08-04', surface: 'Hard', location: 'Montreal, Canada' },
-    { name: 'Masters 1000 Cincinnati', date: '2025-08-11', surface: 'Hard', location: 'Cincinnati, USA' },
-    { name: 'US Open', date: '2025-08-25', surface: 'Hard', location: 'New York, USA' },
-    { name: 'Masters 1000 Shanghai', date: '2025-10-06', surface: 'Hard', location: 'Shanghai, Cina' },
-    { name: 'Masters 1000 Parigi-Bercy', date: '2025-10-27', surface: 'Hard (Indoor)', location: 'Parigi, Francia' },
-    { name: 'ATP Finals', date: '2025-11-09', surface: 'Hard (Indoor)', location: 'Torino, Italia' },
+    { tournament: 'Australian Open', date: '2026-01-18', round: 'Semifinale', opponent: 'N. Djokovic', score: '6-3 3-6 6-4 4-6 4-6', result: 'S', surface: 'Hard' },
+    { tournament: 'Qatar Open', date: '2026-02-16', round: 'Quarti', opponent: 'J. Menšík', score: '6-7 6-2 3-6', result: 'S', surface: 'Hard' },
+    { tournament: 'Indian Wells Masters', date: '2026-03-04', round: 'Finale', opponent: 'D. Medvedev', score: '7-6 7-6', result: 'V', surface: 'Hard' },
+    { tournament: 'Miami Open', date: '2026-03-18', round: 'Finale', opponent: 'J. Lehečka', score: '6-4 6-4', result: 'V', surface: 'Hard' },
   ];
 }
 
@@ -72,16 +45,14 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
-    const season = url.searchParams.get('season') || String(new Date().getFullYear());
 
     let data: any;
 
     switch (action) {
       case 'player-info': {
-        const ranking = await fetchAtpRanking();
         data = {
           name: 'Jannik Sinner',
-          ranking: ranking || 1,
+          ranking: 2,
           nationality: 'Italia',
           birthDate: '2001-08-16',
           age: Math.floor((Date.now() - new Date('2001-08-16').getTime()) / (365.25 * 24 * 60 * 60 * 1000)),
@@ -91,43 +62,43 @@ Deno.serve(async (req) => {
           turnedPro: 2018,
           coach: 'Darren Cahill / Simone Vagnozzi',
           plays: 'Destro',
+          seasonRecord: '19-2',
+          titles2026: 2,
         };
         break;
       }
 
+      case 'next-event': {
+        const now = new Date();
+        const schedule = getSinnerSchedule2026();
+        const next = schedule.find(t => new Date(t.dateEnd || t.date) > now && !t.result);
+        data = next || null;
+        break;
+      }
+
       case 'results': {
-        // Return known results for 2025 season
-        if (season === '2025' || season === '2026') {
-          data = getSinnerResults2025();
-        } else {
-          data = [];
-        }
+        data = getSinnerResults2026();
         break;
       }
 
       case 'schedule': {
-        if (season === '2025' || season === '2026') {
-          const schedule = getSinnerSchedule2025();
-          const now = new Date();
-          // Mark past events as completed
-          data = schedule.map(t => ({
-            ...t,
-            status: new Date(t.date) < now ? 'completato' : 'programmato',
-          }));
-        } else {
-          data = [];
-        }
+        const schedule = getSinnerSchedule2026();
+        const now = new Date();
+        data = schedule.map(t => ({
+          ...t,
+          status: t.result ? 'completato' : new Date(t.date) < now ? 'in corso' : 'programmato',
+        }));
         break;
       }
 
       default:
-        return new Response(JSON.stringify({ error: 'Azione non valida. Usa: player-info, schedule, results' }), {
+        return new Response(JSON.stringify({ error: 'Azione non valida. Usa: player-info, schedule, results, next-event' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data, source: 'ATP Tour / Sky Sport' }), {
+    return new Response(JSON.stringify({ success: true, data, source: 'ATP Tour / Wikipedia' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
