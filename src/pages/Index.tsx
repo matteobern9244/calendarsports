@@ -115,10 +115,14 @@ function MotoGPNextCard() {
     <EventCard
       sport="MotoGP"
       title={data.name}
-      subtitle={[data.circuit, data.country].filter(Boolean).join(' · ')}
-      date={data.dateStart ? formatDateIT(data.dateStart) : '—'}
-      status={data.dateStart ? getEventStatus(data.dateStart) : 'prossimo'}
-    />
+      subtitle={`Round ${data.round} · ${data.circuit || data.location}`}
+      date={data.date_start ? formatDateIT(data.date_start) : '—'}
+      status={data.date_start ? getEventStatus(data.date_start) : 'prossimo'}
+    >
+      <p className="text-xs text-muted-foreground">
+        {data.location} · {data.country}
+      </p>
+    </EventCard>
   );
 }
 
