@@ -6,6 +6,11 @@ const corsHeaders = {
 const SKY_BASE = 'https://sport.sky.it';
 const SERIE_A_COMP_ID = '21';
 
+type SkyWidgetResponse = {
+  html: string;
+  seasonUsed: string;
+};
+
 function unescapeHtml(text: string): string {
   return text
     .replace(/&quot;/g, '"')
@@ -32,6 +37,42 @@ function extractWidgetModel(html: string): any {
   }
 }
 
+async function fetchSkyWidget(
+  buildUrl: (season: string) => string,
+  requestedSeason: string,
+): Promise<SkyWidgetResponse> {
+  const parsedSeason = Number.parseInt(requestedSeason, 10);
+  const fallbackSeason = Number.isFinite(parsedSeason) ? String(parsedSeason - 1) : null;
+  const seasonsToTry = [...new Set([requestedSeason, fallbackSeason].filter(Boolean) as string[])];
+
+  let lastStatus: number | null = null;
+
+  for (const season of seasonsToTry) {
+    const widgetUrl = buildUrl(season);
+    console.log('Fetching:', widgetUrl);
+
+    const res = await fetch(widgetUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+    });
+
+    if (res.ok) {
+      return {
+        html: await res.text(),
+        seasonUsed: season,
+      };
+    }
+
+    lastStatus = res.status;
+    console.warn(`Sky Sport widget unavailable for season ${season}: ${res.status}`);
+
+    if (res.status !== 404) {
+      throw new Error(`Sky Sport error: ${res.status}`);
+    }
+  }
+
+  throw new Error(`Sky Sport error: ${lastStatus ?? 404}`);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -43,16 +84,16 @@ Deno.serve(async (req) => {
     const season = url.searchParams.get('season') || '2025';
 
     let data: any;
+    let seasonUsed = season;
 
     switch (action) {
       case 'standings': {
-        const widgetUrl = `${SKY_BASE}/football/competition-ranking/${season}/${SERIE_A_COMP_ID}/widget.html`;
-        console.log('Fetching:', widgetUrl);
-        const res = await fetch(widgetUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        });
-        if (!res.ok) throw new Error(`Sky Sport error: ${res.status}`);
-        const html = await res.text();
+        const response = await fetchSkyWidget(
+          (seasonToLoad) => `${SKY_BASE}/football/competition-ranking/${seasonToLoad}/${SERIE_A_COMP_ID}/widget.html`,
+          season,
+        );
+        const html = response.html;
+        seasonUsed = response.seasonUsed;
         console.log('HTML length:', html.length);
         const model = extractWidgetModel(html);
         if (!model?.rankingLists?.[0]?.teams) {
@@ -83,13 +124,12 @@ Deno.serve(async (req) => {
       }
 
       case 'calendar': {
-        const widgetUrl = `${SKY_BASE}/football/competition-calendar-results/${season}/${SERIE_A_COMP_ID}/widget.html`;
-        console.log('Fetching:', widgetUrl);
-        const res = await fetch(widgetUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        });
-        if (!res.ok) throw new Error(`Sky Sport error: ${res.status}`);
-        const html = await res.text();
+        const response = await fetchSkyWidget(
+          (seasonToLoad) => `${SKY_BASE}/football/competition-calendar-results/${seasonToLoad}/${SERIE_A_COMP_ID}/widget.html`,
+          season,
+        );
+        const html = response.html;
+        seasonUsed = response.seasonUsed;
         console.log('Calendar HTML length:', html.length);
         const model = extractWidgetModel(html);
         if (!model) {
@@ -132,12 +172,12 @@ Deno.serve(async (req) => {
       }
 
       case 'next-match': {
-        const widgetUrl = `${SKY_BASE}/football/competition-ranking/${season}/${SERIE_A_COMP_ID}/widget.html`;
-        const res = await fetch(widgetUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        });
-        if (!res.ok) throw new Error(`Sky Sport error: ${res.status}`);
-        const html = await res.text();
+        const response = await fetchSkyWidget(
+          (seasonToLoad) => `${SKY_BASE}/football/competition-ranking/${seasonToLoad}/${SERIE_A_COMP_ID}/widget.html`,
+          season,
+        );
+        const html = response.html;
+        seasonUsed = response.seasonUsed;
         const model = extractWidgetModel(html);
         if (!model?.rankingLists?.[0]?.teams) {
           throw new Error('Dati non trovati');
@@ -173,7 +213,7 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data, source: 'Sky Sport Italia' }), {
+    return new Response(JSON.stringify({ success: true, data, source: 'Sky Sport Italia', requestedSeason: season, seasonUsed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
