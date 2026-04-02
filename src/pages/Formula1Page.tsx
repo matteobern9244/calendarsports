@@ -22,7 +22,7 @@ export default function Formula1Page() {
       <SectionHeader title="Formula 1" subtitle="Calendario, classifiche e highlights — Dati reali da Jolpica/Ergast API" />
 
       <div className="mb-6">
-        <SeasonSelector currentSeason={seasons.f1} onSelect={(y) => setSeason("f1", y)} minYear={1950} />
+        <SeasonSelector currentSeason={seasons.f1} onSelect={(y) => setSeason("f1", y)} />
       </div>
 
       <Tabs defaultValue="calendario" className="w-full">

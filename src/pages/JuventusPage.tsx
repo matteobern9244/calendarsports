@@ -20,7 +20,7 @@ export default function JuventusPage() {
       <SectionHeader title="Juventus" subtitle="Dati reali da Sky Sport Italia" />
 
       <div className="mb-6">
-        <SeasonSelector currentSeason={seasons.juventus} onSelect={(y) => setSeason("juventus", y)} minYear={2019} />
+        <SeasonSelector currentSeason={seasons.juventus} onSelect={(y) => setSeason("juventus", y)} />
       </div>
 
       <Tabs defaultValue="classifica" className="w-full">
