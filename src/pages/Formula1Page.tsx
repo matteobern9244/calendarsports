@@ -51,6 +51,7 @@ export default function Formula1Page() {
                   date={formatDateIT(r.date)}
                   time={formatTimeIT(r.time, r.date)}
                   status={getEventStatus(r.date)}
+                  highlight={idx === nextIdx}
                 >
                   <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
                     {r.firstPractice && <span>PL1: {formatTimeIT(r.firstPractice.time, r.firstPractice.date)}</span>}
@@ -65,8 +66,8 @@ export default function Formula1Page() {
                 </EventCard>
               ))}
             </motion.div>
-          )}
-        </TabsContent>
+            );
+          })()}
 
         <TabsContent value="piloti">
           {drvLoading && <LoadingState message="Caricamento classifica piloti..." />}
