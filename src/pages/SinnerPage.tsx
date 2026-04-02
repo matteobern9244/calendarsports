@@ -50,21 +50,27 @@ export default function SinnerPage() {
           {!resLoading && !resError && (!results || results.length === 0) && (
             <EmptyState message={`Nessun risultato disponibile per la stagione ${seasons.sinner}. Lo scraping ATP potrebbe essere limitato.`} />
           )}
-          {results && results.length > 0 && (
+          {results && results.length > 0 && (() => {
+            const sorted = [...results].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            const now = Date.now();
+            const nextIdx = sorted.findIndex((r: any) => new Date(r.date).getTime() > now);
+            return (
             <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-              {[...results].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((r: any, i: number) => (
+              {sorted.map((r: any, i: number) => (
                 <EventCard
                   key={i}
                   sport={r.tournament || 'ATP'}
                   title={r.opponent ? `vs. ${r.opponent}` : r.tournament}
                   date={r.date || '—'}
                   status="completato"
+                  highlight={i === nextIdx}
                 >
                   {r.score && <p className="text-sm font-heading font-bold text-primary">{r.score}</p>}
                 </EventCard>
               ))}
             </motion.div>
-          )}
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="tornei">
