@@ -68,6 +68,7 @@ export default function Formula1Page() {
             </motion.div>
             );
           })()}
+        </TabsContent>
 
         <TabsContent value="piloti">
           {drvLoading && <LoadingState message="Caricamento classifica piloti..." />}

@@ -36,9 +36,13 @@ export default function MotoGPPage() {
           {!calLoading && !calError && (!calendar || calendar.length === 0) && (
             <EmptyState message="Nessun evento in calendario per questa stagione" />
           )}
-          {calendar && calendar.length > 0 && (
+          {calendar && calendar.length > 0 && (() => {
+            const sorted = [...calendar].sort((a: any, b: any) => new Date(a.date || a.date_start).getTime() - new Date(b.date || b.date_start).getTime());
+            const now = Date.now();
+            const nextIdx = sorted.findIndex((e: any) => new Date(e.date || e.date_start).getTime() > now);
+            return (
             <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {[...calendar].sort((a: any, b: any) => new Date(a.date || a.date_start).getTime() - new Date(b.date || b.date_start).getTime()).map((e: any, i: number) => (
+              {sorted.map((e: any, i: number) => (
                 <EventCard
                   key={e.id || i}
                   sport={e.round ? `Round ${e.round}` : "MotoGP"}
@@ -47,6 +51,7 @@ export default function MotoGPPage() {
                   date={formatDateIT(e.date)}
                   time={e.time ? formatTimeIT(e.time, e.date) : undefined}
                   status={getEventStatus(e.date)}
+                  highlight={i === nextIdx}
                 >
                   {e.result && (
                     <p className="text-sm text-muted-foreground">{e.result}</p>
@@ -54,7 +59,8 @@ export default function MotoGPPage() {
                 </EventCard>
               ))}
             </motion.div>
-          )}
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="classifica">
