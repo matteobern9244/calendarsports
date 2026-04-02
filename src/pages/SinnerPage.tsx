@@ -35,7 +35,7 @@ export default function SinnerPage() {
       )}
 
       <div className="mb-6">
-        <SeasonSelector currentSeason={seasons.sinner} onSelect={(y) => setSeason("sinner", y)} minYear={2020} />
+        <SeasonSelector currentSeason={seasons.sinner} onSelect={(y) => setSeason("sinner", y)} />
       </div>
 
       <Tabs defaultValue="risultati" className="w-full">

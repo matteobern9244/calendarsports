@@ -21,7 +21,7 @@ export default function MotoGPPage() {
       <SectionHeader title="MotoGP" subtitle="Calendario, classifiche e highlights — Dati da TheSportsDB" />
 
       <div className="mb-6">
-        <SeasonSelector currentSeason={seasons.motogp} onSelect={(y) => setSeason("motogp", y)} minYear={2020} />
+        <SeasonSelector currentSeason={seasons.motogp} onSelect={(y) => setSeason("motogp", y)} />
       </div>
 
       <Tabs defaultValue="calendario" className="w-full">

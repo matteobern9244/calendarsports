@@ -9,7 +9,7 @@ interface SeasonSelectorProps {
 export default function SeasonSelector({
   currentSeason,
   onSelect,
-  minYear = 2020,
+  minYear = 2026,
 }: SeasonSelectorProps) {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - minYear + 1 }, (_, i) => currentYear - i);

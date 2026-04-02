@@ -12,10 +12,10 @@ interface SeasonPreferences {
 const currentYear = new Date().getFullYear();
 
 const defaults: SeasonPreferences = {
-  sinner: currentYear,
-  juventus: currentYear,
-  f1: currentYear,
-  motogp: currentYear,
+  sinner: Math.max(currentYear, 2026),
+  juventus: Math.max(currentYear, 2026),
+  f1: Math.max(currentYear, 2026),
+  motogp: Math.max(currentYear, 2026),
 };
 
 function loadPreferences(): SeasonPreferences {
