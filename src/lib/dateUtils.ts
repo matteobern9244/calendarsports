@@ -2,12 +2,10 @@
 export function formatDateIT(dateStr: string): string {
   try {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("it-IT", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: "Europe/Rome",
-    });
+    const day = date.toLocaleDateString("it-IT", { day: "2-digit", timeZone: "Europe/Rome" });
+    const month = date.toLocaleDateString("it-IT", { month: "2-digit", timeZone: "Europe/Rome" });
+    const year = date.toLocaleDateString("it-IT", { year: "numeric", timeZone: "Europe/Rome" });
+    return `${day}/${month}/${year}`;
   } catch {
     return dateStr;
   }
