@@ -84,7 +84,7 @@ export default function JuventusPage() {
           {!calLoading && !calError && (!calendar || calendar.length === 0) && <EmptyState message="Calendario partite non disponibile" />}
           {calendar && calendar.length > 0 && (
             <motion.div className="grid gap-3 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {calendar.map((m: any, i: number) => {
+              {[...calendar].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((m: any, i: number) => {
                 const isFinished = m.status === 'FullTime';
                 const isJuveHome = m.homeTeam?.toLowerCase().includes('juventus');
                 const opponent = isJuveHome ? m.awayTeam : m.homeTeam;
