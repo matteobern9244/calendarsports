@@ -52,7 +52,7 @@ export default function SinnerPage() {
           )}
           {results && results.length > 0 && (
             <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-              {results.map((r: any, i: number) => (
+              {[...results].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((r: any, i: number) => (
                 <EventCard
                   key={i}
                   sport={r.tournament || 'ATP'}

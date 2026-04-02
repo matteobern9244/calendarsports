@@ -38,7 +38,7 @@ export default function MotoGPPage() {
           )}
           {calendar && calendar.length > 0 && (
             <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {calendar.map((e: any, i: number) => (
+              {[...calendar].sort((a: any, b: any) => new Date(a.date || a.date_start).getTime() - new Date(b.date || b.date_start).getTime()).map((e: any, i: number) => (
                 <EventCard
                   key={e.id || i}
                   sport={e.round ? `Round ${e.round}` : "MotoGP"}

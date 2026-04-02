@@ -38,7 +38,7 @@ export default function Formula1Page() {
           {!calLoading && !calError && (!calendar || calendar.length === 0) && <EmptyState message="Nessun GP in calendario per questa stagione" />}
           {calendar && calendar.length > 0 && (
             <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {calendar.map((r: any) => (
+              {[...calendar].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((r: any) => (
                 <EventCard
                   key={r.round}
                   sport={`Round ${r.round}`}
