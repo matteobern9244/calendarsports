@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import SectionHeader from "@/components/common/SectionHeader";
 import SeasonSelector from "@/components/common/SeasonSelector";
 import EventCard from "@/components/common/EventCard";
@@ -82,9 +83,13 @@ export default function JuventusPage() {
           {calLoading && <LoadingState message="Caricamento calendario da Sky Sport..." />}
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
           {!calLoading && !calError && (!calendar || calendar.length === 0) && <EmptyState message="Calendario partite non disponibile" />}
-          {calendar && calendar.length > 0 && (
+          {calendar && calendar.length > 0 && (() => {
+            const sorted = [...calendar].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            const now = Date.now();
+            const nextIdx = sorted.findIndex((m: any) => m.status !== 'FullTime' && new Date(m.date).getTime() > now);
+            return (
             <motion.div className="grid gap-3 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {[...calendar].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((m: any, i: number) => {
+              {sorted.map((m: any, i: number) => {
                 const isFinished = m.status === 'FullTime';
                 const isJuveHome = m.homeTeam?.toLowerCase().includes('juventus');
                 const opponent = isJuveHome ? m.awayTeam : m.homeTeam;
@@ -97,13 +102,24 @@ export default function JuventusPage() {
                 const resultColor = result === 'V' ? 'text-green-500' : result === 'S' ? 'text-red-500' : 'text-yellow-500';
                 const dateStr = m.date ? new Date(m.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/Rome' }) : '—';
                 const timeStr = m.date ? new Date(m.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }) : '';
+                const isNext = i === nextIdx;
 
                 return (
                   <motion.div
                     key={i}
                     variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
-                    className="rounded-xl border border-border bg-card p-4 flex items-center gap-3"
+                    className={cn(
+                      "relative rounded-xl border bg-card p-4 flex items-center gap-3 transition-all",
+                      isNext
+                        ? "border-primary/60 shadow-md shadow-primary/10 ring-1 ring-primary/20"
+                        : "border-border"
+                    )}
                   >
+                    {isNext && (
+                      <span className="absolute -top-2.5 left-4 rounded-full bg-primary px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground">
+                        Prossima
+                      </span>
+                    )}
                     <div className="flex-shrink-0 w-8">
                       <span className="text-xs text-muted-foreground font-heading">G{m.matchday}</span>
                     </div>
@@ -130,7 +146,8 @@ export default function JuventusPage() {
                 );
               })}
             </motion.div>
-          )}
+            );
+          })()}
         </TabsContent>
       </Tabs>
     </div>

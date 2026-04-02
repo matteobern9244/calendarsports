@@ -36,9 +36,13 @@ export default function Formula1Page() {
           {calLoading && <LoadingState message="Caricamento calendario F1..." />}
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
           {!calLoading && !calError && (!calendar || calendar.length === 0) && <EmptyState message="Nessun GP in calendario per questa stagione" />}
-          {calendar && calendar.length > 0 && (
+          {calendar && calendar.length > 0 && (() => {
+            const sorted = [...calendar].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            const now = Date.now();
+            const nextIdx = sorted.findIndex((r: any) => new Date(r.date).getTime() > now);
+            return (
             <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {[...calendar].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((r: any) => (
+              {sorted.map((r: any, idx: number) => (
                 <EventCard
                   key={r.round}
                   sport={`Round ${r.round}`}
@@ -47,6 +51,7 @@ export default function Formula1Page() {
                   date={formatDateIT(r.date)}
                   time={formatTimeIT(r.time, r.date)}
                   status={getEventStatus(r.date)}
+                  highlight={idx === nextIdx}
                 >
                   <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
                     {r.firstPractice && <span>PL1: {formatTimeIT(r.firstPractice.time, r.firstPractice.date)}</span>}
@@ -61,7 +66,8 @@ export default function Formula1Page() {
                 </EventCard>
               ))}
             </motion.div>
-          )}
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="piloti">

@@ -10,6 +10,7 @@ interface EventCardProps {
   date: string;
   time?: string;
   status?: "prossimo" | "in_corso" | "completato";
+  highlight?: boolean;
   children?: React.ReactNode;
   className?: string;
 }
@@ -21,6 +22,7 @@ export default function EventCard({
   date,
   time,
   status = "prossimo",
+  highlight = false,
   children,
   className,
 }: EventCardProps) {
@@ -30,10 +32,18 @@ export default function EventCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
       className={cn(
-        "rounded-xl border border-border bg-card p-5 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5",
+        "relative rounded-xl border bg-card p-5 transition-all duration-300 hover:shadow-lg",
+        highlight
+          ? "border-primary/60 shadow-md shadow-primary/10 ring-1 ring-primary/20 hover:shadow-primary/20"
+          : "border-border hover:border-primary/30 hover:shadow-primary/5",
         className
       )}
     >
+      {highlight && (
+        <span className="absolute -top-2.5 left-4 rounded-full bg-primary px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground">
+          Prossimo
+        </span>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-heading font-bold tracking-[0.2em] uppercase text-primary">
