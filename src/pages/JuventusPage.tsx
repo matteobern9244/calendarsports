@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import SectionHeader from "@/components/common/SectionHeader";
 import SeasonSelector from "@/components/common/SeasonSelector";
 import EventCard from "@/components/common/EventCard";
