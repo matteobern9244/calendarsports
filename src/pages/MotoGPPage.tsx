@@ -6,7 +6,7 @@ import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useMotoGPCalendar, useMotoGPStandings } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT, getEventStatus } from "@/lib/dateUtils";
+import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,27 +37,49 @@ export default function MotoGPPage() {
             <EmptyState message="Nessun evento in calendario per questa stagione" />
           )}
           {calendar && calendar.length > 0 && (() => {
-            const sorted = [...calendar].sort((a: any, b: any) => new Date(a.date || a.date_start).getTime() - new Date(b.date || b.date_start).getTime());
-            const now = Date.now();
-            const nextIdx = sorted.findIndex((e: any) => new Date(e.date || e.date_start).getTime() > now);
+            const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
+              calendar,
+              (event: any) => event.date || event.date_start
+            );
             return (
             <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {sorted.map((e: any, i: number) => (
+              {orderedCalendar.map((e: any, i: number) => {
+                const startDate = e.date || e.date_start;
+                const endDate = e.date_end;
+                const location = [e.circuit, e.location || e.venue, e.city, e.country].filter(Boolean).join(" · ");
+                const startTimestamp = startDate ? new Date(startDate).getTime() : NaN;
+                const endTimestamp = endDate ? new Date(endDate).getTime() + (24 * 60 * 60 * 1000) - 1 : startTimestamp;
+
+                const status = Number.isFinite(startTimestamp) && Number.isFinite(endTimestamp)
+                  ? Date.now() > endTimestamp
+                    ? "completato"
+                    : Date.now() >= startTimestamp
+                      ? "in_corso"
+                      : "prossimo"
+                  : startDate
+                    ? getEventStatus(startDate)
+                    : "prossimo";
+
+                return (
                 <EventCard
-                  key={e.id || i}
+                  key={e.id || e.round || i}
                   sport={e.round ? `Round ${e.round}` : "MotoGP"}
                   title={e.name}
-                  subtitle={[e.venue, e.city, e.country].filter(Boolean).join(" · ")}
-                  date={formatDateIT(e.date)}
-                  time={e.time ? formatTimeIT(e.time, e.date) : undefined}
-                  status={getEventStatus(e.date)}
-                  highlight={i === nextIdx}
+                  subtitle={location}
+                  date={startDate ? formatDateIT(startDate) : "—"}
+                  time={e.time ? formatTimeIT(e.time, startDate) : undefined}
+                  status={status}
+                  highlight={i === highlightIndex}
                 >
+                  {endDate && startDate !== endDate && (
+                    <p className="text-sm text-muted-foreground">Weekend di gara fino al {formatDateIT(endDate)}</p>
+                  )}
                   {e.result && (
                     <p className="text-sm text-muted-foreground">{e.result}</p>
                   )}
                 </EventCard>
-              ))}
+                );
+              })}
             </motion.div>
             );
           })()}

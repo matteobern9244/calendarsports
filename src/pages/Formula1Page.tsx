@@ -6,7 +6,7 @@ import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useF1Calendar, useF1DriverStandings, useF1ConstructorStandings } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT, getEventStatus } from "@/lib/dateUtils";
+import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,12 +37,10 @@ export default function Formula1Page() {
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
           {!calLoading && !calError && (!calendar || calendar.length === 0) && <EmptyState message="Nessun GP in calendario per questa stagione" />}
           {calendar && calendar.length > 0 && (() => {
-            const sorted = [...calendar].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            const now = Date.now();
-            const nextIdx = sorted.findIndex((r: any) => new Date(r.date).getTime() > now);
+            const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(calendar, (race: any) => race.date);
             return (
             <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {sorted.map((r: any, idx: number) => (
+              {orderedCalendar.map((r: any, idx: number) => (
                 <EventCard
                   key={r.round}
                   sport={`Round ${r.round}`}
@@ -51,7 +49,7 @@ export default function Formula1Page() {
                   date={formatDateIT(r.date)}
                   time={formatTimeIT(r.time, r.date)}
                   status={getEventStatus(r.date)}
-                  highlight={idx === nextIdx}
+                  highlight={idx === highlightIndex}
                 >
                   <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
                     {r.firstPractice && <span>PL1: {formatTimeIT(r.firstPractice.time, r.firstPractice.date)}</span>}

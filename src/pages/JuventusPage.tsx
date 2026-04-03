@@ -7,7 +7,7 @@ import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
+import { formatDateIT, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -85,12 +85,14 @@ export default function JuventusPage() {
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
           {!calLoading && !calError && (!calendar || calendar.length === 0) && <EmptyState message="Calendario partite non disponibile" />}
           {calendar && calendar.length > 0 && (() => {
-            const sorted = [...calendar].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            const now = Date.now();
-            const nextIdx = sorted.findIndex((m: any) => m.status !== 'FullTime' && new Date(m.date).getTime() > now);
+            const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
+              calendar,
+              (match: any) => match.date,
+              (match: any) => match.status !== 'FullTime'
+            );
             return (
             <motion.div className="grid gap-3 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {sorted.map((m: any, i: number) => {
+              {orderedCalendar.map((m: any, i: number) => {
                 const isFinished = m.status === 'FullTime';
                 const isJuveHome = m.homeTeam?.toLowerCase().includes('juventus');
                 const opponent = isJuveHome ? m.awayTeam : m.homeTeam;
@@ -103,7 +105,7 @@ export default function JuventusPage() {
                 const resultColor = result === 'V' ? 'text-green-500' : result === 'S' ? 'text-red-500' : 'text-yellow-500';
                 const dateStr = m.date ? formatDateIT(m.date) : '—';
                 const timeStr = m.date ? new Date(m.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }) : '';
-                const isNext = i === nextIdx;
+                const isNext = i === highlightIndex;
 
                 return (
                   <motion.div
