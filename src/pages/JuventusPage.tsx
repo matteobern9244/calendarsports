@@ -100,8 +100,8 @@ export default function JuventusPage() {
                   ? juveGoals > oppGoals ? 'V' : juveGoals < oppGoals ? 'S' : 'P'
                   : null;
                 const resultColor = result === 'V' ? 'text-green-500' : result === 'S' ? 'text-red-500' : 'text-yellow-500';
-                const dateStr = m.date ? new Date(m.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/Rome' }) : '—';
-                const timeStr = m.date ? new Date(m.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }) : '';
+                const dateStr = m.date ? formatDateIT(m.date) : '—';
+                const timeStr = m.date ? formatTimeIT(undefined, m.date) : '';
                 const isNext = i === nextIdx;
 
                 return (

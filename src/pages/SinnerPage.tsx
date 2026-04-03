@@ -61,7 +61,7 @@ export default function SinnerPage() {
                   key={i}
                   sport={r.tournament || 'ATP'}
                   title={r.opponent ? `vs. ${r.opponent}` : r.tournament}
-                  date={r.date || '—'}
+                  date={r.date ? formatDateIT(r.date) : '—'}
                   status="completato"
                   highlight={i === nextIdx}
                 >
