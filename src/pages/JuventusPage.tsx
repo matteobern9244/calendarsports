@@ -102,7 +102,7 @@ export default function JuventusPage() {
                   : null;
                 const resultColor = result === 'V' ? 'text-green-500' : result === 'S' ? 'text-red-500' : 'text-yellow-500';
                 const dateStr = m.date ? formatDateIT(m.date) : '—';
-                const timeStr = m.date ? formatTimeIT(undefined, m.date) : '';
+                const timeStr = m.date ? new Date(m.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }) : '';
                 const isNext = i === nextIdx;
 
                 return (
