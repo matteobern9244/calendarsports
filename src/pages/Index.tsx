@@ -1,144 +1,132 @@
+import { useMemo } from "react";
 import EventCard from "@/components/common/EventCard";
 import SectionHeader from "@/components/common/SectionHeader";
+import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
-import { useF1NextRace, useJuventusInfo, useSinnerInfo, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
+import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus } from "@/lib/dateUtils";
+
+interface UpcomingEvent {
+  sport: string;
+  title: string;
+  subtitle?: string;
+  date: string;
+  rawDate: string;
+  time?: string;
+  children?: React.ReactNode;
+}
 
 const container = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.1 } },
+  show: { transition: { staggerChildren: 0.08 } },
 };
 
-function F1NextCard() {
-  const { data, isLoading, error } = useF1NextRace();
-  if (isLoading) return <div className="rounded-xl border border-border bg-card p-5 animate-pulse h-48" />;
-  if (error || !data) return (
-    <EventCard sport="Formula 1" title="Prossimo GP" date="—" status="prossimo">
-      <p className="text-xs text-destructive">Dati non disponibili</p>
-    </EventCard>
-  );
-  return (
-    <EventCard
-      sport="Formula 1"
-      title={data.raceName}
-      subtitle={`Round ${data.round} · ${data.circuit}`}
-      date={formatDateIT(data.date)}
-      time={formatTimeIT(data.time, data.date)}
-      status={getEventStatus(data.date)}
-    >
-      <div className="space-y-1.5">
-        <p className="text-xs font-medium text-foreground">Sessioni del weekend:</p>
-        <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-          {data.firstPractice && <span>PL1: {formatTimeIT(data.firstPractice.time, data.firstPractice.date)}</span>}
-          {data.sprint && <span>Sprint: {formatTimeIT(data.sprint.time, data.sprint.date)}</span>}
-          {data.qualifying && <span>Qual: {formatTimeIT(data.qualifying.time, data.qualifying.date)}</span>}
-          <span className="col-span-2 font-semibold text-primary">Gara: {formatDateIT(data.date)} {formatTimeIT(data.time, data.date)}</span>
-        </div>
-      </div>
-    </EventCard>
-  );
-}
-
-function JuventusNextCard() {
-  const { data, isLoading, error } = useJuventusInfo(2025);
-  if (isLoading) return <div className="rounded-xl border border-border bg-card p-5 animate-pulse h-32" />;
-  if (error || !data) return (
-    <EventCard sport="Calcio · Juventus" title="Juventus" date="—" status="prossimo">
-      <p className="text-xs text-muted-foreground">Dati non disponibili al momento</p>
-    </EventCard>
-  );
-  return (
-    <EventCard
-      sport="Calcio · Serie A"
-      title={`Juventus — ${data.position}° posto`}
-      subtitle={`${data.points} punti · ${data.wins}V ${data.draws}N ${data.losses}P`}
-      date={`${data.played} partite giocate`}
-      status="prossimo"
-    >
-      {data.lastMatches && data.lastMatches.length > 0 && (
-        <div className="flex gap-1.5">
-          <span className="text-xs text-muted-foreground mr-1">Ultime:</span>
-          {data.lastMatches.map((m: any, i: number) => (
-            <span key={i} className={`inline-flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold ${
-              m.result === 'V' ? 'bg-green-500/20 text-green-600' :
-              m.result === 'P' ? 'bg-red-500/20 text-red-600' :
-              'bg-yellow-500/20 text-yellow-600'
-            }`}>{m.result}</span>
-          ))}
-        </div>
-      )}
-    </EventCard>
-  );
-}
-
-function SinnerNextCard() {
-  const { data: info, isLoading: infoLoading } = useSinnerInfo();
-  const { data: nextEvent, isLoading: eventLoading } = useSinnerNextEvent();
-  const isLoading = infoLoading || eventLoading;
-  if (isLoading) return <div className="rounded-xl border border-border bg-card p-5 animate-pulse h-32" />;
-  if (!info && !nextEvent) return (
-    <EventCard sport="Tennis · Jannik Sinner" title="Jannik Sinner" date="—" status="prossimo">
-      <p className="text-xs text-muted-foreground">Dati non disponibili al momento</p>
-    </EventCard>
-  );
-  return (
-    <EventCard
-      sport="Tennis · ATP"
-      title={info?.name || 'Jannik Sinner'}
-      subtitle={`Ranking ATP: #${info?.ranking || '2'} · Record 2026: ${info?.seasonRecord || '—'}`}
-      date={nextEvent ? `Prossimo: ${nextEvent.name}` : '—'}
-      status={nextEvent ? 'prossimo' : 'prossimo'}
-    >
-      {nextEvent && (
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">
-            {nextEvent.tier} · {nextEvent.surface} · {nextEvent.location}
-          </p>
-          <p className="text-xs font-semibold text-primary">
-            {formatDateIT(nextEvent.date)}
-          </p>
-        </div>
-      )}
-    </EventCard>
-  );
-}
-
-function MotoGPNextCard() {
-  const { data, isLoading, error } = useMotoGPNextEvent();
-  if (isLoading) return <div className="rounded-xl border border-border bg-card p-5 animate-pulse h-32" />;
-  if (error || !data) return (
-    <EventCard sport="MotoGP" title="Prossimo GP" date="—" status="prossimo">
-      <p className="text-xs text-muted-foreground">Dati non disponibili al momento</p>
-    </EventCard>
-  );
-  return (
-    <EventCard
-      sport="MotoGP"
-      title={data.name}
-      subtitle={`Round ${data.round} · ${data.circuit || data.location}`}
-      date={data.date_start ? formatDateIT(data.date_start) : '—'}
-      status={data.date_start ? getEventStatus(data.date_start) : 'prossimo'}
-    >
-      <p className="text-xs text-muted-foreground">
-        {data.location} · {data.country}
-      </p>
-    </EventCard>
-  );
-}
-
 export default function HomePage() {
+  const { data: f1Data, isLoading: f1Loading } = useF1NextRace();
+  const { data: juveCalendar, isLoading: juveLoading } = useJuventusCalendar(2025);
+  const { data: sinnerNext, isLoading: sinnerLoading } = useSinnerNextEvent();
+  const { data: motogpNext, isLoading: motogpLoading } = useMotoGPNextEvent();
+
+  const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
+
+  const events = useMemo(() => {
+    const upcoming: UpcomingEvent[] = [];
+    const now = Date.now();
+
+    // F1
+    if (f1Data?.date) {
+      upcoming.push({
+        sport: "Formula 1",
+        title: f1Data.raceName,
+        subtitle: `Round ${f1Data.round} · ${f1Data.circuit}`,
+        rawDate: f1Data.date,
+        date: formatDateIT(f1Data.date),
+        time: formatTimeIT(f1Data.time, f1Data.date),
+      });
+    }
+
+    // Juventus — prossima partita dal calendario
+    if (juveCalendar && Array.isArray(juveCalendar)) {
+      const nextMatch = [...juveCalendar]
+        .filter((m: any) => m.status !== "FullTime" && m.date && new Date(m.date).getTime() > now)
+        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+      if (nextMatch) {
+        const isHome = nextMatch.homeTeam?.toLowerCase().includes("juventus");
+        const opponent = isHome ? nextMatch.awayTeam : nextMatch.homeTeam;
+        const timeStr = new Date(nextMatch.date).toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Europe/Rome",
+        });
+        upcoming.push({
+          sport: "Calcio · Juventus",
+          title: `${isHome ? "vs" : "@"} ${opponent}`,
+          subtitle: `Serie A · Giornata ${nextMatch.matchday || "—"}`,
+          rawDate: nextMatch.date,
+          date: formatDateIT(nextMatch.date),
+          time: timeStr,
+        });
+      }
+    }
+
+    // Sinner
+    if (sinnerNext?.date) {
+      upcoming.push({
+        sport: "Tennis · Sinner",
+        title: sinnerNext.name,
+        subtitle: `${sinnerNext.tier} · ${sinnerNext.surface} · ${sinnerNext.location}`,
+        rawDate: sinnerNext.date,
+        date: formatDateIT(sinnerNext.date),
+      });
+    }
+
+    // MotoGP
+    if (motogpNext) {
+      const startDate = motogpNext.date_start || motogpNext.date;
+      if (startDate) {
+        upcoming.push({
+          sport: "MotoGP",
+          title: motogpNext.name,
+          subtitle: `Round ${motogpNext.round} · ${motogpNext.circuit || motogpNext.location}`,
+          rawDate: startDate,
+          date: formatDateIT(startDate),
+        });
+      }
+    }
+
+    // Ordina per data più vicina
+    return upcoming.sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
+  }, [f1Data, juveCalendar, sinnerNext, motogpNext]);
+
   return (
     <div className="container py-8 sm:py-12">
       <SectionHeader
         title="Prossimi Eventi"
-        subtitle="Dati reali da Jolpica (F1), Sky Sport Italia (Juventus), ATP Tour (Sinner), MotoGP.com"
+        subtitle="Tutti gli eventi imminenti ordinati per data"
       />
-      <motion.div variants={container} initial="hidden" animate="show" className="grid gap-5 sm:grid-cols-2">
-        <SinnerNextCard />
-        <JuventusNextCard />
-        <F1NextCard />
-        <MotoGPNextCard />
-      </motion.div>
+
+      {isLoading && <LoadingState message="Caricamento prossimi eventi..." />}
+
+      {!isLoading && events.length === 0 && (
+        <p className="text-center text-muted-foreground py-12">Nessun evento in programma</p>
+      )}
+
+      {events.length > 0 && (
+        <motion.div variants={container} initial="hidden" animate="show" className="grid gap-5 sm:grid-cols-2">
+          {events.map((ev, idx) => (
+            <EventCard
+              key={`${ev.sport}-${ev.rawDate}`}
+              sport={ev.sport}
+              title={ev.title}
+              subtitle={ev.subtitle}
+              date={ev.date}
+              time={ev.time}
+              status={getEventStatus(ev.rawDate)}
+              highlight={idx === 0}
+            />
+          ))}
+        </motion.div>
+      )}
     </div>
   );
 }
