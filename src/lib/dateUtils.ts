@@ -11,6 +11,36 @@ export function formatDateIT(dateStr: string): string {
   }
 }
 
+function getDateTimestamp(dateStr?: string | null): number {
+  if (!dateStr) return Number.POSITIVE_INFINITY;
+
+  const timestamp = new Date(dateStr).getTime();
+  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+}
+
+export function prioritizeNextUpcoming<T>(
+  items: T[],
+  getDate: (item: T) => string | undefined | null,
+  isUpcomingCandidate: (item: T) => boolean = () => true
+): { items: T[]; highlightIndex: number } {
+  const sorted = [...items].sort((a, b) => getDateTimestamp(getDate(a)) - getDateTimestamp(getDate(b)));
+  const now = Date.now();
+
+  const nextIndex = sorted.findIndex((item) => {
+    const timestamp = getDateTimestamp(getDate(item));
+    return Number.isFinite(timestamp) && timestamp > now && isUpcomingCandidate(item);
+  });
+
+  if (nextIndex <= 0) {
+    return { items: sorted, highlightIndex: nextIndex };
+  }
+
+  return {
+    items: [...sorted.slice(nextIndex), ...sorted.slice(0, nextIndex)],
+    highlightIndex: 0,
+  };
+}
+
 /** Format UTC time string (HH:mm:ssZ) to Italian local time */
 export function formatTimeIT(timeStr?: string | null, dateStr?: string): string {
   if (!timeStr) return "";

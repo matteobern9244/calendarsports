@@ -6,7 +6,7 @@ import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useSportsData";
-import { formatDateIT } from "@/lib/dateUtils";
+import { formatDateIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -52,19 +52,17 @@ export default function SinnerPage() {
             <EmptyState message={`Nessun risultato disponibile per la stagione ${seasons.sinner}. Lo scraping ATP potrebbe essere limitato.`} />
           )}
           {results && results.length > 0 && (() => {
-            const sorted = [...results].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            const now = Date.now();
-            const nextIdx = sorted.findIndex((r: any) => new Date(r.date).getTime() > now);
+            const { items: orderedResults, highlightIndex } = prioritizeNextUpcoming(results, (result: any) => result.date);
             return (
             <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-              {sorted.map((r: any, i: number) => (
+              {orderedResults.map((r: any, i: number) => (
                 <EventCard
                   key={i}
                   sport={r.tournament || 'ATP'}
                   title={r.opponent ? `vs. ${r.opponent}` : r.tournament}
                   date={r.date ? formatDateIT(r.date) : '—'}
-                  status="completato"
-                  highlight={i === nextIdx}
+                  status={r.date ? getEventStatus(r.date) : 'completato'}
+                  highlight={i === highlightIndex}
                 >
                   {r.score && <p className="text-sm font-heading font-bold text-primary">{r.score}</p>}
                 </EventCard>
