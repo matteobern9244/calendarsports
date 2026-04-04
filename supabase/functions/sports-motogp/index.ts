@@ -31,67 +31,78 @@ const MOTOGP_CALENDAR_2026 = [
 const MOTOGP_LEAGUE_ID = '4407';
 
 function parseStandingsFromText(text: string): Array<{ position: number; name: string; team: string; points: number }> {
-  // Find the standings section - look for "Standing after" pattern
-  const standingMatch = text.match(/(?:Rider\s+)?Stand(?:ing|ings?)\s+after\s+[\w\s]+[\r\n]+([\s\S]+)$/i);
-  if (!standingMatch) return [];
+  // Find "standing(s) after" section and get everything after the header line
+  const standingIdx = text.toLowerCase().search(/(?:championship\s+)?stand(?:ing|ings)\s*(?:,\s*top\s*\d+\s*)?\s*after/i);
+  if (standingIdx === -1) return [];
 
-  const standingsText = standingMatch[1];
-  const lines = standingsText.split(/[\r\n]+/).filter(l => l.trim());
+  const afterStanding = text.substring(standingIdx);
+  const lines = afterStanding.split(/[\r\n]+/);
   const results: Array<{ position: number; name: string; team: string; points: number }> = [];
 
-  for (const line of lines) {
-    const cleaned = line.replace(/\t+/g, ' ').trim();
-    if (!cleaned || cleaned.startsWith('Pos')) continue;
+  for (const rawLine of lines) {
+    // Normalize: replace tabs with slashes for uniform parsing
+    const normalized = rawLine.replace(/\t+/g, ' / ').trim();
+    if (!normalized) continue;
 
-    // Pattern with slashes: "N /Rider Name /Team Name /Points"
-    let match = cleaned.match(/^(\d+)\s*\/\s*(.+?)\s*\/\s*(.+?)\s*\/\s*(\d+)\s*$/);
-    if (match) {
-      results.push({
-        position: parseInt(match[1]),
-        name: match[2].trim(),
-        team: match[3].trim(),
-        points: parseInt(match[4]),
-      });
-      continue;
-    }
+    // Skip header lines
+    if (/^(pos|place|championship|stand)/i.test(normalized)) continue;
 
-    // Pattern with slashes but no team: "N /Rider Name /Points"
-    match = cleaned.match(/^(\d+)\s*\/\s*(.+?)\s*\/?\s*(\d+)\s*$/);
-    if (match) {
-      results.push({
-        position: parseInt(match[1]),
-        name: match[2].trim(),
-        team: '',
-        points: parseInt(match[3]),
-      });
-      continue;
-    }
+    // Extract position number at start
+    const posMatch = normalized.match(/^(\d+)\s*/);
+    if (!posMatch) continue;
 
-    // Pattern without slashes: "N Firstname Lastname Points"
-    match = cleaned.match(/^(\d+)\s+([A-Za-zÀ-ÿ]+\s+[A-Za-zÀ-ÿ\s]+?)\s+(\d+)\s*$/);
-    if (match) {
-      results.push({
-        position: parseInt(match[1]),
-        name: match[2].trim(),
-        team: '',
-        points: parseInt(match[3]),
-      });
-      continue;
-    }
+    const position = parseInt(posMatch[1]);
+    const rest = normalized.substring(posMatch[0].length);
 
-    // Pattern: "N Firstname Lastname" with 0 points (no number)
-    match = cleaned.match(/^(\d+)\s+([A-Za-zÀ-ÿ]+\s+[A-Za-zÀ-ÿ\s.]+?)\s*$/);
-    if (match) {
-      results.push({
-        position: parseInt(match[1]),
-        name: match[2].trim(),
-        team: '',
-        points: 0,
-      });
+    // Split by / and clean up
+    const parts = rest.split(/\//).map(p => p.trim()).filter(Boolean);
+
+    if (parts.length >= 3) {
+      // Has position, name, team, points
+      const pointsStr = parts[parts.length - 1].match(/(\d+)/);
+      const points = pointsStr ? parseInt(pointsStr[1]) : 0;
+      const name = parts[0];
+      const team = parts.slice(1, -1).join(' / ');
+      results.push({ position, name, team, points });
+    } else if (parts.length === 2) {
+      // name + points (or name + team)
+      const pointsStr = parts[1].match(/^(\d+)$/);
+      if (pointsStr) {
+        results.push({ position, name: parts[0], team: '', points: parseInt(pointsStr[1]) });
+      } else {
+        results.push({ position, name: parts[0], team: parts[1], points: 0 });
+      }
+    } else if (parts.length === 1) {
+      // Single string: "Firstname Lastname Points" or just name
+      const match = parts[0].match(/^(.+?)\s+(\d+)\s*$/);
+      if (match) {
+        results.push({ position, name: match[1].trim(), team: '', points: parseInt(match[2]) });
+      } else {
+        results.push({ position, name: parts[0], team: '', points: 0 });
+      }
     }
   }
 
   return results;
+}
+
+async function fetchStandingsFromEvents(season: string): Promise<Array<{ position: number; name: string; team: string; points: number }>> {
+  const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=${MOTOGP_LEAGUE_ID}&s=${season}`);
+  if (!res.ok) return [];
+  
+  const json = await res.json();
+  if (!json.events || !Array.isArray(json.events)) return [];
+
+  // Iterate from last to first to find most recent standings
+  for (let i = json.events.length - 1; i >= 0; i--) {
+    const event = json.events[i];
+    const text = event.strResult || '';
+    if (text.toLowerCase().includes('standing')) {
+      const parsed = parseStandingsFromText(text);
+      if (parsed.length > 0) return parsed;
+    }
+  }
+  return [];
 }
 
 Deno.serve(async (req) => {
@@ -118,36 +129,50 @@ Deno.serve(async (req) => {
 
       case 'standings': {
         try {
-          const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=${MOTOGP_LEAGUE_ID}&s=${season}`);
-          if (res.ok) {
-            const json = await res.json();
-            if (json.events && Array.isArray(json.events)) {
-              // Get the last event that contains standings data
-              let latestStandings: Array<{ position: number; name: string; team: string; points: number }> = [];
-              
-              // Iterate from last to first to find most recent standings
-              for (let i = json.events.length - 1; i >= 0; i--) {
-                const event = json.events[i];
-                const text = event.strResult || event.strDescriptionEN || '';
-                if (text.toLowerCase().includes('standing')) {
-                  const parsed = parseStandingsFromText(text);
-                  if (parsed.length > 0) {
-                    latestStandings = parsed;
-                    break;
-                  }
-                }
-              }
+          let standings = await fetchStandingsFromEvents(season);
+          // Fallback to previous season if current has no data
+          if (standings.length === 0) {
+            const prevSeason = String(parseInt(season) - 1);
+            standings = await fetchStandingsFromEvents(prevSeason);
+          }
+          data = standings;
+        } catch (e) {
+          console.log('Standings fetch failed:', e);
+          data = [];
+        }
+        break;
+      }
 
-              if (latestStandings.length > 0) {
-                data = latestStandings;
-                break;
-              }
+      case 'constructor-standings': {
+        // Build constructor standings by aggregating rider team data
+        try {
+          let standings = await fetchStandingsFromEvents(season);
+          if (standings.length === 0) {
+            const prevSeason = String(parseInt(season) - 1);
+            standings = await fetchStandingsFromEvents(prevSeason);
+          }
+
+          // Aggregate points by team
+          const teamPoints: Record<string, number> = {};
+          for (const s of standings) {
+            if (s.team) {
+              // Normalize team names
+              const team = s.team.replace(/\s+/g, ' ').trim();
+              teamPoints[team] = (teamPoints[team] || 0) + s.points;
             }
           }
+
+          data = Object.entries(teamPoints)
+            .sort((a, b) => b[1] - a[1])
+            .map(([team, points], i) => ({
+              position: i + 1,
+              team,
+              points,
+            }));
         } catch (e) {
-          console.log('TheSportsDB standings parse failed:', e);
+          console.log('Constructor standings failed:', e);
+          data = [];
         }
-        data = [];
         break;
       }
 
@@ -159,7 +184,7 @@ Deno.serve(async (req) => {
       }
 
       default:
-        return new Response(JSON.stringify({ error: 'Azione non valida. Usa: calendar, standings, next-event' }), {
+        return new Response(JSON.stringify({ error: 'Azione non valida. Usa: calendar, standings, constructor-standings, next-event' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
