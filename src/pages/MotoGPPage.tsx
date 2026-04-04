@@ -5,7 +5,7 @@ import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
-import { useMotoGPCalendar, useMotoGPStandings } from "@/hooks/useSportsData";
+import { useMotoGPCalendar, useMotoGPStandings, useMotoGPConstructorStandings } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +15,7 @@ export default function MotoGPPage() {
   const { seasons, setSeason } = useSeasonPreferences();
   const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useMotoGPCalendar(seasons.motogp);
   const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useMotoGPStandings(seasons.motogp);
+  const { data: constructors, isLoading: csLoading, error: csError, refetch: csRefetch } = useMotoGPConstructorStandings(seasons.motogp);
 
   return (
     <div className="container py-8 sm:py-12">
@@ -27,7 +28,8 @@ export default function MotoGPPage() {
       <Tabs defaultValue="calendario" className="w-full">
         <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">Calendario</TabsTrigger>
-          <TabsTrigger value="classifica" className="font-heading text-xs tracking-wider uppercase">Classifica</TabsTrigger>
+          <TabsTrigger value="piloti" className="font-heading text-xs tracking-wider uppercase">Classifica Piloti</TabsTrigger>
+          <TabsTrigger value="costruttori" className="font-heading text-xs tracking-wider uppercase">Classifica Costruttori</TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendario">
@@ -85,11 +87,11 @@ export default function MotoGPPage() {
           })()}
         </TabsContent>
 
-        <TabsContent value="classifica">
-          {stLoading && <LoadingState message="Caricamento classifica..." />}
+        <TabsContent value="piloti">
+          {stLoading && <LoadingState message="Caricamento classifica piloti..." />}
           {stError && <ErrorState message="Errore nel caricamento della classifica" onRetry={() => stRefetch()} />}
           {!stLoading && !stError && (!standings || standings.length === 0) && (
-            <EmptyState message="Classifica non disponibile per questa stagione" />
+            <EmptyState message="Classifica piloti non disponibile per questa stagione" />
           )}
           {standings && standings.length > 0 && (
             <div className="rounded-xl border border-border overflow-hidden">
@@ -98,6 +100,7 @@ export default function MotoGPPage() {
                   <TableRow className="bg-muted/50">
                     <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">Pos</TableHead>
                     <TableHead className="font-heading text-xs tracking-wider uppercase">Pilota</TableHead>
+                    <TableHead className="font-heading text-xs tracking-wider uppercase">Team</TableHead>
                     <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Punti</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -105,11 +108,39 @@ export default function MotoGPPage() {
                   {standings.map((s: any) => (
                     <TableRow key={s.position}>
                       <TableCell className="font-heading font-bold">{s.position}</TableCell>
-                      <TableCell className="font-semibold">
-                        {s.name}
-                        {s.team && <span className="text-muted-foreground text-sm ml-2">({s.team})</span>}
-                      </TableCell>
+                      <TableCell className="font-semibold">{s.name}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{s.team || '—'}</TableCell>
                       <TableCell className="text-center font-bold text-primary">{s.points}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="costruttori">
+          {csLoading && <LoadingState message="Caricamento classifica costruttori..." />}
+          {csError && <ErrorState message="Errore nel caricamento della classifica" onRetry={() => csRefetch()} />}
+          {!csLoading && !csError && (!constructors || constructors.length === 0) && (
+            <EmptyState message="Classifica costruttori non disponibile per questa stagione" />
+          )}
+          {constructors && constructors.length > 0 && (
+            <div className="rounded-xl border border-border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">Pos</TableHead>
+                    <TableHead className="font-heading text-xs tracking-wider uppercase">Team</TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Punti</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {constructors.map((c: any) => (
+                    <TableRow key={c.position}>
+                      <TableCell className="font-heading font-bold">{c.position}</TableCell>
+                      <TableCell className="font-semibold">{c.team}</TableCell>
+                      <TableCell className="text-center font-bold text-primary">{c.points}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
