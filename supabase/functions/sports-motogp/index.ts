@@ -3,7 +3,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// MotoGP 2026 calendar - verified from motomatters.com (updated March 2026)
 const MOTOGP_CALENDAR_2026 = [
   { round: 1, name: 'GP della Thailandia', location: 'Buriram', circuit: 'Chang International Circuit', date_start: '2026-02-27', date_end: '2026-03-01', country: 'TH' },
   { round: 2, name: 'GP del Brasile', location: 'Goiânia', circuit: 'Autódromo Ayrton Senna', date_start: '2026-03-20', date_end: '2026-03-22', country: 'BR' },
@@ -29,14 +28,58 @@ const MOTOGP_CALENDAR_2026 = [
   { round: 22, name: 'GP di Valencia', location: 'Cheste', circuit: 'Circuit Ricardo Tormo', date_start: '2026-11-27', date_end: '2026-11-29', country: 'ES' },
 ];
 
-// TheSportsDB league ID for MotoGP
 const MOTOGP_LEAGUE_ID = '4407';
 
-async function fetchFromTheSportsDB(endpoint: string): Promise<any> {
-  const url = `https://www.thesportsdb.com/api/v1/json/3/${endpoint}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`TheSportsDB error: ${res.status}`);
-  return res.json();
+function parseStandingsFromText(text: string): Array<{ position: number; name: string; team: string; points: number }> {
+  // Find the standings section - look for "Standing after" pattern
+  const standingMatch = text.match(/(?:Rider\s+)?Stand(?:ing|ings?)\s+after\s+[\w\s]+[\r\n]+([\s\S]+)$/i);
+  if (!standingMatch) return [];
+
+  const standingsText = standingMatch[1];
+  const lines = standingsText.split(/[\r\n]+/).filter(l => l.trim());
+  const results: Array<{ position: number; name: string; team: string; points: number }> = [];
+
+  for (const line of lines) {
+    const cleaned = line.replace(/\t+/g, ' ').trim();
+    if (!cleaned || cleaned.startsWith('Pos')) continue;
+
+    // Try pattern: "N /Name /Team /Points" or "N Name Points"
+    let match = cleaned.match(/^(\d+)\s*[/\s]+([^/\d]+?)\s*[/\s]+([^/\d]+?)\s*[/\s]+(\d+)\s*$/);
+    if (match) {
+      results.push({
+        position: parseInt(match[1]),
+        name: match[2].trim(),
+        team: match[3].trim(),
+        points: parseInt(match[4]),
+      });
+      continue;
+    }
+
+    // Pattern: "N Name Points" (no team)
+    match = cleaned.match(/^(\d+)\s+(.+?)\s+(\d+)\s*$/);
+    if (match) {
+      results.push({
+        position: parseInt(match[1]),
+        name: match[2].trim(),
+        team: '',
+        points: parseInt(match[3]),
+      });
+      continue;
+    }
+
+    // Pattern: "N /Name Points" with 0 points (no number at end)
+    match = cleaned.match(/^(\d+)\s*[/\s]+(.+?)$/);
+    if (match && !match[2].match(/\d/)) {
+      results.push({
+        position: parseInt(match[1]),
+        name: match[2].trim(),
+        team: '',
+        points: 0,
+      });
+    }
+  }
+
+  return results;
 }
 
 Deno.serve(async (req) => {
@@ -62,52 +105,36 @@ Deno.serve(async (req) => {
       }
 
       case 'standings': {
-        // Use TheSportsDB lookuptable endpoint for season standings
         try {
-          const res = await fetchFromTheSportsDB(`lookuptable.php?l=${MOTOGP_LEAGUE_ID}&s=${season}`);
-          if (res.table && Array.isArray(res.table) && res.table.length > 0) {
-            data = res.table.map((s: any, i: number) => ({
-              position: parseInt(s.intRank) || i + 1,
-              name: s.strTeam || '',
-              team: s.strTeam || '',
-              played: parseInt(s.intPlayed) || 0,
-              wins: parseInt(s.intWin) || 0,
-              points: parseInt(s.intPoints) || 0,
-            }));
-            break;
-          }
-        } catch (e) {
-          console.log('TheSportsDB standings failed:', e);
-        }
-
-        // Fallback: try eventsseason to extract results
-        try {
-          const res = await fetchFromTheSportsDB(`eventsseason.php?id=${MOTOGP_LEAGUE_ID}&s=${season}`);
-          if (res.events && Array.isArray(res.events)) {
-            // Extract unique riders/teams from results
-            const riderPoints: Record<string, { name: string; points: number; wins: number; races: number }> = {};
-            for (const event of res.events) {
-              if (event.strResult) {
-                // Parse result strings if available
-                const winner = event.strResult;
-                if (!riderPoints[winner]) {
-                  riderPoints[winner] = { name: winner, points: 0, wins: 0, races: 0 };
+          const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=${MOTOGP_LEAGUE_ID}&s=${season}`);
+          if (res.ok) {
+            const json = await res.json();
+            if (json.events && Array.isArray(json.events)) {
+              // Get the last event that contains standings data
+              let latestStandings: Array<{ position: number; name: string; team: string; points: number }> = [];
+              
+              // Iterate from last to first to find most recent standings
+              for (let i = json.events.length - 1; i >= 0; i--) {
+                const event = json.events[i];
+                const text = event.strResult || event.strDescriptionEN || '';
+                if (text.toLowerCase().includes('standing')) {
+                  const parsed = parseStandingsFromText(text);
+                  if (parsed.length > 0) {
+                    latestStandings = parsed;
+                    break;
+                  }
                 }
-                riderPoints[winner].wins++;
-                riderPoints[winner].races++;
+              }
+
+              if (latestStandings.length > 0) {
+                data = latestStandings;
+                break;
               }
             }
-            if (Object.keys(riderPoints).length > 0) {
-              data = Object.values(riderPoints)
-                .sort((a, b) => b.wins - a.wins || b.points - a.points)
-                .map((r, i) => ({ position: i + 1, ...r }));
-              break;
-            }
           }
         } catch (e) {
-          console.log('TheSportsDB events fallback failed:', e);
+          console.log('TheSportsDB standings parse failed:', e);
         }
-
         data = [];
         break;
       }
