@@ -97,9 +97,7 @@ export default function MotoGPPage() {
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">Pos</TableHead>
-                    <TableHead className="font-heading text-xs tracking-wider uppercase">Pilota / Team</TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">GP</TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Vittorie</TableHead>
+                    <TableHead className="font-heading text-xs tracking-wider uppercase">Pilota</TableHead>
                     <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Punti</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -107,9 +105,10 @@ export default function MotoGPPage() {
                   {standings.map((s: any) => (
                     <TableRow key={s.position}>
                       <TableCell className="font-heading font-bold">{s.position}</TableCell>
-                      <TableCell className="font-semibold">{s.name}</TableCell>
-                      <TableCell className="text-center">{s.played}</TableCell>
-                      <TableCell className="text-center">{s.wins}</TableCell>
+                      <TableCell className="font-semibold">
+                        {s.name}
+                        {s.team && <span className="text-muted-foreground text-sm ml-2">({s.team})</span>}
+                      </TableCell>
                       <TableCell className="text-center font-bold text-primary">{s.points}</TableCell>
                     </TableRow>
                   ))}
