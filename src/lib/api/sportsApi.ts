@@ -67,4 +67,6 @@ export const motogpApi = {
     callEdgeFunction("sports-motogp", { action: "next-event", season: String(new Date().getFullYear()) }),
   getStandings: (season: number) =>
     callEdgeFunction("sports-motogp", { action: "standings", season: String(season) }),
+  getConstructorStandings: (season: number) =>
+    callEdgeFunction("sports-motogp", { action: "constructor-standings", season: String(season) }),
 };

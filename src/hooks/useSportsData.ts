@@ -116,3 +116,11 @@ export function useMotoGPStandings(season: number) {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+export function useMotoGPConstructorStandings(season: number) {
+  return useQuery({
+    queryKey: ["motogp", "constructor-standings", season],
+    queryFn: () => motogpApi.getConstructorStandings(season),
+    staleTime: 5 * 60 * 1000,
+  });
+}
