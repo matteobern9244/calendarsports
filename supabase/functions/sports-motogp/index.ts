@@ -29,6 +29,16 @@ const MOTOGP_CALENDAR_2026 = [
   { round: 22, name: 'GP di Valencia', location: 'Cheste', circuit: 'Circuit Ricardo Tormo', date_start: '2026-11-27', date_end: '2026-11-29', country: 'ES' },
 ];
 
+// TheSportsDB league ID for MotoGP
+const MOTOGP_LEAGUE_ID = '4407';
+
+async function fetchFromTheSportsDB(endpoint: string): Promise<any> {
+  const url = `https://www.thesportsdb.com/api/v1/json/3/${endpoint}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`TheSportsDB error: ${res.status}`);
+  return res.json();
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -52,28 +62,52 @@ Deno.serve(async (req) => {
       }
 
       case 'standings': {
-        // Try official API
+        // Use TheSportsDB lookuptable endpoint for season standings
         try {
-          const apiUrl = `https://api.motogp.pulserlive.com/motogp/v1/results/standings?season=${season}&category=MotoGP`;
-          const apiRes = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
-          if (apiRes.ok) {
-            const standings = await apiRes.json();
-            if (Array.isArray(standings) && standings.length > 0) {
-              data = standings.map((s: any, i: number) => ({
-                position: s.position || i + 1,
-                rider: s.rider?.full_name || s.classification?.rider?.full_name || '',
-                team: s.team?.name || s.classification?.team?.name || '',
-                points: s.points || s.total_points || 0,
-                wins: s.wins || 0,
-              }));
+          const res = await fetchFromTheSportsDB(`lookuptable.php?l=${MOTOGP_LEAGUE_ID}&s=${season}`);
+          if (res.table && Array.isArray(res.table) && res.table.length > 0) {
+            data = res.table.map((s: any, i: number) => ({
+              position: parseInt(s.intRank) || i + 1,
+              name: s.strTeam || '',
+              team: s.strTeam || '',
+              played: parseInt(s.intPlayed) || 0,
+              wins: parseInt(s.intWin) || 0,
+              points: parseInt(s.intPoints) || 0,
+            }));
+            break;
+          }
+        } catch (e) {
+          console.log('TheSportsDB standings failed:', e);
+        }
+
+        // Fallback: try eventsseason to extract results
+        try {
+          const res = await fetchFromTheSportsDB(`eventsseason.php?id=${MOTOGP_LEAGUE_ID}&s=${season}`);
+          if (res.events && Array.isArray(res.events)) {
+            // Extract unique riders/teams from results
+            const riderPoints: Record<string, { name: string; points: number; wins: number; races: number }> = {};
+            for (const event of res.events) {
+              if (event.strResult) {
+                // Parse result strings if available
+                const winner = event.strResult;
+                if (!riderPoints[winner]) {
+                  riderPoints[winner] = { name: winner, points: 0, wins: 0, races: 0 };
+                }
+                riderPoints[winner].wins++;
+                riderPoints[winner].races++;
+              }
+            }
+            if (Object.keys(riderPoints).length > 0) {
+              data = Object.values(riderPoints)
+                .sort((a, b) => b.wins - a.wins || b.points - a.points)
+                .map((r, i) => ({ position: i + 1, ...r }));
               break;
             }
           }
-          const body = await apiRes.text();
-          console.log('Standings API:', apiRes.status, body.substring(0, 200));
         } catch (e) {
-          console.log('Standings API failed:', e);
+          console.log('TheSportsDB events fallback failed:', e);
         }
+
         data = [];
         break;
       }
@@ -92,7 +126,7 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data, source: 'MotoGP Official' }), {
+    return new Response(JSON.stringify({ success: true, data, source: 'TheSportsDB / MotoGP' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
