@@ -43,8 +43,8 @@ function parseStandingsFromText(text: string): Array<{ position: number; name: s
     const cleaned = line.replace(/\t+/g, ' ').trim();
     if (!cleaned || cleaned.startsWith('Pos')) continue;
 
-    // Try pattern: "N /Name /Team /Points" or "N Name Points"
-    let match = cleaned.match(/^(\d+)\s*[/\s]+([^/\d]+?)\s*[/\s]+([^/\d]+?)\s*[/\s]+(\d+)\s*$/);
+    // Pattern with slashes: "N /Rider Name /Team Name /Points"
+    let match = cleaned.match(/^(\d+)\s*\/\s*(.+?)\s*\/\s*(.+?)\s*\/\s*(\d+)\s*$/);
     if (match) {
       results.push({
         position: parseInt(match[1]),
@@ -55,8 +55,8 @@ function parseStandingsFromText(text: string): Array<{ position: number; name: s
       continue;
     }
 
-    // Pattern: "N Name Points" (no team)
-    match = cleaned.match(/^(\d+)\s+(.+?)\s+(\d+)\s*$/);
+    // Pattern with slashes but no team: "N /Rider Name /Points"
+    match = cleaned.match(/^(\d+)\s*\/\s*(.+?)\s*\/?\s*(\d+)\s*$/);
     if (match) {
       results.push({
         position: parseInt(match[1]),
@@ -67,9 +67,21 @@ function parseStandingsFromText(text: string): Array<{ position: number; name: s
       continue;
     }
 
-    // Pattern: "N /Name Points" with 0 points (no number at end)
-    match = cleaned.match(/^(\d+)\s*[/\s]+(.+?)$/);
-    if (match && !match[2].match(/\d/)) {
+    // Pattern without slashes: "N Firstname Lastname Points"
+    match = cleaned.match(/^(\d+)\s+([A-Za-zÀ-ÿ]+\s+[A-Za-zÀ-ÿ\s]+?)\s+(\d+)\s*$/);
+    if (match) {
+      results.push({
+        position: parseInt(match[1]),
+        name: match[2].trim(),
+        team: '',
+        points: parseInt(match[3]),
+      });
+      continue;
+    }
+
+    // Pattern: "N Firstname Lastname" with 0 points (no number)
+    match = cleaned.match(/^(\d+)\s+([A-Za-zÀ-ÿ]+\s+[A-Za-zÀ-ÿ\s.]+?)\s*$/);
+    if (match) {
       results.push({
         position: parseInt(match[1]),
         name: match[2].trim(),
