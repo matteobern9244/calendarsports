@@ -3,7 +3,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// MotoGP 2026 calendar - verified from motomatters.com (updated March 2026)
 const MOTOGP_CALENDAR_2026 = [
   { round: 1, name: 'GP della Thailandia', location: 'Buriram', circuit: 'Chang International Circuit', date_start: '2026-02-27', date_end: '2026-03-01', country: 'TH' },
   { round: 2, name: 'GP del Brasile', location: 'Goiânia', circuit: 'Autódromo Ayrton Senna', date_start: '2026-03-20', date_end: '2026-03-22', country: 'BR' },
@@ -29,6 +28,72 @@ const MOTOGP_CALENDAR_2026 = [
   { round: 22, name: 'GP di Valencia', location: 'Cheste', circuit: 'Circuit Ricardo Tormo', date_start: '2026-11-27', date_end: '2026-11-29', country: 'ES' },
 ];
 
+const MOTOGP_LEAGUE_ID = '4407';
+
+function parseStandingsFromText(text: string): Array<{ position: number; name: string; team: string; points: number }> {
+  // Find the standings section - look for "Standing after" pattern
+  const standingMatch = text.match(/(?:Rider\s+)?Stand(?:ing|ings?)\s+after\s+[\w\s]+[\r\n]+([\s\S]+)$/i);
+  if (!standingMatch) return [];
+
+  const standingsText = standingMatch[1];
+  const lines = standingsText.split(/[\r\n]+/).filter(l => l.trim());
+  const results: Array<{ position: number; name: string; team: string; points: number }> = [];
+
+  for (const line of lines) {
+    const cleaned = line.replace(/\t+/g, ' ').trim();
+    if (!cleaned || cleaned.startsWith('Pos')) continue;
+
+    // Pattern with slashes: "N /Rider Name /Team Name /Points"
+    let match = cleaned.match(/^(\d+)\s*\/\s*(.+?)\s*\/\s*(.+?)\s*\/\s*(\d+)\s*$/);
+    if (match) {
+      results.push({
+        position: parseInt(match[1]),
+        name: match[2].trim(),
+        team: match[3].trim(),
+        points: parseInt(match[4]),
+      });
+      continue;
+    }
+
+    // Pattern with slashes but no team: "N /Rider Name /Points"
+    match = cleaned.match(/^(\d+)\s*\/\s*(.+?)\s*\/?\s*(\d+)\s*$/);
+    if (match) {
+      results.push({
+        position: parseInt(match[1]),
+        name: match[2].trim(),
+        team: '',
+        points: parseInt(match[3]),
+      });
+      continue;
+    }
+
+    // Pattern without slashes: "N Firstname Lastname Points"
+    match = cleaned.match(/^(\d+)\s+([A-Za-zÀ-ÿ]+\s+[A-Za-zÀ-ÿ\s]+?)\s+(\d+)\s*$/);
+    if (match) {
+      results.push({
+        position: parseInt(match[1]),
+        name: match[2].trim(),
+        team: '',
+        points: parseInt(match[3]),
+      });
+      continue;
+    }
+
+    // Pattern: "N Firstname Lastname" with 0 points (no number)
+    match = cleaned.match(/^(\d+)\s+([A-Za-zÀ-ÿ]+\s+[A-Za-zÀ-ÿ\s.]+?)\s*$/);
+    if (match) {
+      results.push({
+        position: parseInt(match[1]),
+        name: match[2].trim(),
+        team: '',
+        points: 0,
+      });
+    }
+  }
+
+  return results;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -52,27 +117,35 @@ Deno.serve(async (req) => {
       }
 
       case 'standings': {
-        // Try official API
         try {
-          const apiUrl = `https://api.motogp.pulserlive.com/motogp/v1/results/standings?season=${season}&category=MotoGP`;
-          const apiRes = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
-          if (apiRes.ok) {
-            const standings = await apiRes.json();
-            if (Array.isArray(standings) && standings.length > 0) {
-              data = standings.map((s: any, i: number) => ({
-                position: s.position || i + 1,
-                rider: s.rider?.full_name || s.classification?.rider?.full_name || '',
-                team: s.team?.name || s.classification?.team?.name || '',
-                points: s.points || s.total_points || 0,
-                wins: s.wins || 0,
-              }));
-              break;
+          const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=${MOTOGP_LEAGUE_ID}&s=${season}`);
+          if (res.ok) {
+            const json = await res.json();
+            if (json.events && Array.isArray(json.events)) {
+              // Get the last event that contains standings data
+              let latestStandings: Array<{ position: number; name: string; team: string; points: number }> = [];
+              
+              // Iterate from last to first to find most recent standings
+              for (let i = json.events.length - 1; i >= 0; i--) {
+                const event = json.events[i];
+                const text = event.strResult || event.strDescriptionEN || '';
+                if (text.toLowerCase().includes('standing')) {
+                  const parsed = parseStandingsFromText(text);
+                  if (parsed.length > 0) {
+                    latestStandings = parsed;
+                    break;
+                  }
+                }
+              }
+
+              if (latestStandings.length > 0) {
+                data = latestStandings;
+                break;
+              }
             }
           }
-          const body = await apiRes.text();
-          console.log('Standings API:', apiRes.status, body.substring(0, 200));
         } catch (e) {
-          console.log('Standings API failed:', e);
+          console.log('TheSportsDB standings parse failed:', e);
         }
         data = [];
         break;
@@ -92,7 +165,7 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data, source: 'MotoGP Official' }), {
+    return new Response(JSON.stringify({ success: true, data, source: 'TheSportsDB / MotoGP' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
