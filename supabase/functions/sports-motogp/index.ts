@@ -28,81 +28,66 @@ const MOTOGP_CALENDAR_2026 = [
   { round: 22, name: 'GP di Valencia', location: 'Cheste', circuit: 'Circuit Ricardo Tormo', date_start: '2026-11-27', date_end: '2026-11-29', country: 'ES' },
 ];
 
-const MOTOGP_LEAGUE_ID = '4407';
+const SKY_SPORT_MOTOGP_URL = 'https://sport.sky.it/motogp/classifiche';
 
-function parseStandingsFromText(text: string): Array<{ position: number; name: string; team: string; points: number }> {
-  // Find "standing(s) after" section and get everything after the header line
-  const standingIdx = text.toLowerCase().search(/(?:championship\s+)?stand(?:ing|ings)\s*(?:,\s*top\s*\d+\s*)?\s*after/i);
-  if (standingIdx === -1) return [];
+async function fetchSkyStandings(): Promise<{
+  pilots: Array<{ position: number; name: string; team: string; points: number }>;
+  teams: Array<{ position: number; team: string; points: number }>;
+}> {
+  const res = await fetch(SKY_SPORT_MOTOGP_URL, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CalendarSports/1.0)' },
+  });
+  if (!res.ok) throw new Error(`Sky Sport returned ${res.status}`);
+  const html = await res.text();
 
-  const afterStanding = text.substring(standingIdx);
-  const lines = afterStanding.split(/[\r\n]+/);
-  const results: Array<{ position: number; name: string; team: string; points: number }> = [];
+  const pilots: Array<{ position: number; name: string; team: string; points: number }> = [];
+  const teams: Array<{ position: number; team: string; points: number }> = [];
 
-  for (const rawLine of lines) {
-    // Normalize: replace tabs with slashes for uniform parsing
-    const normalized = rawLine.replace(/\t+/g, ' / ').trim();
-    if (!normalized) continue;
-
-    // Skip header lines
-    if (/^(pos|place|championship|stand)/i.test(normalized)) continue;
-
-    // Extract position number at start
-    const posMatch = normalized.match(/^(\d+)\s*/);
-    if (!posMatch) continue;
-
-    const position = parseInt(posMatch[1]);
-    const rest = normalized.substring(posMatch[0].length);
-
-    // Split by / and clean up
-    const parts = rest.split(/\//).map(p => p.trim()).filter(Boolean);
-
-    if (parts.length >= 3) {
-      // Has position, name, team, points
-      const pointsStr = parts[parts.length - 1].match(/(\d+)/);
-      const points = pointsStr ? parseInt(pointsStr[1]) : 0;
-      const name = parts[0];
-      const team = parts.slice(1, -1).join(' / ');
-      results.push({ position, name, team, points });
-    } else if (parts.length === 2) {
-      // name + points (or name + team)
-      const pointsStr = parts[1].match(/^(\d+)$/);
-      if (pointsStr) {
-        results.push({ position, name: parts[0], team: '', points: parseInt(pointsStr[1]) });
-      } else {
-        results.push({ position, name: parts[0], team: parts[1], points: 0 });
-      }
-    } else if (parts.length === 1) {
-      // Single string: "Firstname Lastname Points" or just name
-      const match = parts[0].match(/^(.+?)\s+(\d+)\s*$/);
-      if (match) {
-        results.push({ position, name: match[1].trim(), team: '', points: parseInt(match[2]) });
-      } else {
-        results.push({ position, name: parts[0], team: '', points: 0 });
+  // Parse pilot standings table
+  const pilotSection = html.split('Classifica Piloti MotoGP');
+  if (pilotSection.length > 1) {
+    const tableMatch = pilotSection[1].match(/<table[^>]*>([\s\S]*?)<\/table>/i);
+    if (tableMatch) {
+      const tbody = tableMatch[1];
+      const rows = tbody.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
+      for (const row of rows) {
+        const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
+        if (cells.length >= 5) {
+          const pos = parseInt(cells[0].replace(/<[^>]+>/g, '').trim());
+          // cells[1] is nationality flag
+          const nameRaw = cells[2].replace(/<[^>]+>/g, '').trim();
+          const teamRaw = cells[3].replace(/<[^>]+>/g, '').trim();
+          const pts = parseInt(cells[4].replace(/<[^>]+>/g, '').trim());
+          if (!isNaN(pos) && nameRaw) {
+            pilots.push({ position: pos, name: nameRaw, team: teamRaw, points: pts || 0 });
+          }
+        }
       }
     }
   }
 
-  return results;
-}
-
-async function fetchStandingsFromEvents(season: string): Promise<Array<{ position: number; name: string; team: string; points: number }>> {
-  const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=${MOTOGP_LEAGUE_ID}&s=${season}`);
-  if (!res.ok) return [];
-  
-  const json = await res.json();
-  if (!json.events || !Array.isArray(json.events)) return [];
-
-  // Iterate from last to first to find most recent standings
-  for (let i = json.events.length - 1; i >= 0; i--) {
-    const event = json.events[i];
-    const text = event.strResult || '';
-    if (text.toLowerCase().includes('standing')) {
-      const parsed = parseStandingsFromText(text);
-      if (parsed.length > 0) return parsed;
+  // Parse team standings table
+  const teamSection = html.split('Classifica Team MotoGP');
+  if (teamSection.length > 1) {
+    const tableMatch = teamSection[1].match(/<table[^>]*>([\s\S]*?)<\/table>/i);
+    if (tableMatch) {
+      const tbody = tableMatch[1];
+      const rows = tbody.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
+      for (const row of rows) {
+        const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
+        if (cells.length >= 3) {
+          const pos = parseInt(cells[0].replace(/<[^>]+>/g, '').trim());
+          const teamName = cells[1].replace(/<[^>]+>/g, '').trim();
+          const pts = parseInt(cells[2].replace(/<[^>]+>/g, '').trim());
+          if (!isNaN(pos) && teamName) {
+            teams.push({ position: pos, team: teamName, points: pts || 0 });
+          }
+        }
+      }
     }
   }
-  return [];
+
+  return { pilots, teams };
 }
 
 Deno.serve(async (req) => {
@@ -113,7 +98,6 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
-    const season = url.searchParams.get('season') || String(new Date().getFullYear());
 
     let data: any;
 
@@ -129,48 +113,21 @@ Deno.serve(async (req) => {
 
       case 'standings': {
         try {
-          let standings = await fetchStandingsFromEvents(season);
-          // Fallback to previous season if current has no data
-          if (standings.length === 0) {
-            const prevSeason = String(parseInt(season) - 1);
-            standings = await fetchStandingsFromEvents(prevSeason);
-          }
-          data = standings;
+          const { pilots } = await fetchSkyStandings();
+          data = pilots;
         } catch (e) {
-          console.log('Standings fetch failed:', e);
+          console.error('MotoGP standings fetch failed:', e);
           data = [];
         }
         break;
       }
 
       case 'constructor-standings': {
-        // Build constructor standings by aggregating rider team data
         try {
-          let standings = await fetchStandingsFromEvents(season);
-          if (standings.length === 0) {
-            const prevSeason = String(parseInt(season) - 1);
-            standings = await fetchStandingsFromEvents(prevSeason);
-          }
-
-          // Aggregate points by team
-          const teamPoints: Record<string, number> = {};
-          for (const s of standings) {
-            if (s.team) {
-              // Normalize team names
-              const team = s.team.replace(/\s+/g, ' ').trim();
-              teamPoints[team] = (teamPoints[team] || 0) + s.points;
-            }
-          }
-
-          data = Object.entries(teamPoints)
-            .sort((a, b) => b[1] - a[1])
-            .map(([team, points], i) => ({
-              position: i + 1,
-              team,
-              points,
-            }));
+          const { teams } = await fetchSkyStandings();
+          data = teams;
         } catch (e) {
-          console.log('Constructor standings failed:', e);
+          console.error('MotoGP constructor standings failed:', e);
           data = [];
         }
         break;
@@ -190,7 +147,7 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data, source: 'TheSportsDB / MotoGP' }), {
+    return new Response(JSON.stringify({ success: true, data, source: 'Sky Sport / MotoGP' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
