@@ -136,7 +136,9 @@ export default function HomePage() {
         </Button>
       </div>
 
-      {!isLoading && events.length === 0 && (
+      {(isLoading || syncing) && <LoadingState message="Caricamento prossimi eventi..." />}
+
+      {!isLoading && !syncing && events.length === 0 && (
         <p className="text-center text-muted-foreground py-12">Nessun evento in programma</p>
       )}
 
