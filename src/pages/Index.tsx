@@ -27,12 +27,26 @@ const container = {
 };
 
 export default function HomePage() {
+  const queryClient = useQueryClient();
+  const [syncing, setSyncing] = useState(false);
   const { data: f1Data, isLoading: f1Loading } = useF1NextRace();
   const { data: juveCalendar, isLoading: juveLoading } = useJuventusCalendar(2025);
   const { data: sinnerNext, isLoading: sinnerLoading } = useSinnerNextEvent();
   const { data: motogpNext, isLoading: motogpLoading } = useMotoGPNextEvent();
 
   const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await queryClient.invalidateQueries();
+      toast.success("Tutti i dati sono stati aggiornati!");
+    } catch {
+      toast.error("Errore durante la sincronizzazione");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const events = useMemo(() => {
     const upcoming: UpcomingEvent[] = [];
