@@ -119,12 +119,22 @@ export default function HomePage() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader
-        title="Prossimi Eventi"
-        subtitle="Tutti gli eventi imminenti ordinati per data"
-      />
-
-      {isLoading && <LoadingState message="Caricamento prossimi eventi..." />}
+      <div className="flex items-center justify-between mb-2">
+        <SectionHeader
+          title="Prossimi Eventi"
+          subtitle="Tutti gli eventi imminenti ordinati per data"
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSync}
+          disabled={syncing || isLoading}
+          className="gap-2 shrink-0"
+        >
+          <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+          Sincronizza
+        </Button>
+      </div>
 
       {!isLoading && events.length === 0 && (
         <p className="text-center text-muted-foreground py-12">Nessun evento in programma</p>
