@@ -152,8 +152,8 @@ export default function HomePage() {
               subtitle={ev.subtitle}
               date={ev.date}
               time={ev.time}
-              status={getEventStatus(ev.rawDate)}
-              highlight={idx === 0}
+              status={undefined}
+              highlight={false}
             />
           ))}
         </motion.div>
