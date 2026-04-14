@@ -25,10 +25,10 @@ export default function JuventusPage() {
         <SeasonSelector currentSeason={seasons.juventus} onSelect={(y) => setSeason("juventus", y)} />
       </div>
 
-      <Tabs defaultValue="classifica" className="w-full">
+      <Tabs defaultValue="calendario" className="w-full">
         <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="classifica" className="font-heading text-xs tracking-wider uppercase">Classifica</TabsTrigger>
           <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">Calendario</TabsTrigger>
+          <TabsTrigger value="classifica" className="font-heading text-xs tracking-wider uppercase">Classifica</TabsTrigger>
         </TabsList>
 
         <TabsContent value="classifica">
