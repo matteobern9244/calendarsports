@@ -61,10 +61,17 @@ function findRiderPhoto(name: string): string | null {
   const normalized = name.toLowerCase().trim();
   // Direct match
   if (MOTOGP_RIDER_PHOTOS[normalized]) return MOTOGP_RIDER_PHOTOS[normalized];
-  // Partial match (last name)
+  // Sky Sport uses "Surname Initial." format like "Bezzecchi M." or "Di Giannantonio F."
+  // Extract surname part (everything before the last word if it's a single letter with dot)
+  const parts = normalized.replace(/\./g, '').trim().split(/\s+/);
+  const surname = parts.length > 1 && parts[parts.length - 1].length <= 2
+    ? parts.slice(0, -1).join(' ')
+    : normalized;
+  // Match by surname
   for (const [key, url] of Object.entries(MOTOGP_RIDER_PHOTOS)) {
-    const lastName = key.split(' ').pop() || '';
-    if (normalized.includes(lastName) && lastName.length > 3) return url;
+    const keyParts = key.split(' ');
+    const keySurname = keyParts.length > 1 ? keyParts.slice(1).join(' ') : key;
+    if (surname === keySurname || normalized.includes(keySurname) && keySurname.length > 3) return url;
   }
   return null;
 }
