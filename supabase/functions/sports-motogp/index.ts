@@ -30,8 +30,54 @@ const MOTOGP_CALENDAR_2026 = [
 
 const SKY_SPORT_MOTOGP_URL = 'https://sport.sky.it/motogp/classifiche';
 
+// MotoGP 2026 rider photo mapping (official MotoGP pulselive headshots)
+const MOTOGP_RIDER_PHOTOS: Record<string, string> = {
+  'francesco bagnaia': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/05/9772f542-8f9b-4a1c-b7a3-a5fe8f041f75/IfzOWPi2.png?height=200&width=200',
+  'marc marquez': 'https://resources.motogp.pulselive.com/photo-resources/2026/04/01/8027468c-a966-4c58-ad26-17b68bb807b8/gItv2nNj.png?height=200&width=200',
+  'jorge martin': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/8a56a9dd-c136-423c-b27b-6763ece0fdc4/y0EBqii2.png?height=200&width=200',
+  'pedro acosta': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/07d094fd-a8a6-44ae-a1db-67cd43151bfb/fcl8Ojai.png?height=200&width=200',
+  'enea bastianini': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/05/32fd7aeb-d765-45d8-9da3-cc3ca25689cf/7pX3VTcG.png?height=200&width=200',
+  'marco bezzecchi': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/4f18dc12-2fef-4ac2-bb31-7e7a220c0aa9/k2TFsiWh.png?height=200&width=200',
+  'maverick viñales': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/744f450c-6cbe-42e9-9654-da243fe60889/HMYXeFwb.png?height=200&width=200',
+  'fabio quartararo': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/05/73805511-aba7-4e37-9361-4e4b35da50fe/L72keLEc.png?height=200&width=200',
+  'alex marquez': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/05/71b70d16-3d66-4374-abf0-e439f76a13aa/WezEeZAR.png?height=200&width=200',
+  'brad binder': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/05/9f5512f1-ea75-4c15-a1d7-f4172e8e8eda/PMd3LA13.png?height=200&width=200',
+  'jack miller': 'https://resources.motogp.pulselive.com/photo-resources/2025/02/10/c1787ba0-46dd-4421-acc2-5b752cba4dd8/SNqHTjGK.png?height=200&width=200',
+  'franco morbidelli': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/0cf208c4-e1b9-4a8c-ade6-73de98ae1701/motIUIeZ.png?height=200&width=200',
+  'fabio di giannantonio': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/d24b3386-4301-4208-ba99-cd9e5c1adc42/GdX3sMJC.png?height=200&width=200',
+  'raul fernandez': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/05/08cfd905-a7b6-438f-949e-f7f480bf3ecd/8Mx8BEXK.png?height=200&width=200',
+  'johann zarco': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/05/49611a81-9931-4191-9820-068b73b54f99/y0R5f9H5.png?height=200&width=200',
+  'luca marini': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/73c8564a-a0e0-4dba-9385-a4c0df94d4fc/acF1q0Ma.png?height=200&width=200',
+  'joan mir': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/ca35cfa3-a3cf-4bf0-abd0-56541a81c7a2/FhHj9jIJ.png?height=200&width=200',
+  'alex rins': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/a50fc7d2-4099-4a4f-9c33-dc80ce4cb6fc/WIVVlRSf.png?height=200&width=200',
+  'ai ogura': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/b1327ea2-7125-4c56-a3f8-f751f2118ced/nwXR2BjB.png?height=200&width=200',
+  'toprak razgatlioglu': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/05/743b343d-2b20-40a7-8ae0-e4f5a273503d/5Zq5W4Wt.png?height=200&width=200',
+  'fermin aldeguer': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/68e81f3f-b7fc-463b-9df2-d17c2ace42f7/YF1yv3Jm.png?height=200&width=200',
+  'diogo moreira': 'https://resources.motogp.pulselive.com/photo-resources/2026/03/04/63a4eefc-ce5c-40cc-9abd-870e7aabaa07/z6IXOQnm.png?height=200&width=200',
+  'sergio garcia': 'https://resources.motogp.pulselive.com/photo-resources/2025/11/07/3098c097-ebe6-438c-8615-673b8a8f5ff8/KVM5xr1H.png?height=200&width=200',
+};
+
+function findRiderPhoto(name: string): string | null {
+  const normalized = name.toLowerCase().trim();
+  // Direct match
+  if (MOTOGP_RIDER_PHOTOS[normalized]) return MOTOGP_RIDER_PHOTOS[normalized];
+  // Sky Sport uses "Surname Initial." format like "Bezzecchi M." or "Di Giannantonio F."
+  // Extract surname part (everything before the last word if it's a single letter with dot)
+  const parts = normalized.replace(/\./g, '').trim().split(/\s+/);
+  const surname = parts.length > 1 && parts[parts.length - 1].length <= 2
+    ? parts.slice(0, -1).join(' ')
+    : normalized;
+  // Match by surname
+  for (const [key, url] of Object.entries(MOTOGP_RIDER_PHOTOS)) {
+    const keyParts = key.split(' ');
+    const keySurname = keyParts.length > 1 ? keyParts.slice(1).join(' ') : key;
+    if (surname === keySurname || normalized.includes(keySurname) && keySurname.length > 3) return url;
+  }
+  return null;
+}
+
 async function fetchSkyStandings(): Promise<{
-  pilots: Array<{ position: number; name: string; team: string; points: number }>;
+  pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null }>;
   teams: Array<{ position: number; team: string; points: number }>;
 }> {
   const res = await fetch(SKY_SPORT_MOTOGP_URL, {
@@ -40,7 +86,7 @@ async function fetchSkyStandings(): Promise<{
   if (!res.ok) throw new Error(`Sky Sport returned ${res.status}`);
   const html = await res.text();
 
-  const pilots: Array<{ position: number; name: string; team: string; points: number }> = [];
+  const pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null }> = [];
   const teams: Array<{ position: number; team: string; points: number }> = [];
 
   // Parse pilot standings table
@@ -54,12 +100,11 @@ async function fetchSkyStandings(): Promise<{
         const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
         if (cells.length >= 5) {
           const pos = parseInt(cells[0].replace(/<[^>]+>/g, '').trim());
-          // cells[1] is nationality flag
           const nameRaw = cells[2].replace(/<[^>]+>/g, '').trim();
           const teamRaw = cells[3].replace(/<[^>]+>/g, '').trim();
           const pts = parseInt(cells[4].replace(/<[^>]+>/g, '').trim());
           if (!isNaN(pos) && nameRaw) {
-            pilots.push({ position: pos, name: nameRaw, team: teamRaw, points: pts || 0 });
+            pilots.push({ position: pos, name: nameRaw, team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw) });
           }
         }
       }

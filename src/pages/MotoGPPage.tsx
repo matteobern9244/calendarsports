@@ -108,7 +108,14 @@ export default function MotoGPPage() {
                   {standings.map((s: any) => (
                     <TableRow key={s.position}>
                       <TableCell className="font-heading font-bold">{s.position}</TableCell>
-                      <TableCell className="font-semibold">{s.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {s.photoUrl && (
+                            <img src={s.photoUrl} alt={s.name} className="h-8 w-8 rounded-full object-cover bg-muted flex-shrink-0" />
+                          )}
+                          <span className="font-semibold">{s.name}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground text-sm">{s.team || '—'}</TableCell>
                       <TableCell className="text-center font-bold text-primary">{s.points}</TableCell>
                     </TableRow>

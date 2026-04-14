@@ -45,15 +45,35 @@ Deno.serve(async (req) => {
         if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
         const json = await res.json();
         const standings = json.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
-        data = standings.map((s: any) => ({
-          position: parseInt(s.position),
-          points: parseFloat(s.points),
-          wins: parseInt(s.wins),
-          driver: `${s.Driver?.givenName || ''} ${s.Driver?.familyName || ''}`.trim(),
-          driverCode: s.Driver?.code || '',
-          nationality: s.Driver?.nationality || '',
-          constructor: s.Constructors?.[0]?.name || '',
-        }));
+
+        // Fetch driver headshots from OpenF1
+        let headshotMap: Record<string, string> = {};
+        try {
+          const openF1Res = await fetch('https://api.openf1.org/v1/drivers?session_key=latest');
+          if (openF1Res.ok) {
+            const openF1Drivers = await openF1Res.json();
+            for (const d of openF1Drivers) {
+              if (d.last_name && d.headshot_url) {
+                headshotMap[d.last_name.toLowerCase()] = d.headshot_url;
+              }
+            }
+          }
+        } catch (_) { /* ignore */ }
+
+        data = standings.map((s: any) => {
+          const familyName = s.Driver?.familyName || '';
+          const photoUrl = headshotMap[familyName.toLowerCase()] || null;
+          return {
+            position: parseInt(s.position),
+            points: parseFloat(s.points),
+            wins: parseInt(s.wins),
+            driver: `${s.Driver?.givenName || ''} ${familyName}`.trim(),
+            driverCode: s.Driver?.code || '',
+            nationality: s.Driver?.nationality || '',
+            constructor: s.Constructors?.[0]?.name || '',
+            photoUrl,
+          };
+        });
         break;
       }
 

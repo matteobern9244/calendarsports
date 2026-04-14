@@ -88,8 +88,15 @@ export default function Formula1Page() {
                     <TableRow key={d.position}>
                       <TableCell className="font-heading font-bold">{d.position}</TableCell>
                       <TableCell>
-                        <span className="font-semibold">{d.driver}</span>
-                        <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">{d.driverCode}</span>
+                        <div className="flex items-center gap-2">
+                          {d.photoUrl && (
+                            <img src={d.photoUrl} alt={d.driver} className="h-8 w-8 rounded-full object-cover bg-muted flex-shrink-0" />
+                          )}
+                          <div>
+                            <span className="font-semibold">{d.driver}</span>
+                            <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">{d.driverCode}</span>
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground hidden sm:table-cell">{d.constructor}</TableCell>
                       <TableCell className="text-center">{d.wins}</TableCell>
