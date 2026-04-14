@@ -30,8 +30,46 @@ const MOTOGP_CALENDAR_2026 = [
 
 const SKY_SPORT_MOTOGP_URL = 'https://sport.sky.it/motogp/classifiche';
 
+// MotoGP 2025 rider photo mapping (official MotoGP headshots)
+const MOTOGP_RIDER_PHOTOS: Record<string, string> = {
+  'francesco bagnaia': 'https://resources.motogp.com/riders/f/4/f4c3e579-2599-408d-af44-68cb182fff36/portrait.png',
+  'marc marquez': 'https://resources.motogp.com/riders/0/d/0d2f6dbb-50c5-4ce1-86b8-98b4c4df3c54/portrait.png',
+  'jorge martin': 'https://resources.motogp.com/riders/2/7/2758e362-003c-469a-b756-21df269e8339/portrait.png',
+  'pedro acosta': 'https://resources.motogp.com/riders/3/9/39e1a296-4342-43e7-9e42-56c89dd3b35f/portrait.png',
+  'enea bastianini': 'https://resources.motogp.com/riders/0/8/08a5a8b2-8949-4f06-88a7-6f5311693720/portrait.png',
+  'marco bezzecchi': 'https://resources.motogp.com/riders/6/a/6aee0cd5-c692-4489-8483-a2f5b5e54946/portrait.png',
+  'maverick viñales': 'https://resources.motogp.com/riders/4/e/4e455a2a-96ab-4a4c-ad1c-0bc8fc1a77ba/portrait.png',
+  'fabio quartararo': 'https://resources.motogp.com/riders/e/1/e1b95bf6-b0b8-486e-a75b-8e1381b9ff4f/portrait.png',
+  'alex marquez': 'https://resources.motogp.com/riders/e/d/ed50c66f-d093-4e6b-95b6-de0c29e9d2ae/portrait.png',
+  'brad binder': 'https://resources.motogp.com/riders/f/5/f5a1c1e7-96f7-479e-a498-d8cbdc8bdd29/portrait.png',
+  'jack miller': 'https://resources.motogp.com/riders/a/6/a618a8f7-3a4c-4e41-aa2d-4b5e24a3fba8/portrait.png',
+  'franco morbidelli': 'https://resources.motogp.com/riders/5/f/5fc0b36d-de33-4fb1-a027-0d16e5e2a8af/portrait.png',
+  'fabio di giannantonio': 'https://resources.motogp.com/riders/4/4/4418c28b-4e3a-4b03-b02c-26ae3a3f6d8e/portrait.png',
+  'raul fernandez': 'https://resources.motogp.com/riders/7/3/73b07d67-17aa-4e98-82f5-7c33b1bf6c35/portrait.png',
+  'augusto fernandez': 'https://resources.motogp.com/riders/9/4/940f29e3-1fee-4fcb-b476-b0e4f8f98cb8/portrait.png',
+  'johann zarco': 'https://resources.motogp.com/riders/c/b/cb05cdfc-e91c-4fb5-bd00-b2c2f3530ed7/portrait.png',
+  'luca marini': 'https://resources.motogp.com/riders/a/4/a48e6e1a-6fd2-40b4-913e-d5d7ed1786d5/portrait.png',
+  'takaaki nakagami': 'https://resources.motogp.com/riders/3/5/355139a6-6ad9-43fd-be37-64c11cc54aec/portrait.png',
+  'joan mir': 'https://resources.motogp.com/riders/f/8/f8bf7ae9-bd95-4d89-a728-5a5f8e03c3e0/portrait.png',
+  'aleix espargaro': 'https://resources.motogp.com/riders/1/c/1c9def4d-2e47-4889-b618-ef7eb7b3c60f/portrait.png',
+  'alex rins': 'https://resources.motogp.com/riders/5/d/5d6eae3f-02f4-4f35-8c7d-e3a5c5ef4fcf/portrait.png',
+  'miguel oliveira': 'https://resources.motogp.com/riders/5/1/510a9e31-0d5a-48a7-a87b-d0ffc8f2efec/portrait.png',
+};
+
+function findRiderPhoto(name: string): string | null {
+  const normalized = name.toLowerCase().trim();
+  // Direct match
+  if (MOTOGP_RIDER_PHOTOS[normalized]) return MOTOGP_RIDER_PHOTOS[normalized];
+  // Partial match (last name)
+  for (const [key, url] of Object.entries(MOTOGP_RIDER_PHOTOS)) {
+    const lastName = key.split(' ').pop() || '';
+    if (normalized.includes(lastName) && lastName.length > 3) return url;
+  }
+  return null;
+}
+
 async function fetchSkyStandings(): Promise<{
-  pilots: Array<{ position: number; name: string; team: string; points: number }>;
+  pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null }>;
   teams: Array<{ position: number; team: string; points: number }>;
 }> {
   const res = await fetch(SKY_SPORT_MOTOGP_URL, {
@@ -40,7 +78,7 @@ async function fetchSkyStandings(): Promise<{
   if (!res.ok) throw new Error(`Sky Sport returned ${res.status}`);
   const html = await res.text();
 
-  const pilots: Array<{ position: number; name: string; team: string; points: number }> = [];
+  const pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null }> = [];
   const teams: Array<{ position: number; team: string; points: number }> = [];
 
   // Parse pilot standings table
@@ -54,12 +92,11 @@ async function fetchSkyStandings(): Promise<{
         const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
         if (cells.length >= 5) {
           const pos = parseInt(cells[0].replace(/<[^>]+>/g, '').trim());
-          // cells[1] is nationality flag
           const nameRaw = cells[2].replace(/<[^>]+>/g, '').trim();
           const teamRaw = cells[3].replace(/<[^>]+>/g, '').trim();
           const pts = parseInt(cells[4].replace(/<[^>]+>/g, '').trim());
           if (!isNaN(pos) && nameRaw) {
-            pilots.push({ position: pos, name: nameRaw, team: teamRaw, points: pts || 0 });
+            pilots.push({ position: pos, name: nameRaw, team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw) });
           }
         }
       }
