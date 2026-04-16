@@ -157,7 +157,27 @@ export default function HomePage() {
               time={ev.time}
               status={undefined}
               highlight={false}
-            />
+            >
+              {ev.broadcaster && (
+                <div className="flex flex-wrap gap-1.5">
+                  {ev.broadcaster.split('|').map((b) => b.trim()).filter(Boolean).map((name) => (
+                    <Badge
+                      key={name}
+                      variant="outline"
+                      className={
+                        name.toLowerCase().includes('dazn')
+                          ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]/60 text-[10px]'
+                          : name.toLowerCase().includes('sky')
+                            ? 'bg-sky-900/80 text-sky-100 border-sky-700/60 text-[10px]'
+                            : 'text-[10px]'
+                      }
+                    >
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </EventCard>
           ))}
         </motion.div>
       )}
