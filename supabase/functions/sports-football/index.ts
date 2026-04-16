@@ -5,16 +5,22 @@ const corsHeaders = {
 
 const SKY_BASE = 'https://sport.sky.it';
 const SERIE_A_COMP_ID = '21';
+const UCL_COMP_ID = '5';
+const COPPA_ITALIA_COMP_ID = '259';
 const LEGA_API = 'https://api-sdp.legaseriea.it/v1/serie-a/football';
 
-// Mapping from Sky Sport season (e.g. "2025") to Lega Serie A seasonId
-// Sky uses the starting year of the season
 const LEGA_SEASON_IDS: Record<string, string> = {
-  '2026': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a', // 2025/2026 (Sky uses 2026)
-  '2025': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a', // 2025/2026
-  '2024': 'serie-a::Football_Season::1e32f55e98fc408a9d1fc27c0ba43243', // 2024/2025
-  '2023': 'serie-a::Football_Season::104a84bc07f641e685f70a850c6399eb', // 2023/2024
-  '2022': 'serie-a::Football_Season::65f4d59dedbb43b68197b0ff0529fa21', // 2022/2023
+  '2026': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a',
+  '2025': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a',
+  '2024': 'serie-a::Football_Season::1e32f55e98fc408a9d1fc27c0ba43243',
+  '2023': 'serie-a::Football_Season::104a84bc07f641e685f70a850c6399eb',
+  '2022': 'serie-a::Football_Season::65f4d59dedbb43b68197b0ff0529fa21',
+};
+
+const COMPETITION_NAMES: Record<string, string> = {
+  [SERIE_A_COMP_ID]: 'Serie A',
+  [UCL_COMP_ID]: 'Champions League',
+  [COPPA_ITALIA_COMP_ID]: 'Coppa Italia',
 };
 
 type SkyWidgetResponse = {
@@ -80,7 +86,6 @@ async function fetchSkyWidget(
   throw new Error(`Sky Sport error: ${lastStatus ?? 404}`);
 }
 
-// Fetch broadcaster info from Lega Serie A API for Juventus matches
 async function fetchBroadcasterMap(season: string): Promise<Record<string, string>> {
   const seasonId = LEGA_SEASON_IDS[season];
   if (!seasonId) {
@@ -113,7 +118,6 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
       const homeName = m.home?.shortName || m.home?.officialName || '';
       const awayName = m.away?.shortName || m.away?.officialName || '';
 
-      // Only process Juventus matches
       if (!homeName.toLowerCase().includes('juventus') && !awayName.toLowerCase().includes('juventus')) {
         continue;
       }
@@ -129,15 +133,13 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
       const broadcasterStr = parts.join(' | ');
       if (!broadcasterStr) continue;
 
-      // Key: matchday number from matchSet name (e.g. "Matchday 1" -> "1")
       const matchdayMatch = m.matchSet?.name?.match(/(\d+)/);
       if (matchdayMatch) {
         map[matchdayMatch[1]] = broadcasterStr;
       }
 
-      // Also key by date for more robust matching
       if (m.matchDateUtc) {
-        const dateKey = m.matchDateUtc.substring(0, 10); // YYYY-MM-DD
+        const dateKey = m.matchDateUtc.substring(0, 10);
         map[`date:${dateKey}`] = broadcasterStr;
       }
     }
@@ -148,6 +150,54 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
     console.error('Lega API broadcaster fetch error:', e);
     return {};
   }
+}
+
+function extractJuventusMatches(model: any, competitionId: string, broadcasterMap: Record<string, string>): any[] {
+  const rounds = model.competitionMatchList || [];
+  const matches: any[] = [];
+  const competitionName = COMPETITION_NAMES[competitionId] || 'Altro';
+
+  for (const round of rounds) {
+    const roundNum = round.round;
+    const matchDayList = round.matchDayList || [];
+    for (const matchDay of matchDayList) {
+      const matchList = matchDay.matchList || [];
+      for (const match of matchList) {
+        const homeName = match.home?.name || '';
+        const awayName = match.away?.name || '';
+        if (!homeName.toLowerCase().includes('juventus') && !awayName.toLowerCase().includes('juventus')) continue;
+
+        const isFinished = match.status === 'FullTime';
+
+        // Broadcaster lookup (only for Serie A)
+        let broadcaster: string | null = null;
+        if (competitionId === SERIE_A_COMP_ID) {
+          if (roundNum && broadcasterMap[String(roundNum)]) {
+            broadcaster = broadcasterMap[String(roundNum)];
+          } else if (match.date) {
+            const dateKey = new Date(match.date).toISOString().substring(0, 10);
+            broadcaster = broadcasterMap[`date:${dateKey}`] || null;
+          }
+        }
+
+        matches.push({
+          matchday: roundNum,
+          homeTeam: homeName,
+          awayTeam: awayName,
+          homeLogo: match.home?.logoUrl || null,
+          awayLogo: match.away?.logoUrl || null,
+          homeScore: isFinished ? match.home?.goal : null,
+          awayScore: isFinished ? match.away?.goal : null,
+          date: match.date,
+          status: match.status,
+          competition: competitionName,
+          link: match.link || null,
+          broadcaster,
+        });
+      }
+    }
+  }
+  return matches;
 }
 
 Deno.serve(async (req) => {
@@ -200,65 +250,42 @@ Deno.serve(async (req) => {
       }
 
       case 'calendar': {
-        // Fetch Sky calendar + Lega broadcaster data in parallel
-        const [skyResponse, broadcasterMap] = await Promise.all([
-          fetchSkyWidget(
-            (s) => `${SKY_BASE}/football/competition-calendar-results/${s}/${SERIE_A_COMP_ID}/widget.html`,
-            season,
-          ),
+        // Fetch Serie A, UCL, Coppa Italia calendars + broadcaster map in parallel
+        const competitionIds = [SERIE_A_COMP_ID, UCL_COMP_ID, COPPA_ITALIA_COMP_ID];
+
+        const [broadcasterMap, ...skyResponses] = await Promise.all([
           fetchBroadcasterMap(season),
+          ...competitionIds.map(compId =>
+            fetchSkyWidget(
+              (s) => `${SKY_BASE}/football/competition-calendar-results/${s}/${compId}/widget.html`,
+              season,
+            ).catch(err => {
+              console.warn(`Failed to fetch competition ${compId}:`, err.message);
+              return null;
+            })
+          ),
         ]);
 
-        const html = skyResponse.html;
-        seasonUsed = skyResponse.seasonUsed;
-        const model = extractWidgetModel(html);
-        if (!model) {
-          throw new Error('Dati calendario non trovati nella pagina Sky Sport');
+        const allMatches: any[] = [];
+
+        for (let i = 0; i < competitionIds.length; i++) {
+          const skyResponse = skyResponses[i];
+          if (!skyResponse) continue;
+          if (i === 0) seasonUsed = skyResponse.seasonUsed;
+          const model = extractWidgetModel(skyResponse.html);
+          if (!model) continue;
+          allMatches.push(...extractJuventusMatches(model, competitionIds[i], broadcasterMap));
         }
 
-        const rounds = model.competitionMatchList || [];
-        const juventusMatches: any[] = [];
+        // Sort by date
+        allMatches.sort((a, b) => {
+          if (!a.date && !b.date) return 0;
+          if (!a.date) return 1;
+          if (!b.date) return -1;
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        });
 
-        for (const round of rounds) {
-          const roundNum = round.round;
-          const matchDayList = round.matchDayList || [];
-          for (const matchDay of matchDayList) {
-            const matchList = matchDay.matchList || [];
-            for (const match of matchList) {
-              const homeName = match.home?.name || '';
-              const awayName = match.away?.name || '';
-              if (homeName.toLowerCase().includes('juventus') || awayName.toLowerCase().includes('juventus')) {
-                const isFinished = match.status === 'FullTime';
-
-                // Look up broadcaster by matchday or date
-                let broadcaster: string | null = null;
-                if (roundNum && broadcasterMap[String(roundNum)]) {
-                  broadcaster = broadcasterMap[String(roundNum)];
-                } else if (match.date) {
-                  const dateKey = new Date(match.date).toISOString().substring(0, 10);
-                  broadcaster = broadcasterMap[`date:${dateKey}`] || null;
-                }
-
-                juventusMatches.push({
-                  matchday: roundNum,
-                  homeTeam: homeName,
-                  awayTeam: awayName,
-                  homeLogo: match.home?.logoUrl || null,
-                  awayLogo: match.away?.logoUrl || null,
-                  homeScore: isFinished ? match.home?.goal : null,
-                  awayScore: isFinished ? match.away?.goal : null,
-                  date: match.date,
-                  status: match.status,
-                  competition: 'Serie A',
-                  link: match.link || null,
-                  broadcaster: broadcaster,
-                });
-              }
-            }
-          }
-        }
-
-        data = juventusMatches;
+        data = allMatches;
         break;
       }
 
