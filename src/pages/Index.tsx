@@ -82,7 +82,7 @@ export default function HomePage() {
         upcoming.push({
           sport: "Calcio · Juventus",
           title: `${isHome ? "vs" : "@"} ${opponent}`,
-          subtitle: `Serie A · Giornata ${nextMatch.matchday || "—"}`,
+          subtitle: `${nextMatch.competition || 'Serie A'} · ${nextMatch.competition === 'Serie A' ? `Giornata ${nextMatch.matchday || "—"}` : `Turno ${nextMatch.matchday || "—"}`}`,
           rawDate: nextMatch.date,
           date: formatDateIT(nextMatch.date),
           time: timeStr,

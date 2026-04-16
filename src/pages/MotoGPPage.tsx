@@ -10,6 +10,7 @@ import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } fr
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { User } from "lucide-react";
 
 export default function MotoGPPage() {
   const { seasons, setSeason } = useSeasonPreferences();
@@ -19,7 +20,7 @@ export default function MotoGPPage() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="MotoGP" subtitle="Calendario, classifiche e highlights — Dati da TheSportsDB" />
+      <SectionHeader title="MotoGP" subtitle="Calendario, classifiche e highlights — Dati da Sky Sport" />
 
       <div className="mb-6">
         <SeasonSelector currentSeason={seasons.motogp} onSelect={(y) => setSeason("motogp", y)} />
@@ -110,8 +111,12 @@ export default function MotoGPPage() {
                       <TableCell className="font-heading font-bold">{s.position}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {s.photoUrl && (
+                          {s.photoUrl ? (
                             <img src={s.photoUrl} alt={s.name} className="h-8 w-8 rounded-full object-cover bg-muted flex-shrink-0" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                            </div>
                           )}
                           <span className="font-semibold">{s.name}</span>
                         </div>
@@ -146,7 +151,14 @@ export default function MotoGPPage() {
                   {constructors.map((c: any) => (
                     <TableRow key={c.position}>
                       <TableCell className="font-heading font-bold">{c.position}</TableCell>
-                      <TableCell className="font-semibold">{c.team}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {c.logoUrl && (
+                            <img src={c.logoUrl} alt={c.team} className="h-6 w-10 object-contain flex-shrink-0" />
+                          )}
+                          <span className="font-semibold">{c.team}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-center font-bold text-primary">{c.points}</TableCell>
                     </TableRow>
                   ))}
