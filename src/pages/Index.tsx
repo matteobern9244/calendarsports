@@ -18,6 +18,7 @@ interface UpcomingEvent {
   date: string;
   rawDate: string;
   time?: string;
+  broadcaster?: string;
   children?: React.ReactNode;
 }
 
