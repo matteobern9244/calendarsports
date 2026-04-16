@@ -86,6 +86,7 @@ export default function HomePage() {
           rawDate: nextMatch.date,
           date: formatDateIT(nextMatch.date),
           time: timeStr,
+          broadcaster: nextMatch.broadcaster || undefined,
         });
       }
     }
