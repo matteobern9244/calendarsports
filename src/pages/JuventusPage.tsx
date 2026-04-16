@@ -132,7 +132,26 @@ export default function JuventusPage() {
                         <p className="text-sm font-semibold truncate">
                           {isJuveHome ? 'vs' : '@'} {opponent}
                         </p>
-                        <p className="text-[11px] text-muted-foreground">{dateStr} · {timeStr}</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-muted-foreground">{dateStr} · {timeStr}</span>
+                          {m.broadcaster && (
+                            <span className="inline-flex items-center gap-1">
+                              {m.broadcaster.split(' | ').map((b: string) => (
+                                <span
+                                  key={b}
+                                  className={cn(
+                                    "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
+                                    b.trim() === 'DAZN'
+                                      ? "bg-[#1a1a2e] text-[#f5f5f5] dark:bg-[#f5f5f5] dark:text-[#1a1a2e]"
+                                      : "bg-sky-600/20 text-sky-600 dark:bg-sky-400/20 dark:text-sky-400"
+                                  )}
+                                >
+                                  {b.trim()}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex-shrink-0 text-right">
