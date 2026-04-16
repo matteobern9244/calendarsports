@@ -10,6 +10,7 @@ import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } fr
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { User } from "lucide-react";
 
 export default function Formula1Page() {
   const { seasons, setSeason } = useSeasonPreferences();
@@ -89,8 +90,12 @@ export default function Formula1Page() {
                       <TableCell className="font-heading font-bold">{d.position}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {d.photoUrl && (
+                          {d.photoUrl ? (
                             <img src={d.photoUrl} alt={d.driver} className="h-8 w-8 rounded-full object-cover bg-muted flex-shrink-0" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                            </div>
                           )}
                           <div>
                             <span className="font-semibold">{d.driver}</span>
@@ -127,7 +132,14 @@ export default function Formula1Page() {
                   {constructors.map((c: any) => (
                     <TableRow key={c.position}>
                       <TableCell className="font-heading font-bold">{c.position}</TableCell>
-                      <TableCell className="font-semibold">{c.constructor}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {c.logoUrl && (
+                            <img src={c.logoUrl} alt={c.constructor} className="h-6 w-10 object-contain flex-shrink-0" />
+                          )}
+                          <span className="font-semibold">{c.constructor}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-center">{c.wins}</TableCell>
                       <TableCell className="text-center font-bold text-primary">{c.points}</TableCell>
                     </TableRow>

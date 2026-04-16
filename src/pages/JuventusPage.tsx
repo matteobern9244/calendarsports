@@ -11,6 +11,13 @@ import { formatDateIT, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+
+const COMPETITION_COLORS: Record<string, string> = {
+  'Serie A': 'bg-emerald-600/20 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400 border-emerald-600/30',
+  'Champions League': 'bg-blue-600/20 text-blue-600 dark:bg-blue-400/20 dark:text-blue-400 border-blue-600/30',
+  'Coppa Italia': 'bg-amber-600/20 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400 border-amber-600/30',
+};
 
 export default function JuventusPage() {
   const { seasons, setSeason } = useSeasonPreferences();
@@ -106,6 +113,7 @@ export default function JuventusPage() {
                 const dateStr = m.date ? formatDateIT(m.date) : '—';
                 const timeStr = m.date ? new Date(m.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }) : '';
                 const isNext = i === highlightIndex;
+                const compColor = COMPETITION_COLORS[m.competition] || '';
 
                 return (
                   <motion.div
@@ -124,7 +132,9 @@ export default function JuventusPage() {
                       </span>
                     )}
                     <div className="flex-shrink-0 w-8">
-                      <span className="text-xs text-muted-foreground font-heading">G{m.matchday}</span>
+                      <span className="text-xs text-muted-foreground font-heading">
+                        {m.competition === 'Serie A' ? `G${m.matchday}` : m.matchday ? `R${m.matchday}` : '—'}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {opponentLogo && <img src={opponentLogo} alt={opponent} className="h-6 w-6 object-contain flex-shrink-0" />}
@@ -132,7 +142,10 @@ export default function JuventusPage() {
                         <p className="text-sm font-semibold truncate">
                           {isJuveHome ? 'vs' : '@'} {opponent}
                         </p>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge variant="outline" className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0 h-4 border", compColor)}>
+                            {m.competition}
+                          </Badge>
                           <span className="text-[11px] text-muted-foreground">{dateStr} · {timeStr}</span>
                           {m.broadcaster && (
                             <span className="inline-flex items-center gap-1">
