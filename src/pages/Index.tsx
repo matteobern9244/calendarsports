@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
 import EventCard from "@/components/common/EventCard";
 import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
@@ -18,6 +19,7 @@ interface UpcomingEvent {
   date: string;
   rawDate: string;
   time?: string;
+  broadcaster?: string;
   children?: React.ReactNode;
 }
 
@@ -84,6 +86,7 @@ export default function HomePage() {
           rawDate: nextMatch.date,
           date: formatDateIT(nextMatch.date),
           time: timeStr,
+          broadcaster: nextMatch.broadcaster || undefined,
         });
       }
     }
@@ -154,7 +157,27 @@ export default function HomePage() {
               time={ev.time}
               status={undefined}
               highlight={false}
-            />
+            >
+              {ev.broadcaster && (
+                <div className="flex flex-wrap gap-1.5">
+                  {ev.broadcaster.split('|').map((b) => b.trim()).filter(Boolean).map((name) => (
+                    <Badge
+                      key={name}
+                      variant="outline"
+                      className={
+                        name.toLowerCase().includes('dazn')
+                          ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]/60 text-[10px]'
+                          : name.toLowerCase().includes('sky')
+                            ? 'bg-sky-900/80 text-sky-100 border-sky-700/60 text-[10px]'
+                            : 'text-[10px]'
+                      }
+                    >
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </EventCard>
           ))}
         </motion.div>
       )}

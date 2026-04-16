@@ -10,6 +10,7 @@ const LEGA_API = 'https://api-sdp.legaseriea.it/v1/serie-a/football';
 // Mapping from Sky Sport season (e.g. "2025") to Lega Serie A seasonId
 // Sky uses the starting year of the season
 const LEGA_SEASON_IDS: Record<string, string> = {
+  '2026': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a', // 2025/2026 (Sky uses 2026)
   '2025': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a', // 2025/2026
   '2024': 'serie-a::Football_Season::1e32f55e98fc408a9d1fc27c0ba43243', // 2024/2025
   '2023': 'serie-a::Football_Season::104a84bc07f641e685f70a850c6399eb', // 2023/2024
