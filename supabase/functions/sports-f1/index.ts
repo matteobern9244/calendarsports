@@ -1,7 +1,4 @@
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from '../_shared/security.ts';
 
 const JOLPICA_BASE = 'https://api.jolpi.ca/ergast/f1';
 
@@ -51,9 +48,13 @@ function getConstructorLogo(name: string): string | null {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const rl = checkRateLimit(req, { key: 'sports-f1' });
+  if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
   try {
     const url = new URL(req.url);
