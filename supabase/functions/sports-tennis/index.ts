@@ -1,7 +1,4 @@
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from '../_shared/security.ts';
 
 // Sinner 2026 schedule from Wikipedia (verified March 2026)
 function getSinnerSchedule2026(): any[] {
@@ -38,9 +35,13 @@ function getSinnerResults2026(): any[] {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const rl = checkRateLimit(req, { key: 'sports-tennis' });
+  if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
   try {
     const url = new URL(req.url);
