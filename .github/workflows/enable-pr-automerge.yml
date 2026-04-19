@@ -64,8 +64,17 @@ jobs:
             copilot_blocking_reviews=$(echo "$reviews_json" | jq '[.[]
               | select((.user.type // "") == "Bot")
               | select((.user.login // "" | ascii_downcase | contains("copilot")))
-              | select((.state // "" | ascii_downcase) != "approved")
-              | select((.state // "" | ascii_downcase) != "dismissed")
+              | {
+                  login: (.user.login // "" | ascii_downcase),
+                  submitted_at: (.submitted_at // ""),
+                  state: (.state // "" | ascii_downcase),
+                  id: (.id // 0)
+                }
+            ]
+            | sort_by(.login, .submitted_at, .id)
+            | group_by(.login)
+            | map(last)
+            | map(select(.state != "approved" and .state != "dismissed"))
             ] | length')
 
             if [ "$copilot_blocking_reviews" -ne 0 ]; then
