@@ -1,0 +1,51 @@
+name: Enable PR Auto Merge
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: enable-pr-automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  enable-pr-automerge:
+    name: enable-pr-automerge
+    if: ${{ !github.event.pull_request.draft && (github.base_ref == 'develop' || github.base_ref == 'main') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Skip invalid source branch for main
+        if: ${{ github.base_ref == 'main' && github.head_ref != 'develop' }}
+        run: |
+          echo "Skipping auto-merge for PRs to main from branches other than develop."
+
+      - name: Enable squash auto-merge
+        if: ${{ github.base_ref != 'main' || github.head_ref == 'develop' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          state=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json state,isDraft --jq '.state + "|" + (.isDraft | tostring)')
+          auto_merge=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json autoMergeRequest --jq 'if .autoMergeRequest == null then "" else .autoMergeRequest.mergeMethod end')
+
+          if [ "$state" != "OPEN|false" ]; then
+            echo "PR is not open and ready. Nothing to do."
+            exit 0
+          fi
+
+          if [ -n "$auto_merge" ]; then
+            echo "Auto-merge already enabled with method: $auto_merge"
+            exit 0
+          fi
+
+          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash

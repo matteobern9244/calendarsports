@@ -23,6 +23,8 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 - Aggiornate le action GitHub usate nei workflow a major stabili compatibili
   con il runtime piu' recente dei runner: `actions/checkout@v6`,
   `actions/setup-node@v6`, `actions/upload-artifact@v7`.
+- Aggiunto workflow repository-level per abilitare automaticamente
+  `auto-merge` con metodo `squash` sulle PR verso `develop` e `main`.
 - Required checks finali candidati per la Ruleset di `main`: `quality` ed
   `e2e` dal workflow PR.
 - Documentazione operativa e prompt repository-local allineati alla policy

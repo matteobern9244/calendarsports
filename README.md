@@ -345,6 +345,9 @@ Policy operativa corrente del repository:
   richiesti dalla Ruleset.
 - I check richiesti correnti per le PR verso `main` sono i job `quality` ed
   `e2e` del workflow PR.
+- Le PR verso `develop` e `main` devono avere `auto-merge` attivo con metodo
+  `squash`, cosi' GitHub completa il merge appena i check richiesti e le altre
+  condizioni di merge risultano soddisfatte.
 - Il workflow `guard-main-source.yml` blocca ogni PR verso `main` che non
   provenga da `develop` e non si applica ai push automatici di Lovable.
 - Il workflow PR gira su PR verso `develop` e `main`; il workflow push gira
@@ -390,6 +393,8 @@ Risultato pratico:
 - Lovable continua a pushare su `main` per il sync automatico.
 - Gli umani contribuiscono via feature branch -> `develop`, poi via PR
   `develop` -> `main`.
+- Le PR eleggibili si auto-fondono con `squash` appena check e review
+  richiesti risultano soddisfatti.
 - Nessun push diretto umano su `main` e' possibile, neppure per errore.
 
 ### Sync GitHub -> Lovable
