@@ -36,10 +36,11 @@ jobs:
             exit 0
           fi
 
-          pr_json=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json state,isDraft,baseRefName,headRefName,autoMergeRequest,statusCheckRollup)
+          pr_json=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json state,isDraft,baseRefName,headRefName,autoMergeRequest,statusCheckRollup,author)
           state=$(echo "$pr_json" | jq -r '.state + "|" + (.isDraft | tostring)')
           base_ref=$(echo "$pr_json" | jq -r '.baseRefName')
           head_ref=$(echo "$pr_json" | jq -r '.headRefName')
+          author_login=$(echo "$pr_json" | jq -r '.author.login // ""')
           auto_merge=$(echo "$pr_json" | jq -r 'if .autoMergeRequest == null then "" else .autoMergeRequest.mergeMethod end')
           blocking_checks=$(echo "$pr_json" | jq '[.statusCheckRollup[]? | select((.status != null and .status != "COMPLETED") or (.conclusion != null and .conclusion != "SUCCESS" and .conclusion != "SKIPPED" and .conclusion != "NEUTRAL"))] | length')
 
@@ -57,6 +58,27 @@ jobs:
             echo "PR checks are not fully green yet. Nothing to do."
             exit 0
           fi
+
+          if [ "$author_login" = "dependabot[bot]" ]; then
+            reviews_json=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER/reviews")
+            copilot_blocking_reviews=$(echo "$reviews_json" | jq '[.[]
+              | select((.user.type // "") == "Bot")
+              | select((.user.login // "" | ascii_downcase | contains("copilot")))
+              | select((.state // "" | ascii_downcase) != "approved")
+              | select((.state // "" | ascii_downcase) != "dismissed")
+            ] | length')
+
+            if [ "$copilot_blocking_reviews" -ne 0 ]; then
+              if [ -n "$auto_merge" ]; then
+                gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --disable-auto
+                echo "Auto-merge disabled because Copilot left a non-approved review on this Dependabot PR."
+              else
+                echo "Skipping auto-merge because Copilot left a non-approved review on this Dependabot PR."
+              fi
+              exit 0
+            fi
+          fi
+
           if [ -n "$auto_merge" ]; then
             echo "Auto-merge already enabled with method: $auto_merge"
             exit 0

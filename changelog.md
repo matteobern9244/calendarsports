@@ -13,6 +13,17 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Changed
 
+- Aggiunta configurazione reale di `Dependabot` per `npm` e
+  `github-actions`, con PR di version update indirizzate a `develop`,
+  assegnazione a `matteobern9244`, grouping conservativo e cooldown di 30 giorni
+  sui major update `npm`.
+- Aggiunti guardrail sui workflow di `auto-merge` per disabilitare la fusione
+  automatica delle sole PR Dependabot quando GitHub Copilot lascia una review
+  non `APPROVED`, mantenendo invece il comportamento normale sulle altre PR.
+- README aggiornato con una nota operativa esplicita sul flusso Dependabot,
+  sui limiti dei security updates verso `main` e sull'interazione con Copilot
+  code review.
+
 - Configurazione GitHub di `main` riallineata al modello finale con una sola
   Ruleset moderna repository-level, bypass riservato a `lovable-dev` e nessuna
   Branch protection classica in parallelo.

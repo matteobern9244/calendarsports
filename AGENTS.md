@@ -59,6 +59,8 @@ Regole per agenti AI che operano fuori da Lovable (es. Codex, Copilot in IDE):
   PR verso `develop`.
 - L'arrivo su `main` deve avvenire solo con una PR separata `develop` ->
   `main`.
+- Quando apri una PR, assegna sempre la PR a `@matteobern9244` e applica
+  sempre le label gia' esistenti piu' adatte al change set reale.
 - Se devi proporre merge, dichiara sempre l'impatto potenziale sul sync
   Lovable e sulla versione live.
 - Non cambiare il branch di default o la struttura dei remote senza richiesta
