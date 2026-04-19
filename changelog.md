@@ -65,7 +65,6 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 - Nessuna modifica a workflow Git, branch policy, secrets, edge functions
   o `supabase/config.toml`.
 
-
 ## [2.0.1] - 2026-04-19
 
 ### Added
