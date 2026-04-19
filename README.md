@@ -3,7 +3,7 @@
 Applicazione web sportiva multi-sezione per consultare eventi imminenti,
 calendari e classifiche di Jannik Sinner, Juventus, Formula 1 e MotoGP.
 
-Versione repository corrente: `2.0.1`.
+Versione repository corrente: `2.0.2`.
 
 ## Origine del progetto
 
@@ -26,16 +26,21 @@ incoraggino push automatici o superficiali su `main`.
 
 ## Release baseline
 
-La baseline documentata del repository e' la release `2.0.1`.
+La baseline documentata del repository e' la release `2.0.2`.
 
 Questa release rappresenta il punto in cui sono stati allineati:
 
 - cleanup del versionamento dei file ambiente;
 - workflow GitHub Actions per `develop` e per le PR verso `main`;
 - test locali e CI piu' ripetibili;
-- documentazione operativa coerente con il rischio GitHub <-> Lovable.
+- documentazione operativa coerente con il rischio GitHub <-> Lovable;
+- fix del caricamento dati nel bundle di produzione (wrapper Supabase con
+  fallback hardcoded sui valori pubblici);
+- ErrorBoundary globale e regola ESLint che blocca import diretti dal client
+  Supabase auto-generato;
+- hook pre-commit `husky` + `lint-staged` per bloccare violazioni in locale.
 
-La release `2.0.1` descrive lo stato del repository e delle sue policy
+La release `2.0.2` descrive lo stato del repository e delle sue policy
 operative. Non implica, da sola, che una corrispondente versione live sia gia'
 stata pubblicata su Lovable.
 
