@@ -11,6 +11,12 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
+### Changed
+
+- Verifica sync GitHub <-> Lovable dopo configurazione bypass app
+  `lovable-dev` nelle branch protection rules di `main`. Nessuna modifica
+  funzionale al codice o ai dati.
+
 ## [2.0.2] - 2026-04-19
 
 ### Fixed
