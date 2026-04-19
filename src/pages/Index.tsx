@@ -67,6 +67,7 @@ export default function HomePage() {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [syncStep, setSyncStep] = useState<string>("");
+  const [syncProgress, setSyncProgress] = useState(0);
   const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
   const [tvPage, setTvPage] = useState(0);
   const TV_PAGE_SIZE = 8;
