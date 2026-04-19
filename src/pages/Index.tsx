@@ -177,6 +177,7 @@ export default function HomePage() {
               subtitle={ev.subtitle}
               date={ev.date}
               time={ev.time}
+              startDate={ev.rawDate}
               status={undefined}
               highlight={false}
             >
