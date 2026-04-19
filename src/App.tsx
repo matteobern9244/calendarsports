@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Layout from "@/components/layout/Layout";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import Index from "./pages/Index";
+import StreamingPage from "./pages/StreamingPage";
 import SinnerPage from "./pages/SinnerPage";
 import JuventusPage from "./pages/JuventusPage";
 import Formula1Page from "./pages/Formula1Page";
