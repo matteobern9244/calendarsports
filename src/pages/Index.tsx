@@ -106,6 +106,7 @@ export default function HomePage() {
             hourRome: parseInt(hStr, 10),
             minuteRome: parseInt(mStr, 10),
             title: p.title,
+            genre: p.genre,
           });
         }
       }
