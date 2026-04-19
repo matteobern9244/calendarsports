@@ -36,6 +36,7 @@ interface TvHighlight {
   channelNumber?: number;
   time: string;
   startMs: number;
+  durationMin: number;
   hourRome: number;
   minuteRome: number;
   title: string;
@@ -92,12 +93,15 @@ export default function HomePage() {
           const d = new Date(p.start);
           const hhmm = timeFmt.format(d);
           const [hStr, mStr] = hhmm.split(":");
+          const endMs = p.end ? new Date(p.end).getTime() : d.getTime() + 30 * 60 * 1000;
+          const durationMin = Math.max(0, Math.round((endMs - d.getTime()) / 60000));
           rows.push({
             family: fam,
             channel: ch.name,
             channelNumber: ch.number,
             time: hhmm,
             startMs: d.getTime(),
+            durationMin,
             hourRome: parseInt(hStr, 10),
             minuteRome: parseInt(mStr, 10),
             title: p.title,
@@ -123,30 +127,37 @@ export default function HomePage() {
       const minutes = h.hourRome * 60 + h.minuteRome;
       return minutes >= 21 * 60 && minutes <= 22 * 60 + 30;
     };
+    // Considera "vero" programma di prima serata solo se dura almeno 20 min:
+    // evita stacchi pubblicitari, sigle, R-TNOV e simili "filler" da 1-2 min.
+    const MIN_DURATION = 20;
+    const isMainProgram = (h: TvHighlight) => h.durationMin >= MIN_DURATION;
+
     const pool = familyFilter === "all"
       ? allHighlights
       : allHighlights.filter((r) => r.family === familyFilter);
 
-    // Per ogni canale: prendi il primo programma in prima serata
-    // (fallback al primo dopo le 19 se nessuno cade nella finestra stretta)
+    // Per ogni canale: preferisci il primo programma "vero" (>=20 min) in
+    // prima serata. Fallback al primo qualsiasi se nessun main program.
     const byChannel = new Map<string, TvHighlight>();
     for (const h of pool) {
+      if (!inPrimeWindow(h)) continue;
       const key = `${h.family}|${h.channel}`;
       const existing = byChannel.get(key);
-      const inWindow = inPrimeWindow(h);
       if (!existing) {
         byChannel.set(key, h);
         continue;
       }
-      const existingInWindow = inPrimeWindow(existing);
-      if (inWindow && !existingInWindow) byChannel.set(key, h);
-      else if (inWindow === existingInWindow && h.startMs < existing.startMs) {
+      const hMain = isMainProgram(h);
+      const existingMain = isMainProgram(existing);
+      // Promuovi se il candidato e' main e l'esistente no
+      if (hMain && !existingMain) byChannel.set(key, h);
+      // A parita' di "main-ness" preferisci quello che inizia prima
+      else if (hMain === existingMain && h.startMs < existing.startMs) {
         byChannel.set(key, h);
       }
     }
 
     return Array.from(byChannel.values())
-      .filter(inPrimeWindow)
       .sort((a, b) => {
         const fa = familyOrder[a.family] - familyOrder[b.family];
         if (fa !== 0) return fa;
