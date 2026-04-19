@@ -199,21 +199,27 @@ function buildRomeIso(date: string, hh: number, mm: number): string {
 // Estraiamo entrambi e arricchiamo per match di prefisso uppercase.
 function extractRichTitles(html: string): string[] {
   const rich: string[] = [];
-  // Pattern 1: testo libero (anche multi-linea) seguito da link a /scheda/.
-  // Esempio: "Racconto di una notte - Stagione 1 Episodio 4 (Fiction)\n<a href="/scheda/...">"
-  // [^<>]{5,300} consente newline; non-greedy + lookahead all'<a> di /scheda/.
-  const re1 = /([^<>\r\n][^<>]{4,300}?)(?=\s*<a\s+href="\/scheda\/)/g;
+  const seen = new Set<string>();
+  const push = (raw: string) => {
+    const t = decodeEntities(raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+    if (!t || t.length < 5) return;
+    if (!/[A-Za-zÀ-ÿ]/.test(t)) return;
+    if (seen.has(t)) return;
+    seen.add(t);
+    rich.push(t);
+  };
+
+  // Pattern 1: testo che contiene un genere fra parentesi a fine stringa,
+  // tipico delle "schede" descrittive di staseraintv.
+  // Esempio: "Racconto di una notte - Stagione 1 Episodio 4 (Fiction)".
+  const re1 = /([A-Za-zÀ-ÿ0-9][^<>\r\n]{4,250}\([A-Za-zÀ-ÿ' ]{3,40}\))/g;
   let m: RegExpExecArray | null;
-  while ((m = re1.exec(html)) !== null) {
-    const t = decodeEntities(m[1].replace(/\s+/g, " ").trim());
-    if (t && t.length >= 5 && /[A-Za-zÀ-ÿ]/.test(t)) rich.push(t);
-  }
-  // Pattern 2: title="..." negli <img> delle schede (fallback).
+  while ((m = re1.exec(html)) !== null) push(m[1]);
+
+  // Pattern 2: title="..." negli <img> delle schede (fallback senza genere).
   const re2 = /title="([^"]{5,200})"\s*src="\/scheda\//g;
-  while ((m = re2.exec(html)) !== null) {
-    const t = decodeEntities(m[1].replace(/\s+/g, " ").trim());
-    if (t) rich.push(t);
-  }
+  while ((m = re2.exec(html)) !== null) push(m[1]);
+
   return rich;
 }
 
