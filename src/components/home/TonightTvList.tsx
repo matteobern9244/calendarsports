@@ -239,8 +239,8 @@ export default function TonightTvList() {
                     )}
                     <li className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm">
                       <span
-                        className={`hidden sm:inline-flex items-center font-heading font-bold text-[9px] uppercase tracking-widest w-20 shrink-0 ${
-                          showFamilyDivider ? "text-primary/70" : "text-transparent"
+                        className={`hidden sm:inline-flex items-center font-heading font-bold text-xs uppercase tracking-wider w-24 shrink-0 ${
+                          showFamilyDivider ? "text-primary/80" : "text-transparent"
                         }`}
                         aria-hidden={!showFamilyDivider}
                       >
