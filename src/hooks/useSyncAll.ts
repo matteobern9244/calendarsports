@@ -74,5 +74,5 @@ export function useSyncAll() {
     }
   }, [queryClient]);
 
-  return { sync, syncing, syncStep, syncProgress };
+  return { sync, syncing, syncStep, syncProgress, lastSyncAt };
 }
