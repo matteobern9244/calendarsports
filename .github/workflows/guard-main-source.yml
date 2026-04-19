@@ -1,0 +1,27 @@
+name: Guard Main Source
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guard-main-source-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guard-main-source:
+    name: guard-main-source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enforce develop as source branch for main
+        run: |
+          if [ "${{ github.head_ref }}" != "develop" ]; then
+            echo "Only pull requests from develop to main are allowed."
+            echo "Current source branch: ${{ github.head_ref }}"
+            exit 1
+          fi

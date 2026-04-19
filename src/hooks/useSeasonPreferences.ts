@@ -22,7 +22,9 @@ function loadPreferences(): SeasonPreferences {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return { ...defaults, ...JSON.parse(stored) };
-  } catch {}
+  } catch {
+    // Ignore malformed local storage payloads and fall back to defaults.
+  }
   return defaults;
 }
 

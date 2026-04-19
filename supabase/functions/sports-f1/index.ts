@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
         const standings = json.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
 
         // Fetch driver headshots from OpenF1
-        let headshotMap: Record<string, string> = {};
+        const headshotMap: Record<string, string> = {};
         try {
           const openF1Res = await fetch('https://api.openf1.org/v1/drivers?session_key=latest');
           if (openF1Res.ok) {
