@@ -180,6 +180,91 @@ import { supabase } from "@/lib/supabaseClient";
 import { supabase } from "@/integrations/supabase/client";
 ```
 
+## Workflow di esecuzione obbligatorio
+
+Per ogni task, seguire questa sequenza minima:
+
+1. Riformulare l'obiettivo richiesto in modo sintetico.
+2. Identificare file impattati, fonte dati reale coinvolta e aree di rischio.
+3. Dichiarare i criteri di accettazione prima di modificare il codice.
+4. Leggere la logica esistente prima di proporre cambi strutturali.
+5. Applicare TDD per ogni modifica comportamentale o fix di regressione.
+6. Implementare il cambiamento minimo sicuro necessario.
+7. Eseguire le validazioni pertinenti e dichiarare in modo esplicito limiti,
+   controlli saltati e rischio residuo.
+
+Non saltare direttamente all'editing senza avere capito il comportamento
+attuale e il perimetro reale della modifica.
+
+## Direttiva primaria
+
+Ogni modifica deve essere:
+
+- corretta;
+- minima nel perimetro;
+- testata in modo pertinente;
+- deterministica;
+- non regressiva;
+- coerente con stack, workflow Git e vincoli Lovable del repository.
+
+Non sacrificare correttezza, stabilita' o chiarezza per velocita' di consegna.
+
+## Politica di chiarimento e assunzioni
+
+- Non inventare requisiti, flussi, comandi o vincoli di business non presenti
+  nel repository.
+- Non assumere comportamento mancante se il codice o la documentazione non lo
+  supportano.
+- Seguire sempre la fonte di verita' piu' affidabile tra codice runtime,
+  `README.md`, `AGENTS.md` e istruzioni repository-wide gia' presenti.
+- Se il comportamento atteso, la shape dei dati o il flusso tra frontend e edge
+  function non e' chiaro, fermarsi e chiedere chiarimenti.
+- Se il repository definisce gia' il comportamento, seguire il repository
+  invece di dedurre o generalizzare da altri progetti.
+
+## Politica di scope del cambiamento
+
+- Mantenere i cambiamenti minimi e mirati.
+- Non mescolare feature, refactor, cleanup e cambi comportamentali nello stesso
+  intervento salvo richiesta esplicita.
+- Non refactorizzare codice non correlato al problema da risolvere.
+- Non rinominare o spostare file senza una necessita' reale.
+- Non introdurre nuove dipendenze, pattern o astrazioni senza una motivazione
+  tecnica chiara e proporzionata.
+- Preservare comportamento osservabile, payload, route e contratti di
+  integrazione salvo richiesta esplicita di cambiarli.
+- Quando un cambiamento tocca un adapter, una edge function o una fonte dati,
+  considerare sempre gli impatti sulle pagine sportive, sugli hook React Query
+  e sulla Home aggregata.
+
+## Standard di qualita' del codice
+
+- Separare in modo chiaro responsabilita' UI, orchestrazione applicativa,
+  parsing, mapping e integrazione con provider esterni.
+- Dare a adapter, mapper, facade e wrapper nomi coerenti con il confine che
+  proteggono, evitando bucket generici quando la responsabilita' e' specifica.
+- Preferire chiarezza e flusso dati esplicito a soluzioni "furbe" o implicite.
+- Mantenere funzioni focalizzate, con effetti collaterali leggibili e ridotti.
+- Evitare nesting profondo e dipendenze nascoste tra moduli.
+- Validare input esterni o non affidabili prima di usarli, specialmente su
+  scraping, parsing HTML, querystring e payload remoti.
+- Non silenziare errori che servono a diagnosticare mapping rotti, provider
+  instabili, input invalidi o invarianti violate.
+- Quando regole, label, endpoint, stringhe UI o configurazioni si ripetono in
+  piu' punti, centralizzarle nel layer gia' esistente piu' coerente, senza
+  introdurre complessita' inutile.
+
+## Determinismo e stabilita'
+
+- Evitare comportamento dipendente da tempo, ordine di esecuzione, locale,
+  path macchina o disponibilita' di provider esterni quando non e' strettamente
+  necessario.
+- Mantenere i test deterministici e ripetibili.
+- Per test e verifiche, preferire seam controllate, fixture e mocking mirato
+  invece di dipendere da scraping live o provider terzi instabili.
+- Dichiarare esplicitamente quando una verifica non puo' essere completamente
+  deterministica per limiti del repository o del provider.
+
 ## Regole di modifica
 
 - Preservare UI, nomenclatura e struttura delle route salvo richiesta contraria.
@@ -194,6 +279,64 @@ import { supabase } from "@/integrations/supabase/client";
   `markdownlint`.
 - Se tocchi una sezione sportiva, considera sempre l'impatto sulla Home.
 - Se tocchi shape dei payload backend, verifica frontend e hook correlati.
+
+## Politica TDD e prevenzione regressioni
+
+Per ogni cambiamento comportamentale, seguire `RED -> GREEN -> REFACTOR`:
+
+1. `RED`: aggiungere o aggiornare test che riproducano il comportamento atteso
+   o la regressione.
+2. `GREEN`: implementare il minimo codice necessario per far passare i test.
+3. `REFACTOR`: ripulire l'implementazione mantenendo test verdi e comportamento
+   invariato.
+
+Regole operative:
+
+- Un fix comportamentale non e' completo senza test.
+- Un fix di regressione non e' completo senza regression test.
+- La nuova logica deve essere coperta da test automatici quando il repository
+  offre un punto sensato per farlo.
+- Mockare in modo stretto solo i collaboratori esterni al vero perimetro del
+  test.
+- Mantenere fixture e dati di test minimi, leggibili e canonici.
+- Se il cambiamento tocca una sezione sportiva, verificare anche i flussi
+  adiacenti che consumano la stessa shape dati.
+- La coverage target del repository va trattata come obiettivo progressivo:
+  puntare almeno all'`80%` sul perimetro interessato quando la misurazione e'
+  disponibile, senza inventare risultati o dichiarare soglie non verificate.
+
+## Politica di validazione
+
+Prima di dichiarare completato un task, eseguire la pipeline di validazione
+pertinente supportata dal repository. In base al tipo di modifica, include:
+
+- `npm run lint`
+- `npm run test`
+- `npm run build`
+- `npm run test:e2e` per modifiche che impattano route, flussi principali,
+  rendering o comportamento UI cross-page
+
+Regole operative:
+
+- Usare solo comandi realmente supportati dal repository nello stato attuale.
+- Se vengono modificati file Markdown, eseguire `markdownlint` se disponibile
+  nell'ambiente o dichiarare esplicitamente il limite.
+- Se una validazione non puo' essere eseguita, dichiarare sempre:
+  - che cosa non e' stato eseguito;
+  - perche' non e' stato eseguito;
+  - quale rischio residuo rimane.
+- Non dichiarare mai come eseguiti controlli, test o coverage che non sono
+  stati davvero verificati.
+
+## Protocollo di chiusura task
+
+Prima di dichiarare una modifica completata:
+
+- riassumere in modo aderente ai fatti cosa e' stato cambiato;
+- indicare i file toccati;
+- indicare i test aggiunti o aggiornati, se presenti;
+- indicare i comandi di validazione eseguiti;
+- dichiarare controlli saltati, blocchi o rischio residuo.
 
 ## Checklist pre-edit
 

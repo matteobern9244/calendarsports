@@ -56,4 +56,11 @@ export default tseslint.config(
       "no-restricted-imports": "off",
     },
   },
+  {
+    // I componenti UI shadcn esportano spesso helper/varianti oltre al componente.
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
 );

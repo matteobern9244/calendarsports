@@ -63,7 +63,7 @@ Funzionalita' trasversali:
 
 ## Stack tecnico reale
 
-- `React 18`
+- `React 19`
 - `Vite`
 - `TypeScript`
 - `Tailwind CSS`
@@ -83,6 +83,12 @@ shadcn/ui/Radix.
 ### Frontend
 
 Il frontend e' una SPA Vite servita staticamente.
+
+La route `/` resta caricata in eager load come ingresso principale, mentre le
+route secondarie (`/sinner`, `/juventus`, `/formula1`, `/motogp` e `*`) sono
+ora caricate lazy tramite `React.lazy` e `Suspense` in
+[src/App.tsx](/Users/matteobernardini/code/calendarsports/src/App.tsx), per
+ridurre il bundle iniziale senza cambiare routing o shell applicativa.
 
 File di riferimento:
 
@@ -237,6 +243,11 @@ npm run dev
 ```bash
 npm run build
 ```
+
+La build attuale usa code-splitting esplicito in Vite per separare route
+secondarie e chunk vendor principali (`framework`, `motion`, `ui-vendor`).
+Questo ha ridotto il chunk iniziale della SPA sotto la soglia warning standard
+di `500 kB` senza cambiare stack o comportamento applicativo.
 
 ### Preview build
 
@@ -412,6 +423,10 @@ aggiorna immediatamente questa documentazione e `AGENTS.md`.
 
 Il repository include una suite minima e conservativa per usare GitHub Copilot
 senza introdurre una seconda policy indipendente rispetto a `AGENTS.md`.
+
+`AGENTS.md` governa ora anche il workflow minimo di esecuzione del task,
+la politica di scope del cambiamento, TDD/regression prevention, validazione
+reale e protocollo di chiusura con limiti e rischio residuo espliciti.
 
 Gerarchia operativa:
 

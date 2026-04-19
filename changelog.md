@@ -13,6 +13,29 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Changed
 
+- Rafforzato `AGENTS.md` con workflow di esecuzione obbligatorio, direttiva
+  primaria, policy di scope del cambiamento, standard di qualita',
+  determinismo, TDD/regression prevention, validazione reale e protocollo di
+  chiusura task, adattati al repository senza introdurre workflow di release
+  estranei.
+- Allineati `README.md`, `.github/copilot-instructions.md` e
+  `.github/prompts/pianifica-modifica.prompt.md` alla nuova disciplina di
+  `AGENTS.md`, inclusi TDD `RED -> GREEN -> REFACTOR`, validazione esplicita e
+  rischio residuo dichiarato.
+- Corretto `README.md` per riflettere lo stack reale `React 19`.
+- Introdotto code-splitting dedicato della SPA: route secondarie lazy in
+  `src/App.tsx`, fallback `Suspense` con `LoadingState` e vendor chunking
+  esplicito in `vite.config.ts`.
+- Ridotto il bundle principale della build da `702.94 kB` minified /
+  `211.18 kB` gzip a `244.90 kB` minified, eliminando il warning Vite sulla
+  soglia standard `500 kB`.
+- Silenziato il rumore ESLint della regola
+  `react-refresh/only-export-components` sui componenti UI generati in
+  `src/components/ui/*`, senza modificare il runtime applicativo.
+
+- Aggiunto test dedicato `src/App.test.tsx` per bloccare regressioni sul
+  contract di lazy loading delle route secondarie e sul routing della SPA.
+
 - Aggiunta configurazione reale di `Dependabot` per `npm` e
   `github-actions`, con PR di version update indirizzate a `develop`,
   assegnazione a `matteobern9244`, grouping conservativo e cooldown di 30 giorni

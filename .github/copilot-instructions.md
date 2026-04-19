@@ -32,5 +32,9 @@
   Lovable senza richiesta esplicita.
 - Se modifichi documentazione, mantienila allineata a fonti dati reali,
   workflow Git e relazione con Lovable.
+- Per fix o modifiche comportamentali, applica `RED -> GREEN -> REFACTOR`
+  quando il repository offre un punto di test sensato.
+- Quando chiudi un task, dichiara sempre controlli eseguiti, controlli saltati
+  e rischio residuo invece di riportare validazioni implicite.
 - Se rispondi o pianifichi lavoro, separa fatti verificati, ipotesi e raccomandazioni.
 - Non dichiarare una modifica come completata o risolta senza verifica reale.

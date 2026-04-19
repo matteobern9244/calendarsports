@@ -18,6 +18,10 @@ Il piano deve:
 
 - indicare la fonte dati reale coinvolta: API, scraping, fallback o hardcoded;
 - valutare l'impatto su Home aggregata, hook React Query e Edge Function correlate;
+- dichiarare criteri di accettazione e rischio principale della modifica;
+- esplicitare la strategia `RED -> GREEN -> REFACTOR` se il task cambia il comportamento;
+- includere i comandi di validazione che si intende eseguire;
+- dichiarare eventuali controlli che potrebbero non essere eseguibili e il rischio residuo;
 - esplicitare eventuali rischi verso `main` o verso il workflow GitHub <-> Lovable;
 - assumere per le modifiche umane il flusso feature branch -> `develop` ->
   `main`;
