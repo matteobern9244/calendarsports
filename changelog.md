@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD024 -->
+
 # Changelog
 
 Questo file adotta la struttura di **Keep a Changelog**, adattata alle regole
@@ -8,6 +10,30 @@ Le voci sotto riportate distinguono tra modifiche **verificate** e storico Git
 dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
+
+## [2.0.1] - 2026-04-19
+
+### Added
+
+- Aggiunta una suite GitHub Copilot repository-local composta da:
+  - `.github/copilot-instructions.md`
+  - file path-specific in `.github/instructions/`
+  - prompt riusabili in `.github/prompts/`
+  - configurazione minima workspace in `.vscode/`
+
+### Changed
+
+- Aggiornato `README.md` con una sezione dedicata all'uso di GitHub Copilot nel
+  repository e alla gerarchia tra `AGENTS.md`, istruzioni Copilot e prompt
+  riusabili.
+- Aggiornata la versione applicativa del repository a `2.0.1`.
+
+### Note operative
+
+- La suite Copilot deriva da `AGENTS.md` e non sostituisce le policy operative
+  del repository.
+- I prompt files restano un supporto operativo per IDE compatibili e non una
+  garanzia di enforcement.
 
 ## [2.0.0] - 2026-04-19
 
