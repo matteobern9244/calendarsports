@@ -1,51 +1,76 @@
 name: Enable PR Auto Merge
 
 on:
-  pull_request_target:
+  workflow_run:
+    workflows:
+      - CI Pull Request
+      - Guard Main Source
     types:
-      - opened
-      - reopened
-      - synchronize
-      - ready_for_review
+      - completed
 
 permissions:
   contents: write
   pull-requests: write
 
 concurrency:
-  group: enable-pr-automerge-${{ github.event.pull_request.number }}
+  group: enable-pr-automerge-${{ github.event.workflow_run.id }}
   cancel-in-progress: true
 
 jobs:
   enable-pr-automerge:
     name: enable-pr-automerge
-    if: ${{ !github.event.pull_request.draft && (github.base_ref == 'develop' || github.base_ref == 'main') }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Skip invalid source branch for main
-        if: ${{ github.base_ref == 'main' && github.head_ref != 'develop' }}
-        run: |
-          echo "Skipping auto-merge for PRs to main from branches other than develop."
-
       - name: Enable squash auto-merge
-        if: ${{ github.base_ref != 'main' || github.head_ref == 'develop' }}
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PULL_REQUESTS_JSON: ${{ toJson(github.event.workflow_run.pull_requests) }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          state=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json state,isDraft --jq '.state + "|" + (.isDraft | tostring)')
-          auto_merge=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json autoMergeRequest --jq 'if .autoMergeRequest == null then "" else .autoMergeRequest.mergeMethod end')
+          PR_NUMBER=$(echo "$PULL_REQUESTS_JSON" | jq -r '.[0].number // empty')
+
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+            echo "Workflow run is not associated with a pull request. Nothing to do."
+            exit 0
+          fi
+
+          pr_json=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json state,isDraft,baseRefName,headRefName,autoMergeRequest,statusCheckRollup)
+          state=$(echo "$pr_json" | jq -r '.state + "|" + (.isDraft | tostring)')
+          base_ref=$(echo "$pr_json" | jq -r '.baseRefName')
+          head_ref=$(echo "$pr_json" | jq -r '.headRefName')
+          auto_merge=$(echo "$pr_json" | jq -r 'if .autoMergeRequest == null then "" else .autoMergeRequest.mergeMethod end')
+          blocking_checks=$(echo "$pr_json" | jq '[.statusCheckRollup[]? | select((.status != null and .status != "COMPLETED") or (.conclusion != null and .conclusion != "SUCCESS" and .conclusion != "SKIPPED" and .conclusion != "NEUTRAL"))] | length')
 
           if [ "$state" != "OPEN|false" ]; then
             echo "PR is not open and ready. Nothing to do."
             exit 0
           fi
 
+          if [ "$base_ref" = "main" ] && [ "$head_ref" != "develop" ]; then
+            echo "Skipping auto-merge for PRs to main from branches other than develop."
+            exit 0
+          fi
+
+          if [ "$blocking_checks" -ne 0 ]; then
+            echo "PR checks are not fully green yet. Nothing to do."
+            exit 0
+          fi
           if [ -n "$auto_merge" ]; then
             echo "Auto-merge already enabled with method: $auto_merge"
             exit 0
           fi
 
-          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash
+          merge_output=$(gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash 2>&1) || {
+            echo "$merge_output"
+
+            if echo "$merge_output" | grep -q "enablePullRequestAutoMerge"; then
+              echo "Auto-merge is not available for this branch configuration. Nothing to do."
+              exit 0
+            fi
+
+            exit 1
+          }
+
+          echo "$merge_output"

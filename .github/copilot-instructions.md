@@ -6,9 +6,13 @@
 - Per modifiche umane, assumi sempre flusso feature branch -> `develop` e PR
   separata `develop` -> `main`.
 - Quando una PR verso `develop` o `main` e' eleggibile, mantieni `auto-merge`
-  attivo con metodo `squash` invece di richiedere un merge manuale finale.
+  attivo con metodo `squash` invece di richiedere un merge manuale finale, ma
+  non trattarla come mergiabile prima che i workflow PR pertinenti siano verdi.
 - Non proporre il ripristino della Branch protection classica su `main` se la
   Ruleset moderna e' gia' la fonte unica di protezione.
+- Non assumere che `main` debba avere gate di `pull_request` o
+  `required_status_checks` nella Ruleset: su questo repository il sync diretto
+  di Lovable ha precedenza e richiede una Ruleset minima compatibile.
 - Prima di proporre modifiche, leggi almeno `src/App.tsx`, `src/pages/*`,
   `src/hooks/useSportsData.ts`, `src/lib/api/sportsApi.ts` e
   `supabase/functions/*`.

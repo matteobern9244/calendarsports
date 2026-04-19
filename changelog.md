@@ -11,17 +11,6 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
-### Verifica sync
-
-- 2026-04-19: micro-modifica di prova generata da Lovable per verificare che
-  il sync GitHub <-> Lovable su `main` funzioni correttamente dopo
-  l'applicazione della nuova policy di branch protection (Ruleset unica con
-  bypass `lovable-dev` in mode `always`) e il riallineamento dei workflow
-  CI/CD.
-- 2026-04-19 (retry): seconda micro-modifica di verifica sync Lovable -> GitHub
-  su `main` dopo l'applicazione del prompt completo su GitHub Copilot
-  (hardening Ruleset + correzione workflow CI/CD).
-
 ### Changed
 
 - Configurazione GitHub di `main` riallineata al modello finale con una sola
@@ -35,12 +24,12 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   con il runtime piu' recente dei runner: `actions/checkout@v6`,
   `actions/setup-node@v6`, `actions/upload-artifact@v7`.
 - Aggiunto workflow repository-level per abilitare automaticamente
-  `auto-merge` con metodo `squash` sulle PR verso `develop` e `main`.
-- Rimossa la richiesta di review obbligatoria dalla Ruleset di `main`, cosi'
-  le PR `develop` -> `main` si auto-fondono appena i check richiesti sono
-  verdi.
-- Required checks finali candidati per la Ruleset di `main`: `quality` ed
-  `e2e` dal workflow PR.
+  `auto-merge` con metodo `squash` sulle PR verso `develop` e `main`,
+  riallineato per attivarsi solo dopo esiti PR compatibili con il flusso
+  umano.
+- Ruleset di `main` semplificata al set minimo compatibile con il sync
+  Lovable: solo blocco deletion e force-push, senza gate di PR o required
+  checks sulla branch sincronizzata direttamente dall'app.
 - Documentazione operativa e prompt repository-local allineati alla policy
   finale di branch protection, sync Lovable e regole per agenti AI.
 - Nessuna modifica al codice applicativo, ai secret, ai file env,
@@ -51,6 +40,8 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 - La verifica locale conferma che `npm run lint`, `npm run test` e
   `npm run build` passano, mentre `npm ci` fallisce per drift preesistente tra
   `package.json` e `package-lock.json`.
+- Verificato il ripristino del sync diretto Lovable -> GitHub su `main` dopo
+  l'aggiornamento della Ruleset minima compatibile.
 - Il drift del lockfile impedisce di portare a verde tutti i workflow che
   eseguono `npm ci` senza una modifica esplicita ai file package, esclusa da
   questa change set.
