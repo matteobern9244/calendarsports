@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Tv2, ArrowRight } from "lucide-react";
+import { RefreshCw, Tv2, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
