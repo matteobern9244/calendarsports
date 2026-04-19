@@ -22,8 +22,12 @@ type Channel = {
   logo: string | null;
   number?: number;
   // Slug staseraintv.com per scraping (es. "rai1", "canale5", "sky_uno").
-  // Se undefined il canale non ha fonte e ritorna programs=[].
+  // Se undefined, e' undefined anche superguidatvPath, il canale non ha
+  // fonte e ritorna programs=[].
   staseraSlug?: string;
+  // Path superguidatv.it (es. "guida-programmi-tv-sky-sport-uno/sky-sport/37").
+  // Usato per i canali Sky Sport non coperti da staseraintv.com.
+  superguidatvPath?: string;
 };
 
 type Program = {
@@ -39,38 +43,31 @@ type FamilyId = "sky-sport" | "sky-cinema" | "rai" | "mediaset" | "discovery";
 const FAMILY_RE = /^(sky-sport|sky-cinema|rai|mediaset|discovery)$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-// Slug verificati 2026-04-19 via curl su staseraintv.com.
-// Audit completo: tutti i 41 slug elencati ritornano HTML con >=12 righe
-// HH:MM. I canali Sky Sport branded NON sono coperti dalla fonte: tutti
-// gli slug candidati (`sky_sport_*`, `skysport_*`, `sky_sport1`, ecc.)
-// ritornano 404, e le fonti alternative (guidatv.sky.it, programmi.sky.it,
-// tvzap.kataweb.it) sono client-side rendered o protette da Cloudflare,
-// quindi non parsabili lato server in modo affidabile. Per non lasciare
-// la famiglia "Sport" completamente vuota includiamo Sportitalia
-// (canale 60 DTT, palinsesto sport reale via staseraintv.com) ed
-// eventuali altri canali sport in chiaro coperti dalla fonte.
-// I canali Sky Sport branded restano elencati ma senza staseraSlug:
-// la UI dichiara onestamente "Palinsesto non disponibile".
+// Slug verificati 2026-04-19 via curl.
+// - staseraintv.com: copre RAI, Mediaset, Sky Cinema parziale, Discovery,
+//   Sportitalia. Tutti gli slug `sky_sport_*` ritornano 404.
+// - superguidatv.it: copre i canali Sky Sport branded con pagine
+//   `/programmazione-canale/oggi/<path>/`, formato
+//   `HH:MM | Titolo | Categoria (durata')`.
+// La UI dichiara onestamente "Palinsesto non disponibile" per i canali
+// senza fonte.
 const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
   "sky-sport": {
     label: "Sport (Sky Sport + canali sport in chiaro)",
     channels: [
-      // Coperto da staseraintv.com (verificato 2026-04-19, ~21 righe/giorno).
+      // Sky Sport branded via superguidatv.it (verificato 2026-04-19,
+      // ~40 righe HH:MM/giorno con genere "Sport" estratto).
+      { id: "sky-sport-uno", name: "Sky Sport Uno", logo: null, number: 201, superguidatvPath: "guida-programmi-tv-sky-sport-uno/sky-sport/37" },
+      { id: "sky-sport-calcio", name: "Sky Sport Calcio", logo: null, number: 202, superguidatvPath: "guida-programmi-tv-sky-sport-calcio/sky-sport/572" },
+      { id: "sky-sport-tennis", name: "Sky Sport Tennis", logo: null, number: 203, superguidatvPath: "guida-programmi-tv-sky-sport-tennis-hd/sky-sport/598" },
+      { id: "sky-sport-f1", name: "Sky Sport F1", logo: null, number: 207, superguidatvPath: "guida-programmi-tv-sky-sport-f1-hd/sky-sport/43" },
+      { id: "sky-sport-motogp", name: "Sky Sport MotoGP", logo: null, number: 208, superguidatvPath: "guida-programmi-tv-sky-sport-motogp/sky-sport/44" },
+      { id: "sky-sport-arena", name: "Sky Sport Arena", logo: null, number: 204, superguidatvPath: "guida-programmi-tv-sky-sport-arena/sky-sport/38" },
+      { id: "sky-sport-golf", name: "Sky Sport Golf", logo: null, number: 209, superguidatvPath: "guida-programmi-tv-sky-sport-golf/sky-sport/573" },
+      { id: "sky-sport-max", name: "Sky Sport Max", logo: null, number: 256, superguidatvPath: "guida-programmi-tv-sky-sport-max/sky-sport/1248568499" },
+      { id: "sky-sport-basket", name: "Sky Sport Basket", logo: null, number: 205, superguidatvPath: "guida-programmi-tv-sky-sport-basket/sky-sport/40" },
+      // Sport in chiaro via staseraintv.com.
       { id: "sportitalia", name: "Sportitalia", logo: null, number: 60, staseraSlug: "sportitalia" },
-      // VERIFICATO 2026-04-19: nessuna fonte pubblica HTML statica espone
-      // questi canali Sky Sport (tutti gli slug staseraintv.com ritornano
-      // 404; sky.it usa rendering client-side).
-      { id: "sky-sport-uno", name: "Sky Sport Uno", logo: null, number: 201 },
-      { id: "sky-sport-calcio", name: "Sky Sport Calcio", logo: null, number: 202 },
-      { id: "sky-sport-tennis", name: "Sky Sport Tennis", logo: null, number: 203 },
-      { id: "sky-sport-f1", name: "Sky Sport F1", logo: null, number: 207 },
-      { id: "sky-sport-motogp", name: "Sky Sport MotoGP", logo: null, number: 208 },
-      { id: "sky-sport-arena", name: "Sky Sport Arena", logo: null, number: 204 },
-      { id: "sky-sport-football", name: "Sky Sport Football", logo: null, number: 205 },
-      { id: "sky-sport-action", name: "Sky Sport Action", logo: null, number: 206 },
-      { id: "sky-sport-golf", name: "Sky Sport Golf", logo: null, number: 209 },
-      { id: "sky-sport-max", name: "Sky Sport Max", logo: null, number: 256 },
-      { id: "sky-sport-24", name: "Sky Sport 24", logo: null, number: 200 },
     ],
   },
   "sky-cinema": {
@@ -236,16 +233,35 @@ function extractRichTitles(html: string): string[] {
   return rich;
 }
 
+// Normalizza per match tollerante: minuscolo, rimuove punteggiatura,
+// collassa spazi, rimuove articoli/parole comuni di poco valore.
+function normForMatch(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?: string } {
   if (!rawUpper) return { title: rawUpper };
-  const norm = rawUpper.toUpperCase().replace(/\s+/g, " ").trim();
-  // Cerca un titolo "ricco" che inizi con lo stesso prefisso (case-insensitive).
-  // Preferisci il match piu' lungo.
+  const norm = normForMatch(rawUpper);
+  const normTokens = norm.split(" ").filter(Boolean);
+  // Cerca un titolo "ricco" che condivida un prefisso significativo (>=3 parole
+  // o >=15 char) con la riga grezza, ignorando trattini e punteggiatura.
+  // Es. raw "Roberta Valente - Notaio in Sorrento - S1E3" matcha rich
+  // "Roberta Valente Notaio in Sorrento - Stagione 1 Episodio 3 (Fiction)".
   let best = "";
   for (const cand of rich) {
-    const candUpper = cand.toUpperCase();
-    if (candUpper.startsWith(norm) || norm.startsWith(candUpper.split(" - ")[0].toUpperCase())) {
-      if (cand.length > best.length) best = cand;
+    const candNorm = normForMatch(cand);
+    const candTokens = candNorm.split(" ").filter(Boolean);
+    // Trova lunghezza prefisso comune di token.
+    let common = 0;
+    const lim = Math.min(normTokens.length, candTokens.length);
+    while (common < lim && normTokens[common] === candTokens[common]) common += 1;
+    const commonChars = candTokens.slice(0, common).join(" ").length;
+    if ((common >= 3 || commonChars >= 15) && cand.length > best.length) {
+      best = cand;
     }
   }
   const source = best || rawUpper
@@ -259,7 +275,8 @@ function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?:
     "Fiction", "Film", "Serie", "Serie Tv", "Serie Tv Drammatica",
     "Telefilm", "Miniserie", "Soap Opera", "Soap",
     "Sport", "Calcio", "Tennis", "Motori", "Formula 1", "Motogp", "Ciclismo",
-    "Documentario", "Reality", "Talk Show", "Show", "Varieta'", "Varieta",
+    "Basket", "Pallavolo", "Pallacanestro", "Rugby", "Volley", "Nuoto",
+    "Documentario", "Reality", "Talk Show", "Talkshow", "Show", "Varieta'", "Varieta",
     "Intrattenimento", "Cartoni", "Cartoni Animati", "Animazione",
     "News", "Telegiornale", "Attualita'", "Attualita", "Rubrica",
     "Magazine", "Approfondimento", "Inchiesta", "Meteo",
@@ -268,6 +285,11 @@ function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?:
     "Drammatico", "Biografico", "Storico", "Western", "Fantascienza",
     "Religione", "Educativo", "Cultura", "Viaggi",
   ]);
+  // Normalizza varianti note in forma canonica.
+  const GENRE_ALIASES: Record<string, string> = {
+    "Talkshow": "Talk Show",
+    "Varieta": "Varieta'",
+  };
   const tryExtractGenre = (s: string): { stripped: string; genre?: string } => {
     const mm = s.match(/\s*\(([^()]{2,40})\)\s*$/);
     if (!mm) return { stripped: s };
@@ -276,7 +298,8 @@ function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?:
       .toLowerCase()
       .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
     if (GENRE_WHITELIST.has(candidateNorm)) {
-      return { stripped: s.slice(0, mm.index).trim(), genre: candidateNorm };
+      const canonical = GENRE_ALIASES[candidateNorm] ?? candidateNorm;
+      return { stripped: s.slice(0, mm.index).trim(), genre: canonical };
     }
     return { stripped: s };
   };
@@ -415,12 +438,120 @@ async function fetchStasera(slug: string, date: string): Promise<Program[]> {
   }
 }
 
+// ===== superguidatv.it parser =====
+// Pattern verificato 2026-04-19 sulle pagine
+// `https://www.superguidatv.it/programmazione-canale/oggi/<path>/`.
+// Le righe HH:MM precedono blocchi che contengono il titolo seguito da
+// `Categoria (durata')` (es. "Sport (40')", "Calcio (125')").
+// Solo "oggi" e' supportato (la fonte non espone domani/ieri in URL stabile).
+function parseSuperguidatvHtml(html: string, date: string): Program[] {
+  // Cattura HH:MM seguito (entro 600 char) da "Categoria (NN')".
+  const re = /(\d{1,2}):(\d{2})([\s\S]{1,600}?)([A-Za-zÀ-ÿ' ]{3,40})\s*\((\d{1,3})['']\)/g;
+  const programs: Program[] = [];
+  const seen = new Set<string>();
+  let m: RegExpExecArray | null;
+  let prevStartMs = -1;
+  let dayShift = 0;
+  while ((m = re.exec(html)) !== null) {
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (hh > 27 || mm > 59) continue;
+    const between = m[3];
+    const categoryRaw = m[4].trim();
+    const durationMin = parseInt(m[5], 10);
+    if (durationMin <= 0 || durationMin > 600) continue;
+    const cleaned = decodeEntities(between.replace(/<[^>]+>/g, " "))
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!cleaned) continue;
+    const segments = cleaned.split(/\s\|\s|\s{2,}/).map((s) => s.trim()).filter(Boolean);
+    let title = segments[segments.length - 1] || cleaned;
+    title = title.replace(/\s*\(St\.\s*\d{4}.*?\)\s*$/i, "").trim();
+    if (!title || title.length < 2) continue;
+    if (/^(in\s*onda|ultim['’]ora|prossim[ao])$/i.test(title)) continue;
+
+    const baseDate = new Date(`${date}T00:00:00Z`);
+    if (dayShift > 0) baseDate.setUTCDate(baseDate.getUTCDate() + dayShift);
+    let dateForRow = baseDate.toISOString().slice(0, 10);
+    let startIso = buildRomeIso(dateForRow, hh, mm);
+    let startMs = new Date(startIso).getTime();
+    if (prevStartMs > 0 && startMs < prevStartMs - 30 * 60 * 1000) {
+      dayShift += 1;
+      const shifted = new Date(`${date}T00:00:00Z`);
+      shifted.setUTCDate(shifted.getUTCDate() + dayShift);
+      dateForRow = shifted.toISOString().slice(0, 10);
+      startIso = buildRomeIso(dateForRow, hh, mm);
+      startMs = new Date(startIso).getTime();
+    }
+    prevStartMs = startMs;
+
+    const genre = categoryRaw
+      .toLowerCase()
+      .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+
+    const endIso = new Date(startMs + durationMin * 60 * 1000).toISOString();
+    const key = `${startIso}|${title.slice(0, 50)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    programs.push({ start: startIso, end: endIso, title, genre });
+  }
+  programs.sort((a, b) => a.start.localeCompare(b.start));
+  // Merge ripetizioni adiacenti dello stesso titolo (la fonte spesso ripete).
+  const dedup: Program[] = [];
+  for (const p of programs) {
+    const prev = dedup[dedup.length - 1];
+    if (prev && prev.title === p.title &&
+        Math.abs(new Date(p.start).getTime() - new Date(prev.end).getTime()) < 5 * 60 * 1000) {
+      prev.end = p.end;
+      continue;
+    }
+    dedup.push(p);
+  }
+  return dedup;
+}
+
+async function fetchSuperguidatv(path: string, date: string): Promise<Program[]> {
+  const cacheKey = `sg:${path}:${date}`;
+  const cached = fetchCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < TTL_MS) return cached.programs;
+
+  if (date !== todayRomeISO()) {
+    fetchCache.set(cacheKey, { at: Date.now(), programs: [] });
+    return [];
+  }
+  const url = `https://www.superguidatv.it/programmazione-canale/oggi/${path}/`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "it-IT,it;q=0.9",
+      },
+    });
+    if (!res.ok) {
+      console.warn("[streaming-tv] superguidatv non-OK", res.status, path);
+      fetchCache.set(cacheKey, { at: Date.now(), programs: [] });
+      return [];
+    }
+    const html = await res.text();
+    const programs = parseSuperguidatvHtml(html, date);
+    console.log("[streaming-tv] superguidatv parsed", path, "programs=", programs.length, "htmlLen=", html.length);
+    fetchCache.set(cacheKey, { at: Date.now(), programs });
+    return programs;
+  } catch (err) {
+    console.warn("[streaming-tv] superguidatv fetch error", path, err);
+    return [];
+  }
+}
+
 async function fetchProgramsForChannel(
   channel: Channel,
   date: string,
 ): Promise<Program[]> {
-  if (!channel.staseraSlug) return [];
-  return await fetchStasera(channel.staseraSlug, date);
+  if (channel.staseraSlug) return await fetchStasera(channel.staseraSlug, date);
+  if (channel.superguidatvPath) return await fetchSuperguidatv(channel.superguidatvPath, date);
+  return [];
 }
 
 // Limita la concorrenza per non hammerare staseraintv.com.

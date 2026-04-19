@@ -345,39 +345,39 @@ export default function HomePage() {
                   return (
                     <li
                       key={`${row.family}-${row.channel}-${row.time}-${i}`}
-                      className="flex items-start gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
+                      className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
                     >
                       <span
-                        className={`hidden sm:inline-flex font-heading text-[9px] uppercase tracking-widest w-20 shrink-0 pt-0.5 ${
+                        className={`hidden sm:inline-flex items-center font-heading text-[9px] uppercase tracking-widest w-20 shrink-0 ${
                           showFamilyDivider ? "text-primary/70" : "text-transparent"
                         }`}
                         aria-hidden={!showFamilyDivider}
                       >
                         {familyLabelMap[row.family]}
                       </span>
-                      <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm pt-0.5">
+                      <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm leading-none">
                         {row.time}
                       </span>
                       <Badge
                         variant="outline"
-                        className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 whitespace-nowrap mt-0.5"
+                        className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
                       >
                         {row.channel}
                       </Badge>
-                      <div className="min-w-0 flex-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                        <span className="font-medium text-xs sm:text-sm leading-snug break-words">
+                      <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="font-medium text-xs sm:text-sm leading-tight break-words">
                           {row.title}
                         </span>
                         {row.genre && (
                           <Badge
                             variant="secondary"
-                            className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20"
+                            className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none"
                           >
                             {row.genre}
                           </Badge>
                         )}
                         {formatDuration(row.durationMin) && (
-                          <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap font-mono">
+                          <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap font-mono leading-none">
                             {formatDuration(row.durationMin)}
                           </span>
                         )}
