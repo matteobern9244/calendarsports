@@ -179,7 +179,7 @@ export default function JuventusPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex-shrink-0 text-right">
+                    <div className="relative z-[1] flex-shrink-0 text-right">
                       {isFinished ? (
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-heading font-bold">{m.homeScore} - {m.awayScore}</span>
