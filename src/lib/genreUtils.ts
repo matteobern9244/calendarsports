@@ -18,17 +18,19 @@ export function inferGenre(
   // Per famiglia/canale dedicato
   if (family === "sky-cinema" || ch.includes("cinema")) return "Film";
   if (family === "sky-sport" || ch.includes("sport") || ch.includes("eurosport")) {
-    if (/calcio|serie a|champions|europa league|coppa|napoli|juventus|inter|milan|roma/.test(t)) return "Calcio";
-    if (/formula 1|\bf1\b|gran premio|gp\b/.test(t)) return "Formula 1";
+    // Ordine importante: MotoGP prima di "gp\b" (Formula 1)
     if (/motogp|moto2|moto3/.test(t)) return "MotoGP";
-    if (/tennis|atp|wta|sinner|alcaraz/.test(t)) return "Tennis";
-    if (/basket|nba|eurolega/.test(t)) return "Basket";
+    if (/formula 1|\bf1\b|gran premio|\bgp\b/.test(t)) return "Formula 1";
+    if (/\b(serie a|champions league|europa league|coppa italia)\b|\b(napoli|juventus|inter|milan|roma)\b\s*[-–]/.test(t)) return "Calcio";
+    if (/\bcalcio\b/.test(t)) return "Calcio";
+    if (/tennis|\batp\b|\bwta\b|sinner|alcaraz/.test(t)) return "Tennis";
+    if (/basket|\bnba\b|eurolega/.test(t)) return "Basket";
     if (/ciclismo|giro d['’]italia|tour de france/.test(t)) return "Ciclismo";
     return "Sport";
   }
 
   // Per keyword nel titolo
-  if (/\btg\b|telegiornale|news|edizione delle/.test(t)) return "News";
+  if (/\btg\d?\b|telegiornale|\bnews\b|edizione delle/.test(t)) return "News";
   if (/meteo/.test(t)) return "Meteo";
   if (/quiz|reazione a catena|l['’]eredita|caduta libera/.test(t)) return "Quiz";
   if (/striscia|paperissima|zelig|le iene|propaganda|porta a porta|piazzapulita|dimartedi|cartabianca|stasera italia/.test(t)) return "Talk Show";
