@@ -1,9 +1,36 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { STREAMING_PROVIDERS } from "@/hooks/useStreamingData";
 import { streamingApi } from "@/lib/api/sportsApi";
 import { todayRomeISO, addDaysISO } from "@/lib/dateUtils";
+
+const LAST_SYNC_KEY = "calendarsports:lastSyncAt";
+
+// Legge il timestamp persistito da localStorage. Ritorna null se mancante,
+// invalido o se localStorage non e' disponibile (SSR / sandbox).
+function readPersistedSyncAt(): Date | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(LAST_SYNC_KEY);
+    if (!raw) return null;
+    const ms = Number(raw);
+    if (!Number.isFinite(ms) || ms <= 0) return null;
+    return new Date(ms);
+  } catch {
+    return null;
+  }
+}
+
+// Persistenza fail-safe: ignora quota errors e ambienti senza storage.
+function writePersistedSyncAt(date: Date): void {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(LAST_SYNC_KEY, String(date.getTime()));
+  } catch {
+    // ignore
+  }
+}
 
 /**
  * Hook per sincronizzare tutti i dati dell'app:
@@ -13,13 +40,28 @@ import { todayRomeISO, addDaysISO } from "@/lib/dateUtils";
  *
  * Espone stato granulare (syncing, syncStep, syncProgress) per
  * mostrare indicatori UI coerenti tra pagine diverse.
+ *
+ * `lastSyncAt` viene persistito in localStorage cosi' rimane condiviso
+ * tra Home e Streaming e sopravvive ai refresh; le modifiche fatte in
+ * un'altra tab vengono propagate via `storage` event.
  */
 export function useSyncAll() {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [syncStep, setSyncStep] = useState<string>("");
   const [syncProgress, setSyncProgress] = useState(0);
-  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(() => readPersistedSyncAt());
+
+  // Mantieni allineate piu' istanze dell'hook (Home + Streaming + altre tab).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== LAST_SYNC_KEY) return;
+      setLastSyncAt(readPersistedSyncAt());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const sync = useCallback(async () => {
     setSyncing(true);
@@ -62,7 +104,9 @@ export function useSyncAll() {
         ),
       );
       setSyncProgress(100);
-      setLastSyncAt(new Date());
+      const now = new Date();
+      setLastSyncAt(now);
+      writePersistedSyncAt(now);
 
       toast.success("Tutti i dati sono stati aggiornati!", { id: toastId });
     } catch {
