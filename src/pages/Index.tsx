@@ -423,7 +423,8 @@ export default function HomePage() {
                           </span>
                         )}
                       </div>
-                    </li>
+                      </li>
+                    </>
                   );
                 })}
               </ul>
