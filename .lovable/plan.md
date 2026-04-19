@@ -1,35 +1,45 @@
 
-The build is failing on `sports-motogp/index.ts` lines 128 and 150 — the non-null assertions I supposedly added in an earlier turn aren't actually present (or were lost). Need to verify the current state of the file before planning the fix. Also the user reports no data loads in preview AND published app — this is almost certainly because the edge functions failed to deploy due to these TS errors, so the old version is running OR all 4 functions are broken.
+The user reports that the app works in preview but not in production after deploy. From the network logs, preview is working (all 4 edge functions returning 200). The published URL is `https://calendarsports.lovable.app`.
 
-Let me check the actual file state first.
+Looking at `_shared/security.ts`: CORS allows the request origin if it matches the allowlist, otherwise falls back to `https://calendarsports.lovable.app`. Need to verify what's in the allowlist — if `calendarsports.lovable.app` is allowed, it should work. Let me check.
 
-Plan:
+Actually I should check the security.ts allowlist. The summary says "exact origins or hosts ending with known suffixes". The fallback origin is `https://calendarsports.lovable.app`, suggesting the production domain SHOULD be in the allowlist. But if browsers see `Access-Control-Allow-Origin: https://calendarsports.lovable.app` while requesting from same origin, it should match — that's fine.
+
+So why would prod fail? Possibilities:
+1. The published version is an OLD bundle from before the recent edge function changes — but edge functions deploy independently of frontend, so that shouldn't matter for data loading.
+2. Frontend in prod uses different env vars (`VITE_SUPABASE_URL` etc.) — but `.env` is auto-managed and same across builds.
+3. The published version was built BEFORE the recent code changes and the user hasn't clicked "Update" in the publish dialog. **This is the most likely cause** — the user explicitly says "una volta deployata non vengon caricati i dati", and frontend changes require manual republish.
+4. Rate limiter is in-memory per instance — could block if hammered, but unlikely the root cause.
+5. CORS allowlist might not include `calendarsports.lovable.app` exactly — need to verify.
+
+I need to actually inspect `_shared/security.ts` to see the allowlist before planning.
 
 ## Diagnosi
 
-Il build delle Edge Functions sta fallendo con 2 errori TypeScript in `supabase/functions/sports-motogp/index.ts` (righe 128 e 150): `cells[0]` è `possibly 'undefined'`. Finché il build non passa, **nessuna delle 4 edge functions viene ridistribuita** — di conseguenza preview e produzione non caricano dati nuovi (e se la versione precedente non è mai stata deployata con successo dopo le ultime modifiche al CORS/rate-limit, le chiamate falliscono del tutto).
+In **preview** funziona (tutte e 4 le edge functions restituiscono 200 con dati validi, log network confermano). In **produzione** (`https://calendarsports.lovable.app`) no.
 
-Questo è un problema di **codice**, non di configurazione/secrets: tutti i secrets richiesti sono già presenti (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, ecc.) e non serve nulla da parte tua su GitHub o nelle impostazioni.
+Le edge functions sono condivise tra preview e prod (stesso progetto Supabase), quindi il problema non sta nel backend ma in **uno** di questi punti:
 
-## Fix proposto
+1. **Frontend non re-pubblicato** — le modifiche frontend in Lovable richiedono un click esplicito su "Update" nel dialog Publish. Le edge functions invece si deployano da sole. Se hai modificato solo edge functions di recente, la prod usa ancora il bundle precedente, ma quello dovrebbe comunque chiamare le edge functions correttamente. Da verificare quando è stato fatto l'ultimo Publish del frontend.
+2. **CORS allowlist** in `supabase/functions/_shared/security.ts` — se l'origin `https://calendarsports.lovable.app` non è esplicitamente in allowlist, il browser blocca le risposte in prod (in preview l'origin è `*.lovableproject.com` che probabilmente è whitelisted). Questa è la causa più probabile.
 
-Verifico prima lo stato reale di `sports-motogp/index.ts` (righe 120-160) per capire perché le non-null assertions annunciate in precedenza non risultano applicate. Poi:
+## Indagine che propongo (read-only)
 
-1. **Correzione TS in `supabase/functions/sports-motogp/index.ts`** — sostituisco l'accesso `cells[0]` / `cells[N]` con un pattern sicuro:
-   ```ts
-   const c0 = cells[0]; const c1 = cells[1]; // ecc.
-   if (!c0 || !c1 || ...) continue;
-   const pos = parseInt(c0.replace(...).trim());
-   ```
-   Questo soddisfa il type-checker Deno senza usare `!` (più robusto se il parsing HTML cambia).
+1. Aprire `supabase/functions/_shared/security.ts` e verificare l'allowlist origin: confermare se `calendarsports.lovable.app` è incluso e con che pattern matching.
+2. Aprire `vite.config.ts` e `src/integrations/supabase/client.ts` per escludere differenze prod vs preview lato client.
+3. Controllare i log delle edge function in prod (`supabase--analytics_query` su `function_edge_logs` filtrando per origin `calendarsports.lovable.app`) per vedere se le richieste arrivano e che status code restituiscono.
+4. Eseguire `supabase--curl_edge_functions` simulando l'origin di produzione (`Origin: https://calendarsports.lovable.app`) per riprodurre il problema lato server.
 
-2. **Deploy esplicito** delle 4 edge functions con `supabase--deploy_edge_functions` per garantire che la nuova versione vada online subito.
+## Fix probabile (da confermare dopo l'indagine)
 
-3. **Verifica end-to-end** con `supabase--curl_edge_functions` su un endpoint per ciascuna funzione (status 200 + `success: true`).
+A seconda di cosa emerge, una di queste due azioni:
 
-4. **Report finale** con esito di ciascun endpoint e conferma che preview/produzione tornano a caricare dati.
+- **A)** Aggiungere `https://calendarsports.lovable.app` (ed eventualmente il custom domain) all'allowlist CORS in `supabase/functions/_shared/security.ts`, poi ridistribuire le 4 edge functions.
+- **B)** Se la causa è solo frontend non aggiornato, indicarti di cliccare **Publish → Update** in Lovable (nessuna modifica codice).
 
-## File toccati
-- `supabase/functions/sports-motogp/index.ts` (solo le 2 zone di parsing classifiche)
+## Cosa NON tocco
 
-Nessuna modifica a `main`, a workflow Git, a secrets o a configurazione Lovable. Nessun rischio per il sync GitHub↔Lovable.
+- `main`, workflow GitHub, segreti, `supabase/config.toml`, fonti dati, mapping statici.
+- Stack o routing.
+
+Nessuna modifica a codice in questa fase: serve prima leggere `security.ts` e i log per evitare di sparare alla cieca.
