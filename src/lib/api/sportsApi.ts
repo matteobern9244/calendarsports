@@ -5,8 +5,8 @@ async function callEdgeFunction(functionName: string, params: Record<string, str
   const url = `${SUPABASE_PROJECT_URL}/functions/v1/${functionName}?${queryString}`;
   const response = await fetch(url, {
     headers: {
-      "Authorization": `Bearer ${anonKey}`,
-      "apikey": anonKey,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "apikey": SUPABASE_ANON_KEY,
     },
   });
 
