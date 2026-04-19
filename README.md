@@ -1,3 +1,354 @@
-# Welcome to your Lovable project
+# Calendar Sports
 
-TODO: Document your project here
+Applicazione web sportiva multi-sezione per consultare eventi imminenti,
+calendari e classifiche di Jannik Sinner, Juventus, Formula 1 e MotoGP.
+
+Versione repository corrente: `2.0.0`.
+
+## Origine del progetto
+
+Questo repository nasce da un progetto creato inizialmente con **Lovable** e poi
+evoluto localmente in GitHub e IDE.
+
+Punti operativi da tenere presenti:
+
+- il codice e' tuo e puo' essere modificato liberamente;
+- il progetto mantiene pero' un contesto operativo legato a Lovable e a
+  Supabase;
+- il branch `main` va trattato come **branch sensibile** perche', in base alla
+  documentazione Lovable, il sync GitHub <-> Lovable avviene sul branch di
+  default;
+- il deploy in produzione **non** e' automatizzato da questo repository e resta
+  una scelta manuale da eseguire in Lovable.
+
+Per questo motivo la documentazione di questo repo evita istruzioni che
+incoraggino push automatici o superficiali su `main`.
+
+## Release baseline
+
+La baseline documentata del repository e' la release `2.0.0`.
+
+Questa release rappresenta il punto in cui sono stati allineati:
+
+- cleanup del versionamento dei file ambiente;
+- workflow GitHub Actions per `develop` e per le PR verso `main`;
+- test locali e CI piu' ripetibili;
+- documentazione operativa coerente con il rischio GitHub <-> Lovable.
+
+La release `2.0.0` descrive lo stato del repository e delle sue policy
+operative. Non implica, da sola, che una corrispondente versione live sia gia'
+stata pubblicata su Lovable.
+
+## Cosa fa l'app
+
+L'app espone cinque viste principali:
+
+- `Home`: aggrega i prossimi eventi rilevanti da tutte le sezioni.
+- `Jannik Sinner`: profilo sintetico, risultati e calendario tornei.
+- `Juventus`: calendario partite e classifica Serie A.
+- `Formula 1`: calendario GP, classifica piloti e costruttori.
+- `MotoGP`: calendario weekend, classifica piloti e costruttori.
+
+Funzionalita' trasversali:
+
+- tema light/dark;
+- sincronizzazione client-side tramite invalidazione delle query;
+- selezione stagione per ogni sezione;
+- UI costruita con componenti shadcn/ui e Radix.
+
+## Stack tecnico reale
+
+- `React 18`
+- `Vite`
+- `TypeScript`
+- `Tailwind CSS`
+- `shadcn/ui`
+- `Radix UI`
+- `@tanstack/react-query`
+- `react-router-dom` con `BrowserRouter`
+- `Supabase Edge Functions`
+- `Vitest` e `Playwright` presenti nel progetto, ma con copertura attuale minima
+
+Il profilo tecnologico coincide con quanto Lovable dichiara come stack standard
+per i progetti exportati: React + Vite + TypeScript + Tailwind +
+shadcn/ui/Radix.
+
+## Architettura ad alto livello
+
+### Frontend
+
+Il frontend e' una SPA Vite servita staticamente.
+
+File di riferimento:
+
+- [src/App.tsx](/Users/matteobernardini/code/calendarsports/src/App.tsx)
+- [src/pages/Index.tsx](/Users/matteobernardini/code/calendarsports/src/pages/Index.tsx)
+- [src/pages/SinnerPage.tsx](/Users/matteobernardini/code/calendarsports/src/pages/SinnerPage.tsx)
+- [src/pages/JuventusPage.tsx](/Users/matteobernardini/code/calendarsports/src/pages/JuventusPage.tsx)
+- [src/pages/Formula1Page.tsx](/Users/matteobernardini/code/calendarsports/src/pages/Formula1Page.tsx)
+- [src/pages/MotoGPPage.tsx](/Users/matteobernardini/code/calendarsports/src/pages/MotoGPPage.tsx)
+
+### Accesso ai dati lato client
+
+Il frontend non chiama direttamente le fonti esterne. Passa da:
+
+- [src/lib/api/sportsApi.ts](/Users/matteobernardini/code/calendarsports/src/lib/api/sportsApi.ts)
+- [src/hooks/useSportsData.ts](/Users/matteobernardini/code/calendarsports/src/hooks/useSportsData.ts)
+
+Le richieste browser puntano alle Edge Functions Supabase via:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+### Backend leggero
+
+Le integrazioni esterne stanno nelle funzioni dentro
+[supabase/functions](/Users/matteobernardini/code/calendarsports/supabase/functions):
+
+- `sports-f1`
+- `sports-football`
+- `sports-tennis`
+- `sports-motogp`
+
+Queste funzioni si occupano di:
+
+- interrogare API pubbliche;
+- fare scraping di provider esterni;
+- applicare mapping statici e fallback;
+- uniformare il payload verso il frontend.
+
+## Fonti dati e affidabilita'
+
+Questo progetto **non** usa una sola fonte dati omogenea. Usa un mix di API,
+scraping e dati statici. Va documentato e mantenuto come tale.
+
+### Formula 1
+
+Fonti correnti:
+
+- Jolpica / Ergast-compatible API per calendario e standings;
+- OpenF1 per headshot dei piloti;
+- mapping statici di fallback per foto piloti e loghi costruttori.
+
+Rischi:
+
+- i campi disponibili possono cambiare lato provider;
+- OpenF1 non garantisce copertura completa di tutti i piloti;
+- i fallback statici richiedono manutenzione stagionale.
+
+### Juventus
+
+Fonti correnti:
+
+- widget e pagine Sky Sport per calendario e classifica;
+- API Lega Serie A per le informazioni broadcaster;
+- merge applicativo tra Serie A, Champions League e Coppa Italia.
+
+Rischi:
+
+- scraping fragile rispetto a cambi HTML o widget;
+- dipendenza da competition ID e season ID esterni;
+- eventuali cambi strutturali sui siti Sky o Lega possono rompere la feature.
+
+### Jannik Sinner
+
+Fonti correnti:
+
+- dati statici codificati nella Edge Function `sports-tennis`;
+- il codice dichiara come fonte concettuale ATP Tour / Wikipedia, ma il runtime
+  attuale usa dataset statici 2026.
+
+Rischi:
+
+- forte rischio di obsolescenza;
+- manutenzione manuale a ogni nuova stagione;
+- nessun refresh automatico da API ufficiale.
+
+### MotoGP
+
+Fonti correnti:
+
+- calendario statico 2026;
+- scraping Sky Sport per standings;
+- mapping statici per foto piloti e loghi team o costruttori.
+
+Rischi:
+
+- calendario hardcoded soggetto a drift;
+- scraping standings fragile;
+- mapping statici da aggiornare in caso di roster o team changes.
+
+## Setup locale
+
+### Prerequisiti
+
+- Node.js 20+ raccomandato
+- npm disponibile
+- progetto Supabase valido se vuoi usare le Edge Functions reali collegate
+
+Il repository contiene anche `bun.lock` e `bun.lockb`, ma i comandi
+ufficialmente presenti in `package.json` sono npm-based.
+
+### Installazione
+
+```bash
+npm install
+```
+
+### Variabili ambiente
+
+Per il frontend servono queste variabili:
+
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_PUBLISHABLE_KEY=
+VITE_SUPABASE_PROJECT_ID=
+```
+
+Nel repository era presente anche una `.env` reale con chiavi di progetto.
+Trattala come materiale da rimuovere dal versionamento e ruotare se necessario.
+Usa invece `.env.local` o `.env` locale non tracciata e prendi come base
+[.env.example](/Users/matteobernardini/code/calendarsports/.env.example).
+
+Variabili aggiuntive non-Vite:
+
+```env
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
+```
+
+Nel codice frontend oggi vengono lette direttamente solo le variabili `VITE_*`;
+le variabili non-Vite sono comunque mantenute nell'esempio per coerenza con il
+setup Supabase e Lovable esistente.
+
+### Avvio locale
+
+```bash
+npm run dev
+```
+
+### Build
+
+```bash
+npm run build
+```
+
+### Preview build
+
+```bash
+npm run preview
+```
+
+### Lint
+
+```bash
+npm run lint
+```
+
+### Test
+
+```bash
+npm run test
+```
+
+### End-to-end test
+
+```bash
+npm run test:e2e
+```
+
+### Test in watch
+
+```bash
+npm run test:watch
+```
+
+## Supabase e funzioni edge
+
+Le funzioni edge sono sotto
+[supabase/functions](/Users/matteobernardini/code/calendarsports/supabase/functions).
+
+Punti chiave:
+
+- il frontend costruisce URL del tipo
+  `https://<project>.supabase.co/functions/v1/<function>?...`;
+- le chiamate includono `Authorization: Bearer <anon-key>` e `apikey`;
+- le funzioni rispondono in JSON con forma `success/data` o `success/error`;
+- ogni funzione incapsula logica di fetch, scraping, fallback e rate limiting
+  basilare.
+
+Il repo non contiene una documentazione operativa completa per sviluppo edge
+locale. In pratica oggi il percorso piu' lineare e':
+
+1. usare un progetto Supabase gia' configurato;
+2. esporre nel frontend le variabili `VITE_SUPABASE_*`;
+3. verificare che le Edge Functions corrispondenti siano deployate su quel
+   progetto.
+
+## GitHub, branch e relazione con Lovable
+
+Questo e' il punto piu' sensibile del repository.
+
+- Lovable documenta il sync GitHub <-> Lovable sul branch di default;
+- per questo repo va assunto che `main` sia il branch a rischio sync;
+- le attivita' di analisi, sviluppo e refactor dovrebbero avvenire fuori da
+  `main`, salvo istruzioni esplicite;
+- nessun documento di questo repo deve suggerire push automatici su `main`;
+- il deploy della versione di produzione resta manuale da eseguire in Lovable da
+  parte tua.
+
+Policy operativa corrente del repository:
+
+- `main` deve ricevere modifiche solo tramite pull request da `develop`;
+- su `main` non vanno fatti push diretti;
+- il merge verso `main` deve restare bloccato finche' non passano tutti i check
+  GitHub Actions richiesti;
+- i workflow CI validano `lint`, `test`, `build` ed E2E frontend;
+- gli E2E usano fixture e mocking delle Edge Functions, quindi validano router,
+  UI e shape dati senza dipendere dai provider esterni live.
+
+Se cambi branch policy, default branch o integrazione GitHub in Lovable,
+aggiorna immediatamente questa documentazione e `AGENTS.md`.
+
+## Routing e hosting SPA
+
+L'app usa `BrowserRouter`. Di conseguenza, su hosting esterno, il server web
+deve fare fallback a `index.html` per tutte le route applicative.
+
+Questo e' coerente anche con la documentazione Lovable sui deploy esterni dei
+progetti exportati.
+
+## Stato attuale e limiti noti
+
+- `README.md` originario generato da Lovable era incompleto.
+- Il progetto usa fonti eterogenee e non sempre affidabili.
+- Alcune sezioni sono parzialmente o totalmente hardcoded sulla stagione 2026.
+- La copertura test reale e' quasi nulla: e' presente solo un test esempio.
+- Il file `.env` era presente nel repo con valori reali.
+- Il setup di deployment non e' descritto end-to-end in modo sufficiente.
+- Puo' esistere drift tra stato del repository, ambiente Supabase collegato e
+  versione live su Lovable.
+
+## Miglioramenti raccomandati
+
+- Rimuovere `.env` dal versionamento e sostituirlo operativamente con
+  `.env.example` + `.env.local`.
+- Valutare la rotazione delle chiavi gia' presenti nel file `.env` tracciato.
+- Rafforzare i test almeno su trasformazioni dati delle Edge Functions,
+  rendering delle pagine principali e regressioni di routing, theme e query
+  invalidation.
+- Formalizzare il workflow branch con branch di lavoro dedicati, review prima di
+  merge e merge su `main` solo quando compatibile con il sync Lovable
+  desiderato.
+- Documentare meglio il flusso di deploy reale e lo stato delle Edge Functions
+  deployate.
+
+## File da leggere per orientarsi
+
+- [src/App.tsx](/Users/matteobernardini/code/calendarsports/src/App.tsx)
+- [src/lib/api/sportsApi.ts](/Users/matteobernardini/code/calendarsports/src/lib/api/sportsApi.ts)
+- [src/hooks/useSportsData.ts](/Users/matteobernardini/code/calendarsports/src/hooks/useSportsData.ts)
+- [supabase/functions/sports-f1/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-f1/index.ts)
+- [supabase/functions/sports-football/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-football/index.ts)
+- [supabase/functions/sports-tennis/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-tennis/index.ts)
+- [supabase/functions/sports-motogp/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-motogp/index.ts)
