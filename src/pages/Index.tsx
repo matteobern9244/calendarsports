@@ -252,7 +252,7 @@ export default function HomePage() {
                   <span className="text-gold-gradient">Stasera in TV</span>
                 </h2>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Prime time da Sky Cinema, RAI, Mediaset, Discovery — fonte staseraintv.com
+                  Prima serata (20:30–22:30) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
                 </p>
               </div>
             </div>
