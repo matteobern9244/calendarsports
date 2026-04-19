@@ -33,7 +33,11 @@ interface UpcomingEvent {
 interface TvHighlight {
   family: StreamingFamilyId;
   channel: string;
+  channelNumber?: number;
   time: string;
+  startMs: number;
+  hourRome: number;
+  minuteRome: number;
   title: string;
 }
 
