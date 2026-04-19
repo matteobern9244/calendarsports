@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   STREAMING_FAMILIES,
@@ -66,6 +67,7 @@ export default function HomePage() {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [syncStep, setSyncStep] = useState<string>("");
+  const [syncProgress, setSyncProgress] = useState(0);
   const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
   const [tvPage, setTvPage] = useState(0);
   const TV_PAGE_SIZE = 8;
@@ -190,6 +192,7 @@ export default function HomePage() {
 
   const handleSync = async () => {
     setSyncing(true);
+    setSyncProgress(0);
     const toastId = toast.loading("Avvio sincronizzazione...");
     try {
       // 1. Sport
@@ -202,6 +205,7 @@ export default function HomePage() {
         },
         refetchType: "all",
       });
+      setSyncProgress(33);
 
       // 2. Palinsesti TV (gia' attivi sulla home)
       setSyncStep("Aggiornamento palinsesti TV...");
@@ -210,6 +214,7 @@ export default function HomePage() {
         queryKey: ["streaming-tv"],
         refetchType: "all",
       });
+      setSyncProgress(66);
 
       // 3. Nuove uscite (non montate sulla home: prefetch esplicito)
       setSyncStep("Aggiornamento nuove uscite streaming...");
@@ -225,6 +230,7 @@ export default function HomePage() {
           }),
         ),
       );
+      setSyncProgress(100);
 
       toast.success("Tutti i dati sono stati aggiornati!", { id: toastId });
     } catch {
@@ -232,6 +238,7 @@ export default function HomePage() {
     } finally {
       setSyncStep("");
       setSyncing(false);
+      setTimeout(() => setSyncProgress(0), 600);
     }
   };
 
@@ -319,25 +326,34 @@ export default function HomePage() {
 
   return (
     <div className="container py-8 sm:py-12 space-y-10">
-      <div className="flex items-center justify-end gap-3">
-        {syncing && syncStep && (
-          <span
-            className="text-xs font-heading uppercase tracking-wider text-muted-foreground animate-pulse"
-            aria-live="polite"
+      <div className="flex flex-col items-end gap-2">
+        <div className="flex items-center justify-end gap-3">
+          {syncing && syncStep && (
+            <span
+              className="text-xs font-heading uppercase tracking-wider text-muted-foreground animate-pulse"
+              aria-live="polite"
+            >
+              {syncStep}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSync}
+            disabled={syncing || isLoading}
+            className="gap-2 shrink-0"
           >
-            {syncStep}
-          </span>
+            <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Sincronizzo..." : "Sincronizza"}
+          </Button>
+        </div>
+        {syncing && (
+          <Progress
+            value={syncProgress}
+            aria-label="Avanzamento sincronizzazione"
+            className="h-1.5 w-[240px]"
+          />
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSync}
-          disabled={syncing || isLoading}
-          className="gap-2 shrink-0"
-        >
-          <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Sincronizzo..." : "Sincronizza"}
-        </Button>
       </div>
 
       {/* Stasera in TV — quadro reale multi-famiglia con filtri rapidi */}
