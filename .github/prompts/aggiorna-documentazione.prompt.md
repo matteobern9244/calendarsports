@@ -16,6 +16,8 @@ Quando proponi testo:
 - distingui tra fonti live, scraping, fallback e contenuti hardcoded;
 - mantieni allineate policy Git, rischio `main` e relazione con
   Lovable;
+- tratta come configurazione finale il flusso feature branch -> `develop` ->
+  `main` e una sola Ruleset moderna su `main`;
 - non suggerire push automatici su `main`;
 - non dichiarare come verificato cio' che non e' stato controllato con
   file, diff o comandi.
