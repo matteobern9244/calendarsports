@@ -43,19 +43,44 @@ Lovable**.
 
 Assunzione operativa del repository:
 
-- `main` e' il branch sensibile collegato o potenzialmente collegato al sync
+- `main` e' il branch di default collegato al sync bidirezionale GitHub <->
   Lovable.
-- Il sync GitHub <-> Lovable va considerato un rischio operativo reale.
-- Il deploy in produzione resta manuale su Lovable.
+- Lovable scrive automaticamente su `main` ad ogni modifica fatta dall'editor
+  Lovable. Questo e' il canale ufficiale di scrittura su `main`.
+- Gli sviluppatori umani **non** pushano direttamente su `main`. Lavorano su
+  `develop` (o su feature branch derivati da `develop`) e arrivano su `main`
+  solo via pull request.
+- Il deploy in produzione resta manuale su Lovable (Publish -> Update).
 
-Regole:
+Regole per agenti AI che operano fuori da Lovable (es. Codex, Copilot in IDE):
 
-- Fare analisi, patch e refactor lontano da `main`, salvo istruzioni esplicite.
-- Se devi proporre merge o push, dichiara sempre l'impatto potenziale sul sync
-  Lovable.
-- Non proporre push automatici su `main`.
+- Non pushare mai direttamente su `main`.
+- Lavorare su `develop` o su feature branch e proporre PR verso `main`.
+- Se devi proporre merge, dichiara sempre l'impatto potenziale sul sync
+  Lovable e sulla versione live.
 - Non cambiare il branch di default o la struttura dei remote senza richiesta
   esplicita.
+
+Regole per Lovable (questo agente, in-editor):
+
+- E' l'unico canale autorizzato a scrivere direttamente su `main`.
+- Ogni modifica fatta in chat Lovable produce un commit automatico su `main`
+  via sync GitHub <-> Lovable.
+- Le branch protection rules su GitHub devono consentire push solo all'app
+  GitHub di Lovable (`lovable-dev[bot]` o equivalente) e bloccare push diretti
+  da utenti umani.
+
+Configurazione consigliata su GitHub (da applicare manualmente, non via
+codice):
+
+- Settings -> Branches -> Branch protection rule per `main`:
+  - Require a pull request before merging (per i merge da `develop`).
+  - Restrict who can push to matching branches -> consentire solo l'app
+    GitHub di Lovable.
+  - Do not allow bypassing the above settings.
+
+Cosi' `main` resta sincronizzato 1:1 con Lovable e gli umani contribuiscono
+solo via PR da `develop`.
 
 ## Mappa minima del codice da leggere prima di intervenire
 
