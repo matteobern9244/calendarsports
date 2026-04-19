@@ -217,8 +217,8 @@ function extractRichTitles(html: string): string[] {
   return rich;
 }
 
-function enrichTitle(rawUpper: string, rich: string[]): string {
-  if (!rawUpper) return rawUpper;
+function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?: string } {
+  if (!rawUpper) return { title: rawUpper };
   const norm = rawUpper.toUpperCase().replace(/\s+/g, " ").trim();
   // Cerca un titolo "ricco" che inizi con lo stesso prefisso (case-insensitive).
   // Preferisci il match piu' lungo.
@@ -229,11 +229,37 @@ function enrichTitle(rawUpper: string, rich: string[]): string {
       if (cand.length > best.length) best = cand;
     }
   }
-  if (best) return best;
-  // Capitalizza in modo leggibile l'output uppercase grezzo.
-  return rawUpper
+  const source = best || rawUpper
     .toLowerCase()
     .replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+
+  // Estrai genere fra parentesi a fine titolo: "... (Fiction)" / "(Film)" / "(Sport)".
+  // Whitelist generi noti per evitare di confondere parentesi descrittive
+  // (es. "(Replica)", "(2023)").
+  const GENRE_WHITELIST = new Set([
+    "Fiction", "Film", "Serie Tv", "Serie Tv Drammatica",
+    "Sport", "Calcio", "Tennis", "Motori", "Formula 1", "Motogp",
+    "Documentario", "Reality", "Talk Show", "Show", "Varieta'", "Varieta",
+    "Intrattenimento", "Cartoni", "Cartoni Animati", "Animazione",
+    "News", "Telegiornale", "Attualita'", "Attualita",
+    "Cucina", "Lifestyle", "Musica", "Quiz", "Cinema",
+    "Commedia", "Azione", "Thriller", "Avventura", "Horror", "Romantico",
+    "Drammatico", "Biografico", "Storico", "Western", "Fantascienza",
+  ]);
+  let title = source;
+  let genre: string | undefined;
+  const genreMatch = title.match(/\s*\(([^()]{2,40})\)\s*$/);
+  if (genreMatch) {
+    const candidate = genreMatch[1].trim();
+    const candidateNorm = candidate
+      .toLowerCase()
+      .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+    if (GENRE_WHITELIST.has(candidateNorm)) {
+      genre = candidateNorm;
+      title = title.slice(0, genreMatch.index).trim();
+    }
+  }
+  return { title, genre };
 }
 
 function parseStaseraintvHtml(html: string, date: string): Program[] {
@@ -271,7 +297,7 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
     }
     prevStartMs = startMs;
 
-    const titleEnriched = enrichTitle(titleRaw, richTitles);
+    const { title: titleEnriched, genre } = enrichTitle(titleRaw, richTitles);
 
     const key = `${startIso}|${titleEnriched.slice(0, 50)}`;
     if (seen.has(key)) continue;
@@ -281,6 +307,7 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
       start: startIso,
       end: startIso,
       title: titleEnriched,
+      ...(genre ? { genre } : {}),
     });
   }
 
