@@ -220,7 +220,7 @@ export default function TonightTvList() {
               value="all"
               size="sm"
               aria-label="Mostra tutte le famiglie"
-              className="h-9 px-3 text-[11px] font-heading uppercase tracking-wider data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              className="h-9 px-3 text-[11px] font-heading uppercase tracking-wider border border-primary/30 bg-card/60 text-foreground hover:bg-primary/15 hover:text-foreground hover:border-primary/60 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:border-primary data-[state=on]:shadow-[0_0_0_1px_hsl(var(--gold)/0.6)]"
             >
               Tutti
             </ToggleGroupItem>
@@ -230,7 +230,7 @@ export default function TonightTvList() {
                 value={f.id}
                 size="sm"
                 aria-label={`Filtra ${f.label}`}
-                className="h-9 px-3 text-[11px] font-heading uppercase tracking-wider data-[state=on]:bg-primary data-[state=on]:text-primary-foreground whitespace-nowrap"
+                className="h-9 px-3 text-[11px] font-heading uppercase tracking-wider whitespace-nowrap border border-primary/30 bg-card/60 text-foreground hover:bg-primary/15 hover:text-foreground hover:border-primary/60 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:border-primary data-[state=on]:shadow-[0_0_0_1px_hsl(var(--gold)/0.6)]"
               >
                 {f.label}
               </ToggleGroupItem>
