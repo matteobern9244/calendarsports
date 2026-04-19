@@ -40,13 +40,26 @@ const FAMILY_RE = /^(sky-sport|sky-cinema|rai|mediaset|discovery)$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Slug verificati 2026-04-19 via curl su staseraintv.com.
-// Sky Sport NON e' coperto dalla fonte: tutti gli slug `sky_sport_*` ritornano
-// 404. Lasciamo i canali nella whitelist senza staseraSlug -> programs=[],
+// Audit completo: tutti i 41 slug elencati ritornano HTML con >=12 righe
+// HH:MM. I canali Sky Sport branded NON sono coperti dalla fonte: tutti
+// gli slug candidati (`sky_sport_*`, `skysport_*`, `sky_sport1`, ecc.)
+// ritornano 404, e le fonti alternative (guidatv.sky.it, programmi.sky.it,
+// tvzap.kataweb.it) sono client-side rendered o protette da Cloudflare,
+// quindi non parsabili lato server in modo affidabile. Per non lasciare
+// la famiglia "Sport" completamente vuota includiamo Sportitalia
+// (canale 60 DTT, palinsesto sport reale via staseraintv.com) ed
+// eventuali altri canali sport in chiaro coperti dalla fonte.
+// I canali Sky Sport branded restano elencati ma senza staseraSlug:
 // la UI dichiara onestamente "Palinsesto non disponibile".
 const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
   "sky-sport": {
-    label: "Sky Sport (Now TV)",
+    label: "Sport (Sky Sport + canali sport in chiaro)",
     channels: [
+      // Coperto da staseraintv.com (verificato 2026-04-19, ~21 righe/giorno).
+      { id: "sportitalia", name: "Sportitalia", logo: null, number: 60, staseraSlug: "sportitalia" },
+      // VERIFICATO 2026-04-19: nessuna fonte pubblica HTML statica espone
+      // questi canali Sky Sport (tutti gli slug staseraintv.com ritornano
+      // 404; sky.it usa rendering client-side).
       { id: "sky-sport-uno", name: "Sky Sport Uno", logo: null, number: 201 },
       { id: "sky-sport-calcio", name: "Sky Sport Calcio", logo: null, number: 202 },
       { id: "sky-sport-tennis", name: "Sky Sport Tennis", logo: null, number: 203 },
@@ -243,26 +256,44 @@ function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?:
   // Whitelist generi noti per evitare di confondere parentesi descrittive
   // (es. "(Replica)", "(2023)").
   const GENRE_WHITELIST = new Set([
-    "Fiction", "Film", "Serie Tv", "Serie Tv Drammatica", "Miniserie",
-    "Sport", "Calcio", "Tennis", "Motori", "Formula 1", "Motogp",
+    "Fiction", "Film", "Serie", "Serie Tv", "Serie Tv Drammatica",
+    "Telefilm", "Miniserie", "Soap Opera", "Soap",
+    "Sport", "Calcio", "Tennis", "Motori", "Formula 1", "Motogp", "Ciclismo",
     "Documentario", "Reality", "Talk Show", "Show", "Varieta'", "Varieta",
     "Intrattenimento", "Cartoni", "Cartoni Animati", "Animazione",
     "News", "Telegiornale", "Attualita'", "Attualita", "Rubrica",
-    "Cucina", "Lifestyle", "Musica", "Quiz", "Cinema",
+    "Magazine", "Approfondimento", "Inchiesta", "Meteo",
+    "Cucina", "Lifestyle", "Musica", "Quiz", "Cinema", "Game Show",
     "Commedia", "Azione", "Thriller", "Avventura", "Horror", "Romantico",
     "Drammatico", "Biografico", "Storico", "Western", "Fantascienza",
+    "Religione", "Educativo", "Cultura", "Viaggi",
   ]);
-  let title = source;
-  let genre: string | undefined;
-  const genreMatch = title.match(/\s*\(([^()]{2,40})\)\s*$/);
-  if (genreMatch) {
-    const candidate = genreMatch[1].trim();
+  const tryExtractGenre = (s: string): { stripped: string; genre?: string } => {
+    const mm = s.match(/\s*\(([^()]{2,40})\)\s*$/);
+    if (!mm) return { stripped: s };
+    const candidate = mm[1].trim();
     const candidateNorm = candidate
       .toLowerCase()
       .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
     if (GENRE_WHITELIST.has(candidateNorm)) {
-      genre = candidateNorm;
-      title = title.slice(0, genreMatch.index).trim();
+      return { stripped: s.slice(0, mm.index).trim(), genre: candidateNorm };
+    }
+    return { stripped: s };
+  };
+  // 1) Tenta sul titolo "ricco" (es. "Racconto di una notte ... (Fiction)").
+  let { stripped: title, genre } = tryExtractGenre(source);
+  // 2) Fallback: tenta direttamente sul raw uppercase quando il rich block
+  // non ha una parentesi finale (es. la riga grezza "RACCONTO ... (FICTION)").
+  if (!genre) {
+    const rawTry = tryExtractGenre(rawUpper);
+    if (rawTry.genre) {
+      genre = rawTry.genre;
+      // Se il raw conteneva il genere ma il rich no, mantieni il rich come
+      // titolo (gia' senza parentesi) o usa il raw strippato se non c'e'
+      // alcun rich match.
+      if (!best) title = rawTry.stripped
+        .toLowerCase()
+        .replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
     }
   }
   return { title, genre };

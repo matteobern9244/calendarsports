@@ -48,6 +48,16 @@ const container = {
   show: { transition: { staggerChildren: 0.08 } },
 };
 
+// Formatta una durata in minuti come "45 min" o "1h 25 min".
+// Ritorna stringa vuota per durate non valide o nulle.
+function formatDuration(min: number): string {
+  if (!Number.isFinite(min) || min <= 0) return "";
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m} min`;
+}
+
 type FilterValue = "all" | StreamingFamilyId;
 
 export default function HomePage() {
@@ -365,6 +375,11 @@ export default function HomePage() {
                           >
                             {row.genre}
                           </Badge>
+                        )}
+                        {formatDuration(row.durationMin) && (
+                          <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap font-mono">
+                            {formatDuration(row.durationMin)}
+                          </span>
                         )}
                       </div>
                     </li>
