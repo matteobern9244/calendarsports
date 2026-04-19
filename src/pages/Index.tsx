@@ -354,9 +354,19 @@ export default function HomePage() {
                       >
                         {row.channel}
                       </Badge>
-                      <span className="font-medium min-w-0 flex-1 text-xs sm:text-sm leading-snug break-words">
-                        {row.title}
-                      </span>
+                      <div className="min-w-0 flex-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                        <span className="font-medium text-xs sm:text-sm leading-snug break-words">
+                          {row.title}
+                        </span>
+                        {row.genre && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20"
+                          >
+                            {row.genre}
+                          </Badge>
+                        )}
+                      </div>
                     </li>
                   );
                 })}
