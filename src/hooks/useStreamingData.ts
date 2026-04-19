@@ -6,10 +6,10 @@ import {
 } from "@/lib/api/sportsApi";
 
 export const STREAMING_FAMILIES: { id: StreamingFamilyId; label: string }[] = [
-  { id: "sky-sport", label: "Sky Sport" },
-  { id: "sky-cinema", label: "Sky Cinema" },
   { id: "rai", label: "RAI" },
   { id: "mediaset", label: "Mediaset" },
+  { id: "sky-sport", label: "Sky Sport" },
+  { id: "sky-cinema", label: "Sky Cinema" },
   { id: "discovery", label: "Discovery" },
 ];
 
