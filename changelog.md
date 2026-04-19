@@ -13,6 +13,42 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- Scheda **Stasera in TV** in Home: ogni riga programma ora mostra, oltre
+  al titolo, un piccolo badge **genere** (Fiction, Film, Sport, Show, ecc.)
+  quando la fonte lo espone, e la **durata** del programma nel formato
+  `45 min` o `1h 25 min` calcolata da `start`/`end`. Layout invariato e
+  responsive (`flex-wrap items-baseline` per wrap pulito su mobile).
+- Edge function `streaming-tv`: estrazione genere resa piu' robusta. Oltre
+  al match sui blocchi "scheda" descrittivi (titolo "ricco" come
+  `Racconto di una notte ... (Fiction)`), aggiunto fallback diretto sulla
+  riga grezza `HH:MM - TITOLO (GENERE)` quando il rich block non contiene
+  parentesi finale. **Whitelist generi estesa** con voci viste spesso ma
+  precedentemente filtrate: `Telefilm`, `Serie`, `Soap Opera`, `Soap`,
+  `Magazine`, `Approfondimento`, `Inchiesta`, `Meteo`, `Game Show`,
+  `Religione`, `Educativo`, `Cultura`, `Viaggi`, `Ciclismo`.
+
+### Fixed
+
+- **Copertura palinsesti famiglia "Sport"**: prima la famiglia Sky Sport
+  ritornava esclusivamente canali con `programs=[]`. Audit completo
+  2026-04-19 di TUTTI i 41 slug attivi: ognuno ritorna >=12 righe `HH:MM`
+  reali da `staseraintv.com`. Per la famiglia Sport e' stato aggiunto
+  **Sportitalia** (canale 60 DTT, slug `sportitalia`, ~21 righe/giorno
+  con genere `Sport` correttamente estratto), in modo che il filtro
+  "Sport" mostri sempre almeno un palinsesto reale invece di una scheda
+  vuota.
+- I canali Sky Sport branded (Uno, Calcio, Tennis, F1, MotoGP, Arena,
+  Football, Action, Golf, Max, 24) restano dichiaratamente **non
+  coperti**: tutti gli slug candidati su `staseraintv.com` (`sky_sport_*`,
+  `skysport_*`, `sky_sport1`, ecc.) ritornano 404; le fonti alternative
+  (`guidatv.sky.it`, `programmi.sky.it`) usano rendering client-side e
+  non espongono il palinsesto in HTML statico parsabile;
+  `tvzap.kataweb.it` e' protetto da Cloudflare. Nessun dato inventato:
+  la UI continua a dichiarare onestamente "Palinsesto non disponibile"
+  per quei canali.
+
+### Added (precedenti)
+
 - Nuova sezione **Streaming** (`/streaming`) come prima voce di
   navigazione dopo Home. Pagina con due tab:
   - **TV stasera**: selettore famiglia canali (Sky Sport, Sky Cinema, RAI,
