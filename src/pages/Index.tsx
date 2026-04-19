@@ -5,7 +5,7 @@ import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
+import { formatDateIT, formatTimeIT, formatDuration } from "@/lib/dateUtils";
 import { useQueries } from "@tanstack/react-query";
 import { RefreshCw, Tv2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
