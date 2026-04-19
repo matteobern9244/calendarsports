@@ -5,21 +5,20 @@ import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT, todayRomeISO, addDaysISO } from "@/lib/dateUtils";
-import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
+import { useQueries } from "@tanstack/react-query";
 import { RefreshCw, Tv2, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   STREAMING_FAMILIES,
-  STREAMING_PROVIDERS,
   type TvFamilyPayload,
 } from "@/hooks/useStreamingData";
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
+import { useSyncAll } from "@/hooks/useSyncAll";
 
 
 interface UpcomingEvent {
@@ -64,10 +63,7 @@ function formatDuration(min: number): string {
 type FilterValue = "all" | StreamingFamilyId;
 
 export default function HomePage() {
-  const queryClient = useQueryClient();
-  const [syncing, setSyncing] = useState(false);
-  const [syncStep, setSyncStep] = useState<string>("");
-  const [syncProgress, setSyncProgress] = useState(0);
+  const { sync: handleSync, syncing, syncStep, syncProgress } = useSyncAll();
   const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
   const [tvPage, setTvPage] = useState(0);
   const TV_PAGE_SIZE = 8;
@@ -190,57 +186,6 @@ export default function HomePage() {
     return m;
   }, []);
 
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncProgress(0);
-    const toastId = toast.loading("Avvio sincronizzazione...");
-    try {
-      // 1. Sport
-      setSyncStep("Aggiornamento dati sportivi...");
-      toast.loading("Aggiornamento dati sportivi...", { id: toastId });
-      await queryClient.invalidateQueries({
-        predicate: (q) => {
-          const k = q.queryKey?.[0];
-          return typeof k === "string" && !k.startsWith("streaming-");
-        },
-        refetchType: "all",
-      });
-      setSyncProgress(33);
-
-      // 2. Palinsesti TV (gia' attivi sulla home)
-      setSyncStep("Aggiornamento palinsesti TV...");
-      toast.loading("Aggiornamento palinsesti TV...", { id: toastId });
-      await queryClient.invalidateQueries({
-        queryKey: ["streaming-tv"],
-        refetchType: "all",
-      });
-      setSyncProgress(66);
-
-      // 3. Nuove uscite (non montate sulla home: prefetch esplicito)
-      setSyncStep("Aggiornamento nuove uscite streaming...");
-      toast.loading("Aggiornamento nuove uscite streaming...", { id: toastId });
-      const today = todayRomeISO();
-      const dateTo = addDaysISO(today, 14);
-      await Promise.all(
-        STREAMING_PROVIDERS.map((p) =>
-          queryClient.prefetchQuery({
-            queryKey: ["streaming-releases", p.id, today, dateTo],
-            queryFn: () => streamingApi.getReleasesByProvider(p.id, today, dateTo),
-            staleTime: 0,
-          }),
-        ),
-      );
-      setSyncProgress(100);
-
-      toast.success("Tutti i dati sono stati aggiornati!", { id: toastId });
-    } catch {
-      toast.error("Errore durante la sincronizzazione", { id: toastId });
-    } finally {
-      setSyncStep("");
-      setSyncing(false);
-      setTimeout(() => setSyncProgress(0), 600);
-    }
-  };
 
   const events = useMemo(() => {
     const upcoming: UpcomingEvent[] = [];
