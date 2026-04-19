@@ -12,6 +12,7 @@ interface HeaderProps {
 
 const navItems = [
   { label: "HOME", path: "/" },
+  { label: "STREAMING", path: "/streaming" },
   { label: "JANNIK SINNER", path: "/sinner" },
   { label: "JUVENTUS", path: "/juventus" },
   { label: "FORMULA 1", path: "/formula1" },

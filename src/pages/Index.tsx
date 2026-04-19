@@ -13,7 +13,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { STREAMING_FAMILIES } from "@/hooks/useStreamingData";
+import { STREAMING_FAMILIES, useTvByFamily } from "@/hooks/useStreamingData";
 
 interface UpcomingEvent {
   sport: string;
@@ -38,8 +38,31 @@ export default function HomePage() {
   const { data: juveCalendar, isLoading: juveLoading } = useJuventusCalendar(2025);
   const { data: sinnerNext, isLoading: sinnerLoading } = useSinnerNextEvent();
   const { data: motogpNext, isLoading: motogpLoading } = useMotoGPNextEvent();
+  const { data: tvDiscovery } = useTvByFamily("discovery");
 
   const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
+
+  const tonightHighlights = useMemo(() => {
+    if (!tvDiscovery?.programsAvailable) return [];
+    const rows: { channel: string; time: string; title: string }[] = [];
+    for (const ch of tvDiscovery.channels ?? []) {
+      for (const p of ch.programs) {
+        rows.push({
+          channel: ch.name,
+          time: new Intl.DateTimeFormat("it-IT", {
+            timeZone: "Europe/Rome",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }).format(new Date(p.start)),
+          title: p.title,
+        });
+      }
+    }
+    return rows
+      .sort((a, b) => a.time.localeCompare(b.time))
+      .slice(0, 6);
+  }, [tvDiscovery]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -125,39 +148,63 @@ export default function HomePage() {
 
   return (
     <div className="container py-8 sm:py-12 space-y-10">
-      {/* Stasera in TV — entry point compatto verso /streaming */}
+      {/* Stasera in TV — quadro rapido programmi reali (Discovery) + link */}
       <Card className="border-primary/30 bg-gradient-to-br from-card to-card/60">
-        <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg gold-gradient shrink-0">
-              <Tv2 className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="font-heading text-lg font-bold uppercase tracking-wider">
-                <span className="text-gold-gradient">Stasera in TV</span>
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                Palinsesto serale + nuove uscite streaming
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {STREAMING_FAMILIES.map((f) => (
-                  <Link
-                    key={f.id}
-                    to={`/streaming?tab=tv&family=${f.id}`}
-                    className="text-[10px] font-heading uppercase tracking-wider px-2 py-0.5 rounded-full border border-border/60 text-muted-foreground hover:text-primary hover:border-primary/60 transition-colors"
-                  >
-                    {f.label}
-                  </Link>
-                ))}
+        <CardContent className="p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg gold-gradient shrink-0">
+                <Tv2 className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="font-heading text-lg font-bold uppercase tracking-wider">
+                  <span className="text-gold-gradient">Stasera in TV</span>
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {tonightHighlights.length > 0
+                    ? "Prime time Real Time + DMax (palinsesto reale)"
+                    : "Palinsesto serale + nuove uscite streaming"}
+                </p>
               </div>
             </div>
+            <Button asChild size="sm" className="shrink-0 self-start sm:self-auto gap-2">
+              <Link to="/streaming">
+                Apri Streaming
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
           </div>
-          <Button asChild size="sm" className="shrink-0 self-start sm:self-auto gap-2">
-            <Link to="/streaming">
-              Apri Streaming
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
+
+          {tonightHighlights.length > 0 ? (
+            <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40">
+              {tonightHighlights.map((row, i) => (
+                <li
+                  key={`${row.channel}-${row.time}-${i}`}
+                  className="flex items-center gap-3 px-3 py-2 text-sm"
+                >
+                  <span className="font-mono text-primary w-12 shrink-0">
+                    {row.time}
+                  </span>
+                  <Badge variant="outline" className="text-[10px] uppercase tracking-wider shrink-0">
+                    {row.channel}
+                  </Badge>
+                  <span className="font-medium truncate min-w-0">{row.title}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {STREAMING_FAMILIES.map((f) => (
+                <Link
+                  key={f.id}
+                  to={`/streaming?tab=tv&family=${f.id}`}
+                  className="text-[10px] font-heading uppercase tracking-wider px-2 py-0.5 rounded-full border border-border/60 text-muted-foreground hover:text-primary hover:border-primary/60 transition-colors"
+                >
+                  {f.label}
+                </Link>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

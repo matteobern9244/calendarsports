@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Layout from "@/components/layout/Layout";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import Index from "./pages/Index";
+import StreamingPage from "./pages/StreamingPage";
 import SinnerPage from "./pages/SinnerPage";
 import JuventusPage from "./pages/JuventusPage";
 import Formula1Page from "./pages/Formula1Page";
@@ -32,6 +33,7 @@ const App = () => (
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
+              <Route path="/streaming" element={<StreamingPage />} />
               <Route path="/sinner" element={<SinnerPage />} />
               <Route path="/juventus" element={<JuventusPage />} />
               <Route path="/formula1" element={<Formula1Page />} />

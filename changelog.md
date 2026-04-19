@@ -20,14 +20,22 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
     pagina), filtro server-side prime time 19:00-24:00 Europe/Rome, stato
     sincronizzato in URL (`?tab=tv&family=rai&page=2`).
   - **Nuove uscite**: selettore provider (Netflix, Prime Video, Disney+,
-    HBO Max), griglia poster TMDB con paginazione (8 per pagina).
-- Edge function `streaming-tv` con dataset canali ufficiali e stub di
-  scraping per canale (lista canali sempre presente, programmi reali
-  vuoti finche' i feed non vengono integrati). FRAGILE.
-- Edge function `streaming-releases` su TMDB `/discover` filtrata per
-  `watch_region=IT`, cache in-memory 1h, gestione esplicita dell'assenza
-  di `TMDB_API_KEY` (risposta `configured=false` invece di errore).
-- Blocco compatto **Stasera in TV** in Home con shortcut a tutte le
+    HBO Max), griglia poster TMDB con paginazione (8 per pagina), filtro
+    pill **Tutti / Film / Serie**, selettore data **Oggi / 3 giorni / 7
+    giorni**, dialog di dettaglio al click sul poster (overview, voto,
+    cast top 6, link al provider e a TMDB).
+- Edge function `streaming-tv` con scraping reale di `www.guida.tv` per i
+  canali Discovery (Real Time, DMax). Cache in-memory 1h per canale/giorno.
+  FRAGILE: parser HTML basato su regex, soggetto a rotture se il markup
+  guida.tv cambia. Sky/RAI/Mediaset restano elencati ma con
+  `programsAvailable=false`.
+- Edge function `streaming-releases` su TMDB `/discover` con range
+  `dateFrom`/`dateTo` (default oggi..oggi+7), nuova action `credits`
+  (`type`+`id`) per cast top 10, cache in-memory 1h (24h per credits).
+  Gestione esplicita dell'assenza di `TMDB_API_KEY` (`configured=false`).
+- Quadro reale **Stasera in TV** in Home: prime time Real Time + DMax
+  ordinato per orario (max 6 righe), fallback ai pill famiglie quando
+  i programmi non sono disponibili.
   famiglie canali via deep-link `?family=`.
 
 ### Changed

@@ -1,15 +1,14 @@
 // Edge function: streaming-releases
-// Restituisce le nuove uscite del giorno per provider streaming (Netflix,
-// Prime Video, Disney+, HBO Max) usando TMDB API (region IT).
+// Restituisce le nuove uscite per provider streaming (Netflix, Prime Video,
+// Disney+, HBO Max) usando TMDB API (region IT).
 //
-// Fonte: TMDB /discover/movie + /discover/tv con filtro
-// `with_watch_providers` + `watch_region=IT` + data corrente Europe/Rome.
-// Richiede secret `TMDB_API_KEY`. Senza chiave, la funzione risponde
-// success=true con `data.items=[]` e `configured=false` cosi' il
-// frontend puo' mostrare uno stato vuoto informativo.
+// Actions:
+//  - new-today: lista uscite tra dateFrom..dateTo (default oggi..oggi+7)
+//  - credits:   cast top 10 di un singolo titolo (param type, id)
 //
-// FRAGILITA': dipende da disponibilita' TMDB e correttezza dei
-// `watch_provider` IDs lato TMDB. I dati possono essere parziali.
+// Richiede secret `TMDB_API_KEY`. Senza chiave, la lista risponde con
+// `data.items=[]` e `configured=false` cosi' il frontend mostra uno
+// stato vuoto informativo.
 
 import {
   buildCorsHeaders,
@@ -19,25 +18,27 @@ import {
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
+const TMDB_PROFILE_IMG = "https://image.tmdb.org/t/p/w185";
 
 // TMDB watch_provider IDs (region IT)
-const PROVIDERS: Record<string, { id: number; label: string }> = {
-  netflix: { id: 8, label: "Netflix" },
-  prime: { id: 119, label: "Amazon Prime Video" },
-  disney: { id: 337, label: "Disney+" },
-  hbo: { id: 1899, label: "HBO Max" },
+const PROVIDERS: Record<string, { id: number; label: string; homepage: string }> = {
+  netflix: { id: 8, label: "Netflix", homepage: "https://www.netflix.com" },
+  prime: { id: 119, label: "Amazon Prime Video", homepage: "https://www.primevideo.com" },
+  disney: { id: 337, label: "Disney+", homepage: "https://www.disneyplus.com" },
+  hbo: { id: 1899, label: "HBO Max", homepage: "https://www.max.com" },
 };
 
 const PROVIDER_KEY_RE = /^(netflix|prime|disney|hbo)$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const KIND_RE = /^(movie|tv)$/;
+const ID_RE = /^\d{1,9}$/;
 
-// Cache in-memory per provider (1h)
 type CacheEntry = { at: number; payload: unknown };
 const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60 * 60 * 1000;
+const CREDITS_TTL_MS = 24 * 60 * 60 * 1000;
 
 function todayRomeISO(): string {
-  // YYYY-MM-DD nella timezone Europe/Rome
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Rome",
     year: "numeric",
@@ -47,10 +48,17 @@ function todayRomeISO(): string {
   return fmt.format(new Date());
 }
 
+function addDaysISO(dateIso: string, days: number): string {
+  const d = new Date(`${dateIso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 async function tmdbDiscover(
   kind: "movie" | "tv",
   providerId: number,
-  date: string,
+  dateFrom: string,
+  dateTo: string,
   apiKey: string,
 ): Promise<any[]> {
   const dateKey = kind === "movie" ? "primary_release_date" : "first_air_date";
@@ -59,8 +67,8 @@ async function tmdbDiscover(
   url.searchParams.set("language", "it-IT");
   url.searchParams.set("watch_region", "IT");
   url.searchParams.set("with_watch_providers", String(providerId));
-  url.searchParams.set(`${dateKey}.gte`, date);
-  url.searchParams.set(`${dateKey}.lte`, date);
+  url.searchParams.set(`${dateKey}.gte`, dateFrom);
+  url.searchParams.set(`${dateKey}.lte`, dateTo);
   url.searchParams.set("sort_by", "popularity.desc");
   url.searchParams.set("include_adult", "false");
 
@@ -70,6 +78,19 @@ async function tmdbDiscover(
   }
   const json = await res.json();
   return Array.isArray(json.results) ? json.results : [];
+}
+
+async function tmdbCredits(
+  kind: "movie" | "tv",
+  id: string,
+  apiKey: string,
+): Promise<any> {
+  const url = new URL(`${TMDB_BASE}/${kind}/${id}/credits`);
+  url.searchParams.set("api_key", apiKey);
+  url.searchParams.set("language", "it-IT");
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`TMDB credits ${kind} ${res.status}`);
+  return await res.json();
 }
 
 function normalizeItem(raw: any, kind: "movie" | "tv") {
@@ -86,6 +107,23 @@ function normalizeItem(raw: any, kind: "movie" | "tv") {
   };
 }
 
+function normalizeCast(raw: any) {
+  const cast = Array.isArray(raw?.cast) ? raw.cast.slice(0, 10) : [];
+  return cast.map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    character: c.character ?? "",
+    profile: c.profile_path ? `${TMDB_PROFILE_IMG}${c.profile_path}` : null,
+  }));
+}
+
+function jsonResponse(body: unknown, init: ResponseInit, corsHeaders: Record<string, string>) {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: { ...corsHeaders, "Content-Type": "application/json", ...(init.headers ?? {}) },
+  });
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
 
@@ -99,81 +137,137 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const action = url.searchParams.get("action") ?? "new-today";
-    const provider = url.searchParams.get("provider") ?? "";
-    const dateParam = url.searchParams.get("date") ?? "";
-
-    if (action !== "new-today") {
-      return new Response(
-        JSON.stringify({ success: false, error: "Azione non supportata" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    if (!PROVIDER_KEY_RE.test(provider)) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Provider non valido" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const date = DATE_RE.test(dateParam) ? dateParam : todayRomeISO();
 
     const apiKey = Deno.env.get("TMDB_API_KEY") ?? "";
+
+    // === ACTION: credits ===
+    if (action === "credits") {
+      const type = url.searchParams.get("type") ?? "";
+      const id = url.searchParams.get("id") ?? "";
+      if (!KIND_RE.test(type) || !ID_RE.test(id)) {
+        return jsonResponse(
+          { success: false, error: "Parametri credits non validi" },
+          { status: 400 },
+          corsHeaders,
+        );
+      }
+      if (!apiKey) {
+        return jsonResponse(
+          { success: true, data: { type, id, cast: [], configured: false } },
+          {},
+          corsHeaders,
+        );
+      }
+      const cacheKey = `credits:${type}:${id}`;
+      const cached = cache.get(cacheKey);
+      if (cached && Date.now() - cached.at < CREDITS_TTL_MS) {
+        return jsonResponse({ success: true, data: cached.payload }, {}, corsHeaders);
+      }
+      try {
+        const raw = await tmdbCredits(type as "movie" | "tv", id, apiKey);
+        const payload = {
+          type,
+          id,
+          cast: normalizeCast(raw),
+          configured: true,
+        };
+        cache.set(cacheKey, { at: Date.now(), payload });
+        return jsonResponse({ success: true, data: payload }, {}, corsHeaders);
+      } catch (err) {
+        console.warn("[streaming-releases] credits error", err);
+        return jsonResponse(
+          { success: true, data: { type, id, cast: [], configured: true } },
+          {},
+          corsHeaders,
+        );
+      }
+    }
+
+    // === ACTION: new-today (range) ===
+    if (action !== "new-today") {
+      return jsonResponse(
+        { success: false, error: "Azione non supportata" },
+        { status: 400 },
+        corsHeaders,
+      );
+    }
+
+    const provider = url.searchParams.get("provider") ?? "";
+    if (!PROVIDER_KEY_RE.test(provider)) {
+      return jsonResponse(
+        { success: false, error: "Provider non valido" },
+        { status: 400 },
+        corsHeaders,
+      );
+    }
+
+    const dateFromParam = url.searchParams.get("dateFrom") ?? url.searchParams.get("date") ?? "";
+    const dateToParam = url.searchParams.get("dateTo") ?? "";
+    const today = todayRomeISO();
+    const dateFrom = DATE_RE.test(dateFromParam) ? dateFromParam : today;
+    const dateTo = DATE_RE.test(dateToParam) ? dateToParam : dateFrom;
+
     if (!apiKey) {
-      // Risposta strutturata: il frontend mostra EmptyState informativo.
-      return new Response(
-        JSON.stringify({
+      return jsonResponse(
+        {
           success: true,
           data: {
             provider,
             providerLabel: PROVIDERS[provider].label,
-            date,
+            providerHomepage: PROVIDERS[provider].homepage,
+            date: dateFrom,
+            dateFrom,
+            dateTo,
             items: [],
             configured: false,
           },
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        },
+        {},
+        corsHeaders,
       );
     }
 
-    const cacheKey = `${provider}:${date}`;
+    const cacheKey = `${provider}:${dateFrom}:${dateTo}`;
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
-      return new Response(
-        JSON.stringify({ success: true, data: cached.payload }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return jsonResponse({ success: true, data: cached.payload }, {}, corsHeaders);
     }
 
     const providerCfg = PROVIDERS[provider];
     const [movies, tv] = await Promise.all([
-      tmdbDiscover("movie", providerCfg.id, date, apiKey).catch(() => []),
-      tmdbDiscover("tv", providerCfg.id, date, apiKey).catch(() => []),
+      tmdbDiscover("movie", providerCfg.id, dateFrom, dateTo, apiKey).catch(() => []),
+      tmdbDiscover("tv", providerCfg.id, dateFrom, dateTo, apiKey).catch(() => []),
     ]);
 
     const items = [
       ...movies.map((m) => normalizeItem(m, "movie")),
       ...tv.map((t) => normalizeItem(t, "tv")),
-    ].sort((a, b) => (b.voteAverage ?? 0) - (a.voteAverage ?? 0));
+    ].sort((a, b) => {
+      // ordina prima per data crescente, poi per voto decrescente
+      const dateCmp = (a.releaseDate ?? "").localeCompare(b.releaseDate ?? "");
+      if (dateCmp !== 0) return dateCmp;
+      return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
+    });
 
     const payload = {
       provider,
       providerLabel: providerCfg.label,
-      date,
+      providerHomepage: providerCfg.homepage,
+      date: dateFrom,
+      dateFrom,
+      dateTo,
       items,
       configured: true,
     };
     cache.set(cacheKey, { at: Date.now(), payload });
 
-    return new Response(
-      JSON.stringify({ success: true, data: payload }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return jsonResponse({ success: true, data: payload }, {}, corsHeaders);
   } catch (err) {
     console.error("[streaming-releases]", err);
-    return new Response(
-      JSON.stringify({ success: false, error: (err as Error).message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    return jsonResponse(
+      { success: false, error: (err as Error).message },
+      { status: 500 },
+      corsHeaders,
     );
   }
 });

@@ -75,11 +75,22 @@ export const streamingApi = {
       family,
       ...(date ? { date } : {}),
     }),
-  getReleasesByProvider: (provider: StreamingProviderId, date?: string) =>
+  getReleasesByProvider: (
+    provider: StreamingProviderId,
+    dateFrom?: string,
+    dateTo?: string,
+  ) =>
     callEdgeFunction("streaming-releases", {
       action: "new-today",
       provider,
-      ...(date ? { date } : {}),
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
+    }),
+  getReleaseCredits: (type: "movie" | "tv", id: number | string) =>
+    callEdgeFunction("streaming-releases", {
+      action: "credits",
+      type,
+      id: String(id),
     }),
 };
 
