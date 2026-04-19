@@ -233,16 +233,35 @@ function extractRichTitles(html: string): string[] {
   return rich;
 }
 
+// Normalizza per match tollerante: minuscolo, rimuove punteggiatura,
+// collassa spazi, rimuove articoli/parole comuni di poco valore.
+function normForMatch(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?: string } {
   if (!rawUpper) return { title: rawUpper };
-  const norm = rawUpper.toUpperCase().replace(/\s+/g, " ").trim();
-  // Cerca un titolo "ricco" che inizi con lo stesso prefisso (case-insensitive).
-  // Preferisci il match piu' lungo.
+  const norm = normForMatch(rawUpper);
+  const normTokens = norm.split(" ").filter(Boolean);
+  // Cerca un titolo "ricco" che condivida un prefisso significativo (>=3 parole
+  // o >=15 char) con la riga grezza, ignorando trattini e punteggiatura.
+  // Es. raw "Roberta Valente - Notaio in Sorrento - S1E3" matcha rich
+  // "Roberta Valente Notaio in Sorrento - Stagione 1 Episodio 3 (Fiction)".
   let best = "";
   for (const cand of rich) {
-    const candUpper = cand.toUpperCase();
-    if (candUpper.startsWith(norm) || norm.startsWith(candUpper.split(" - ")[0].toUpperCase())) {
-      if (cand.length > best.length) best = cand;
+    const candNorm = normForMatch(cand);
+    const candTokens = candNorm.split(" ").filter(Boolean);
+    // Trova lunghezza prefisso comune di token.
+    let common = 0;
+    const lim = Math.min(normTokens.length, candTokens.length);
+    while (common < lim && normTokens[common] === candTokens[common]) common += 1;
+    const commonChars = candTokens.slice(0, common).join(" ").length;
+    if ((common >= 3 || commonChars >= 15) && cand.length > best.length) {
+      best = cand;
     }
   }
   const source = best || rawUpper
@@ -256,7 +275,8 @@ function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?:
     "Fiction", "Film", "Serie", "Serie Tv", "Serie Tv Drammatica",
     "Telefilm", "Miniserie", "Soap Opera", "Soap",
     "Sport", "Calcio", "Tennis", "Motori", "Formula 1", "Motogp", "Ciclismo",
-    "Documentario", "Reality", "Talk Show", "Show", "Varieta'", "Varieta",
+    "Basket", "Pallavolo", "Pallacanestro", "Rugby", "Volley", "Nuoto",
+    "Documentario", "Reality", "Talk Show", "Talkshow", "Show", "Varieta'", "Varieta",
     "Intrattenimento", "Cartoni", "Cartoni Animati", "Animazione",
     "News", "Telegiornale", "Attualita'", "Attualita", "Rubrica",
     "Magazine", "Approfondimento", "Inchiesta", "Meteo",
@@ -265,6 +285,11 @@ function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?:
     "Drammatico", "Biografico", "Storico", "Western", "Fantascienza",
     "Religione", "Educativo", "Cultura", "Viaggi",
   ]);
+  // Normalizza varianti note in forma canonica.
+  const GENRE_ALIASES: Record<string, string> = {
+    "Talkshow": "Talk Show",
+    "Varieta": "Varieta'",
+  };
   const tryExtractGenre = (s: string): { stripped: string; genre?: string } => {
     const mm = s.match(/\s*\(([^()]{2,40})\)\s*$/);
     if (!mm) return { stripped: s };
@@ -273,7 +298,8 @@ function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?:
       .toLowerCase()
       .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
     if (GENRE_WHITELIST.has(candidateNorm)) {
-      return { stripped: s.slice(0, mm.index).trim(), genre: candidateNorm };
+      const canonical = GENRE_ALIASES[candidateNorm] ?? candidateNorm;
+      return { stripped: s.slice(0, mm.index).trim(), genre: canonical };
     }
     return { stripped: s };
   };
