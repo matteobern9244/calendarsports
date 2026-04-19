@@ -20,24 +20,6 @@ import {
 } from "@/hooks/useStreamingData";
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
 
-// Helpers per calcolare il range default delle nuove uscite (oggi -> +14gg)
-// in fuso Europe/Rome, coerente con StreamingPage.tsx.
-function todayRomeISO(): string {
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Rome",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  return fmt.format(new Date());
-}
-
-function addDaysISO(dateIso: string, days: number): string {
-  const [y, m, d] = dateIso.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + days);
-  return dt.toISOString().slice(0, 10);
-}
 
 interface UpcomingEvent {
   sport: string;
