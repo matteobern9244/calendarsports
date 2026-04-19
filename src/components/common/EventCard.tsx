@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Calendar, Clock } from "lucide-react";
 import { motion } from "framer-motion";
+import EventCountdown from "./EventCountdown";
 
 interface EventCardProps {
   sport: string;
@@ -9,6 +10,8 @@ interface EventCardProps {
   subtitle?: string;
   date: string;
   time?: string;
+  /** ISO date string of the event start, used for live countdown */
+  startDate?: string;
   status?: "prossimo" | "in_corso" | "completato";
   highlight?: boolean;
   children?: React.ReactNode;
@@ -21,6 +24,7 @@ export default function EventCard({
   subtitle,
   date,
   time,
+  startDate,
   status = "prossimo",
   highlight = false,
   children,
@@ -89,7 +93,7 @@ export default function EventCard({
       {subtitle && <p className="text-sm text-muted-foreground mb-3">{subtitle}</p>}
 
       {/* Date/Time */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <Calendar className="h-3.5 w-3.5" />
           {date}
@@ -99,6 +103,9 @@ export default function EventCard({
             <Clock className="h-3.5 w-3.5" />
             {time}
           </span>
+        )}
+        {startDate && status !== "completato" && (
+          <EventCountdown startDate={startDate} className="ml-auto" />
         )}
       </div>
 
