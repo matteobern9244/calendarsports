@@ -2,12 +2,14 @@
 // Restituisce il palinsesto prime time (19:00-24:00 Europe/Rome) di oggi
 // per famiglia di canali (sky-sport, sky-cinema, rai, mediaset, discovery).
 //
-// FRAGILITA' MASSIMA: per Real Time/DMax usiamo il feed XMLTV community
-// di iptv-org (https://github.com/iptv-org/epg) che e' soggetto a
-// cambiamenti senza preavviso (struttura, channel id, disponibilita').
-// Sky/RAI/Mediaset restano stub vuoti: i canali sono elencati come
-// navigazione, ma `programsAvailable=false` viene dichiarato nel payload
-// cosi' la UI puo' mostrare uno stato onesto. Mai dati inventati.
+// FRAGILITA' MASSIMA: per Real Time/DMax facciamo scraping diretto delle
+// pagine pubbliche di www.guida.tv (struttura HTML soggetta a cambio
+// senza preavviso). I feed XMLTV community di iptv-org NON sono
+// distribuiti come file statici: vanno generati con un grabber, quindi
+// non li possiamo consumare a runtime. Sky/RAI/Mediaset restano stub
+// vuoti: i canali sono elencati come navigazione, ma `programsAvailable
+// =false` viene dichiarato cosi' la UI mostra uno stato onesto. Mai
+// dati inventati: se lo scraping fallisce, programs=[].
 
 import {
   buildCorsHeaders,
@@ -20,8 +22,8 @@ type Channel = {
   name: string;
   logo: string | null;
   number?: number;
-  // id XMLTV nel feed iptv-org (solo Discovery oggi)
-  xmltvId?: string;
+  // Path guida.tv (es. "82847384/real-time") per scraping Discovery
+  guidatvPath?: string;
 };
 
 type Program = {
@@ -110,8 +112,20 @@ const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
   discovery: {
     label: "Discovery (Real Time + DMax)",
     channels: [
-      { id: "real-time", name: "Real Time", logo: null, number: 31, xmltvId: "RealTime.it" },
-      { id: "dmax", name: "DMax", logo: null, number: 52, xmltvId: "DMAX.it" },
+      {
+        id: "real-time",
+        name: "Real Time",
+        logo: null,
+        number: 31,
+        guidatvPath: "82847384/real-time",
+      },
+      {
+        id: "dmax",
+        name: "DMax",
+        logo: null,
+        number: 52,
+        guidatvPath: "68776588/dmax-italia",
+      },
     ],
   },
 };
@@ -138,54 +152,9 @@ function isPrimeTime(iso: string): boolean {
   return h >= 19 && h < 24;
 }
 
-// === XMLTV parser per Discovery (iptv-org) ===
-// Feed IT: https://iptv-org.github.io/epg/guides/it/mediasetinfinity.mediaset.it.epg.xml
-// non e' garantito coprire Discovery; il guide ufficiale Discovery e':
-//   https://iptv-org.github.io/epg/guides/it/dplay.com.epg.xml
-// Cache 1h del feed completo, parse on-demand per channel.
-const XMLTV_DISCOVERY_URL =
-  "https://iptv-org.github.io/epg/guides/it/dplay.com.epg.xml";
-
-type XmltvCacheEntry = { at: number; xml: string };
-const xmltvCache = new Map<string, XmltvCacheEntry>();
-const XMLTV_TTL_MS = 60 * 60 * 1000;
-
-async function fetchXmltvDiscovery(): Promise<string | null> {
-  const cached = xmltvCache.get(XMLTV_DISCOVERY_URL);
-  if (cached && Date.now() - cached.at < XMLTV_TTL_MS) {
-    return cached.xml;
-  }
-  try {
-    const res = await fetch(XMLTV_DISCOVERY_URL, {
-      headers: { "User-Agent": "calendar-sports-edge/1.0" },
-    });
-    if (!res.ok) {
-      console.warn("[streaming-tv] XMLTV fetch non-OK", res.status);
-      return null;
-    }
-    const xml = await res.text();
-    xmltvCache.set(XMLTV_DISCOVERY_URL, { at: Date.now(), xml });
-    return xml;
-  } catch (err) {
-    console.warn("[streaming-tv] XMLTV fetch error", err);
-    return null;
-  }
-}
-
-// XMLTV time format: "20260419190000 +0200" -> ISO
-function xmltvTimeToIso(raw: string): string | null {
-  // YYYYMMDDhhmmss [+/-]HHMM
-  const m = raw.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?$/);
-  if (!m) return null;
-  const [, y, mo, d, h, mi, s, tz] = m;
-  const tzPart = tz ? `${tz.slice(0, 3)}:${tz.slice(3)}` : "Z";
-  const iso = `${y}-${mo}-${d}T${h}:${mi}:${s}${tzPart}`;
-  const t = new Date(iso).getTime();
-  return Number.isFinite(t) ? new Date(t).toISOString() : null;
-}
-
-function decodeXmlEntities(s: string): string {
+function decodeEntities(s: string): string {
   return s
+    .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
@@ -194,54 +163,140 @@ function decodeXmlEntities(s: string): string {
     .replace(/&amp;/g, "&");
 }
 
-function extractTag(block: string, tag: string): string | undefined {
-  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
-  const m = block.match(re);
-  return m ? decodeXmlEntities(m[1].trim()) : undefined;
+// Costruisce ISO timestamp partendo da YYYY-MM-DD + HH:MM (Europe/Rome).
+// Europe/Rome ha DST: usiamo l'offset corrente del giorno (CET +0100 / CEST +0200).
+function buildRomeIso(date: string, hh: number, mm: number): string {
+  // Probe: crea data alle 12:00 UTC del giorno e calcola offset Europe/Rome
+  const probe = new Date(`${date}T12:00:00Z`);
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Rome",
+    timeZoneName: "shortOffset",
+  });
+  const parts = fmt.formatToParts(probe);
+  const off = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT+1";
+  const m = off.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+  const sign = m && m[1] === "-" ? -1 : 1;
+  const offH = m ? parseInt(m[2], 10) : 1;
+  const offM = m && m[3] ? parseInt(m[3], 10) : 0;
+  const offMin = sign * (offH * 60 + offM);
+  // hh:mm Rome -> UTC ms
+  const utcMs = Date.UTC(
+    parseInt(date.slice(0, 4), 10),
+    parseInt(date.slice(5, 7), 10) - 1,
+    parseInt(date.slice(8, 10), 10),
+    hh,
+    mm,
+    0,
+  ) - offMin * 60 * 1000;
+  return new Date(utcMs).toISOString();
 }
 
-function parseProgrammesForChannel(
-  xml: string,
-  channelId: string,
-  date: string,
-): Program[] {
-  // Match <programme start="..." stop="..." channel="ChannelId">...</programme>
-  const escaped = channelId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(
-    `<programme\\s+([^>]*?channel=["']${escaped}["'][^>]*)>([\\s\\S]*?)<\\/programme>`,
-    "gi",
-  );
+// Estrae i programmi dalla pagina guida.tv di un canale.
+// Pattern (verificato 2026-04-19):
+//   <tr><td width="110"><h5 class="thin">HH:MM</h5></td>
+//   <td><h5 class="thin"><a href="...">TITOLO</a></h5>
+//   <h6>... <i>info</i></h6></td></tr>
+function parseGuidatvHtml(html: string, date: string): Program[] {
   const programs: Program[] = [];
+  const rowRe =
+    /<tr>\s*<td[^>]*>\s*<h5[^>]*class="thin"[^>]*>\s*(\d{1,2}):(\d{2})\s*<\/h5>\s*<\/td>\s*<td[^>]*>\s*<h5[^>]*class="thin"[^>]*>([\s\S]*?)<\/h5>([\s\S]*?)<\/td>\s*<\/tr>/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(xml)) !== null) {
-    const attrs = m[1];
-    const body = m[2];
-    const startMatch = attrs.match(/start=["']([^"']+)["']/);
-    const stopMatch = attrs.match(/stop=["']([^"']+)["']/);
-    if (!startMatch) continue;
-    const startIso = xmltvTimeToIso(startMatch[1]);
-    const stopIso = stopMatch ? xmltvTimeToIso(stopMatch[1]) : null;
-    if (!startIso) continue;
-    // Filtra solo i programmi del giorno richiesto in Europe/Rome
-    const dayKey = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Europe/Rome",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(startIso));
-    if (dayKey !== date) continue;
-    const title = extractTag(body, "title") ?? "(senza titolo)";
-    const desc = extractTag(body, "desc");
-    const category = extractTag(body, "category");
+  let prevStartMs = -1;
+  let dayShift = 0;
+  while ((m = rowRe.exec(html)) !== null) {
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (hh > 27 || mm > 59) continue;
+    // Il palinsesto puo' iniziare prima delle 06:00 del giorno successivo
+    // (notte). Quando l'orario "torna indietro" rispetto al precedente,
+    // shift di +1 giorno.
+    const baseDate = new Date(`${date}T00:00:00Z`);
+    if (dayShift > 0) baseDate.setUTCDate(baseDate.getUTCDate() + dayShift);
+    let dateForRow = baseDate.toISOString().slice(0, 10);
+    let startIso = buildRomeIso(dateForRow, hh, mm);
+    let startMs = new Date(startIso).getTime();
+    if (prevStartMs > 0 && startMs < prevStartMs) {
+      dayShift += 1;
+      const shifted = new Date(`${date}T00:00:00Z`);
+      shifted.setUTCDate(shifted.getUTCDate() + dayShift);
+      dateForRow = shifted.toISOString().slice(0, 10);
+      startIso = buildRomeIso(dateForRow, hh, mm);
+      startMs = new Date(startIso).getTime();
+    }
+    prevStartMs = startMs;
+
+    const titleHtml = m[3];
+    const extraHtml = m[4];
+    // estrai testo del link / del h5
+    const linkMatch = titleHtml.match(/<a[^>]*>([\s\S]*?)<\/a>/);
+    const titleRaw = (linkMatch ? linkMatch[1] : titleHtml)
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const title = decodeEntities(titleRaw) || "(senza titolo)";
+
+    // info aggiuntiva dal <h6><i>...</i></h6>
+    const infoMatch = extraHtml.match(/<i[^>]*>([\s\S]*?)<\/i>/);
+    const info = infoMatch
+      ? decodeEntities(
+          infoMatch[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+        )
+      : undefined;
+
     programs.push({
       start: startIso,
-      end: stopIso ?? startIso,
+      end: startIso, // chiuso sotto con start del prossimo
       title,
-      genre: category,
-      description: desc,
+      description: info,
     });
   }
-  return programs.sort((a, b) => a.start.localeCompare(b.start));
+  // chiudi end con start del successivo (default +30m sull'ultimo)
+  for (let i = 0; i < programs.length - 1; i += 1) {
+    programs[i].end = programs[i + 1].start;
+  }
+  if (programs.length > 0) {
+    const last = programs[programs.length - 1];
+    last.end = new Date(new Date(last.start).getTime() + 30 * 60 * 1000)
+      .toISOString();
+  }
+  return programs;
+}
+
+// Cache 1h per (channel,date)
+type CacheEntry = { at: number; programs: Program[] };
+const guidatvCache = new Map<string, CacheEntry>();
+const TTL_MS = 60 * 60 * 1000;
+
+async function fetchGuidatv(
+  guidatvPath: string,
+  date: string,
+): Promise<Program[]> {
+  const cacheKey = `${guidatvPath}:${date}`;
+  const cached = guidatvCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < TTL_MS) return cached.programs;
+
+  const url = `https://www.guida.tv/programmi-tv/palinsesto/canale/${guidatvPath}.html?dt=${date}`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; CalendarSports/1.0; +https://calendarsports.lovable.app)",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "it-IT,it;q=0.9",
+      },
+    });
+    if (!res.ok) {
+      console.warn("[streaming-tv] guida.tv non-OK", res.status, guidatvPath);
+      return [];
+    }
+    const html = await res.text();
+    const programs = parseGuidatvHtml(html, date);
+    guidatvCache.set(cacheKey, { at: Date.now(), programs });
+    return programs;
+  } catch (err) {
+    console.warn("[streaming-tv] guida.tv fetch error", guidatvPath, err);
+    return [];
+  }
 }
 
 async function fetchProgramsForChannel(
@@ -249,17 +304,8 @@ async function fetchProgramsForChannel(
   channel: Channel,
   date: string,
 ): Promise<Program[]> {
-  if (family !== "discovery" || !channel.xmltvId) {
-    return [];
-  }
-  const xml = await fetchXmltvDiscovery();
-  if (!xml) return [];
-  try {
-    return parseProgrammesForChannel(xml, channel.xmltvId, date);
-  } catch (err) {
-    console.warn("[streaming-tv] XMLTV parse error", channel.xmltvId, err);
-    return [];
-  }
+  if (family !== "discovery" || !channel.guidatvPath) return [];
+  return await fetchGuidatv(channel.guidatvPath, date);
 }
 
 Deno.serve(async (req) => {
@@ -298,7 +344,14 @@ Deno.serve(async (req) => {
         const programs = await fetchProgramsForChannel(family as FamilyId, ch, date)
           .then((list) => list.filter((p) => isPrimeTime(p.start)))
           .catch(() => [] as Program[]);
-        return { ...ch, programs };
+        // Espone solo i campi per il frontend (no guidatvPath/xmltvId)
+        return {
+          id: ch.id,
+          name: ch.name,
+          logo: ch.logo,
+          number: ch.number,
+          programs,
+        };
       }),
     );
 
