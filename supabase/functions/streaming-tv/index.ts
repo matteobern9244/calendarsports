@@ -536,6 +536,7 @@ async function fetchSuperguidatv(path: string, date: string): Promise<Program[]>
     }
     const html = await res.text();
     const programs = parseSuperguidatvHtml(html, date);
+    console.log("[streaming-tv] superguidatv parsed", path, "programs=", programs.length, "htmlLen=", html.length);
     fetchCache.set(cacheKey, { at: Date.now(), programs });
     return programs;
   } catch (err) {
