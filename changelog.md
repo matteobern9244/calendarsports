@@ -11,6 +11,14 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
+### Verifica sync
+
+- 2026-04-19: micro-modifica di prova generata da Lovable per verificare che
+  il sync GitHub <-> Lovable su `main` funzioni correttamente dopo
+  l'applicazione della nuova policy di branch protection (Ruleset unica con
+  bypass `lovable-dev` in mode `always`) e il riallineamento dei workflow
+  CI/CD.
+
 ### Changed
 
 - Configurazione GitHub di `main` riallineata al modello finale con una sola
