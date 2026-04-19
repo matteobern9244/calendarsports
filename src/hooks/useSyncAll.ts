@@ -62,6 +62,7 @@ export function useSyncAll() {
         ),
       );
       setSyncProgress(100);
+      setLastSyncAt(new Date());
 
       toast.success("Tutti i dati sono stati aggiornati!", { id: toastId });
     } catch {
