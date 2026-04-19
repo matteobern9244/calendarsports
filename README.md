@@ -277,6 +277,34 @@ Punti chiave:
 - ogni funzione incapsula logica di fetch, scraping, fallback e rate limiting
   basilare.
 
+### Import del client Supabase nel frontend
+
+Per qualunque uso del client Supabase JS SDK (auth, realtime,
+`functions.invoke`, storage, query DB) importa sempre da
+`@/lib/supabaseClient`, non da `@/integrations/supabase/client`.
+
+Il file `src/integrations/supabase/client.ts` e' auto-generato e read-only,
+e legge `import.meta.env.VITE_SUPABASE_URL` /
+`VITE_SUPABASE_PUBLISHABLE_KEY` direttamente. In alcuni build di produzione
+queste variabili non vengono iniettate nel bundle: il client viene quindi
+creato con `URL = undefined` e le richieste finiscono su
+`https://<host>/undefined/functions/v1/...` (fallback HTML 200, mai JSON,
+React Query in loading infinito).
+
+`src/lib/supabaseClient.ts` ricrea il client usando le stesse variabili
+con fallback hardcoded sui valori pubblici (project URL e anon key),
+garantendo che funzioni in qualunque build. Esporta inoltre
+`SUPABASE_PROJECT_URL` e `SUPABASE_ANON_KEY` per chiamate `fetch` manuali
+verso le edge functions (gia' usate da `src/lib/api/sportsApi.ts`).
+
+```ts
+// OK
+import { supabase } from "@/lib/supabaseClient";
+
+// Da evitare nei nuovi import
+import { supabase } from "@/integrations/supabase/client";
+```
+
 Il repo non contiene una documentazione operativa completa per sviluppo edge
 locale. In pratica oggi il percorso piu' lineare e':
 
