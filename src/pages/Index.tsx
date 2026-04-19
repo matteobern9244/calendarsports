@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import EventCard from "@/components/common/EventCard";
 import SectionHeader from "@/components/common/SectionHeader";
@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Tv2, ArrowRight } from "lucide-react";
+import { RefreshCw, Tv2, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -52,6 +52,8 @@ export default function HomePage() {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
+  const [tvPage, setTvPage] = useState(0);
+  const TV_PAGE_SIZE = 8;
   const { data: f1Data, isLoading: f1Loading } = useF1NextRace();
   const { data: juveCalendar, isLoading: juveLoading } = useJuventusCalendar(2025);
   const { data: sinnerNext, isLoading: sinnerLoading } = useSinnerNextEvent();
@@ -115,7 +117,7 @@ export default function HomePage() {
   const tonightHighlights = useMemo(() => {
     const inPrimeWindow = (h: TvHighlight) => {
       const minutes = h.hourRome * 60 + h.minuteRome;
-      return minutes >= 20 * 60 + 15 && minutes <= 22 * 60 + 30;
+      return minutes >= 21 * 60 && minutes <= 22 * 60 + 30;
     };
     const pool = familyFilter === "all"
       ? allHighlights
@@ -237,6 +239,19 @@ export default function HomePage() {
     ? familyLabelMap[familyFilter]
     : null;
 
+  // Reset paginazione quando cambia il filtro famiglia
+  useEffect(() => {
+    setTvPage(0);
+  }, [familyFilter]);
+
+  // Paginazione interna alla scheda Stasera in TV
+  const totalTvPages = Math.max(1, Math.ceil(tonightHighlights.length / TV_PAGE_SIZE));
+  const safePage = Math.min(tvPage, totalTvPages - 1);
+  const pagedHighlights = useMemo(
+    () => tonightHighlights.slice(safePage * TV_PAGE_SIZE, safePage * TV_PAGE_SIZE + TV_PAGE_SIZE),
+    [tonightHighlights, safePage],
+  );
+
   return (
     <div className="container py-8 sm:py-12 space-y-10">
       {/* Stasera in TV — quadro reale multi-famiglia con filtri rapidi */}
@@ -252,7 +267,7 @@ export default function HomePage() {
                   <span className="text-gold-gradient">Stasera in TV</span>
                 </h2>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Prima serata (20:30–22:30) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
+                  Prima serata (dalle 21:00) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
                 </p>
               </div>
             </div>
@@ -295,36 +310,71 @@ export default function HomePage() {
           </div>
 
           {tonightHighlights.length > 0 ? (
-            <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 max-h-[480px] overflow-y-auto">
-              {tonightHighlights.map((row, i) => {
-                const prev = tonightHighlights[i - 1];
-                const showFamilyDivider = !prev || prev.family !== row.family;
-                return (
-                  <li
-                    key={`${row.family}-${row.channel}-${row.time}-${i}`}
-                    className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
-                  >
-                    {showFamilyDivider && (
-                      <span className="hidden sm:inline-flex font-heading text-[9px] uppercase tracking-widest text-primary/70 w-20 shrink-0">
-                        {familyLabelMap[row.family]}
-                      </span>
-                    )}
-                    <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm">
-                      {row.time}
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 max-w-[110px] sm:max-w-none truncate"
+            <>
+              <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40">
+                {pagedHighlights.map((row, i) => {
+                  const prev = pagedHighlights[i - 1];
+                  const showFamilyDivider = !prev || prev.family !== row.family;
+                  return (
+                    <li
+                      key={`${row.family}-${row.channel}-${row.time}-${i}`}
+                      className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
                     >
-                      {row.channel}
-                    </Badge>
-                    <span className="font-medium truncate min-w-0 text-xs sm:text-sm">
-                      {row.title}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+                      <span
+                        className={`hidden sm:inline-flex font-heading text-[9px] uppercase tracking-widest w-20 shrink-0 ${
+                          showFamilyDivider ? "text-primary/70" : "text-transparent"
+                        }`}
+                        aria-hidden={!showFamilyDivider}
+                      >
+                        {showFamilyDivider ? familyLabelMap[row.family] : familyLabelMap[row.family]}
+                      </span>
+                      <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm">
+                        {row.time}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 max-w-[110px] sm:max-w-none truncate"
+                      >
+                        {row.channel}
+                      </Badge>
+                      <span className="font-medium truncate min-w-0 text-xs sm:text-sm">
+                        {row.title}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {totalTvPages > 1 && (
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTvPage((p) => Math.max(0, p - 1))}
+                    disabled={safePage === 0}
+                    className="h-8 px-2 gap-1 text-xs"
+                    aria-label="Pagina precedente"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Precedente</span>
+                  </Button>
+                  <span className="text-[11px] font-heading uppercase tracking-wider text-muted-foreground">
+                    Pagina {safePage + 1} / {totalTvPages} · {tonightHighlights.length} canali
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTvPage((p) => Math.min(totalTvPages - 1, p + 1))}
+                    disabled={safePage >= totalTvPages - 1}
+                    className="h-8 px-2 gap-1 text-xs"
+                    aria-label="Pagina successiva"
+                  >
+                    <span className="hidden sm:inline">Successiva</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="rounded-md border border-dashed border-border/60 bg-card/30 px-4 py-6 text-center text-sm text-muted-foreground">
               {filteredFamilyLabel ? (

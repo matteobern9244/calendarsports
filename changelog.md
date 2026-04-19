@@ -42,9 +42,13 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   Gestione esplicita dell'assenza di `TMDB_API_KEY` (`configured=false`).
 - Quadro reale **Stasera in TV** in Home con aggregazione multi-famiglia
   (5 query parallele) e **filtri rapidi** user-friendly: chip
-  selezionabili `Tutti / Sky Sport / Sky Cinema / RAI / Mediaset /
-  Discovery` su `ToggleGroup`, top 8 righe ordinate per orario,
-  responsive (chip scrollabili orizzontalmente su mobile, wrap su
+  selezionabili `Tutti / RAI / Mediaset / Sky Sport / Sky Cinema /
+  Discovery` su `ToggleGroup` (ordine identico nei chip e nella lista),
+  un programma per canale nella **fascia di prima serata (dalle 21:00
+  in poi, fino a 22:30)**, **paginazione interna** alla scheda (8 canali
+  per pagina, controlli Precedente/Successiva con conteggio), allineamento
+  delle righe stabilizzato grazie a una colonna famiglia di larghezza
+  fissa, responsive (chip scrollabili orizzontalmente su mobile, wrap su
   desktop). Empty state esplicito per famiglia senza dati.
 
 ### Changed
