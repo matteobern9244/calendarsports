@@ -63,7 +63,16 @@ function formatDuration(min: number): string {
 type FilterValue = "all" | StreamingFamilyId;
 
 export default function HomePage() {
-  const { sync: handleSync, syncing, syncStep, syncProgress } = useSyncAll();
+  const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
+  const lastSyncLabel = useMemo(() => {
+    if (!lastSyncAt) return null;
+    return new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(lastSyncAt);
+  }, [lastSyncAt]);
   const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
   const [tvPage, setTvPage] = useState(0);
   const TV_PAGE_SIZE = 8;
