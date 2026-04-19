@@ -10,6 +10,8 @@ interface SparkleLoopProps {
   radius?: number;
   /** Dimensione massima di ciascuna scintilla in px */
   size?: number;
+  /** Mostra anche un glow gold pulsante sincronizzato col loop */
+  glow?: boolean;
 }
 
 interface Spark {
