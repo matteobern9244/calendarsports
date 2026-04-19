@@ -1,113 +1,101 @@
 
-## Obiettivo
+## Piano: estensioni Streaming
 
-Aggiungere una sezione **Streaming** all'app con:
-- nuova pagina `/streaming` con 2 tab: **TV stasera** (prime time 19:00-24:00) e **Nuove uscite** (Netflix, Prime Video, Disney+, HBO Max);
-- voce nav `STREAMING` come prima voce dopo `HOME`;
-- blocco compatto **Stasera in TV** sulla Home con top 6 highlights + link a `/streaming`.
+Sei richieste, raggruppate per area. Includo anche un **fix critico** scoperto nell'esplorazione: la rotta `/streaming` non è registrata in `App.tsx` e la voce nav non esiste in `Header.tsx` (il messaggio precedente diceva fossero state aggiunte, ma il codice mostra il contrario).
 
-## Navigazione interna alla tab TV (NUOVO)
+### 1. Nav: STREAMING tra HOME e JANNIK SINNER
 
-Niente "muro" di canali tutti insieme. La tab **TV stasera** usa una navigazione a due livelli:
+`src/components/layout/Header.tsx` → aggiungo `{ label: "STREAMING", path: "/streaming" }` in seconda posizione.
+`src/App.tsx` → aggiungo `import StreamingPage` + `<Route path="/streaming" element={<StreamingPage />} />`.
 
-1. **Selettore famiglia canali** (sticky, come tab pill orizzontali scrollabili su mobile):
-   - `Sky Sport` · `Sky Cinema` · `RAI` · `Mediaset` · `Discovery` (Real Time + DMax)
-2. **Lista canali della famiglia selezionata** (accordion verticale):
-   - clicco `RAI` → vedo solo Rai 1, Rai 2, Rai 3, Rai 4, Rai 5, Rai Movie, Rai Premium, Rai Gulp, Rai Yoyo, Rai Storia, Rai Scuola, Rai News24, Rai Sport, Rai Sport+
-   - ogni canale è un accordion item che mostra i programmi prime time 19:00-24:00 quando aperto
+### 2. Edge function `streaming-tv`: integrazione XMLTV iptv-org per Real Time + DMax
 
-**Paginazione interna alla famiglia** (quando i canali sono molti, es. RAI 14 canali, Mediaset 13):
-- Componente `Pagination` (già presente in `src/components/ui/pagination.tsx`)
-- Default 6 canali per pagina, configurabile via state
-- Reset pagina a 1 quando cambio famiglia
-- Persisto la famiglia selezionata in URL query param `?family=rai&page=2` per deep link
+In `supabase/functions/streaming-tv/index.ts`:
+- aggiungo `fetchDiscoveryXmltv(date)` che scarica `https://raw.githubusercontent.com/iptv-org/epg/master/sites/mediaset.it/mediaset.it.channels.xml` o equivalente. Fonte XMLTV reale per Real Time/DMax: `https://iptv-org.github.io/epg/guides/it/mediasetinfinity.mediaset.it.epg.xml` (o feed analogo iptv-org for Italy).
+- parser XMLTV minimale via regex (no libreria DOM in Deno edge): estraggo `<programme start="..." stop="..." channel="..."><title>...</title><desc>...</desc><category>...</category></programme>`.
+- mapping: `real-time` → channel id XMLTV "RealTime.it", `dmax` → "DMax.it" (verifico con curl al deploy).
+- cache in-memory 1h del feed completo, parse lazy per canale.
+- `fetchProgramsForChannel` chiama il parser solo per family `discovery`. Le altre famiglie restano stub vuoto (dichiarato `programsAvailable: false`), come oggi.
+- fallback: se fetch o parse fallisce → lista vuota, mai dati inventati.
 
-Stato di default all'apertura della pagina: famiglia `Sky Sport`, pagina 1.
+Cache key: `xmltv-discovery:${date}`. TTL 1h.
 
-## Navigazione interna alla tab Nuove uscite
+### 3. Edge function `streaming-releases`: range 7 giorni + selettore data
 
-Stesso pattern coerente:
-- Selettore provider pill: `Netflix` · `Prime Video` · `Disney+` · `HBO Max`
-- Solo provider selezionato visibile alla volta
-- Paginazione 8 titoli per pagina se >8 uscite nel giorno
-- Default: `Netflix`, pagina 1
+In `supabase/functions/streaming-releases/index.ts`:
+- accetto nuovo param opzionale `dateFrom` e `dateTo` (regex `DATE_RE` già presente). Se assenti: `dateFrom = oggi`, `dateTo = oggi + 7`.
+- TMDB `/discover` supporta nativamente `primary_release_date.gte` + `.lte` → cambio i parametri esistenti per accettare il range invece del singolo giorno.
+- output payload: aggiungo `dateFrom`, `dateTo` + ogni item mantiene `releaseDate` (già presente). 
+- cache key: `${provider}:${dateFrom}:${dateTo}`.
 
-## Fonti dati (fragilità dichiarata)
+In `src/lib/api/sportsApi.ts`:
+- estendo `streamingApi.getReleasesByProvider(provider, dateFrom?, dateTo?)`.
 
-| Provider | Fonte | Tipo |
-|---|---|---|
-| Sky Sport, Sky Cinema | scraping `guidatv.sky.it` | fragile |
-| RAI (14 canali) | scraping `raiplay.it/guidatv` | fragile |
-| Mediaset (13 canali) | scraping `mediasetinfinity.it` | fragile |
-| Real Time, DMax | XMLTV `iptv-org/epg` | fragile |
-| Netflix/Prime/Disney+/HBO Max | TMDB API `/discover` + `with_watch_providers` + `watch_region=IT` | richiede `TMDB_API_KEY` |
+In `src/hooks/useStreamingData.ts`:
+- estendo `useReleasesByProvider(provider, dateFrom?, dateTo?)`, queryKey include il range.
 
-## Edge Functions nuove
+### 4. Filtro Film/Serie nella tab Nuove uscite
 
-1. `supabase/functions/streaming-tv/index.ts`
-   - Azioni: `prime-time`
-   - Param obbligatorio: `family` (sky-sport|sky-cinema|rai|mediaset|discovery), opzionale `channel`, `date`
-   - Validazione regex stretta su tutti i param
-   - CORS + rate limit identici agli altri
-   - Filtro orario 19:00-24:00 server-side
-   - Output: `{ family, channels: [{ id, name, logo, programs: [{ start, end, title, genre }] }] }`
+In `StreamingPage.tsx` tab `releases`:
+- nuovo state `kindFilter: "all" | "movie" | "tv"` (default `all`), persistito in URL come `?kind=movie`.
+- 3 pill `Tutti` / `Film` / `Serie` sotto il `ProviderSelector`.
+- filtro client-side su `items` prima del paginamento (TMDB già restituisce `type` per ogni item).
+- selettore data: aggiungo un `Select` `Oggi` / `Prossimi 3 giorni` / `Prossimi 7 giorni` (default `Oggi`) sopra le pill, persistito in URL come `?range=7d`. Calcolo `dateFrom`/`dateTo` lato client e li passo all'hook.
 
-2. `supabase/functions/streaming-releases/index.ts`
-   - Azione: `new-today`
-   - Param: `provider`
-   - Chiama TMDB con secret `TMDB_API_KEY`
-   - Cache in-memory 1h per provider
-   - Output: `{ provider, items: [{ tmdbId, title, type, releaseDate, poster, overview }] }`
+### 5. Dialog dettaglio poster
 
-## Frontend
+Nuovo componente `src/components/streaming/ReleaseDetailDialog.tsx`:
+- props: `item: ReleaseItem | null`, `provider: StreamingProviderId`, `onClose`.
+- usa `Dialog` di shadcn (già presente in `src/components/ui/dialog.tsx`).
+- mostra: poster grande, titolo, badge tipo (Film/Serie), data uscita, voto, **overview** (già nel payload TMDB), **link diretto al provider** (URL deep-link generico per provider: Netflix `https://www.netflix.com/title/{id}` non è disponibile da TMDB; uso fallback `https://www.themoviedb.org/{type}/{tmdbId}` come "Vedi dettagli su TMDB" + link homepage provider come secondo CTA).
 
-- `src/lib/api/sportsApi.ts` → aggiungo `streamingApi.getTvByFamily(family, date?)` e `streamingApi.getReleasesByProvider(provider)`
-- `src/hooks/useStreamingData.ts` nuovo: `useTvByFamily(family)`, `useReleasesByProvider(provider)` con React Query (`staleTime` 15min TV, 1h releases)
-- `src/pages/StreamingPage.tsx` nuovo:
-  - Tabs TV / Nuove uscite (`@/components/ui/tabs`)
-  - Sotto-selettore famiglia/provider pill scrollabile orizzontale
-  - Lista canali paginata (6 per pagina) con `Accordion` per ogni canale
-  - Lista uscite paginata (8 per pagina) come grid card
-  - URL state: `?tab=tv&family=rai&page=1`
-- `src/pages/Index.tsx`: blocco **Stasera in TV** (top 6 highlights misti) sopra "Prossimi Eventi"
-- `src/components/layout/Header.tsx`: aggiungo `STREAMING` come prima voce dopo `HOME`
-- `src/App.tsx`: route `<Route path="/streaming" element={<StreamingPage />} />`
+**Cast**: TMDB `/discover` non restituisce cast. Per averlo serve seconda chiamata `/movie/{id}/credits` o `/tv/{id}/credits`. Due opzioni:
+- A) lazy on click: nuova edge function action `get-credits?type=movie&id=123` → fetch on-demand quando si apre il dialog (più pulito, niente sprechi).
+- B) prefetch in `discover` (impossibile: non c'è append_to_response su `/discover`).
 
-## UI
+Adotto **A**: estendo `streaming-releases` con action `credits` (param `type`, `id`), nuovo hook `useReleaseCredits(type, id)` con `enabled: !!id`, cache lunga (24h). Il dialog mostra skeleton per il cast finché carica, top 6 attori con nome.
 
-- Riuso esclusivo di token esistenti (oro/navy/Oswald/Inter)
-- Pill famiglia: `Badge` o `Button` variant outline, attivo = filled gold
-- Accordion canale: header con logo + nome, body con righe orarie
-- Paginazione: shadcn `Pagination` esistente, centrata sotto la lista
+In `StreamingPage.tsx`: card poster diventa `<button onClick={() => setSelectedItem(item)}>`, `<ReleaseDetailDialog item={selectedItem} ... />` montato a fianco della grid.
 
-## Vincoli operativi
+### 6. Home: quadro rapido "Stasera in TV" reale
 
-- Feature branch da `develop`, PR verso `develop`
-- Nessuna modifica a `src/integrations/supabase/*`, `supabase/config.toml`, env, branch policy
-- Import client da `@/lib/supabaseClient`
-- Validazione regex su tutti i param edge (lezione `season_param_url_injection`)
-- Aggiorno `README.md`, `AGENTS.md`, `changelog.md` sotto `[Unreleased]`
+Oggi la card Home ha solo i pill di link alle famiglie. La richiesta è vedere **un quadro rapido della programmazione**.
 
-## Cosa serve da te
+In `src/pages/Index.tsx`:
+- uso `useTvByFamily("discovery")` per fetchare i programmi reali (l'unica famiglia con dati XMLTV dopo il punto 2).
+- mostro fino a 6 righe compatte: ora + canale + titolo programma, ordinate per orario, solo prime time.
+- se `programsAvailable === false` o lista vuota → mostro i pill famiglie come oggi (fallback grazioso).
+- mantengo CTA "Apri Streaming".
 
-1. **TMDB API key** (per tab Nuove uscite). Senza, la tab mostra `EmptyState` "Configura TMDB_API_KEY".
-2. Conferma accettazione rischio fragilità (5 scraper + 1 EPG community + 1 API esterna).
+Limite onesto: solo Real Time + DMax avranno dati reali; Sky/RAI/Mediaset restano elencati come pill di navigazione finché non integrate. Lo dichiaro nel sottotitolo della card.
 
-## Ordine di implementazione
+### Vincoli rispettati
 
-1. Edge function `streaming-releases` + secret request TMDB
-2. Edge function `streaming-tv` (Sky → RAI → Mediaset → XMLTV Discovery)
-3. `streamingApi` + hooks
-4. `StreamingPage` con tab + selettore famiglia + paginazione + URL state
-5. Header nav + route
-6. Blocco "Stasera in TV" su Home
-7. Aggiornamento docs
-8. Lint + build + verifica manuale end-to-end
+- Branch: lavoro su `develop`, PR verso `develop`. Lovable scriverà su `main` automaticamente.
+- Nessuna modifica a `src/integrations/supabase/*`, `supabase/config.toml`, env, branch policy.
+- Validazione regex su tutti i nuovi param edge (`type`, `id`, `dateFrom`, `dateTo`).
+- Fonti dichiarate fragili: XMLTV iptv-org community (può cambiare struttura/disappear), TMDB (richiede key, già configurata).
+- Aggiorno `README.md` (nuova fonte XMLTV + dettaglio dialog + range 7gg) e `changelog.md` sotto `[Unreleased]`.
 
-## Fuori scope
+### File toccati
 
-- Login / personalizzazione
-- Notifiche / promemoria
-- Catalogo storico oltre il giorno corrente
-- Ricerca full-text
-- Deep-link verso app provider
+- `src/App.tsx` (route)
+- `src/components/layout/Header.tsx` (nav)
+- `src/pages/Index.tsx` (quadro Stasera in TV reale)
+- `src/pages/StreamingPage.tsx` (filtro Film/Serie, selettore data, dialog wiring)
+- `src/components/streaming/ReleaseDetailDialog.tsx` (nuovo)
+- `src/hooks/useStreamingData.ts` (nuovi hook + range)
+- `src/lib/api/sportsApi.ts` (firme estese)
+- `supabase/functions/streaming-tv/index.ts` (XMLTV parser Discovery)
+- `supabase/functions/streaming-releases/index.ts` (range 7gg + action credits)
+- `README.md`, `changelog.md`
+
+### Ordine di esecuzione
+
+1. Fix nav + route (sblocca tutto)
+2. `streaming-tv` XMLTV Discovery + verifica curl
+3. Home quadro reale
+4. `streaming-releases` range + filtri
+5. Action credits + dialog
+6. Filtri Film/Serie + selettore data UI
+7. Docs + verifica end-to-end
