@@ -22,8 +22,12 @@ type Channel = {
   logo: string | null;
   number?: number;
   // Slug staseraintv.com per scraping (es. "rai1", "canale5", "sky_uno").
-  // Se undefined il canale non ha fonte e ritorna programs=[].
+  // Se undefined, e' undefined anche superguidatvPath, il canale non ha
+  // fonte e ritorna programs=[].
   staseraSlug?: string;
+  // Path superguidatv.it (es. "guida-programmi-tv-sky-sport-uno/sky-sport/37").
+  // Usato per i canali Sky Sport non coperti da staseraintv.com.
+  superguidatvPath?: string;
 };
 
 type Program = {
