@@ -82,3 +82,27 @@ export function getEventStatus(dateStr: string): "prossimo" | "in_corso" | "comp
   if (diffHours < 3 && diffHours > -3) return "in_corso";
   return "prossimo";
 }
+
+/**
+ * Restituisce la data odierna in formato ISO `YYYY-MM-DD` calcolata nel
+ * fuso `Europe/Rome`. Usato per allineare i range delle nuove uscite
+ * streaming (Index + StreamingPage) al giorno italiano.
+ */
+export function todayRomeISO(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/**
+ * Somma `days` (anche negativi) ad una data ISO `YYYY-MM-DD` operando in
+ * UTC per evitare drift da DST. Ritorna sempre `YYYY-MM-DD`.
+ */
+export function addDaysISO(dateIso: string, days: number): string {
+  const d = new Date(`${dateIso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}

@@ -44,6 +44,7 @@ import type {
   StreamingProviderId,
 } from "@/lib/api/sportsApi";
 import { cn } from "@/lib/utils";
+import { todayRomeISO, addDaysISO } from "@/lib/dateUtils";
 
 const CHANNELS_PER_PAGE = 6;
 const RELEASES_PER_PAGE = 8;
@@ -72,20 +73,6 @@ function formatHour(iso: string): string {
   }).format(new Date(iso));
 }
 
-function todayRomeISO(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Rome",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-function addDaysISO(dateIso: string, days: number): string {
-  const d = new Date(`${dateIso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
 
 function isFamily(value: string | null): value is StreamingFamilyId {
   return !!value && STREAMING_FAMILIES.some((f) => f.id === value);
