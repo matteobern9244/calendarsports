@@ -13,7 +13,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { STREAMING_FAMILIES } from "@/hooks/useStreamingData";
+import { STREAMING_FAMILIES, useTvByFamily } from "@/hooks/useStreamingData";
 
 interface UpcomingEvent {
   sport: string;
