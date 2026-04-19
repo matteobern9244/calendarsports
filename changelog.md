@@ -11,7 +11,27 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
+### Added
+
+- Nuova sezione **Streaming** (`/streaming`) come prima voce di
+  navigazione dopo Home. Pagina con due tab:
+  - **TV stasera**: selettore famiglia canali (Sky Sport, Sky Cinema, RAI,
+    Mediaset, Discovery), accordion per canale, paginazione (6 canali per
+    pagina), filtro server-side prime time 19:00-24:00 Europe/Rome, stato
+    sincronizzato in URL (`?tab=tv&family=rai&page=2`).
+  - **Nuove uscite**: selettore provider (Netflix, Prime Video, Disney+,
+    HBO Max), griglia poster TMDB con paginazione (8 per pagina).
+- Edge function `streaming-tv` con dataset canali ufficiali e stub di
+  scraping per canale (lista canali sempre presente, programmi reali
+  vuoti finche' i feed non vengono integrati). FRAGILE.
+- Edge function `streaming-releases` su TMDB `/discover` filtrata per
+  `watch_region=IT`, cache in-memory 1h, gestione esplicita dell'assenza
+  di `TMDB_API_KEY` (risposta `configured=false` invece di errore).
+- Blocco compatto **Stasera in TV** in Home con shortcut a tutte le
+  famiglie canali via deep-link `?family=`.
+
 ### Changed
+
 
 - Aggiunta configurazione reale di `Dependabot` per `npm` e
   `github-actions`, con PR di version update indirizzate a `develop`,
