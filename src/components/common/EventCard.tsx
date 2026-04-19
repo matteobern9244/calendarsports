@@ -72,8 +72,8 @@ export default function EventCard({
           {sport}
         </span>
         {status === "in_corso" && (
-          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-red-500">
-            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-destructive">
+            <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
             LIVE
           </span>
         )}
