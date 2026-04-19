@@ -435,14 +435,17 @@ export default function HomePage() {
                         <span className="font-medium text-xs sm:text-sm leading-tight break-words">
                           {row.title}
                         </span>
-                        {row.genre && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none"
-                          >
-                            {row.genre}
-                          </Badge>
-                        )}
+                        {(() => {
+                          const g = row.genre || inferGenre(row.family, row.channel, row.title);
+                          return g ? (
+                            <Badge
+                              variant="secondary"
+                              className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none"
+                            >
+                              {g}
+                            </Badge>
+                          ) : null;
+                        })()}
                         {formatDuration(row.durationMin) && (
                           <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap font-mono leading-none">
                             {formatDuration(row.durationMin)}
