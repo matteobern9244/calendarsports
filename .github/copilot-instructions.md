@@ -5,6 +5,8 @@
 - Non suggerire push diretti o workflow automatici su `main` come default.
 - Per modifiche umane, assumi sempre flusso feature branch -> `develop` e PR
   separata `develop` -> `main`.
+- Quando una PR verso `develop` o `main` e' eleggibile, mantieni `auto-merge`
+  attivo con metodo `squash` invece di richiedere un merge manuale finale.
 - Non proporre il ripristino della Branch protection classica su `main` se la
   Ruleset moderna e' gia' la fonte unica di protezione.
 - Prima di proporre modifiche, leggi almeno `src/App.tsx`, `src/pages/*`,

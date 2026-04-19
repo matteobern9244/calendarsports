@@ -97,6 +97,11 @@ Con questa configurazione:
 - Lovable continua a poter pushare direttamente su `main` per il sync.
 - Gli umani lavorano su feature branch -> `develop`.
 - L'arrivo umano su `main` avviene solo con PR `develop` -> `main`.
+- Le PR verso `develop` e `main` devono avere `auto-merge` attivo con metodo
+  `squash` appena vengono aperte o aggiornate.
+- Se i check richiesti sono verdi, GitHub deve fondere automaticamente la PR
+  non appena risultano soddisfatte anche le altre condizioni di merge
+  applicabili, ad esempio una review obbligatoria su `main`.
 - Il workflow `guard-main-source.yml` blocca le PR verso `main` che non
   provengono da `develop`, ma non interferisce con i push automatici di
   Lovable su `main`.
