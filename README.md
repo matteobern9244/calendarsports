@@ -341,13 +341,11 @@ Policy operativa corrente del repository:
 - Su `main` non vanno fatti push diretti da utenti umani.
 - La protezione di `main` deve essere gestita da una sola Ruleset moderna,
   senza una Branch protection classica attiva in parallelo.
-- Il merge verso `main` deve restare bloccato finche' non passano i check
-  richiesti dalla Ruleset.
-- I check richiesti correnti per le PR verso `main` sono i job `quality` ed
-  `e2e` del workflow PR.
+- La Ruleset di `main` deve restare minimale e compatibile con il push diretto
+  di Lovable: protegge da deletion e force-push, ma non deve imporre gate di
+  PR o required checks che possano rigettare il sync automatico.
 - Le PR verso `develop` e `main` devono avere `auto-merge` attivo con metodo
-  `squash`, cosi' GitHub completa il merge appena i check richiesti e le altre
-  condizioni di merge risultano soddisfatte.
+  `squash`, ma solo dopo esito positivo dei workflow PR pertinenti.
 - Il workflow `guard-main-source.yml` blocca ogni PR verso `main` che non
   provenga da `develop` e non si applica ai push automatici di Lovable.
 - Il workflow PR gira su PR verso `develop` e `main`; il workflow push gira
@@ -365,10 +363,7 @@ La configurazione finale richiesta del repository e':
   `refs/heads/main`;
 - bypass riservato alla sola app GitHub `lovable-dev` con `bypass mode`
   `Always`;
-- branch rules attive: blocco deletion, blocco force-push,
-  pull request obbligatoria senza review obbligatoria e con stale reviews
-  dismiss,
-  required status checks strict sui job `quality` ed `e2e`;
+- branch rules attive: blocco deletion e blocco force-push;
 - nessuna Branch protection classica attiva su `main`.
 
 Non vanno attivati nella Ruleset:
@@ -384,8 +379,9 @@ Non vanno attivati nella Ruleset:
 Se Lovable mostra questo errore, controllare in ordine:
 
 1. Esiste ancora una Branch protection classica attiva oltre alla Ruleset?
-2. Il bypass per `lovable-dev` e' davvero in mode `Always` ed esteso anche
-   ai required status checks?
+2. La Ruleset di `main` contiene per errore gate come `pull_request` o
+  `required_status_checks` invece del solo set minimale compatibile con
+  Lovable?
 3. E' attivo qualche flag tipo `Do not allow bypassing` o `Enforce for
    admins`?
 
@@ -394,9 +390,11 @@ Risultato pratico:
 - Lovable continua a pushare su `main` per il sync automatico.
 - Gli umani contribuiscono via feature branch -> `develop`, poi via PR
   `develop` -> `main`.
-- Le PR eleggibili si auto-fondono con `squash` appena i check richiesti e le
-  altre condizioni di merge risultano soddisfatti.
-- Nessun push diretto umano su `main` e' possibile, neppure per errore.
+- Le PR eleggibili si auto-fondono con `squash` solo dopo workflow PR verdi e
+  guardrail soddisfatti.
+- Il divieto di push diretto umano su `main` resta una regola operativa del
+  repository, non un gate che deve interferire con il sync automatico di
+  Lovable.
 
 ### Sync GitHub -> Lovable
 
