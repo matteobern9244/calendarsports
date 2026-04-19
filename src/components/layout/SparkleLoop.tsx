@@ -78,6 +78,29 @@ export function SparkleLoop({
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 flex items-center justify-center"
     >
+      {glow && (
+        <motion.span
+          key={`glow-${tick}`}
+          className="absolute rounded-full"
+          style={{
+            width: radius * 2,
+            height: radius * 2,
+            background:
+              "radial-gradient(circle, hsl(var(--gold-light) / 0.55) 0%, hsl(var(--gold) / 0.35) 40%, transparent 70%)",
+            filter: "blur(2px)",
+          }}
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{
+            scale: [0.6, 1.15, 0.85],
+            opacity: [0, 0.9, 0],
+          }}
+          transition={{
+            duration: 1.4,
+            ease: "easeOut",
+            times: [0, 0.45, 1],
+          }}
+        />
+      )}
       <AnimatePresence>
         {sparks.map((s) => (
           <motion.span
