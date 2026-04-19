@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Compass,
   Film,
+  LayoutGrid,
   Radio,
   Trophy,
   Tv,
