@@ -124,8 +124,8 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 - Il rebrand e' puramente cosmetico lato UI/metadati/docs: nessun
   impatto su routing, fonti dati, edge functions, secrets, branch
   policy o sync Lovable <-> GitHub.
-- Il downgrade SemVer `2.0.2 -> 2.0.0` e' esplicito e voluto come reset
-  identita' prodotto. Le release storiche restano archiviate sotto.
+- Bump versione `2.0.2 -> 2.1.0` come release minor di rebrand. Le
+  release storiche restano archiviate sotto.
 - `npm run lint`, `npm run test` e `npm run build` da eseguire come
   verifica finale. Il drift preesistente tra `package.json` e
   `package-lock.json` puo' ancora far fallire `npm ci` finche' il
