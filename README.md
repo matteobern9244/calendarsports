@@ -73,7 +73,22 @@ Funzionalita' trasversali:
 - sincronizzazione client-side tramite invalidazione delle query;
 - selezione stagione per ogni sezione;
 - UI costruita con componenti shadcn/ui e Radix;
-- responsive completo (mobile/tablet/desktop) sui banner Home.
+- responsive completo (mobile/tablet/desktop) sui banner Home;
+- **card eventi premium** con bordo gold sottile, hover lift, top accent
+  line e glow radiale gold soft (vedi `src/components/common/EventCard.tsx`),
+  riutilizzate in Home, Sinner, F1 e MotoGP; le card custom partite di
+  Juventus replicano lo stesso trattamento per coerenza visiva;
+- **countdown live al prossimo evento** dentro ogni card sportiva
+  (`src/components/common/EventCountdown.tsx`), aggiornato ogni secondo,
+  con badge "Inizio imminente" entro una finestra di ±3 ore dall'inizio;
+  non viene renderizzato sugli eventi gia' completati;
+- **highlight del prossimo evento in assoluto** nella Home: la prima card
+  di "Prossimi Eventi" (lista ordinata cronologicamente) riceve bordo gold
+  pieno + ring + badge "Prossimo" sopra la card. Le pagine sport
+  evidenziano analogamente la prima card upcoming via la utility
+  `prioritizeNextUpcoming` in `src/lib/dateUtils.ts`;
+- **glow pulsante gold** sull'icona della voce di navigazione attiva
+  (`Header.tsx`), sincronizzato con il loop di scintille (`SparkleLoop`).
 
 ### Streaming: fonte dati TV
 
