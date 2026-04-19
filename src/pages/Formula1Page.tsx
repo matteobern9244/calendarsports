@@ -49,6 +49,7 @@ export default function Formula1Page() {
                   subtitle={`${r.circuit} · ${r.locality}, ${r.country}`}
                   date={formatDateIT(r.date)}
                   time={formatTimeIT(r.time, r.date)}
+                  startDate={r.time ? `${r.date}T${r.time}` : r.date}
                   status={getEventStatus(r.date)}
                   highlight={idx === highlightIndex}
                 >
