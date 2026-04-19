@@ -373,16 +373,14 @@ export default function HomePage() {
                   const prev = pagedHighlights[i - 1];
                   const showFamilyDivider = !prev || prev.family !== row.family;
                   return (
-                    <>
+                    <Fragment key={`${row.family}-${row.channel}-${row.time}-${i}`}>
                       {showFamilyDivider && i > 0 && (
                         <li
-                          key={`sep-${row.family}-${i}`}
                           aria-hidden="true"
                           className="h-[3px] bg-primary border-y border-primary/40 list-none"
                         />
                       )}
                       <li
-                        key={`${row.family}-${row.channel}-${row.time}-${i}`}
                         className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
                       >
                       <span
