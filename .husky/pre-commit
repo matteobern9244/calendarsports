@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh" 2>/dev/null || true
+
+# Esegue ESLint sui file .ts/.tsx in stage. La regola `no-restricted-imports`
+# blocca import diretti da `@/integrations/supabase/client`: vedi AGENTS.md →
+# "Import del client Supabase". In CI lo stesso check gira via `npm run lint`
+# nel workflow `ci-pr-main`.
+npx --no-install lint-staged
