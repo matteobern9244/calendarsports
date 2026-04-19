@@ -192,6 +192,7 @@ export default function HomePage() {
 
   const handleSync = async () => {
     setSyncing(true);
+    setSyncProgress(0);
     const toastId = toast.loading("Avvio sincronizzazione...");
     try {
       // 1. Sport
@@ -204,6 +205,7 @@ export default function HomePage() {
         },
         refetchType: "all",
       });
+      setSyncProgress(33);
 
       // 2. Palinsesti TV (gia' attivi sulla home)
       setSyncStep("Aggiornamento palinsesti TV...");
@@ -212,6 +214,7 @@ export default function HomePage() {
         queryKey: ["streaming-tv"],
         refetchType: "all",
       });
+      setSyncProgress(66);
 
       // 3. Nuove uscite (non montate sulla home: prefetch esplicito)
       setSyncStep("Aggiornamento nuove uscite streaming...");
@@ -227,6 +230,7 @@ export default function HomePage() {
           }),
         ),
       );
+      setSyncProgress(100);
 
       toast.success("Tutti i dati sono stati aggiornati!", { id: toastId });
     } catch {
@@ -234,6 +238,7 @@ export default function HomePage() {
     } finally {
       setSyncStep("");
       setSyncing(false);
+      setTimeout(() => setSyncProgress(0), 600);
     }
   };
 
