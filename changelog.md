@@ -18,6 +18,9 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   l'applicazione della nuova policy di branch protection (Ruleset unica con
   bypass `lovable-dev` in mode `always`) e il riallineamento dei workflow
   CI/CD.
+- 2026-04-19 (retry): seconda micro-modifica di verifica sync Lovable -> GitHub
+  su `main` dopo l'applicazione del prompt completo su GitHub Copilot
+  (hardening Ruleset + correzione workflow CI/CD).
 
 ### Changed
 
