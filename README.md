@@ -3,7 +3,7 @@
 Applicazione web sportiva multi-sezione per consultare eventi imminenti,
 calendari e classifiche di Jannik Sinner, Juventus, Formula 1 e MotoGP.
 
-Versione repository corrente: `2.0.0`.
+Versione repository corrente: `2.0.1`.
 
 ## Origine del progetto
 
@@ -26,7 +26,7 @@ incoraggino push automatici o superficiali su `main`.
 
 ## Release baseline
 
-La baseline documentata del repository e' la release `2.0.0`.
+La baseline documentata del repository e' la release `2.0.1`.
 
 Questa release rappresenta il punto in cui sono stati allineati:
 
@@ -35,7 +35,7 @@ Questa release rappresenta il punto in cui sono stati allineati:
 - test locali e CI piu' ripetibili;
 - documentazione operativa coerente con il rischio GitHub <-> Lovable.
 
-La release `2.0.0` descrive lo stato del repository e delle sue policy
+La release `2.0.1` descrive lo stato del repository e delle sue policy
 operative. Non implica, da sola, che una corrispondente versione live sia gia'
 stata pubblicata su Lovable.
 
@@ -309,6 +309,26 @@ Policy operativa corrente del repository:
 
 Se cambi branch policy, default branch o integrazione GitHub in Lovable,
 aggiorna immediatamente questa documentazione e `AGENTS.md`.
+
+## GitHub Copilot nel repository
+
+Il repository include una suite minima e conservativa per usare GitHub Copilot
+senza introdurre una seconda policy indipendente rispetto a `AGENTS.md`.
+
+Gerarchia operativa:
+
+- `AGENTS.md`: fonte normativa primaria per agenti e assistenti AI.
+- `.github/copilot-instructions.md`: istruzioni repository-wide compatte per
+  Copilot.
+- `.github/instructions/*.instructions.md`: istruzioni specifiche per path, per
+  frontend, funzioni edge e documentazione.
+- `.github/prompts/*.prompt.md`: prompt riusabili per onboarding, pianificazione,
+  review rischi, refactor sicuro e aggiornamento documentale.
+- `.vscode/settings.json`: abilita i prompt files nel workspace VS Code.
+
+La suite Copilot non cambia workflow Git, branch policy, segreti, deploy o
+integrazione Lovable. Serve solo a mantenere Copilot aderente ai vincoli gia'
+documentati nel repository.
 
 ## Routing e hosting SPA
 
