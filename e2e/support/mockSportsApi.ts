@@ -243,9 +243,88 @@ async function fulfillJson(route: Route, status: number, body: unknown) {
   });
 }
 
+// Genera un payload streaming-tv minimale per la famiglia richiesta. Per
+// RAI e Mediaset includiamo programmi di prima serata su 2 canali ciascuna
+// in modo da poter verificare separatori oro tra famiglie e righe per
+// canale. Per le altre famiglie ritorniamo programsAvailable=false.
+function buildTvPayload(family: string, date: string) {
+  if (family === "rai") {
+    return {
+      family,
+      familyLabel: "RAI",
+      date,
+      channels: [
+        {
+          id: "rai-1",
+          name: "Rai 1",
+          logo: null,
+          number: 1,
+          programs: [
+            {
+              start: `${date}T19:30:00.000Z`, // 21:30 Europe/Rome
+              end: `${date}T20:35:00.000Z`,
+              title: "Test Programma RAI 1",
+              genre: "Fiction",
+            },
+          ],
+        },
+        {
+          id: "rai-2",
+          name: "Rai 2",
+          logo: null,
+          number: 2,
+          programs: [
+            {
+              start: `${date}T19:00:00.000Z`, // 21:00 Europe/Rome
+              end: `${date}T19:47:00.000Z`,
+              title: "Test Programma RAI 2",
+              genre: "Telefilm",
+            },
+          ],
+        },
+      ],
+      programsAvailable: true,
+    };
+  }
+  if (family === "mediaset") {
+    return {
+      family,
+      familyLabel: "Mediaset",
+      date,
+      channels: [
+        {
+          id: "canale-5",
+          name: "Canale 5",
+          logo: null,
+          number: 5,
+          programs: [
+            {
+              start: `${date}T19:21:00.000Z`,
+              end: `${date}T20:46:00.000Z`,
+              title: "Test Programma Canale 5",
+              genre: "Fiction",
+            },
+          ],
+        },
+      ],
+      programsAvailable: true,
+    };
+  }
+  return { family, familyLabel: family, date, channels: [], programsAvailable: false };
+}
+
 export async function installSportsApiMocks(page: Page, options: MockOptions = {}) {
   await page.route("**/functions/v1/**", async (route) => {
     const url = new URL(route.request().url());
+
+    // Mock dedicato per streaming-tv (la scheda Stasera in TV in Home).
+    if (url.pathname.endsWith("/streaming-tv")) {
+      const family = url.searchParams.get("family") ?? "";
+      const date = url.searchParams.get("date") ?? "2099-05-01";
+      await fulfillJson(route, 200, { success: true, data: buildTvPayload(family, date) });
+      return;
+    }
+
     const endpoint = getEndpointKey(url);
 
     if (!endpoint) {
