@@ -125,10 +125,12 @@ async function fetchSkyStandings(): Promise<{
       for (const row of rows) {
         const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
         if (cells.length >= 5) {
-          const pos = parseInt(cells[0].replace(/<[^>]+>/g, '').trim());
-          const nameRaw = cells[2].replace(/<[^>]+>/g, '').trim();
-          const teamRaw = cells[3].replace(/<[^>]+>/g, '').trim();
-          const pts = parseInt(cells[4].replace(/<[^>]+>/g, '').trim());
+          const c0 = cells[0], c2 = cells[2], c3 = cells[3], c4 = cells[4];
+          if (!c0 || !c2 || !c3 || !c4) continue;
+          const pos = parseInt(c0.replace(/<[^>]+>/g, '').trim());
+          const nameRaw = c2.replace(/<[^>]+>/g, '').trim();
+          const teamRaw = c3.replace(/<[^>]+>/g, '').trim();
+          const pts = parseInt(c4.replace(/<[^>]+>/g, '').trim());
           if (!isNaN(pos) && nameRaw) {
             pilots.push({ position: pos, name: nameRaw, team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw) });
           }
@@ -147,9 +149,11 @@ async function fetchSkyStandings(): Promise<{
       for (const row of rows) {
         const cells = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || [];
         if (cells.length >= 3) {
-          const pos = parseInt(cells[0].replace(/<[^>]+>/g, '').trim());
-          const teamName = cells[1].replace(/<[^>]+>/g, '').trim();
-          const pts = parseInt(cells[2].replace(/<[^>]+>/g, '').trim());
+          const c0 = cells[0], c1 = cells[1], c2 = cells[2];
+          if (!c0 || !c1 || !c2) continue;
+          const pos = parseInt(c0.replace(/<[^>]+>/g, '').trim());
+          const teamName = c1.replace(/<[^>]+>/g, '').trim();
+          const pts = parseInt(c2.replace(/<[^>]+>/g, '').trim());
           if (!isNaN(pos) && teamName) {
             const constructor = getTeamConstructor(teamName);
             teams.push({ position: pos, team: teamName, points: pts || 0, logoUrl: constructor ? (MOTOGP_CONSTRUCTOR_LOGOS[constructor] || null) : null });
