@@ -380,6 +380,13 @@ export default function HomePage() {
                           className="h-[3px] bg-primary border-y border-primary/40 list-none"
                         />
                       )}
+                      {showFamilyDivider && (
+                        <li className="sm:hidden px-2.5 pt-2 pb-1 bg-primary/5">
+                          <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-primary/80">
+                            {familyLabelMap[row.family]}
+                          </span>
+                        </li>
+                      )}
                       <li
                         className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
                       >
