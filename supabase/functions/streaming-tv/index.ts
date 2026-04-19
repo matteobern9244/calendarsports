@@ -68,8 +68,6 @@ const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
       { id: "sky-sport-basket", name: "Sky Sport Basket", logo: null, number: 205, superguidatvPath: "guida-programmi-tv-sky-sport-basket/sky-sport/40" },
       { id: "sky-sport-24", name: "Sky Sport 24", logo: null, number: 200, superguidatvPath: "guida-programmi-tv-sky-sport24/sky-sport/36" },
       // Verificato 2026-04-19: nessuna pagina pubblica dedicata trovata per Sky Sport Football / Action.
-      // Sport in chiaro via staseraintv.com.
-      { id: "sportitalia", name: "Sportitalia", logo: null, number: 60, staseraSlug: "sportitalia" },
     ],
   },
   "sky-cinema": {
