@@ -19,6 +19,7 @@ export function useSyncAll() {
   const [syncing, setSyncing] = useState(false);
   const [syncStep, setSyncStep] = useState<string>("");
   const [syncProgress, setSyncProgress] = useState(0);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
 
   const sync = useCallback(async () => {
     setSyncing(true);
@@ -61,6 +62,7 @@ export function useSyncAll() {
         ),
       );
       setSyncProgress(100);
+      setLastSyncAt(new Date());
 
       toast.success("Tutti i dati sono stati aggiornati!", { id: toastId });
     } catch {
@@ -72,5 +74,5 @@ export function useSyncAll() {
     }
   }, [queryClient]);
 
-  return { sync, syncing, syncStep, syncProgress };
+  return { sync, syncing, syncStep, syncProgress, lastSyncAt };
 }

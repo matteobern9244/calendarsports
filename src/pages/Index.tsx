@@ -63,7 +63,16 @@ function formatDuration(min: number): string {
 type FilterValue = "all" | StreamingFamilyId;
 
 export default function HomePage() {
-  const { sync: handleSync, syncing, syncStep, syncProgress } = useSyncAll();
+  const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
+  const lastSyncLabel = useMemo(() => {
+    if (!lastSyncAt) return null;
+    return new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(lastSyncAt);
+  }, [lastSyncAt]);
   const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
   const [tvPage, setTvPage] = useState(0);
   const TV_PAGE_SIZE = 8;
@@ -273,14 +282,21 @@ export default function HomePage() {
     <div className="container py-8 sm:py-12 space-y-10">
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center justify-end gap-3">
-          {syncing && syncStep && (
+          {syncing && syncStep ? (
             <span
               className="text-xs font-heading uppercase tracking-wider text-muted-foreground animate-pulse"
               aria-live="polite"
             >
               {syncStep}
             </span>
-          )}
+          ) : lastSyncLabel ? (
+            <span
+              className="text-xs font-heading uppercase tracking-wider text-muted-foreground"
+              aria-live="polite"
+            >
+              Ultimo aggiornamento: <span className="text-foreground/80 font-mono normal-case">{lastSyncLabel}</span>
+            </span>
+          ) : null}
           <Button
             variant="outline"
             size="sm"
