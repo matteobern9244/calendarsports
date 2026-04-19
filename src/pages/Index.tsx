@@ -376,6 +376,11 @@ export default function HomePage() {
                             {row.genre}
                           </Badge>
                         )}
+                        {formatDuration(row.durationMin) && (
+                          <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap font-mono">
+                            {formatDuration(row.durationMin)}
+                          </span>
+                        )}
                       </div>
                     </li>
                   );
