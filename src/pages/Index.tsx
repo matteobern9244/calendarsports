@@ -7,10 +7,13 @@ import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus } from "@/lib/dateUtils";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Tv2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { STREAMING_FAMILIES } from "@/hooks/useStreamingData";
 
 interface UpcomingEvent {
   sport: string;
@@ -121,7 +124,43 @@ export default function HomePage() {
   }, [f1Data, juveCalendar, sinnerNext, motogpNext]);
 
   return (
-    <div className="container py-8 sm:py-12">
+    <div className="container py-8 sm:py-12 space-y-10">
+      {/* Stasera in TV — entry point compatto verso /streaming */}
+      <Card className="border-primary/30 bg-gradient-to-br from-card to-card/60">
+        <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg gold-gradient shrink-0">
+              <Tv2 className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-heading text-lg font-bold uppercase tracking-wider">
+                <span className="text-gold-gradient">Stasera in TV</span>
+              </h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Palinsesto serale + nuove uscite streaming
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {STREAMING_FAMILIES.map((f) => (
+                  <Link
+                    key={f.id}
+                    to={`/streaming?tab=tv&family=${f.id}`}
+                    className="text-[10px] font-heading uppercase tracking-wider px-2 py-0.5 rounded-full border border-border/60 text-muted-foreground hover:text-primary hover:border-primary/60 transition-colors"
+                  >
+                    {f.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+          <Button asChild size="sm" className="shrink-0 self-start sm:self-auto gap-2">
+            <Link to="/streaming">
+              Apri Streaming
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between mb-2">
         <SectionHeader
           title="Prossimi Eventi"
