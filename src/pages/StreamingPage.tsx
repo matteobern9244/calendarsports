@@ -219,11 +219,11 @@ export default function StreamingPage() {
               </span>
             ) : null}
             <Button
-              variant="outline"
+              variant="ghost"
               size="default"
               onClick={handleSync}
               disabled={syncing}
-              className="gap-2 shrink-0 px-5 text-sm font-heading uppercase tracking-wider"
+              className="btn-gold gap-2 shrink-0 px-6 h-11 rounded-full text-sm font-heading uppercase tracking-widest font-semibold hover:text-primary-foreground"
             >
               <RefreshCw className={`h-5 w-5 ${syncing ? "animate-spin" : ""}`} />
               {syncing ? "Sincronizzo..." : "Sincronizza"}
