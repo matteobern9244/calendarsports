@@ -281,6 +281,19 @@ export default function HomePage() {
 
   return (
     <div className="container py-8 sm:py-12 space-y-10">
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSync}
+          disabled={syncing || isLoading}
+          className="gap-2 shrink-0"
+        >
+          <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+          Sincronizza
+        </Button>
+      </div>
+
       {/* Stasera in TV — quadro reale multi-famiglia con filtri rapidi */}
       <Card className="border-primary/30 bg-gradient-to-br from-card to-card/60">
         <CardContent className="p-4 sm:p-5 space-y-4">
@@ -439,21 +452,11 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2">
         <SectionHeader
           title="Prossimi Eventi"
           subtitle="Tutti gli eventi imminenti ordinati per data"
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSync}
-          disabled={syncing || isLoading}
-          className="gap-2 shrink-0"
-        >
-          <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-          Sincronizza
-        </Button>
       </div>
 
       {(isLoading || syncing) && <LoadingState message="Caricamento prossimi eventi..." />}
