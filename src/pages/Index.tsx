@@ -1,19 +1,23 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import EventCard from "@/components/common/EventCard";
 import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT, getEventStatus } from "@/lib/dateUtils";
-import { useQueryClient } from "@tanstack/react-query";
+import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Tv2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { STREAMING_FAMILIES, useTvByFamily } from "@/hooks/useStreamingData";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  STREAMING_FAMILIES,
+  type TvFamilyPayload,
+} from "@/hooks/useStreamingData";
+import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
 
 interface UpcomingEvent {
   sport: string;
@@ -26,43 +30,80 @@ interface UpcomingEvent {
   children?: React.ReactNode;
 }
 
+interface TvHighlight {
+  family: StreamingFamilyId;
+  channel: string;
+  time: string;
+  title: string;
+}
+
 const container = {
   hidden: {},
   show: { transition: { staggerChildren: 0.08 } },
 };
 
+type FilterValue = "all" | StreamingFamilyId;
+
 export default function HomePage() {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
+  const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
   const { data: f1Data, isLoading: f1Loading } = useF1NextRace();
   const { data: juveCalendar, isLoading: juveLoading } = useJuventusCalendar(2025);
   const { data: sinnerNext, isLoading: sinnerLoading } = useSinnerNextEvent();
   const { data: motogpNext, isLoading: motogpLoading } = useMotoGPNextEvent();
-  const { data: tvDiscovery } = useTvByFamily("discovery");
+
+  // Fetch parallelo di tutte le 5 famiglie TV
+  const tvQueries = useQueries({
+    queries: STREAMING_FAMILIES.map((f) => ({
+      queryKey: ["streaming-tv", f.id],
+      queryFn: () => streamingApi.getTvByFamily(f.id),
+      staleTime: 15 * 60 * 1000,
+    })),
+  });
 
   const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
 
-  const tonightHighlights = useMemo(() => {
-    if (!tvDiscovery?.programsAvailable) return [];
-    const rows: { channel: string; time: string; title: string }[] = [];
-    for (const ch of tvDiscovery.channels ?? []) {
-      for (const p of ch.programs) {
-        rows.push({
-          channel: ch.name,
-          time: new Intl.DateTimeFormat("it-IT", {
-            timeZone: "Europe/Rome",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          }).format(new Date(p.start)),
-          title: p.title,
-        });
+  // Aggrega tutti i programmi reali da tutte le famiglie con etichetta family
+  const allHighlights = useMemo<TvHighlight[]>(() => {
+    const rows: TvHighlight[] = [];
+    tvQueries.forEach((q, idx) => {
+      const fam = STREAMING_FAMILIES[idx].id;
+      const data = q.data as TvFamilyPayload | undefined;
+      if (!data?.programsAvailable) return;
+      for (const ch of data.channels ?? []) {
+        for (const p of ch.programs) {
+          rows.push({
+            family: fam,
+            channel: ch.name,
+            time: new Intl.DateTimeFormat("it-IT", {
+              timeZone: "Europe/Rome",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            }).format(new Date(p.start)),
+            title: p.title,
+          });
+        }
       }
-    }
-    return rows
+    });
+    return rows;
+  }, [tvQueries]);
+
+  const tonightHighlights = useMemo(() => {
+    const filtered = familyFilter === "all"
+      ? allHighlights
+      : allHighlights.filter((r) => r.family === familyFilter);
+    return [...filtered]
       .sort((a, b) => a.time.localeCompare(b.time))
-      .slice(0, 6);
-  }, [tvDiscovery]);
+      .slice(0, 8);
+  }, [allHighlights, familyFilter]);
+
+  const familyLabelMap = useMemo(() => {
+    const m: Record<StreamingFamilyId, string> = {} as Record<StreamingFamilyId, string>;
+    STREAMING_FAMILIES.forEach((f) => { m[f.id] = f.label; });
+    return m;
+  }, []);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -80,7 +121,6 @@ export default function HomePage() {
     const upcoming: UpcomingEvent[] = [];
     const now = Date.now();
 
-    // F1
     if (f1Data?.date) {
       upcoming.push({
         sport: "Formula 1",
@@ -92,7 +132,6 @@ export default function HomePage() {
       });
     }
 
-    // Juventus — prossima partita dal calendario
     if (juveCalendar && Array.isArray(juveCalendar)) {
       const nextMatch = [...juveCalendar]
         .filter((m: any) => m.status !== "FullTime" && m.date && new Date(m.date).getTime() > now)
@@ -117,7 +156,6 @@ export default function HomePage() {
       }
     }
 
-    // Sinner
     if (sinnerNext?.date) {
       upcoming.push({
         sport: "Tennis · Sinner",
@@ -128,7 +166,6 @@ export default function HomePage() {
       });
     }
 
-    // MotoGP
     if (motogpNext) {
       const startDate = motogpNext.date_start || motogpNext.date;
       if (startDate) {
@@ -142,17 +179,20 @@ export default function HomePage() {
       }
     }
 
-    // Ordina per data più vicina
     return upcoming.sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
   }, [f1Data, juveCalendar, sinnerNext, motogpNext]);
 
+  const filteredFamilyLabel = familyFilter !== "all"
+    ? familyLabelMap[familyFilter]
+    : null;
+
   return (
     <div className="container py-8 sm:py-12 space-y-10">
-      {/* Stasera in TV — quadro rapido programmi reali (Discovery) + link */}
+      {/* Stasera in TV — quadro reale multi-famiglia con filtri rapidi */}
       <Card className="border-primary/30 bg-gradient-to-br from-card to-card/60">
-        <CardContent className="p-5 space-y-4">
+        <CardContent className="p-4 sm:p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 min-w-0">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg gold-gradient shrink-0">
                 <Tv2 className="h-5 w-5 text-primary-foreground" />
               </div>
@@ -161,9 +201,7 @@ export default function HomePage() {
                   <span className="text-gold-gradient">Stasera in TV</span>
                 </h2>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {tonightHighlights.length > 0
-                    ? "Prime time Real Time + DMax (palinsesto reale)"
-                    : "Palinsesto serale + nuove uscite streaming"}
+                  Prime time da Sky Cinema, RAI, Mediaset, Discovery — fonte staseraintv.com
                 </p>
               </div>
             </div>
@@ -175,34 +213,75 @@ export default function HomePage() {
             </Button>
           </div>
 
+          {/* Filtri rapidi: chip scrollabili su mobile, wrap su desktop */}
+          <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible scrollbar-hide">
+            <ToggleGroup
+              type="single"
+              value={familyFilter}
+              onValueChange={(v) => v && setFamilyFilter(v as FilterValue)}
+              className="inline-flex sm:flex sm:flex-wrap justify-start gap-1.5 min-w-max sm:min-w-0"
+            >
+              <ToggleGroupItem
+                value="all"
+                size="sm"
+                aria-label="Mostra tutte le famiglie"
+                className="h-9 px-3 text-[11px] font-heading uppercase tracking-wider data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                Tutti
+              </ToggleGroupItem>
+              {STREAMING_FAMILIES.map((f) => (
+                <ToggleGroupItem
+                  key={f.id}
+                  value={f.id}
+                  size="sm"
+                  aria-label={`Filtra ${f.label}`}
+                  className="h-9 px-3 text-[11px] font-heading uppercase tracking-wider data-[state=on]:bg-primary data-[state=on]:text-primary-foreground whitespace-nowrap"
+                >
+                  {f.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+
           {tonightHighlights.length > 0 ? (
             <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40">
               {tonightHighlights.map((row, i) => (
                 <li
                   key={`${row.channel}-${row.time}-${i}`}
-                  className="flex items-center gap-3 px-3 py-2 text-sm"
+                  className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
                 >
-                  <span className="font-mono text-primary w-12 shrink-0">
+                  <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm">
                     {row.time}
                   </span>
-                  <Badge variant="outline" className="text-[10px] uppercase tracking-wider shrink-0">
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 max-w-[110px] sm:max-w-none truncate"
+                  >
                     {row.channel}
                   </Badge>
-                  <span className="font-medium truncate min-w-0">{row.title}</span>
+                  <span className="font-medium truncate min-w-0 text-xs sm:text-sm">
+                    {row.title}
+                  </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {STREAMING_FAMILIES.map((f) => (
-                <Link
-                  key={f.id}
-                  to={`/streaming?tab=tv&family=${f.id}`}
-                  className="text-[10px] font-heading uppercase tracking-wider px-2 py-0.5 rounded-full border border-border/60 text-muted-foreground hover:text-primary hover:border-primary/60 transition-colors"
-                >
-                  {f.label}
-                </Link>
-              ))}
+            <div className="rounded-md border border-dashed border-border/60 bg-card/30 px-4 py-6 text-center text-sm text-muted-foreground">
+              {filteredFamilyLabel ? (
+                <>
+                  Palinsesto non disponibile per <strong>{filteredFamilyLabel}</strong>.
+                  <br />
+                  <button
+                    type="button"
+                    onClick={() => setFamilyFilter("all")}
+                    className="mt-2 text-primary hover:underline text-xs font-heading uppercase tracking-wider"
+                  >
+                    Mostra tutte le famiglie
+                  </button>
+                </>
+              ) : (
+                "Palinsesto non ancora disponibile"
+              )}
             </div>
           )}
         </CardContent>
@@ -233,7 +312,7 @@ export default function HomePage() {
 
       {events.length > 0 && (
         <motion.div variants={container} initial="hidden" animate="show" className="grid gap-5 sm:grid-cols-2">
-          {events.map((ev, idx) => (
+          {events.map((ev) => (
             <EventCard
               key={`${ev.sport}-${ev.rawDate}`}
               sport={ev.sport}
