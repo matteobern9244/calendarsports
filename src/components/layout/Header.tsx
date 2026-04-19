@@ -56,7 +56,7 @@ export default function Header({ theme, toggleTheme }: HeaderProps) {
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "group relative inline-flex items-center gap-1.5 px-3 lg:px-4 py-2 rounded-full",
-                    "text-[12px] lg:text-[13px] font-heading font-semibold tracking-[0.14em] uppercase",
+                    "text-[15px] lg:text-base font-heading font-semibold tracking-[0.12em] uppercase",
                     "transition-colors duration-200",
                     active
                       ? "text-primary-foreground"
