@@ -38,8 +38,31 @@ export default function HomePage() {
   const { data: juveCalendar, isLoading: juveLoading } = useJuventusCalendar(2025);
   const { data: sinnerNext, isLoading: sinnerLoading } = useSinnerNextEvent();
   const { data: motogpNext, isLoading: motogpLoading } = useMotoGPNextEvent();
+  const { data: tvDiscovery } = useTvByFamily("discovery");
 
   const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
+
+  const tonightHighlights = useMemo(() => {
+    if (!tvDiscovery?.programsAvailable) return [];
+    const rows: { channel: string; time: string; title: string }[] = [];
+    for (const ch of tvDiscovery.channels ?? []) {
+      for (const p of ch.programs) {
+        rows.push({
+          channel: ch.name,
+          time: new Intl.DateTimeFormat("it-IT", {
+            timeZone: "Europe/Rome",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }).format(new Date(p.start)),
+          title: p.title,
+        });
+      }
+    }
+    return rows
+      .sort((a, b) => a.time.localeCompare(b.time))
+      .slice(0, 6);
+  }, [tvDiscovery]);
 
   const handleSync = async () => {
     setSyncing(true);
