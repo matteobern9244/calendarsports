@@ -16,6 +16,12 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 - Verifica sync GitHub <-> Lovable dopo configurazione bypass app
   `lovable-dev` nelle branch protection rules di `main`. Nessuna modifica
   funzionale al codice o ai dati.
+- Documentazione `README.md` e `AGENTS.md` aggiornata con checklist
+  corretta per Ruleset moderna vs Branch protection classica e diagnosi
+  errore "Push was rejected by branch protection rules".
+- Secondo tentativo di push da Lovable per validare bypass su Ruleset
+  dopo rimozione del flag "No bypass" e disattivazione protezione
+  classica.
 
 ## [2.0.2] - 2026-04-19
 
