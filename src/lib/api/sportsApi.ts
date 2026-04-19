@@ -1,19 +1,12 @@
-// Public Supabase project URL and anon key (safe to expose, used as fallback
-// when Vite env vars are not injected into the production bundle).
-const FALLBACK_SUPABASE_URL = "https://jxijruuclgskxlbqittk.supabase.co";
-const FALLBACK_SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4aWpydXVjbGdza3hsYnFpdHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDc1ODksImV4cCI6MjA5MDM4MzU4OX0.DHIimVDItkhF1o9e6NK71BKjNkVP2EHsJpJyJIqgiSE";
+import { SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY } from "@/lib/supabaseClient";
 
 async function callEdgeFunction(functionName: string, params: Record<string, string>) {
   const queryString = new URLSearchParams(params).toString();
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_SUPABASE_ANON_KEY;
-
-  const url = `${supabaseUrl}/functions/v1/${functionName}?${queryString}`;
+  const url = `${SUPABASE_PROJECT_URL}/functions/v1/${functionName}?${queryString}`;
   const response = await fetch(url, {
     headers: {
-      "Authorization": `Bearer ${anonKey}`,
-      "apikey": anonKey,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "apikey": SUPABASE_ANON_KEY,
     },
   });
 
