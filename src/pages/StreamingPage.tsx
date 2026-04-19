@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Sparkles, Tv2 } from "lucide-react";
+import { Sparkles, Tv2, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -45,6 +45,8 @@ import type {
 } from "@/lib/api/sportsApi";
 import { cn } from "@/lib/utils";
 import { todayRomeISO, addDaysISO } from "@/lib/dateUtils";
+import { Progress } from "@/components/ui/progress";
+import { useSyncAll } from "@/hooks/useSyncAll";
 
 const CHANNELS_PER_PAGE = 6;
 const RELEASES_PER_PAGE = 8;
@@ -116,6 +118,16 @@ export default function StreamingPage() {
   const [kindFilter, setKindFilter] = useState<KindId>(initialKind);
   const [page, setPage] = useState<number>(initialPage);
   const [selected, setSelected] = useState<ReleaseItem | null>(null);
+  const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
+  const lastSyncLabel = useMemo(() => {
+    if (!lastSyncAt) return null;
+    return new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(lastSyncAt);
+  }, [lastSyncAt]);
 
   // Sync URL state
   useEffect(() => {
@@ -183,10 +195,49 @@ export default function StreamingPage() {
 
   return (
     <div className="container py-8 space-y-8">
-      <SectionHeader
-        title="Streaming"
-        subtitle="Palinsesto TV serale e nuove uscite della settimana"
-      />
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <SectionHeader
+          title="Streaming"
+          subtitle="Palinsesto TV serale e nuove uscite della settimana"
+        />
+        <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+          <div className="flex items-center gap-3">
+            {syncing && syncStep ? (
+              <span
+                className="text-xs font-heading uppercase tracking-wider text-muted-foreground animate-pulse"
+                aria-live="polite"
+              >
+                {syncStep}
+              </span>
+            ) : lastSyncLabel ? (
+              <span
+                className="text-xs font-heading uppercase tracking-wider text-muted-foreground"
+                aria-live="polite"
+              >
+                Ultimo aggiornamento:{" "}
+                <span className="text-foreground/80 font-mono normal-case">{lastSyncLabel}</span>
+              </span>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSync}
+              disabled={syncing}
+              className="gap-2 shrink-0"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "Sincronizzo..." : "Sincronizza"}
+            </Button>
+          </div>
+          {syncing && (
+            <Progress
+              value={syncProgress}
+              aria-label="Avanzamento sincronizzazione"
+              className="h-1.5 w-[240px]"
+            />
+          )}
+        </div>
+      </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "tv" | "releases")}>
         <TabsList className="grid w-full grid-cols-2 max-w-md">
