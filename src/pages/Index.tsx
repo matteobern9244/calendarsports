@@ -5,21 +5,20 @@ import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT, todayRomeISO, addDaysISO } from "@/lib/dateUtils";
-import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
+import { useQueries } from "@tanstack/react-query";
 import { RefreshCw, Tv2, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   STREAMING_FAMILIES,
-  STREAMING_PROVIDERS,
   type TvFamilyPayload,
 } from "@/hooks/useStreamingData";
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
+import { useSyncAll } from "@/hooks/useSyncAll";
 
 
 interface UpcomingEvent {
