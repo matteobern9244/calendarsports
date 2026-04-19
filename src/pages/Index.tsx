@@ -83,6 +83,7 @@ type FilterValue = "all" | StreamingFamilyId;
 export default function HomePage() {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
+  const [syncStep, setSyncStep] = useState<string>("");
   const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
   const [tvPage, setTvPage] = useState(0);
   const TV_PAGE_SIZE = 8;
@@ -207,12 +208,30 @@ export default function HomePage() {
 
   const handleSync = async () => {
     setSyncing(true);
+    const toastId = toast.loading("Avvio sincronizzazione...");
     try {
-      // 1. Invalida tutto (sport + palinsesti TV gia' attivi sulla home)
-      await queryClient.invalidateQueries({ refetchType: "all" });
+      // 1. Sport
+      setSyncStep("Aggiornamento dati sportivi...");
+      toast.loading("Aggiornamento dati sportivi...", { id: toastId });
+      await queryClient.invalidateQueries({
+        predicate: (q) => {
+          const k = q.queryKey?.[0];
+          return typeof k === "string" && !k.startsWith("streaming-");
+        },
+        refetchType: "all",
+      });
 
-      // 2. Pre-fetch esplicito delle 4 famiglie "Nuove uscite" (non montate
-      // sulla home): forza refetch lato server con staleTime: 0.
+      // 2. Palinsesti TV (gia' attivi sulla home)
+      setSyncStep("Aggiornamento palinsesti TV...");
+      toast.loading("Aggiornamento palinsesti TV...", { id: toastId });
+      await queryClient.invalidateQueries({
+        queryKey: ["streaming-tv"],
+        refetchType: "all",
+      });
+
+      // 3. Nuove uscite (non montate sulla home: prefetch esplicito)
+      setSyncStep("Aggiornamento nuove uscite streaming...");
+      toast.loading("Aggiornamento nuove uscite streaming...", { id: toastId });
       const today = todayRomeISO();
       const dateTo = addDaysISO(today, 14);
       await Promise.all(
@@ -225,10 +244,11 @@ export default function HomePage() {
         ),
       );
 
-      toast.success("Tutti i dati sono stati aggiornati!");
+      toast.success("Tutti i dati sono stati aggiornati!", { id: toastId });
     } catch {
-      toast.error("Errore durante la sincronizzazione");
+      toast.error("Errore durante la sincronizzazione", { id: toastId });
     } finally {
+      setSyncStep("");
       setSyncing(false);
     }
   };
