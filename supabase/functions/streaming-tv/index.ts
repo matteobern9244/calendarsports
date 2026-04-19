@@ -191,10 +191,54 @@ function buildRomeIso(date: string, hh: number, mm: number): string {
 // righe formato `HH:MM - Titolo<br>` (separate da newline o tag <br>).
 // Esempio:
 //   06:00 - RaiNews24<br>07:00 - TG 1<br>21:30 - Roberta Valente...<br>
+//
+// Limite della fonte: nelle righe HH:MM il titolo e' spesso troncato in
+// MAIUSCOLO (es. "RACCONTO DI UNA NOTTE"). La forma estesa
+// (es. "Racconto di una notte - Stagione 1 Episodio 4 (Fiction)") compare
+// invece nei blocchi "scheda" della stessa pagina, in case-mista.
+// Estraiamo entrambi e arricchiamo per match di prefisso uppercase.
+function extractRichTitles(html: string): string[] {
+  const rich: string[] = [];
+  // Pattern 1: testo libero seguito da link a /scheda/.../<slug>.html.
+  // Esempio: "Racconto di una notte - Stagione 1 Episodio 4 (Fiction)"
+  // appare come testo prima di <a href="/scheda/...">.
+  const re1 = /([A-ZÀ-Ý][^\n<>]{4,200}?)(?=\s*<a\s+href="\/scheda\/)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re1.exec(html)) !== null) {
+    const t = decodeEntities(m[1].replace(/\s+/g, " ").trim());
+    if (t && t.length >= 5) rich.push(t);
+  }
+  // Pattern 2: title="..." negli <img> delle schede (fallback).
+  const re2 = /title="([^"]{5,200})"\s*src="\/scheda\//g;
+  while ((m = re2.exec(html)) !== null) {
+    const t = decodeEntities(m[1].replace(/\s+/g, " ").trim());
+    if (t) rich.push(t);
+  }
+  return rich;
+}
+
+function enrichTitle(rawUpper: string, rich: string[]): string {
+  if (!rawUpper) return rawUpper;
+  const norm = rawUpper.toUpperCase().replace(/\s+/g, " ").trim();
+  // Cerca un titolo "ricco" che inizi con lo stesso prefisso (case-insensitive).
+  // Preferisci il match piu' lungo.
+  let best = "";
+  for (const cand of rich) {
+    const candUpper = cand.toUpperCase();
+    if (candUpper.startsWith(norm) || norm.startsWith(candUpper.split(" - ")[0].toUpperCase())) {
+      if (cand.length > best.length) best = cand;
+    }
+  }
+  if (best) return best;
+  // Capitalizza in modo leggibile l'output uppercase grezzo.
+  return rawUpper
+    .toLowerCase()
+    .replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+}
+
 function parseStaseraintvHtml(html: string, date: string): Program[] {
+  const richTitles = extractRichTitles(html);
   // Estrai tutti i match HH:MM - Title fino al prossimo <br> o newline.
-  // Il titolo puo' contenere trattini interni: catturiamo finche' non
-  // troviamo <br> o un newline o l'inizio di un nuovo blocco HH:MM.
   const re = /(\d{1,2}):(\d{2})\s*-\s*([^<\r\n]+?)(?=<br|\r|\n|<\/h|<\/d|$)/g;
   const programs: Program[] = [];
   let m: RegExpExecArray | null;
@@ -210,7 +254,6 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
     let titleRaw = m[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     titleRaw = decodeEntities(titleRaw);
     if (!titleRaw || titleRaw.length < 2) continue;
-    // Ignora rumore: link di navigazione, attributi
     if (/^(continua|stagione|episodio)$/i.test(titleRaw)) continue;
 
     const baseDate = new Date(`${date}T00:00:00Z`);
@@ -219,7 +262,6 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
     let startIso = buildRomeIso(dateForRow, hh, mm);
     let startMs = new Date(startIso).getTime();
     if (prevStartMs > 0 && startMs < prevStartMs - 30 * 60 * 1000) {
-      // Wrap-around al giorno successivo (notte)
       dayShift += 1;
       const shifted = new Date(`${date}T00:00:00Z`);
       shifted.setUTCDate(shifted.getUTCDate() + dayShift);
@@ -229,20 +271,19 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
     }
     prevStartMs = startMs;
 
-    // Dedupe (lo stesso programma puo' apparire nel "prime time" e nella
-    // griglia completa)
-    const key = `${startIso}|${titleRaw.slice(0, 50)}`;
+    const titleEnriched = enrichTitle(titleRaw, richTitles);
+
+    const key = `${startIso}|${titleEnriched.slice(0, 50)}`;
     if (seen.has(key)) continue;
     seen.add(key);
 
     programs.push({
       start: startIso,
       end: startIso,
-      title: titleRaw,
+      title: titleEnriched,
     });
   }
 
-  // Ordina e chiudi end con start del successivo
   programs.sort((a, b) => a.start.localeCompare(b.start));
   for (let i = 0; i < programs.length - 1; i += 1) {
     programs[i].end = programs[i + 1].start;
