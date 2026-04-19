@@ -115,7 +115,7 @@ export default function HomePage() {
   const tonightHighlights = useMemo(() => {
     const inPrimeWindow = (h: TvHighlight) => {
       const minutes = h.hourRome * 60 + h.minuteRome;
-      return minutes >= 20 * 60 + 15 && minutes <= 22 * 60 + 30;
+      return minutes >= 21 * 60 && minutes <= 22 * 60 + 30;
     };
     const pool = familyFilter === "all"
       ? allHighlights
