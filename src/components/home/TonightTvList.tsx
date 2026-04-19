@@ -220,8 +220,9 @@ export default function TonightTvList() {
             value="all"
             size="sm"
             aria-label="Mostra tutte le famiglie"
-            className="h-9 w-full sm:w-auto px-2 sm:px-3 text-[11px] font-heading uppercase tracking-wider border border-primary/30 bg-card/60 text-foreground hover:bg-primary/15 hover:text-foreground hover:border-primary/60 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:border-primary data-[state=on]:shadow-[0_0_0_1px_hsl(var(--gold)/0.6)]"
+            className="h-9 w-full sm:w-auto px-2 sm:px-3 text-[11px] font-heading uppercase tracking-wider border border-primary/30 bg-card/60 text-foreground hover:bg-primary/15 hover:text-foreground hover:border-primary/60 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:border-primary data-[state=on]:shadow-[0_0_0_1px_hsl(var(--gold)/0.6)] gap-1.5"
           >
+            <LayoutGrid className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             Tutti
           </ToggleGroupItem>
           {STREAMING_FAMILIES.map((f) => {
