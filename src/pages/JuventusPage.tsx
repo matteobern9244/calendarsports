@@ -121,7 +121,7 @@ export default function JuventusPage() {
                     variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
                     whileHover={{ y: -3 }}
                     className={cn(
-                      "group relative rounded-2xl border bg-card p-4 flex items-center gap-3 overflow-hidden",
+                      "group relative rounded-2xl border bg-card px-4 py-3.5 flex items-center gap-3",
                       "transition-[box-shadow,border-color,transform] duration-300 ease-out",
                       "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
                       "hover:shadow-[0_16px_36px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
@@ -136,31 +136,31 @@ export default function JuventusPage() {
                     />
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_top,hsl(var(--gold)/0.10),transparent_60%)]"
+                      className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_top,hsl(var(--gold)/0.10),transparent_60%)]"
                     />
                     {isNext && (
-                      <span className="absolute -top-2.5 left-4 rounded-full bg-gradient-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--gold)/0.6)]">
+                      <span className="absolute -top-2.5 left-4 z-10 rounded-full bg-gradient-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--gold)/0.6)]">
                         Prossima
                       </span>
                     )}
-                    <div className="flex-shrink-0 w-8">
+                    <div className="relative z-[1] flex-shrink-0 w-8">
                       <span className="text-xs text-muted-foreground font-heading">
                         {m.competition === 'Serie A' ? `G${m.matchday}` : m.matchday ? `R${m.matchday}` : '—'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="relative z-[1] flex items-center gap-2 flex-1 min-w-0">
                       {opponentLogo && <img src={opponentLogo} alt={opponent} className="h-6 w-6 object-contain flex-shrink-0" />}
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold truncate text-foreground">
                           {isJuveHome ? 'vs' : '@'} {opponent}
                         </p>
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                           <Badge variant="outline" className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0 h-4 border", compColor)}>
                             {m.competition}
                           </Badge>
-                          <span className="text-[11px] text-muted-foreground">{dateStr} · {timeStr}</span>
+                          <span className="text-[11px] text-muted-foreground whitespace-nowrap">{dateStr} · {timeStr}</span>
                           {m.broadcaster && (
-                            <span className="inline-flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1 flex-wrap">
                               {m.broadcaster.split(' | ').map((b: string) => (
                                 <span
                                   key={b}
