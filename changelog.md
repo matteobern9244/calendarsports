@@ -11,6 +11,8 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-04-19
+
 ### Fixed
 
 - **Bundle di produzione: dati non caricati su dominio pubblicato.** In alcune
