@@ -366,7 +366,8 @@ La configurazione finale richiesta del repository e':
 - bypass riservato alla sola app GitHub `lovable-dev` con `bypass mode`
   `Always`;
 - branch rules attive: blocco deletion, blocco force-push,
-  pull request obbligatoria con almeno 1 approval e stale reviews dismiss,
+  pull request obbligatoria senza review obbligatoria e con stale reviews
+  dismiss,
   required status checks strict sui job `quality` ed `e2e`;
 - nessuna Branch protection classica attiva su `main`.
 
@@ -393,8 +394,8 @@ Risultato pratico:
 - Lovable continua a pushare su `main` per il sync automatico.
 - Gli umani contribuiscono via feature branch -> `develop`, poi via PR
   `develop` -> `main`.
-- Le PR eleggibili si auto-fondono con `squash` appena check e review
-  richiesti risultano soddisfatti.
+- Le PR eleggibili si auto-fondono con `squash` appena i check richiesti e le
+  altre condizioni di merge risultano soddisfatti.
 - Nessun push diretto umano su `main` e' possibile, neppure per errore.
 
 ### Sync GitHub -> Lovable
