@@ -384,19 +384,19 @@ export default function HomePage() {
                       className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
                     >
                       <span
-                        className={`hidden sm:inline-flex items-center font-heading text-[9px] uppercase tracking-widest w-20 shrink-0 ${
+                        className={`hidden sm:inline-flex items-center font-heading font-bold text-[9px] uppercase tracking-widest w-20 shrink-0 ${
                           showFamilyDivider ? "text-primary/70" : "text-transparent"
                         }`}
                         aria-hidden={!showFamilyDivider}
                       >
                         {familyLabelMap[row.family]}
                       </span>
-                      <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm leading-none">
+                      <span className="font-mono font-bold text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm leading-none">
                         {row.time}
                       </span>
                       <Badge
                         variant="outline"
-                        className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
+                        className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
                       >
                         {row.channel}
                       </Badge>
