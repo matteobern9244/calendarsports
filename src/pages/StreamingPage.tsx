@@ -118,6 +118,16 @@ export default function StreamingPage() {
   const [kindFilter, setKindFilter] = useState<KindId>(initialKind);
   const [page, setPage] = useState<number>(initialPage);
   const [selected, setSelected] = useState<ReleaseItem | null>(null);
+  const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
+  const lastSyncLabel = useMemo(() => {
+    if (!lastSyncAt) return null;
+    return new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(lastSyncAt);
+  }, [lastSyncAt]);
 
   // Sync URL state
   useEffect(() => {
