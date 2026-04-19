@@ -1,0 +1,69 @@
+name: Disable PR Auto Merge On Copilot Review
+
+on:
+  pull_request_review:
+    types:
+      - submitted
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: disable-pr-automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  disable-pr-automerge:
+    name: disable-pr-automerge
+    if: ${{ github.event.pull_request.state == 'open' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Disable auto-merge after Copilot review on Dependabot PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_AUTHOR_LOGIN: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+          REVIEW_AUTHOR_LOGIN: ${{ github.event.review.user.login }}
+          REVIEW_AUTHOR_TYPE: ${{ github.event.review.user.type }}
+          REVIEW_STATE: ${{ github.event.review.state }}
+        run: |
+          if [ "$PR_AUTHOR_LOGIN" != "dependabot[bot]" ]; then
+            echo "PR author is not Dependabot. Nothing to do."
+            exit 0
+          fi
+
+          if [ "$REVIEW_AUTHOR_TYPE" != "Bot" ]; then
+            echo "Review author is not a bot. Nothing to do."
+            exit 0
+          fi
+
+          review_author_login_lc=$(echo "$REVIEW_AUTHOR_LOGIN" | tr '[:upper:]' '[:lower:]')
+          review_state_lc=$(echo "$REVIEW_STATE" | tr '[:upper:]' '[:lower:]')
+
+          case "$review_author_login_lc" in
+            *copilot*)
+              ;;
+            *)
+              echo "Review author is not Copilot. Nothing to do."
+              exit 0
+              ;;
+          esac
+
+          if [ "$review_state_lc" = "approved" ] || [ "$review_state_lc" = "dismissed" ]; then
+            echo "Copilot review is not blocking. Nothing to do."
+            exit 0
+          fi
+
+          pr_json=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json autoMergeRequest)
+          auto_merge=$(echo "$pr_json" | jq -r 'if .autoMergeRequest == null then "" else .autoMergeRequest.mergeMethod end')
+
+          if [ -z "$auto_merge" ]; then
+            echo "Auto-merge is already disabled. Nothing to do."
+            exit 0
+          fi
+
+          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --disable-auto
+          echo "Auto-merge disabled because Copilot left a non-approved review on this Dependabot PR."

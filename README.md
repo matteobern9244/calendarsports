@@ -428,6 +428,25 @@ La suite Copilot non cambia workflow Git, branch policy, segreti, deploy o
 integrazione Lovable. Serve solo a mantenere Copilot aderente ai vincoli gia'
 documentati nel repository.
 
+### Dependabot e auto-merge
+
+- Dependabot apre i version updates verso `develop`, non verso `main`.
+- Le PR Dependabot vengono assegnate a `@matteobern9244`.
+- Gli aggiornamenti `npm` minor e patch sono raggruppati separatamente dalle
+  major; le major hanno anche un cooldown di 30 giorni per ridurre rumore e
+  churn sul ramo operativo.
+- Gli aggiornamenti di `github-actions` vengono gestiti in PR dedicate verso
+  `develop`.
+- Se una PR Dependabot e' verde, il repository puo' mantenere il flag di
+  `auto-merge` con metodo `squash`.
+- Se GitHub Copilot lascia una review non `APPROVED` su una PR Dependabot,
+  l'auto-merge viene disabilitato e la PR resta in attesa di decisione umana.
+- Questa regola di blocco e' limitata alle PR create da `dependabot[bot]` e non
+  altera il comportamento normale di auto-merge per le altre PR.
+- Limite noto di GitHub: `target-branch` vale per i version updates; eventuali
+  security updates di Dependabot continuano a usare il branch di default
+  `main`.
+
 ## Routing e hosting SPA
 
 L'app usa `BrowserRouter`. Di conseguenza, su hosting esterno, il server web
