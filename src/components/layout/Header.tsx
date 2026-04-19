@@ -12,6 +12,7 @@ import {
   F1BrandIcon,
   MotoGPBrandIcon,
 } from "./BrandIcons";
+import { SparkleLoop } from "./SparkleLoop";
 
 interface HeaderProps {
   theme: "light" | "dark";
@@ -154,6 +155,7 @@ export default function Header({ theme, toggleTheme }: HeaderProps) {
                         active ? "opacity-100 drop-shadow-[0_1px_0_hsl(var(--navy-dark)/0.4)]" : "opacity-80 group-hover:opacity-100"
                       )}
                     />
+                    {active && <SparkleLoop count={4} intervalMs={4500} radius={16} size={4} />}
                   </motion.span>
                   <span className="relative z-10 hidden lg:inline">{item.label}</span>
                   <span className="relative z-10 lg:hidden">{item.shortLabel}</span>
