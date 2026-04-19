@@ -11,6 +11,60 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Bundle di produzione: dati non caricati su dominio pubblicato.** In alcune
+  build di produzione `import.meta.env.VITE_SUPABASE_URL` /
+  `VITE_SUPABASE_PUBLISHABLE_KEY` non venivano iniettate nel bundle. Le
+  richieste partivano verso `https://<host>/undefined/functions/v1/...`,
+  Lovable rispondeva con il fallback HTML SPA (200 OK ma non JSON), React
+  Query restava in loading infinito. Diagnosi tramite ispezione network del
+  sito live (`https://calendarsports.lovable.app`).
+
+### Added
+
+- `src/lib/supabaseClient.ts`: wrapper sicuro del client Supabase JS SDK con
+  fallback hardcoded sui valori pubblici (project URL + anon key) usati
+  quando le env var Vite non sono iniettate nel bundle. Esporta anche
+  `SUPABASE_PROJECT_URL` e `SUPABASE_ANON_KEY` per chiamate `fetch` manuali
+  alle edge functions.
+- `src/components/common/ErrorBoundary.tsx`: ErrorBoundary globale wrappato
+  attorno all'app in `src/App.tsx`. Mostra titolo, messaggio leggibile,
+  dettagli tecnici collassabili e pulsante "Ricarica pagina" invece di una
+  pagina bianca o di uno spinner infinito su errori di render.
+- Regola ESLint `no-restricted-imports` in `eslint.config.js` che blocca
+  import diretti da `@/integrations/supabase/client` e suggerisce
+  `@/lib/supabaseClient`. Eccezioni configurate per il wrapper stesso e per
+  il file auto-generato.
+- Hook **pre-commit** locale via `husky` + `lint-staged` (`.husky/pre-commit`,
+  blocco `lint-staged` in `package.json`): esegue `eslint --max-warnings=0`
+  sui file `.ts`/`.tsx` in stage. Si attiva automaticamente al primo
+  `npm install` grazie allo script `prepare`.
+
+### Changed
+
+- `src/lib/api/sportsApi.ts`: ora importa `SUPABASE_PROJECT_URL` e
+  `SUPABASE_ANON_KEY` dal wrapper sicuro invece di leggere direttamente
+  `import.meta.env`. Comportamento invariato in preview, fix in produzione.
+- `AGENTS.md`: aggiunta sezione "Import del client Supabase" con regola,
+  motivazione e esempio OK/da evitare. Aggiunta voce per
+  `src/lib/supabaseClient.ts` nella mappa funzionale.
+- `README.md`: aggiunta sottosezione "Import del client Supabase nel
+  frontend" dentro "Supabase e funzioni edge".
+
+### Note operative
+
+- I valori hardcoded nel wrapper sono **pubblici** (project URL + anon key,
+  gli stessi gia' esposti nel client auto-generato e nel bundle): non
+  introducono rischi di sicurezza.
+- La regola ESLint e' `error`, quindi una violazione fa fallire `npm run
+  lint` sia in locale sia in CI (`.github/workflows/ci-pr-main.yml` esegue
+  gia' `npm run lint` su ogni PR verso `main`).
+- Il file auto-generato `src/integrations/supabase/client.ts` resta
+  intatto e read-only.
+- Nessuna modifica a workflow Git, branch policy, secrets, edge functions
+  o `supabase/config.toml`.
+
 ## [2.0.1] - 2026-04-19
 
 ### Added
