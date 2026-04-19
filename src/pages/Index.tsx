@@ -326,25 +326,34 @@ export default function HomePage() {
 
   return (
     <div className="container py-8 sm:py-12 space-y-10">
-      <div className="flex items-center justify-end gap-3">
-        {syncing && syncStep && (
-          <span
-            className="text-xs font-heading uppercase tracking-wider text-muted-foreground animate-pulse"
-            aria-live="polite"
+      <div className="flex flex-col items-end gap-2">
+        <div className="flex items-center justify-end gap-3">
+          {syncing && syncStep && (
+            <span
+              className="text-xs font-heading uppercase tracking-wider text-muted-foreground animate-pulse"
+              aria-live="polite"
+            >
+              {syncStep}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSync}
+            disabled={syncing || isLoading}
+            className="gap-2 shrink-0"
           >
-            {syncStep}
-          </span>
+            <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Sincronizzo..." : "Sincronizza"}
+          </Button>
+        </div>
+        {syncing && (
+          <Progress
+            value={syncProgress}
+            aria-label="Avanzamento sincronizzazione"
+            className="h-1.5 w-[240px]"
+          />
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSync}
-          disabled={syncing || isLoading}
-          className="gap-2 shrink-0"
-        >
-          <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Sincronizzo..." : "Sincronizza"}
-        </Button>
       </div>
 
       {/* Stasera in TV — quadro reale multi-famiglia con filtri rapidi */}
