@@ -52,6 +52,8 @@ export default function HomePage() {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
+  const [tvPage, setTvPage] = useState(0);
+  const TV_PAGE_SIZE = 8;
   const { data: f1Data, isLoading: f1Loading } = useF1NextRace();
   const { data: juveCalendar, isLoading: juveLoading } = useJuventusCalendar(2025);
   const { data: sinnerNext, isLoading: sinnerLoading } = useSinnerNextEvent();
