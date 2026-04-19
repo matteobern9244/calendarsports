@@ -106,3 +106,23 @@ export function addDaysISO(dateIso: string, days: number): string {
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
+
+/**
+ * Formatta una durata espressa in minuti come "45 min" o "1h 25 min".
+ * Ritorna stringa vuota per valori non finiti, negativi o zero.
+ *
+ * Esempi:
+ * - `formatDuration(45)` -> "45 min"
+ * - `formatDuration(60)` -> "1h"
+ * - `formatDuration(85)` -> "1h 25 min"
+ * - `formatDuration(0)` -> ""
+ * - `formatDuration(NaN)` -> ""
+ */
+export function formatDuration(min: number): string {
+  if (!Number.isFinite(min) || min <= 0) return "";
+  const rounded = Math.round(min);
+  if (rounded < 60) return `${rounded} min`;
+  const h = Math.floor(rounded / 60);
+  const m = rounded % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m} min`;
+}
