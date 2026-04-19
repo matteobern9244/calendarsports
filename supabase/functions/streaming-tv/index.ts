@@ -256,26 +256,44 @@ function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?:
   // Whitelist generi noti per evitare di confondere parentesi descrittive
   // (es. "(Replica)", "(2023)").
   const GENRE_WHITELIST = new Set([
-    "Fiction", "Film", "Serie Tv", "Serie Tv Drammatica", "Miniserie",
-    "Sport", "Calcio", "Tennis", "Motori", "Formula 1", "Motogp",
+    "Fiction", "Film", "Serie", "Serie Tv", "Serie Tv Drammatica",
+    "Telefilm", "Miniserie", "Soap Opera", "Soap",
+    "Sport", "Calcio", "Tennis", "Motori", "Formula 1", "Motogp", "Ciclismo",
     "Documentario", "Reality", "Talk Show", "Show", "Varieta'", "Varieta",
     "Intrattenimento", "Cartoni", "Cartoni Animati", "Animazione",
     "News", "Telegiornale", "Attualita'", "Attualita", "Rubrica",
-    "Cucina", "Lifestyle", "Musica", "Quiz", "Cinema",
+    "Magazine", "Approfondimento", "Inchiesta", "Meteo",
+    "Cucina", "Lifestyle", "Musica", "Quiz", "Cinema", "Game Show",
     "Commedia", "Azione", "Thriller", "Avventura", "Horror", "Romantico",
     "Drammatico", "Biografico", "Storico", "Western", "Fantascienza",
+    "Religione", "Educativo", "Cultura", "Viaggi",
   ]);
-  let title = source;
-  let genre: string | undefined;
-  const genreMatch = title.match(/\s*\(([^()]{2,40})\)\s*$/);
-  if (genreMatch) {
-    const candidate = genreMatch[1].trim();
+  const tryExtractGenre = (s: string): { stripped: string; genre?: string } => {
+    const mm = s.match(/\s*\(([^()]{2,40})\)\s*$/);
+    if (!mm) return { stripped: s };
+    const candidate = mm[1].trim();
     const candidateNorm = candidate
       .toLowerCase()
       .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
     if (GENRE_WHITELIST.has(candidateNorm)) {
-      genre = candidateNorm;
-      title = title.slice(0, genreMatch.index).trim();
+      return { stripped: s.slice(0, mm.index).trim(), genre: candidateNorm };
+    }
+    return { stripped: s };
+  };
+  // 1) Tenta sul titolo "ricco" (es. "Racconto di una notte ... (Fiction)").
+  let { stripped: title, genre } = tryExtractGenre(source);
+  // 2) Fallback: tenta direttamente sul raw uppercase quando il rich block
+  // non ha una parentesi finale (es. la riga grezza "RACCONTO ... (FICTION)").
+  if (!genre) {
+    const rawTry = tryExtractGenre(rawUpper);
+    if (rawTry.genre) {
+      genre = rawTry.genre;
+      // Se il raw conteneva il genere ma il rich no, mantieni il rich come
+      // titolo (gia' senza parentesi) o usa il raw strippato se non c'e'
+      // alcun rich match.
+      if (!best) title = rawTry.stripped
+        .toLowerCase()
+        .replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
     }
   }
   return { title, genre };
