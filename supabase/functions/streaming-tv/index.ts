@@ -66,6 +66,7 @@ const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
       { id: "sky-sport-golf", name: "Sky Sport Golf", logo: null, number: 209, superguidatvPath: "guida-programmi-tv-sky-sport-golf/sky-sport/573" },
       { id: "sky-sport-max", name: "Sky Sport Max", logo: null, number: 256, superguidatvPath: "guida-programmi-tv-sky-sport-max/sky-sport/1248568499" },
       { id: "sky-sport-basket", name: "Sky Sport Basket", logo: null, number: 205, superguidatvPath: "guida-programmi-tv-sky-sport-basket/sky-sport/40" },
+      { id: "sky-sport-24", name: "Sky Sport 24", logo: null, number: 200, superguidatvPath: "guida-programmi-tv-sky-sport24/sky-sport/36" },
       // Sport in chiaro via staseraintv.com.
       { id: "sportitalia", name: "Sportitalia", logo: null, number: 60, staseraSlug: "sportitalia" },
     ],
