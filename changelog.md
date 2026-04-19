@@ -11,11 +11,12 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
-## [2.0.0] - 2026-04-19 (rebrand reset)
+## [2.1.0] - 2026-04-19 (rebrand "Calendar Events")
 
-> **Nota**: la numerazione semantica torna a `2.0.0` per marcare il cambio
-> identita' di prodotto da **"Calendar Sports"** a **"Calendar Events"**.
-> Le voci storiche `2.0.0`, `2.0.1`, `2.0.2` precedenti restano archiviate
+> **Nota**: release minor che marca il cambio identita' di prodotto da
+> **"Calendar Sports"** a **"Calendar Events"** sopra la baseline
+> `2.0.2`. Le voci storiche `2.0.0`, `2.0.1`, `2.0.2` restano archiviate
+> piu' sotto come riferimento storico e non vengono riscritte.
 > piu' sotto come riferimento storico e non vengono riscritte.
 
 ### Added
@@ -23,7 +24,7 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 - **Rebrand applicazione**: nome prodotto cambiato da "Calendar Sports"
   a **"Calendar Events"**. Header con icona `CalendarDays` (Lucide) al
   posto di `Trophy`, logo testuale "Calendar Events" con accento gold
-  sulla prima parola, footer semplificato a `CALENDAR EVENTS · v2.0.0`.
+  sulla prima parola, footer semplificato a `CALENDAR EVENTS · v2.1.0`.
 - Nuovo file `src/lib/version.ts` come unica fonte di verita' per
   `APP_VERSION` e `APP_NAME`, importato dal footer in
   `src/components/layout/Layout.tsx`.
@@ -83,8 +84,8 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 - Footer applicazione: ora mostra solo `CALENDAR EVENTS · v{APP_VERSION}`
   centrato, in `font-heading tracking-wider uppercase`.
-- `package.json`: `"version"` riportato a `"2.0.0"` come reset rebrand
-  (downgrade SemVer dichiarato e voluto).
+- `package.json`: `"version"` aggiornato a `"2.1.0"` come release di
+  rebrand sopra la baseline `2.0.2`.
 - `index.html`: aggiornati `<title>`, `<meta name="description">`,
   `<meta name="author">`, `og:title`, `twitter:title`, `og:description`,
   `twitter:description` con la nuova identita' "Calendar Events".
@@ -123,8 +124,8 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 - Il rebrand e' puramente cosmetico lato UI/metadati/docs: nessun
   impatto su routing, fonti dati, edge functions, secrets, branch
   policy o sync Lovable <-> GitHub.
-- Il downgrade SemVer `2.0.2 -> 2.0.0` e' esplicito e voluto come reset
-  identita' prodotto. Le release storiche restano archiviate sotto.
+- Bump versione `2.0.2 -> 2.1.0` come release minor di rebrand. Le
+  release storiche restano archiviate sotto.
 - `npm run lint`, `npm run test` e `npm run build` da eseguire come
   verifica finale. Il drift preesistente tra `package.json` e
   `package-lock.json` puo' ancora far fallire `npm ci` finche' il
