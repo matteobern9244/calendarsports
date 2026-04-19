@@ -71,21 +71,29 @@ export default function HomePage() {
   // Aggrega tutti i programmi reali da tutte le famiglie con etichetta family
   const allHighlights = useMemo<TvHighlight[]>(() => {
     const rows: TvHighlight[] = [];
+    const timeFmt = new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
     tvQueries.forEach((q, idx) => {
       const fam = STREAMING_FAMILIES[idx].id;
       const data = q.data as TvFamilyPayload | undefined;
       if (!data?.programsAvailable) return;
       for (const ch of data.channels ?? []) {
         for (const p of ch.programs) {
+          const d = new Date(p.start);
+          const hhmm = timeFmt.format(d);
+          const [hStr, mStr] = hhmm.split(":");
           rows.push({
             family: fam,
             channel: ch.name,
-            time: new Intl.DateTimeFormat("it-IT", {
-              timeZone: "Europe/Rome",
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false,
-            }).format(new Date(p.start)),
+            channelNumber: ch.number,
+            time: hhmm,
+            startMs: d.getTime(),
+            hourRome: parseInt(hStr, 10),
+            minuteRome: parseInt(mStr, 10),
             title: p.title,
           });
         }
@@ -94,14 +102,53 @@ export default function HomePage() {
     return rows;
   }, [tvQueries]);
 
+  // "Prima fascia serale" italiana: ~20:30 - 22:30 Europe/Rome.
+  // Selezioniamo per ogni canale il primo programma in quella finestra,
+  // poi ordiniamo per famiglia (RAI -> Mediaset -> Sky Sport -> Sky Cinema
+  // -> Discovery) e per numero canale.
+  const familyOrder = useMemo(() => {
+    const m: Record<StreamingFamilyId, number> = {} as Record<StreamingFamilyId, number>;
+    STREAMING_FAMILIES.forEach((f, i) => { m[f.id] = i; });
+    return m;
+  }, []);
+
   const tonightHighlights = useMemo(() => {
-    const filtered = familyFilter === "all"
+    const inPrimeWindow = (h: TvHighlight) => {
+      const minutes = h.hourRome * 60 + h.minuteRome;
+      return minutes >= 20 * 60 + 15 && minutes <= 22 * 60 + 30;
+    };
+    const pool = familyFilter === "all"
       ? allHighlights
       : allHighlights.filter((r) => r.family === familyFilter);
-    return [...filtered]
-      .sort((a, b) => a.time.localeCompare(b.time))
-      .slice(0, 8);
-  }, [allHighlights, familyFilter]);
+
+    // Per ogni canale: prendi il primo programma in prima serata
+    // (fallback al primo dopo le 19 se nessuno cade nella finestra stretta)
+    const byChannel = new Map<string, TvHighlight>();
+    for (const h of pool) {
+      const key = `${h.family}|${h.channel}`;
+      const existing = byChannel.get(key);
+      const inWindow = inPrimeWindow(h);
+      if (!existing) {
+        byChannel.set(key, h);
+        continue;
+      }
+      const existingInWindow = inPrimeWindow(existing);
+      if (inWindow && !existingInWindow) byChannel.set(key, h);
+      else if (inWindow === existingInWindow && h.startMs < existing.startMs) {
+        byChannel.set(key, h);
+      }
+    }
+
+    return Array.from(byChannel.values())
+      .filter(inPrimeWindow)
+      .sort((a, b) => {
+        const fa = familyOrder[a.family] - familyOrder[b.family];
+        if (fa !== 0) return fa;
+        const cn = (a.channelNumber ?? 9999) - (b.channelNumber ?? 9999);
+        if (cn !== 0) return cn;
+        return a.startMs - b.startMs;
+      });
+  }, [allHighlights, familyFilter, familyOrder]);
 
   const familyLabelMap = useMemo(() => {
     const m: Record<StreamingFamilyId, string> = {} as Record<StreamingFamilyId, string>;
