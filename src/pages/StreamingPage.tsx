@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Tv, Sparkles, Tv2 } from "lucide-react";
+import { Sparkles, Tv2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -119,7 +119,6 @@ export default function StreamingPage() {
       <SectionHeader
         title="Streaming"
         subtitle="Palinsesto TV serale e nuove uscite del giorno"
-        icon={Tv}
       />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "tv" | "releases")}>
