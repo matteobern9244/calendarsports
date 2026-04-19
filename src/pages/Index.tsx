@@ -374,7 +374,9 @@ export default function HomePage() {
                   return (
                     <li
                       key={`${row.family}-${row.channel}-${row.time}-${i}`}
-                      className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
+                      className={`flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm ${
+                        showFamilyDivider && i > 0 ? "border-t-2 border-primary/70" : ""
+                      }`}
                     >
                       <span
                         className={`hidden sm:inline-flex items-center font-heading font-bold text-[9px] uppercase tracking-widest w-20 shrink-0 ${
