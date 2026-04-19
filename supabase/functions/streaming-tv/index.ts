@@ -40,13 +40,26 @@ const FAMILY_RE = /^(sky-sport|sky-cinema|rai|mediaset|discovery)$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Slug verificati 2026-04-19 via curl su staseraintv.com.
-// Sky Sport NON e' coperto dalla fonte: tutti gli slug `sky_sport_*` ritornano
-// 404. Lasciamo i canali nella whitelist senza staseraSlug -> programs=[],
+// Audit completo: tutti i 41 slug elencati ritornano HTML con >=12 righe
+// HH:MM. I canali Sky Sport branded NON sono coperti dalla fonte: tutti
+// gli slug candidati (`sky_sport_*`, `skysport_*`, `sky_sport1`, ecc.)
+// ritornano 404, e le fonti alternative (guidatv.sky.it, programmi.sky.it,
+// tvzap.kataweb.it) sono client-side rendered o protette da Cloudflare,
+// quindi non parsabili lato server in modo affidabile. Per non lasciare
+// la famiglia "Sport" completamente vuota includiamo Sportitalia
+// (canale 60 DTT, palinsesto sport reale via staseraintv.com) ed
+// eventuali altri canali sport in chiaro coperti dalla fonte.
+// I canali Sky Sport branded restano elencati ma senza staseraSlug:
 // la UI dichiara onestamente "Palinsesto non disponibile".
 const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
   "sky-sport": {
-    label: "Sky Sport (Now TV)",
+    label: "Sport (Sky Sport + canali sport in chiaro)",
     channels: [
+      // Coperto da staseraintv.com (verificato 2026-04-19, ~21 righe/giorno).
+      { id: "sportitalia", name: "Sportitalia", logo: null, number: 60, staseraSlug: "sportitalia" },
+      // VERIFICATO 2026-04-19: nessuna fonte pubblica HTML statica espone
+      // questi canali Sky Sport (tutti gli slug staseraintv.com ritornano
+      // 404; sky.it usa rendering client-side).
       { id: "sky-sport-uno", name: "Sky Sport Uno", logo: null, number: 201 },
       { id: "sky-sport-calcio", name: "Sky Sport Calcio", logo: null, number: 202 },
       { id: "sky-sport-tennis", name: "Sky Sport Tennis", logo: null, number: 203 },
