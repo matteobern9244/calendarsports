@@ -41,9 +41,28 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   -3`, shadow gold, top line, glow radiale, badge gradient).
 - **Glow pulsante gold** sull'icona della voce di navigazione attiva
   (`Header.tsx`), sincronizzato con il loop di scintille (`SparkleLoop`).
+- **Icona PWA dedicata** (`public/favicon.png`, 1024x1024 PNG): nuova
+  icona quadrata coerente con il brand "Calendar Events" (calendario
+  gold su sfondo navy `#0B1A33`, monogramma "CE"), usata sia come
+  favicon (`<link rel="icon">` e `apple-touch-icon` in `index.html`) sia
+  come icona PWA installabile (`public/manifest.webmanifest`, entries
+  `purpose: any` e `purpose: maskable`). Sostituisce il riferimento
+  precedente a un `favicon.png` non presente nel repository, eliminando
+  l'icona generica del browser su Add-to-Home-Screen iOS/Android.
 
 ### Fixed
 
+- **Leggibilita' "Stasera in TV" su mobile**
+  (`src/components/home/TonightTvList.tsx`): le righe della tabella
+  collassavano ora, badge canale, titolo lungo, badge genere e durata
+  sulla stessa riga, rendendo i titoli (es. "Roberta Valente Notaio in
+  Sorrento - Stagione 1 Episodio 3 - Cuba Libre") difficili da leggere
+  su viewport stretti (≤640px). Introdotto layout responsive a 2 righe
+  esclusivo del breakpoint mobile (`sm:hidden`): riga 1 con ora + badge
+  canale + durata (allineata a destra via `ml-auto`), riga 2 con titolo
+  full-width + badge genere. Layout desktop (`hidden sm:flex`)
+  invariato. Nessuna modifica alla logica di filtraggio, ordinamento
+  prima serata, paginazione o ai dati sottostanti.
 - **Regressione di leggibilita' nelle card** (`EventCard.tsx`): rimosso
   `overflow-hidden` dal container (clippava badge "Prossimo" sporgente,
   countdown e contenuto wrappato) e aggiunto `relative z-[1]` ai contenitori

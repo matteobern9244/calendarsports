@@ -269,53 +269,94 @@ export default function TonightTvList() {
                         </li>
                       );
                     })()}
-                    <li className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm">
-                      {(() => {
-                        const FamilyIcon = FAMILY_ICONS[row.family];
-                        return (
-                          <span
-                            className={`hidden sm:inline-flex items-center gap-1.5 font-heading font-bold text-xs uppercase tracking-wider w-24 shrink-0 ${
-                              showFamilyDivider ? "text-primary/80" : "text-transparent"
-                            }`}
-                            aria-hidden={!showFamilyDivider}
-                          >
-                            <FamilyIcon
-                              className={`h-3.5 w-3.5 shrink-0 ${showFamilyDivider ? "text-primary/80" : "text-transparent"}`}
-                              aria-hidden="true"
-                            />
-                            {familyLabelMap[row.family]}
-                          </span>
-                        );
-                      })()}
-                      <span className="font-mono font-bold text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm leading-none">
-                        {row.time}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
-                      >
-                        {row.channel}
-                      </Badge>
-                      <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="font-medium text-xs sm:text-sm leading-tight break-words">
-                          {row.title}
-                        </span>
+                    <li className="px-2.5 sm:px-3 py-2.5 sm:py-2 text-sm">
+                      {/* Desktop: layout su singola riga */}
+                      <div className="hidden sm:flex sm:items-center sm:gap-3">
                         {(() => {
-                          const g = row.genre || inferGenre(row.family, row.channel, row.title);
-                          return g ? (
-                            <Badge
-                              variant="secondary"
-                              className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none"
+                          const FamilyIcon = FAMILY_ICONS[row.family];
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1.5 font-heading font-bold text-xs uppercase tracking-wider w-24 shrink-0 ${
+                                showFamilyDivider ? "text-primary/80" : "text-transparent"
+                              }`}
+                              aria-hidden={!showFamilyDivider}
                             >
-                              {g}
-                            </Badge>
-                          ) : null;
+                              <FamilyIcon
+                                className={`h-3.5 w-3.5 shrink-0 ${showFamilyDivider ? "text-primary/80" : "text-transparent"}`}
+                                aria-hidden="true"
+                              />
+                              {familyLabelMap[row.family]}
+                            </span>
+                          );
                         })()}
-                        {formatDuration(row.durationMin) && (
-                          <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap font-mono leading-none">
-                            {formatDuration(row.durationMin)}
+                        <span className="font-mono font-bold text-primary w-12 shrink-0 text-sm leading-none">
+                          {row.time}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-bold uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
+                        >
+                          {row.channel}
+                        </Badge>
+                        <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="font-medium text-sm leading-tight break-words">
+                            {row.title}
                           </span>
-                        )}
+                          {(() => {
+                            const g = row.genre || inferGenre(row.family, row.channel, row.title);
+                            return g ? (
+                              <Badge
+                                variant="secondary"
+                                className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none"
+                              >
+                                {g}
+                              </Badge>
+                            ) : null;
+                          })()}
+                          {formatDuration(row.durationMin) && (
+                            <span className="text-xs text-muted-foreground whitespace-nowrap font-mono leading-none">
+                              {formatDuration(row.durationMin)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Mobile: layout a 2 righe per migliore leggibilita' */}
+                      <div className="sm:hidden flex flex-col gap-1.5">
+                        {/* Riga 1: ora + canale + durata */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-primary text-sm leading-none shrink-0">
+                            {row.time}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] font-bold uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
+                          >
+                            {row.channel}
+                          </Badge>
+                          {formatDuration(row.durationMin) && (
+                            <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono leading-none ml-auto">
+                              {formatDuration(row.durationMin)}
+                            </span>
+                          )}
+                        </div>
+                        {/* Riga 2: titolo + genere */}
+                        <div className="flex items-start gap-2 flex-wrap">
+                          <span className="font-medium text-[13px] leading-snug break-words flex-1 min-w-0">
+                            {row.title}
+                          </span>
+                          {(() => {
+                            const g = row.genre || inferGenre(row.family, row.channel, row.title);
+                            return g ? (
+                              <Badge
+                                variant="secondary"
+                                className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none mt-0.5"
+                              >
+                                {g}
+                              </Badge>
+                            ) : null;
+                          })()}
+                        </div>
                       </div>
                     </li>
                   </Fragment>

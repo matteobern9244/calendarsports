@@ -88,7 +88,18 @@ Funzionalita' trasversali:
   evidenziano analogamente la prima card upcoming via la utility
   `prioritizeNextUpcoming` in `src/lib/dateUtils.ts`;
 - **glow pulsante gold** sull'icona della voce di navigazione attiva
-  (`Header.tsx`), sincronizzato con il loop di scintille (`SparkleLoop`).
+  (`Header.tsx`), sincronizzato con il loop di scintille (`SparkleLoop`);
+- **layout responsive a 2 righe** della scheda "Stasera in TV" su
+  mobile (`src/components/home/TonightTvList.tsx`): in viewport ≤640px
+  ogni riga di programma e' divisa su due livelli (riga 1: ora + canale
+  + durata; riga 2: titolo + genere) per garantire la leggibilita' dei
+  titoli lunghi; layout desktop a singola riga invariato;
+- **icona PWA dedicata** (`public/favicon.png`, 1024x1024) usata sia
+  come favicon che come icona installabile dal manifest
+  (`public/manifest.webmanifest`, `purpose: any` + `maskable`):
+  calendario gold su sfondo navy coerente col brand, sostituisce
+  l'icona generica del browser quando l'app viene aggiunta alla home
+  su iOS/Android.
 
 ### Streaming: fonte dati TV
 
