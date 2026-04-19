@@ -199,26 +199,32 @@ function buildRomeIso(date: string, hh: number, mm: number): string {
 // Estraiamo entrambi e arricchiamo per match di prefisso uppercase.
 function extractRichTitles(html: string): string[] {
   const rich: string[] = [];
-  // Pattern 1: testo libero seguito da link a /scheda/.../<slug>.html.
-  // Esempio: "Racconto di una notte - Stagione 1 Episodio 4 (Fiction)"
-  // appare come testo prima di <a href="/scheda/...">.
-  const re1 = /([A-ZÀ-Ý][^\n<>]{4,200}?)(?=\s*<a\s+href="\/scheda\/)/g;
+  const seen = new Set<string>();
+  const push = (raw: string) => {
+    const t = decodeEntities(raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+    if (!t || t.length < 5) return;
+    if (!/[A-Za-zÀ-ÿ]/.test(t)) return;
+    if (seen.has(t)) return;
+    seen.add(t);
+    rich.push(t);
+  };
+
+  // Pattern 1: testo che contiene un genere fra parentesi a fine stringa,
+  // tipico delle "schede" descrittive di staseraintv.
+  // Esempio: "Racconto di una notte - Stagione 1 Episodio 4 (Fiction)".
+  const re1 = /([A-Za-zÀ-ÿ0-9][^<>\r\n]{4,250}\([A-Za-zÀ-ÿ' ]{3,40}\))/g;
   let m: RegExpExecArray | null;
-  while ((m = re1.exec(html)) !== null) {
-    const t = decodeEntities(m[1].replace(/\s+/g, " ").trim());
-    if (t && t.length >= 5) rich.push(t);
-  }
-  // Pattern 2: title="..." negli <img> delle schede (fallback).
+  while ((m = re1.exec(html)) !== null) push(m[1]);
+
+  // Pattern 2: title="..." negli <img> delle schede (fallback senza genere).
   const re2 = /title="([^"]{5,200})"\s*src="\/scheda\//g;
-  while ((m = re2.exec(html)) !== null) {
-    const t = decodeEntities(m[1].replace(/\s+/g, " ").trim());
-    if (t) rich.push(t);
-  }
+  while ((m = re2.exec(html)) !== null) push(m[1]);
+
   return rich;
 }
 
-function enrichTitle(rawUpper: string, rich: string[]): string {
-  if (!rawUpper) return rawUpper;
+function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?: string } {
+  if (!rawUpper) return { title: rawUpper };
   const norm = rawUpper.toUpperCase().replace(/\s+/g, " ").trim();
   // Cerca un titolo "ricco" che inizi con lo stesso prefisso (case-insensitive).
   // Preferisci il match piu' lungo.
@@ -229,11 +235,37 @@ function enrichTitle(rawUpper: string, rich: string[]): string {
       if (cand.length > best.length) best = cand;
     }
   }
-  if (best) return best;
-  // Capitalizza in modo leggibile l'output uppercase grezzo.
-  return rawUpper
+  const source = best || rawUpper
     .toLowerCase()
     .replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+
+  // Estrai genere fra parentesi a fine titolo: "... (Fiction)" / "(Film)" / "(Sport)".
+  // Whitelist generi noti per evitare di confondere parentesi descrittive
+  // (es. "(Replica)", "(2023)").
+  const GENRE_WHITELIST = new Set([
+    "Fiction", "Film", "Serie Tv", "Serie Tv Drammatica", "Miniserie",
+    "Sport", "Calcio", "Tennis", "Motori", "Formula 1", "Motogp",
+    "Documentario", "Reality", "Talk Show", "Show", "Varieta'", "Varieta",
+    "Intrattenimento", "Cartoni", "Cartoni Animati", "Animazione",
+    "News", "Telegiornale", "Attualita'", "Attualita", "Rubrica",
+    "Cucina", "Lifestyle", "Musica", "Quiz", "Cinema",
+    "Commedia", "Azione", "Thriller", "Avventura", "Horror", "Romantico",
+    "Drammatico", "Biografico", "Storico", "Western", "Fantascienza",
+  ]);
+  let title = source;
+  let genre: string | undefined;
+  const genreMatch = title.match(/\s*\(([^()]{2,40})\)\s*$/);
+  if (genreMatch) {
+    const candidate = genreMatch[1].trim();
+    const candidateNorm = candidate
+      .toLowerCase()
+      .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+    if (GENRE_WHITELIST.has(candidateNorm)) {
+      genre = candidateNorm;
+      title = title.slice(0, genreMatch.index).trim();
+    }
+  }
+  return { title, genre };
 }
 
 function parseStaseraintvHtml(html: string, date: string): Program[] {
@@ -271,7 +303,7 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
     }
     prevStartMs = startMs;
 
-    const titleEnriched = enrichTitle(titleRaw, richTitles);
+    const { title: titleEnriched, genre } = enrichTitle(titleRaw, richTitles);
 
     const key = `${startIso}|${titleEnriched.slice(0, 50)}`;
     if (seen.has(key)) continue;
@@ -281,6 +313,7 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
       start: startIso,
       end: startIso,
       title: titleEnriched,
+      ...(genre ? { genre } : {}),
     });
   }
 
