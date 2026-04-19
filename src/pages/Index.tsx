@@ -169,7 +169,7 @@ export default function HomePage() {
 
       {events.length > 0 && (
         <motion.div variants={container} initial="hidden" animate="show" className="grid gap-5 sm:grid-cols-2">
-          {events.map((ev) => (
+          {events.map((ev, idx) => (
             <EventCard
               key={`${ev.sport}-${ev.rawDate}`}
               sport={ev.sport}
@@ -179,7 +179,7 @@ export default function HomePage() {
               time={ev.time}
               startDate={ev.rawDate}
               status={undefined}
-              highlight={false}
+              highlight={idx === 0}
             >
               {ev.broadcaster && (
                 <div className="flex flex-wrap gap-1.5">
