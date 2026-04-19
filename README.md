@@ -322,23 +322,53 @@ locale. In pratica oggi il percorso piu' lineare e':
 
 Questo e' il punto piu' sensibile del repository.
 
-- Lovable documenta il sync GitHub <-> Lovable sul branch di default;
-- per questo repo va assunto che `main` sia il branch a rischio sync;
-- le attivita' di analisi, sviluppo e refactor dovrebbero avvenire fuori da
-  `main`, salvo istruzioni esplicite;
-- nessun documento di questo repo deve suggerire push automatici su `main`;
-- il deploy della versione di produzione resta manuale da eseguire in Lovable da
-  parte tua.
+- Lovable sincronizza in modo bidirezionale e automatico sul branch di
+  default del repo, che per questo progetto e' `main`.
+- Ogni modifica fatta dall'editor Lovable produce un commit automatico su
+  `main`. Lovable e' quindi l'unico canale autorizzato a scrivere
+  direttamente su `main`.
+- Gli sviluppatori umani non pushano mai direttamente su `main`. Lavorano su
+  `develop` (o feature branch derivati da `develop`) e arrivano su `main`
+  solo tramite pull request.
+- Il deploy in produzione resta manuale da eseguire in Lovable
+  (Publish -> Update).
 
 Policy operativa corrente del repository:
 
-- `main` deve ricevere modifiche solo tramite pull request da `develop`;
-- su `main` non vanno fatti push diretti;
-- il merge verso `main` deve restare bloccato finche' non passano tutti i check
-  GitHub Actions richiesti;
-- i workflow CI validano `lint`, `test`, `build` ed E2E frontend;
-- gli E2E usano fixture e mocking delle Edge Functions, quindi validano router,
-  UI e shape dati senza dipendere dai provider esterni live.
+- `main` accetta scritture solo da:
+  - l'app GitHub di Lovable (sync automatico bidirezionale);
+  - merge di pull request provenienti da `develop`.
+- Su `main` non vanno fatti push diretti da utenti umani.
+- Il merge verso `main` deve restare bloccato finche' non passano tutti i
+  check GitHub Actions richiesti.
+- I workflow CI validano `lint`, `test`, `build` ed E2E frontend.
+- Gli E2E usano fixture e mocking delle Edge Functions, quindi validano
+  router, UI e shape dati senza dipendere dai provider esterni live.
+
+### Configurazione GitHub consigliata (branch protection)
+
+Per rendere effettiva la policy "solo Lovable scrive su `main`", configura
+manualmente su GitHub (Settings -> Branches -> Add rule per `main`):
+
+- Require a pull request before merging.
+- Restrict who can push to matching branches -> consentire solo l'app GitHub
+  di Lovable (es. `lovable-dev[bot]`).
+- Do not allow bypassing the above settings (vale anche per gli admin).
+
+Risultato pratico:
+
+- Lovable continua a pushare su `main` per il sync automatico.
+- Gli umani possono contribuire solo via PR da `develop` verso `main`.
+- Nessun push diretto umano su `main` e' possibile, neppure per errore.
+
+### Sync GitHub -> Lovable
+
+- Il sync e' event-driven sul branch di default (`main`).
+- Quando un commit arriva su `main` (sia da Lovable, sia da merge di PR
+  umane), Lovable aggiorna automaticamente il progetto in editor.
+- Non esiste un pulsante "Sync now": e' automatico.
+- Se da locale non vedi i commit fatti da Lovable, esegui
+  `git fetch --all --prune` e verifica `git log origin/main --oneline`.
 
 Se cambi branch policy, default branch o integrazione GitHub in Lovable,
 aggiorna immediatamente questa documentazione e `AGENTS.md`.
