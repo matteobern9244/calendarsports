@@ -347,13 +347,50 @@ Policy operativa corrente del repository:
 
 ### Configurazione GitHub consigliata (branch protection)
 
-Per rendere effettiva la policy "solo Lovable scrive su `main`", configura
-manualmente su GitHub (Settings -> Branches -> Add rule per `main`):
+**Regola d'oro**: usare **una sola** fonte di protezione per `main`. Avere
+sia una Ruleset moderna sia una Branch protection rule classica attive
+contemporaneamente fa sommare le restrizioni e finisce per bloccare anche
+l'app Lovable, perche' la regola piu' restrittiva vince sempre.
+
+#### Opzione A consigliata: Ruleset moderna
+
+In `Settings -> Rules -> Rulesets`, creare/modificare una Ruleset che
+matcha esattamente il branch `main`:
 
 - Require a pull request before merging.
-- Restrict who can push to matching branches -> consentire solo l'app GitHub
-  di Lovable (es. `lovable-dev[bot]`).
-- Do not allow bypassing the above settings (vale anche per gli admin).
+- Require status checks to pass (lint, test, build, e2e).
+- Bypass list: aggiungere l'app GitHub di Lovable (`lovable-dev`) come
+  actor con bypass mode = `Always`. Il bypass deve coprire sia la PR
+  requirement sia gli status checks.
+- **NON** attivare opzioni tipo `Do not allow bypassing the above
+  settings`: annullano la bypass list e rifiutano anche i push di
+  Lovable.
+- Verificare che non esistano altre Ruleset con pattern `*` o `main*`
+  che intercettano comunque `main` senza la stessa bypass list.
+
+#### Opzione B alternativa: Branch protection rule classica
+
+In `Settings -> Branches -> Branch protection rule` per `main`:
+
+- Require a pull request before merging.
+- Restrict who can push to matching branches -> includere esplicitamente
+  l'app GitHub di Lovable (`lovable-dev`). Le restrizioni devono coprire
+  le GitHub Apps, non solo utenti/team.
+- Lasciare **disattivato** `Do not allow bypassing the above settings`,
+  altrimenti Lovable resta bloccata anche se autorizzata.
+
+#### Diagnostica errore "Push was rejected by branch protection rules"
+
+Se Lovable mostra questo errore, controllare in ordine:
+
+1. `main` matcha contemporaneamente Ruleset + Branch protection classica?
+   Se si', disattivare una delle due e tenere la Ruleset.
+2. Il bypass per `lovable-dev` copre anche i required status checks (non
+   solo la PR requirement)?
+3. E' attivo qualche flag tipo `No bypass` / `Do not allow bypassing` su
+   una delle due regole? Se si', disattivarlo.
+4. Esiste una Ruleset secondaria con pattern `*` o `main*` senza bypass
+   per Lovable? Se si', allinearla o restringere il pattern.
 
 Risultato pratico:
 
