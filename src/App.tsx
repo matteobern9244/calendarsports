@@ -11,7 +11,15 @@ import Formula1Page from "./pages/Formula1Page";
 import MotoGPPage from "./pages/MotoGPPage";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const disableQueryRetries = import.meta.env.VITE_DISABLE_QUERY_RETRIES === "true";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: disableQueryRetries ? false : 3,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
