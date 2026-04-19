@@ -85,7 +85,7 @@ export default function Header({ theme, toggleTheme }: HeaderProps) {
             transition={{ duration: 0.2 }}
             className="md:hidden overflow-hidden border-t border-border/50 bg-card"
           >
-            <div className="container py-4 flex flex-col gap-1">
+            <div className="container py-4 flex flex-col gap-1.5">
               {navItems.map((item) => {
                 const active = location.pathname === item.path;
                 return (
@@ -93,13 +93,17 @@ export default function Header({ theme, toggleTheme }: HeaderProps) {
                     key={item.path}
                     to={item.path}
                     onClick={() => setMobileOpen(false)}
+                    aria-current={active ? "page" : undefined}
                     className={cn(
-                      "px-4 py-3 text-sm font-heading font-semibold tracking-widest uppercase rounded-lg transition-colors",
+                      "relative pl-5 pr-4 py-3 text-sm font-heading font-semibold tracking-widest uppercase rounded-xl transition-all duration-200 border",
                       active
-                        ? "text-primary bg-primary/10"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        ? "text-primary-foreground bg-gradient-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] border-[hsl(var(--gold-dark))]/60 shadow-[0_6px_18px_-6px_hsl(var(--gold)/0.55)]"
+                        : "text-foreground/80 border-border/60 bg-muted/30 hover:text-foreground hover:border-[hsl(var(--gold))]/40 hover:bg-muted/60"
                     )}
                   >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full bg-[hsl(var(--gold-light))]" />
+                    )}
                     {item.label}
                   </Link>
                 );
