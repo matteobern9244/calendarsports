@@ -13,20 +13,36 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Changed
 
-- Verifica sync GitHub <-> Lovable dopo configurazione bypass app
-  `lovable-dev` nelle branch protection rules di `main`. Nessuna modifica
-  funzionale al codice o ai dati.
-- Documentazione `README.md` e `AGENTS.md` aggiornata con checklist
-  corretta per Ruleset moderna vs Branch protection classica e diagnosi
-  errore "Push was rejected by branch protection rules".
-- Secondo tentativo di push da Lovable per validare bypass su Ruleset
-  dopo rimozione del flag "No bypass" e disattivazione protezione
-  classica.
-- Terzo tentativo di push da Lovable dopo disattivazione di
-  "Require status checks to pass" sulla Ruleset di `main`, per isolare
-  se il blocco residuo dipendeva dai required checks.
-- Quarto tentativo di push da Lovable per ulteriore verifica del sync
-  GitHub <-> Lovable su `main`.
+- Configurazione GitHub di `main` riallineata al modello finale con una sola
+  Ruleset moderna repository-level, bypass riservato a `lovable-dev` e nessuna
+  Branch protection classica in parallelo.
+- Workflow GitHub Actions riallineati al flusso feature branch -> `develop` ->
+  `main`: CI su push solo per `develop`, CI su PR per `develop` e `main`,
+  `guard-main-source` confermato come blocco delle sole PR verso `main` da
+  branch diversi da `develop`.
+- Aggiornate le action GitHub usate nei workflow a major stabili compatibili
+  con il runtime piu' recente dei runner: `actions/checkout@v6`,
+  `actions/setup-node@v6`, `actions/upload-artifact@v7`.
+- Aggiunto workflow repository-level per abilitare automaticamente
+  `auto-merge` con metodo `squash` sulle PR verso `develop` e `main`.
+- Rimossa la richiesta di review obbligatoria dalla Ruleset di `main`, cosi'
+  le PR `develop` -> `main` si auto-fondono appena i check richiesti sono
+  verdi.
+- Required checks finali candidati per la Ruleset di `main`: `quality` ed
+  `e2e` dal workflow PR.
+- Documentazione operativa e prompt repository-local allineati alla policy
+  finale di branch protection, sync Lovable e regole per agenti AI.
+- Nessuna modifica al codice applicativo, ai secret, ai file env,
+  `supabase/config.toml`, alle edge functions o ai lockfile di progetto.
+
+### Note operative
+
+- La verifica locale conferma che `npm run lint`, `npm run test` e
+  `npm run build` passano, mentre `npm ci` fallisce per drift preesistente tra
+  `package.json` e `package-lock.json`.
+- Il drift del lockfile impedisce di portare a verde tutti i workflow che
+  eseguono `npm ci` senza una modifica esplicita ai file package, esclusa da
+  questa change set.
 
 ## [2.0.2] - 2026-04-19
 

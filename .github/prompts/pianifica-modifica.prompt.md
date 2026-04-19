@@ -19,6 +19,8 @@ Il piano deve:
 - indicare la fonte dati reale coinvolta: API, scraping, fallback o hardcoded;
 - valutare l'impatto su Home aggregata, hook React Query e Edge Function correlate;
 - esplicitare eventuali rischi verso `main` o verso il workflow GitHub <-> Lovable;
+- assumere per le modifiche umane il flusso feature branch -> `develop` ->
+  `main`;
 - non proporre cambi di stack, branch policy o deploy senza richiesta esplicita.
 
 Formato richiesto:

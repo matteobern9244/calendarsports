@@ -16,6 +16,8 @@ Concentrati su:
 - mismatch di shape dati tra frontend e funzioni edge;
 - fragilita' di scraping, parsing HTML, mapping statici e fallback stagionali;
 - testo o codice che incentiva uso improprio di `main` o nasconde il rischio Lovable;
+- testo che reintroduce Branch protection classica su `main` o salta il
+  passaggio feature branch -> `develop` -> `main`;
 - affermazioni documentali non supportate dal codice.
 
 Formato richiesto:

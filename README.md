@@ -328,8 +328,8 @@ Questo e' il punto piu' sensibile del repository.
   `main`. Lovable e' quindi l'unico canale autorizzato a scrivere
   direttamente su `main`.
 - Gli sviluppatori umani non pushano mai direttamente su `main`. Lavorano su
-  `develop` (o feature branch derivati da `develop`) e arrivano su `main`
-  solo tramite pull request.
+  feature branch derivati da `develop`, aprono PR verso `develop` e arrivano
+  su `main` solo tramite una PR separata `develop` -> `main`.
 - Il deploy in produzione resta manuale da eseguire in Lovable
   (Publish -> Update).
 
@@ -339,63 +339,63 @@ Policy operativa corrente del repository:
   - l'app GitHub di Lovable (sync automatico bidirezionale);
   - merge di pull request provenienti da `develop`.
 - Su `main` non vanno fatti push diretti da utenti umani.
-- Il merge verso `main` deve restare bloccato finche' non passano tutti i
-  check GitHub Actions richiesti.
-- I workflow CI validano `lint`, `test`, `build` ed E2E frontend.
+- La protezione di `main` deve essere gestita da una sola Ruleset moderna,
+  senza una Branch protection classica attiva in parallelo.
+- Il merge verso `main` deve restare bloccato finche' non passano i check
+  richiesti dalla Ruleset.
+- I check richiesti correnti per le PR verso `main` sono i job `quality` ed
+  `e2e` del workflow PR.
+- Le PR verso `develop` e `main` devono avere `auto-merge` attivo con metodo
+  `squash`, cosi' GitHub completa il merge appena i check richiesti e le altre
+  condizioni di merge risultano soddisfatte.
+- Il workflow `guard-main-source.yml` blocca ogni PR verso `main` che non
+  provenga da `develop` e non si applica ai push automatici di Lovable.
+- Il workflow PR gira su PR verso `develop` e `main`; il workflow push gira
+  solo su `develop`.
 - Gli E2E usano fixture e mocking delle Edge Functions, quindi validano
   router, UI e shape dati senza dipendere dai provider esterni live.
 
-### Configurazione GitHub consigliata (branch protection)
+### Configurazione GitHub finale su `main`
 
-**Regola d'oro**: usare **una sola** fonte di protezione per `main`. Avere
-sia una Ruleset moderna sia una Branch protection rule classica attive
-contemporaneamente fa sommare le restrizioni e finisce per bloccare anche
-l'app Lovable, perche' la regola piu' restrittiva vince sempre.
+**Regola d'oro**: usare **una sola** fonte di protezione per `main`.
 
-#### Opzione A consigliata: Ruleset moderna
+La configurazione finale richiesta del repository e':
 
-In `Settings -> Rules -> Rulesets`, creare/modificare una Ruleset che
-matcha esattamente il branch `main`:
+- una sola Ruleset repository-level attiva su `main`, con target esatto
+  `refs/heads/main`;
+- bypass riservato alla sola app GitHub `lovable-dev` con `bypass mode`
+  `Always`;
+- branch rules attive: blocco deletion, blocco force-push,
+  pull request obbligatoria senza review obbligatoria e con stale reviews
+  dismiss,
+  required status checks strict sui job `quality` ed `e2e`;
+- nessuna Branch protection classica attiva su `main`.
 
-- Require a pull request before merging.
-- Require status checks to pass (lint, test, build, e2e).
-- Bypass list: aggiungere l'app GitHub di Lovable (`lovable-dev`) come
-  actor con bypass mode = `Always`. Il bypass deve coprire sia la PR
-  requirement sia gli status checks.
-- **NON** attivare opzioni tipo `Do not allow bypassing the above
-  settings`: annullano la bypass list e rifiutano anche i push di
-  Lovable.
-- Verificare che non esistano altre Ruleset con pattern `*` o `main*`
-  che intercettano comunque `main` senza la stessa bypass list.
+Non vanno attivati nella Ruleset:
 
-#### Opzione B alternativa: Branch protection rule classica
-
-In `Settings -> Branches -> Branch protection rule` per `main`:
-
-- Require a pull request before merging.
-- Restrict who can push to matching branches -> includere esplicitamente
-  l'app GitHub di Lovable (`lovable-dev`). Le restrizioni devono coprire
-  le GitHub Apps, non solo utenti/team.
-- Lasciare **disattivato** `Do not allow bypassing the above settings`,
-  altrimenti Lovable resta bloccata anche se autorizzata.
+- `required_linear_history`;
+- `required_signatures`;
+- `required_deployments`;
+- code scanning come gate di merge su `main`;
+- flag equivalenti a `Do not allow bypassing` o `Enforce for admins`.
 
 #### Diagnostica errore "Push was rejected by branch protection rules"
 
 Se Lovable mostra questo errore, controllare in ordine:
 
-1. `main` matcha contemporaneamente Ruleset + Branch protection classica?
-   Se si', disattivare una delle due e tenere la Ruleset.
-2. Il bypass per `lovable-dev` copre anche i required status checks (non
-   solo la PR requirement)?
-3. E' attivo qualche flag tipo `No bypass` / `Do not allow bypassing` su
-   una delle due regole? Se si', disattivarlo.
-4. Esiste una Ruleset secondaria con pattern `*` o `main*` senza bypass
-   per Lovable? Se si', allinearla o restringere il pattern.
+1. Esiste ancora una Branch protection classica attiva oltre alla Ruleset?
+2. Il bypass per `lovable-dev` e' davvero in mode `Always` ed esteso anche
+   ai required status checks?
+3. E' attivo qualche flag tipo `Do not allow bypassing` o `Enforce for
+   admins`?
 
 Risultato pratico:
 
 - Lovable continua a pushare su `main` per il sync automatico.
-- Gli umani possono contribuire solo via PR da `develop` verso `main`.
+- Gli umani contribuiscono via feature branch -> `develop`, poi via PR
+  `develop` -> `main`.
+- Le PR eleggibili si auto-fondono con `squash` appena i check richiesti e le
+  altre condizioni di merge risultano soddisfatti.
 - Nessun push diretto umano su `main` e' possibile, neppure per errore.
 
 ### Sync GitHub -> Lovable
