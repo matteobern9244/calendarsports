@@ -113,7 +113,7 @@ export default function HomePage() {
   }, [f1Data, juveCalendar, sinnerNext, motogpNext]);
 
   return (
-    <div className="container py-8 sm:py-12 space-y-10">
+    <div className="container py-4 sm:py-6 space-y-8">
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center justify-end gap-3">
           {syncing && syncStep ? (
@@ -133,12 +133,12 @@ export default function HomePage() {
           ) : null}
           <Button
             variant="outline"
-            size="sm"
+            size="default"
             onClick={handleSync}
             disabled={syncing || isLoading}
-            className="gap-2 shrink-0"
+            className="gap-2 shrink-0 px-5 text-sm font-heading uppercase tracking-wider"
           >
-            <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-5 w-5 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Sincronizzo..." : "Sincronizza"}
           </Button>
         </div>
