@@ -1,101 +1,79 @@
 
-## Piano: estensioni Streaming
 
-Sei richieste, raggruppate per area. Includo anche un **fix critico** scoperto nell'esplorazione: la rotta `/streaming` non è registrata in `App.tsx` e la voce nav non esiste in `Header.tsx` (il messaggio precedente diceva fossero state aggiunte, ma il codice mostra il contrario).
+User wants to add to the previous staseraintv.com plan:
+1. Quick channel/family filters in the Home "Stasera in TV" banner
+2. Full responsive behavior
+3. README + changelog updates (already in plan, reconfirm)
 
-### 1. Nav: STREAMING tra HOME e JANNIK SINNER
+Keep the plan concise and additive.
 
-`src/components/layout/Header.tsx` → aggiungo `{ label: "STREAMING", path: "/streaming" }` in seconda posizione.
-`src/App.tsx` → aggiungo `import StreamingPage` + `<Route path="/streaming" element={<StreamingPage />} />`.
+## Piano: estensione "Stasera in TV" Home + responsive + docs
 
-### 2. Edge function `streaming-tv`: integrazione XMLTV iptv-org per Real Time + DMax
+Estende il piano già approvato (switch a `staseraintv.com` per scraping completo di tutte le famiglie). Aggiunge filtri rapidi user-friendly nella home e responsive verificato.
 
-In `supabase/functions/streaming-tv/index.ts`:
-- aggiungo `fetchDiscoveryXmltv(date)` che scarica `https://raw.githubusercontent.com/iptv-org/epg/master/sites/mediaset.it/mediaset.it.channels.xml` o equivalente. Fonte XMLTV reale per Real Time/DMax: `https://iptv-org.github.io/epg/guides/it/mediasetinfinity.mediaset.it.epg.xml` (o feed analogo iptv-org for Italy).
-- parser XMLTV minimale via regex (no libreria DOM in Deno edge): estraggo `<programme start="..." stop="..." channel="..."><title>...</title><desc>...</desc><category>...</category></programme>`.
-- mapping: `real-time` → channel id XMLTV "RealTime.it", `dmax` → "DMax.it" (verifico con curl al deploy).
-- cache in-memory 1h del feed completo, parse lazy per canale.
-- `fetchProgramsForChannel` chiama il parser solo per family `discovery`. Le altre famiglie restano stub vuoto (dichiarato `programsAvailable: false`), come oggi.
-- fallback: se fetch o parse fallisce → lista vuota, mai dati inventati.
-
-Cache key: `xmltv-discovery:${date}`. TTL 1h.
-
-### 3. Edge function `streaming-releases`: range 7 giorni + selettore data
-
-In `supabase/functions/streaming-releases/index.ts`:
-- accetto nuovo param opzionale `dateFrom` e `dateTo` (regex `DATE_RE` già presente). Se assenti: `dateFrom = oggi`, `dateTo = oggi + 7`.
-- TMDB `/discover` supporta nativamente `primary_release_date.gte` + `.lte` → cambio i parametri esistenti per accettare il range invece del singolo giorno.
-- output payload: aggiungo `dateFrom`, `dateTo` + ogni item mantiene `releaseDate` (già presente). 
-- cache key: `${provider}:${dateFrom}:${dateTo}`.
-
-In `src/lib/api/sportsApi.ts`:
-- estendo `streamingApi.getReleasesByProvider(provider, dateFrom?, dateTo?)`.
-
-In `src/hooks/useStreamingData.ts`:
-- estendo `useReleasesByProvider(provider, dateFrom?, dateTo?)`, queryKey include il range.
-
-### 4. Filtro Film/Serie nella tab Nuove uscite
-
-In `StreamingPage.tsx` tab `releases`:
-- nuovo state `kindFilter: "all" | "movie" | "tv"` (default `all`), persistito in URL come `?kind=movie`.
-- 3 pill `Tutti` / `Film` / `Serie` sotto il `ProviderSelector`.
-- filtro client-side su `items` prima del paginamento (TMDB già restituisce `type` per ogni item).
-- selettore data: aggiungo un `Select` `Oggi` / `Prossimi 3 giorni` / `Prossimi 7 giorni` (default `Oggi`) sopra le pill, persistito in URL come `?range=7d`. Calcolo `dateFrom`/`dateTo` lato client e li passo all'hook.
-
-### 5. Dialog dettaglio poster
-
-Nuovo componente `src/components/streaming/ReleaseDetailDialog.tsx`:
-- props: `item: ReleaseItem | null`, `provider: StreamingProviderId`, `onClose`.
-- usa `Dialog` di shadcn (già presente in `src/components/ui/dialog.tsx`).
-- mostra: poster grande, titolo, badge tipo (Film/Serie), data uscita, voto, **overview** (già nel payload TMDB), **link diretto al provider** (URL deep-link generico per provider: Netflix `https://www.netflix.com/title/{id}` non è disponibile da TMDB; uso fallback `https://www.themoviedb.org/{type}/{tmdbId}` come "Vedi dettagli su TMDB" + link homepage provider come secondo CTA).
-
-**Cast**: TMDB `/discover` non restituisce cast. Per averlo serve seconda chiamata `/movie/{id}/credits` o `/tv/{id}/credits`. Due opzioni:
-- A) lazy on click: nuova edge function action `get-credits?type=movie&id=123` → fetch on-demand quando si apre il dialog (più pulito, niente sprechi).
-- B) prefetch in `discover` (impossibile: non c'è append_to_response su `/discover`).
-
-Adotto **A**: estendo `streaming-releases` con action `credits` (param `type`, `id`), nuovo hook `useReleaseCredits(type, id)` con `enabled: !!id`, cache lunga (24h). Il dialog mostra skeleton per il cast finché carica, top 6 attori con nome.
-
-In `StreamingPage.tsx`: card poster diventa `<button onClick={() => setSelectedItem(item)}>`, `<ReleaseDetailDialog item={selectedItem} ... />` montato a fianco della grid.
-
-### 6. Home: quadro rapido "Stasera in TV" reale
-
-Oggi la card Home ha solo i pill di link alle famiglie. La richiesta è vedere **un quadro rapido della programmazione**.
+### 1. Filtri rapidi nella card "Stasera in TV" (Home)
 
 In `src/pages/Index.tsx`:
-- uso `useTvByFamily("discovery")` per fetchare i programmi reali (l'unica famiglia con dati XMLTV dopo il punto 2).
-- mostro fino a 6 righe compatte: ora + canale + titolo programma, ordinate per orario, solo prime time.
-- se `programsAvailable === false` o lista vuota → mostro i pill famiglie come oggi (fallback grazioso).
-- mantengo CTA "Apri Streaming".
 
-Limite onesto: solo Real Time + DMax avranno dati reali; Sky/RAI/Mediaset restano elencati come pill di navigazione finché non integrate. Lo dichiaro nel sottotitolo della card.
+- Sopra la lista degli highlights aggiungo una **toggle bar** orizzontale con chip selezionabili:
+  - `Tutti` (default)
+  - `Sky Sport`
+  - `Sky Cinema`
+  - `RAI`
+  - `Mediaset`
+  - `Discovery`
+- Componente: riuso `ToggleGroup` shadcn (`src/components/ui/toggle-group.tsx`) con `type="single"`, default `"all"`.
+- Stato locale `selectedFamily: "all" | StreamingFamilyId` (no URL state per la Home, è un widget compatto).
+- I dati vengono già fetchati con `useQueries` su tutte e 5 le famiglie (dal piano precedente). Il filtro è puramente client-side: se `selectedFamily === "all"` mescolo tutto e mostro top 6 per orario; altrimenti filtro le righe della famiglia selezionata e mostro top 6.
+- Ogni riga mantiene il badge canale per chiarezza.
+- Empty state per famiglia: se la famiglia selezionata non ha dati → messaggio inline "Palinsesto non disponibile per <famiglia>" + suggerimento di tornare a "Tutti".
 
-### Vincoli rispettati
+### 2. Responsive
 
-- Branch: lavoro su `develop`, PR verso `develop`. Lovable scriverà su `main` automaticamente.
-- Nessuna modifica a `src/integrations/supabase/*`, `supabase/config.toml`, env, branch policy.
-- Validazione regex su tutti i nuovi param edge (`type`, `id`, `dateFrom`, `dateTo`).
-- Fonti dichiarate fragili: XMLTV iptv-org community (può cambiare struttura/disappear), TMDB (richiede key, già configurata).
-- Aggiorno `README.md` (nuova fonte XMLTV + dettaglio dialog + range 7gg) e `changelog.md` sotto `[Unreleased]`.
+Verifica esplicita su 3 viewport:
+- **Mobile** (<640px): chip filtri scrollabili orizzontalmente con `overflow-x-auto` + `scrollbar-hide`, nessun wrap, tap target ≥ 40px. Righe highlights: orario + canale badge + titolo truncato a 1 riga.
+- **Tablet** (640–1024px): chip su singola riga con wrap se necessario.
+- **Desktop** (≥1024px): chip inline accanto al titolo "Stasera in TV" se c'è spazio, altrimenti sotto.
+
+Layout righe highlights resta `flex items-center gap-3` con `min-w-0` + `truncate` sul titolo (già presente). Nessun nuovo breakpoint custom: solo classi Tailwind standard (`sm:`, `md:`, `lg:`).
+
+### 3. Resto del piano (invariato, già approvato)
+
+- Edge function `streaming-tv` riscritta con slug `staseraintv.com` per tutte le 5 famiglie.
+- Parser regex `/^(\d{1,2}):(\d{2}) - (.+?)$/gm`.
+- Cache 1h per `(slug, date)`.
+- `StreamingPage.tsx`: rimozione disclaimer "solo Discovery", nuovo disclaimer "Fonte: staseraintv.com".
+
+### 4. Documentazione
+
+- **`README.md`**: aggiorno la sezione Streaming dichiarando:
+  - Fonte reale: `staseraintv.com` (scraping pubblico, fragile per definizione).
+  - Copertura: tutte e 5 le famiglie (Sky Sport, Sky Cinema, RAI, Mediaset, Discovery).
+  - Home "Stasera in TV": filtri rapidi per famiglia, responsive.
+- **`changelog.md`** sotto `[Unreleased]`:
+  - `Added`: filtri rapidi per famiglia nella card "Stasera in TV" della Home.
+  - `Changed`: scraping TV esteso a tutte le famiglie via `staseraintv.com` (sostituisce `guida.tv`).
+  - `Note operative`: fonte di terze parti, può cambiare struttura senza preavviso.
 
 ### File toccati
 
-- `src/App.tsx` (route)
-- `src/components/layout/Header.tsx` (nav)
-- `src/pages/Index.tsx` (quadro Stasera in TV reale)
-- `src/pages/StreamingPage.tsx` (filtro Film/Serie, selettore data, dialog wiring)
-- `src/components/streaming/ReleaseDetailDialog.tsx` (nuovo)
-- `src/hooks/useStreamingData.ts` (nuovi hook + range)
-- `src/lib/api/sportsApi.ts` (firme estese)
-- `supabase/functions/streaming-tv/index.ts` (XMLTV parser Discovery)
-- `supabase/functions/streaming-releases/index.ts` (range 7gg + action credits)
-- `README.md`, `changelog.md`
+- `supabase/functions/streaming-tv/index.ts` (slug staseraintv + parser nuovo)
+- `src/pages/Index.tsx` (multi-famiglia + filtri rapidi + responsive)
+- `src/pages/StreamingPage.tsx` (disclaimer)
+- `README.md`
+- `changelog.md`
 
-### Ordine di esecuzione
+### Verifica end-to-end
 
-1. Fix nav + route (sblocca tutto)
-2. `streaming-tv` XMLTV Discovery + verifica curl
-3. Home quadro reale
-4. `streaming-releases` range + filtri
-5. Action credits + dialog
-6. Filtri Film/Serie + selettore data UI
-7. Docs + verifica end-to-end
+1. Deploy `streaming-tv` + curl su tutte e 5 le famiglie.
+2. Home: chip "Tutti" mostra mix realistico; ogni chip famiglia filtra correttamente.
+3. Resize 360px / 768px / 1280px: chip scrollabili su mobile, layout pulito.
+4. `npm run lint` + `npm run build`.
+
+### Vincoli rispettati
+
+- Nessuna modifica a `src/integrations/supabase/*`, `supabase/config.toml`, env, secrets, branch policy.
+- Nessuna nuova dipendenza.
+- Fragilità dichiarata in UI, README, changelog.
+- Nessun dato inventato: famiglie senza dati → empty state esplicito.
+
