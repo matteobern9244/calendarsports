@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import EventCard from "@/components/common/EventCard";
 import SectionHeader from "@/components/common/SectionHeader";
@@ -368,17 +368,21 @@ export default function HomePage() {
 
           {tonightHighlights.length > 0 ? (
             <>
-              <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40">
+              <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 overflow-hidden">
                 {pagedHighlights.map((row, i) => {
                   const prev = pagedHighlights[i - 1];
                   const showFamilyDivider = !prev || prev.family !== row.family;
                   return (
-                    <li
-                      key={`${row.family}-${row.channel}-${row.time}-${i}`}
-                      className={`flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm ${
-                        showFamilyDivider && i > 0 ? "border-t-2 border-primary/70" : ""
-                      }`}
-                    >
+                    <Fragment key={`${row.family}-${row.channel}-${row.time}-${i}`}>
+                      {showFamilyDivider && i > 0 && (
+                        <li
+                          aria-hidden="true"
+                          className="h-[3px] bg-primary border-y border-primary/40 list-none"
+                        />
+                      )}
+                      <li
+                        className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
+                      >
                       <span
                         className={`hidden sm:inline-flex items-center font-heading font-bold text-[9px] uppercase tracking-widest w-20 shrink-0 ${
                           showFamilyDivider ? "text-primary/70" : "text-transparent"
@@ -417,7 +421,8 @@ export default function HomePage() {
                           </span>
                         )}
                       </div>
-                    </li>
+                      </li>
+                    </Fragment>
                   );
                 })}
               </ul>
