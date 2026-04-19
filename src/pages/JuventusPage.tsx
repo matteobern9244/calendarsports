@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import SectionHeader from "@/components/common/SectionHeader";
 import SeasonSelector from "@/components/common/SeasonSelector";
 import EventCard from "@/components/common/EventCard";
+import EventCountdown from "@/components/common/EventCountdown";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
@@ -179,7 +180,7 @@ export default function JuventusPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="relative z-[1] flex-shrink-0 text-right">
+                    <div className="relative z-[1] flex-shrink-0 text-right flex flex-col items-end gap-1">
                       {isFinished ? (
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-heading font-bold">{m.homeScore} - {m.awayScore}</span>
@@ -187,6 +188,9 @@ export default function JuventusPage() {
                         </div>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                      {!isFinished && m.date && (
+                        <EventCountdown startDate={m.date} />
                       )}
                     </div>
                   </motion.div>
