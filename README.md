@@ -75,16 +75,35 @@ Il palinsesto reale viene scraperato da `www.staseraintv.com` (pubblico).
 **Fragile per definizione**: se la fonte cambia struttura HTML, il parser
 si rompe e i programmi diventano vuoti (mai dati inventati).
 
-Copertura attuale (verificata 2026-04-19):
+Nella scheda "Stasera in TV" della Home ogni riga mostra:
 
-- **RAI**: Rai 1-5, Movie, Premium, Gulp, YoYo, Storia, Scuola, Sport +HD.
-- **Mediaset**: Canale 5, Italia 1/2, Rete 4, Iris, 20, La5, Cine34,
-  Boing, Cartoonito, Top Crime, Focus, Mediaset Extra.
-- **Sky Cinema**: Uno, Collection, Family, Action, Romance.
-- **Discovery & co.**: Real Time, DMax, Nove, Discovery Channel/Turbo,
-  Food Network, HGTV, Giallo, K2, Frisbee.
-- **Sky Sport**: NON coperto da staseraintv.com -> i canali sono elencati
-  ma con `programs=[]` e la UI dichiara "Palinsesto non disponibile".
+- orario di inizio e badge canale,
+- titolo del programma,
+- piccolo badge **genere** (Fiction, Film, Sport, Show, ecc.) **solo quando
+  la fonte lo espone** in chiaro (parentesi finale del titolo nei blocchi
+  scheda di staseraintv.com),
+- **durata** del programma calcolata da `start`/`end` nel formato
+  `45 min` o `1h 25 min` (mostrata sempre quando la durata e' valida).
+
+#### Copertura palinsesti per canale (audit verificato 2026-04-19)
+
+Tutti gli slug attivi sono stati validati con `curl` contro
+`staseraintv.com` e ritornano almeno 12 righe `HH:MM` per giorno:
+
+| Famiglia | Coperti | Non coperti |
+| --- | --- | --- |
+| **RAI** | Rai 1, 2, 3, 4, 5, Movie, Premium, Gulp, YoYo, Storia, Scuola, Sport +HD | — |
+| **Mediaset** | Canale 5, Italia 1, Italia 2, Rete 4, Iris, 20, La5, Cine34, Boing, Cartoonito, Top Crime, Focus, Mediaset Extra | — |
+| **Sky Cinema** | Uno, Collection, Family, Action, Romance | Due, Suspense, Drama, Comedy |
+| **Discovery** | Real Time, DMax, Nove, Discovery Channel, Discovery Turbo, Food Network, HGTV, Giallo, K2, Frisbee | — |
+| **Sport** | **Sportitalia** (canale 60 DTT, palinsesto sport reale) | Tutti i canali Sky Sport branded (Uno, Calcio, Tennis, F1, MotoGP, Arena, Football, Action, Golf, Max, 24) |
+
+I canali Sky Sport branded restano elencati nella whitelist con
+`programs=[]`: la UI dichiara onestamente "Palinsesto non disponibile". E'
+stato verificato che nessuna fonte pubblica HTML statica li espone in
+modo parsabile lato server (`staseraintv.com` ritorna 404 su tutti gli
+slug `sky_sport_*`; `guidatv.sky.it`/`programmi.sky.it` usano rendering
+client-side; `tvzap.kataweb.it` e' protetto da Cloudflare).
 
 ## Stack tecnico reale
 
