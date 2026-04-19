@@ -239,6 +239,14 @@ export default function HomePage() {
     ? familyLabelMap[familyFilter]
     : null;
 
+  // Paginazione interna alla scheda Stasera in TV
+  const totalTvPages = Math.max(1, Math.ceil(tonightHighlights.length / TV_PAGE_SIZE));
+  const safePage = Math.min(tvPage, totalTvPages - 1);
+  const pagedHighlights = useMemo(
+    () => tonightHighlights.slice(safePage * TV_PAGE_SIZE, safePage * TV_PAGE_SIZE + TV_PAGE_SIZE),
+    [tonightHighlights, safePage],
+  );
+
   return (
     <div className="container py-8 sm:py-12 space-y-10">
       {/* Stasera in TV — quadro reale multi-famiglia con filtri rapidi */}
