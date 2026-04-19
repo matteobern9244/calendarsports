@@ -63,10 +63,7 @@ function formatDuration(min: number): string {
 type FilterValue = "all" | StreamingFamilyId;
 
 export default function HomePage() {
-  const queryClient = useQueryClient();
-  const [syncing, setSyncing] = useState(false);
-  const [syncStep, setSyncStep] = useState<string>("");
-  const [syncProgress, setSyncProgress] = useState(0);
+  const { sync: handleSync, syncing, syncStep, syncProgress } = useSyncAll();
   const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
   const [tvPage, setTvPage] = useState(0);
   const TV_PAGE_SIZE = 8;
