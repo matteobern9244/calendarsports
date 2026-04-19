@@ -1,44 +1,50 @@
 
-## Diagnosi aggiornata (importante: cambia tutto rispetto alle conclusioni precedenti)
+Obiettivo: individuare quale regola GitHub sta ancora bloccando i push di Lovable su `main`.
 
-Verifica appena fatta direttamente sul sito pubblicato:
+Fatti verificati:
+- Nel repo, `README.md` e `AGENTS.md` descrivono `main` come branch sincronizzato da Lovable.
+- Tu hai confermato che su GitHub sono attivi sia una Ruleset sia una Branch protection rule classica.
+- Hai aggiunto il bypass solo nella Ruleset.
+- Hai ancora attivo `Do not allow bypassing the above settings` / opzione equivalente.
 
-1. `https://calendarsports.lovable.app` **monta React** correttamente (non è una pagina bianca da bundle vuoto: lo snapshot HTML mostra il componente `HomePage` renderizzato con il titolo "Prossimi Eventi" e lo spinner "Caricamento prossimi eventi…").
-2. Le richieste dal dominio di produzione **arrivano** alle edge functions e ricevono **200 OK** con payload corretti — i log in tempo reale lo confermano per tutte e 4 le funzioni (`sports-f1`, `sports-football`, `sports-tennis`, `sports-motogp`).
-3. Il browser (anche in incognito) resta bloccato su `isLoading = true`, quindi **una o più query non passano mai a `success` lato React Query** anche se la rete restituisce 200.
-4. "Publish → Up to date" = il commit attuale è già il bundle live, quindi non puoi pubblicare di nuovo manualmente.
+Diagnosi piu' probabile:
+1. La Branch protection rule classica su `main` sta ancora vincendo o si sta sommando alla Ruleset.
+2. Il flag `No bypass` sta annullando il bypass che hai dato all'app Lovable.
+3. Se esistono anche required checks / required workflows o una restrict-push separata nella regola classica, Lovable puo' restare bloccato anche se nella Ruleset hai creato un bypass.
 
-Conclusione: **non è un problema di CORS, secrets, GitHub o publish**. È un bug runtime nel bundle frontend prodotto in build di produzione che blocca la transizione `loading → success` di React Query. Le ipotesi più probabili (in ordine):
+Piano di verifica, in ordine:
+1. Apri GitHub e controlla se `main` matcha due protezioni contemporaneamente:
+   - `Settings -> Rules -> Rulesets`
+   - `Settings -> Branches -> Branch protection rules`
+   Se entrambe toccano `main`, considera questa la causa numero uno.
 
-- **A)** Errore JS lanciato dopo il fetch (es. `forwardRef` warning su `EventCard`/`Badge` che in build minificata diventa eccezione), che fa fallire silenziosamente la query → React Query la marca pending all'infinito.
-- **B)** Mismatch fra il bundle servito e il codice corrente: il CDN Lovable potrebbe servire un bundle precedente in cache pur dichiarando "Up to date" (raro ma possibile).
-- **C)** Errore in `useMemo` di `Index.tsx` quando uno dei dataset arriva (es. `formatTimeIT` o `formatDateIT` che esplode su uno dei payload), che blocca il render del primo successo e congela l'UI.
+2. Isola una sola fonte di verita':
+   - Opzione consigliata: tieni la Ruleset moderna come regola attiva per `main`.
+   - Disattiva o elimina temporaneamente la Branch protection rule classica su `main`, oppure rimuovi da lei ogni blocco che puo' intercettare i push.
 
-## Cosa serve fare in default mode (read+write+exec)
+3. Nella Ruleset di `main`, verifica tre punti distinti:
+   - Lovable e' nella bypass list degli actor ammessi.
+   - Il bypass copre non solo la pull request requirement, ma anche eventuali required status checks / required workflows, se presenti.
+   - Non c'e' un flag equivalente a `Do not allow bypassing` che renda inutile la bypass list.
 
-1. **Acquisire i log console+network reali del pubblicato** aprendolo con il browser tool (`browser--navigate_to_url https://calendarsports.lovable.app`, poi `browser--read_console_logs` e `browser--list_network_requests`). Senza questo è cieco — i log che ho ora sono solo della preview.
-2. **In base agli errori trovati**, applicare uno di questi fix mirati:
-   - se `forwardRef` warning → wrappare `EventCard` con `React.forwardRef` (causa #A)
-   - se `TypeError` in `formatDateIT`/`formatTimeIT` → guardia null nel reducer/`useMemo` (causa #C)
-   - se nessun errore JS ma le query restano pending → aggiungere logging temporaneo in `callEdgeFunction` e ridistribuire
-3. **Forzare un bust della cache CDN** facendo una micro-modifica al bundle (es. bump version in `package.json` + commit) per garantire che il CDN serva il nuovo build, poi richiedere all'utente un hard refresh.
-4. **Verificare end-to-end** sul pubblicato (non sulla preview) dopo il fix.
+4. Se invece vuoi tenere la Branch protection rule classica:
+   - Controlla che anche li' Lovable sia autorizzato.
+   - Controlla `Restrict who can push to matching branches`: se attivo, Lovable deve comparire esplicitamente tra gli actor autorizzati.
+   - Disattiva `Do not allow bypassing the above settings`, altrimenti il bypass rischia di non servire.
 
-## File potenzialmente toccati
+5. Controlla i blocchi piu' comuni che spesso restano nascosti:
+   - Required status checks / required workflows ancora obbligatori per i push diretti.
+   - Restrict who can push configurato solo per utenti/team ma non per GitHub App.
+   - Una seconda Ruleset piu' generale che matcha comunque `main`.
+   - Un branch pattern tipo `*` o `main*` che prende anche `main`.
 
-- `src/components/common/EventCard.tsx` (forwardRef se necessario)
-- `src/pages/Index.tsx` (guardia su `useMemo` se necessario)
-- `src/lib/dateUtils.ts` (guardia null se necessario)
-- `package.json` (bump versione per forzare cache bust se necessario)
+Configurazione finale attesa:
+- Una sola protezione effettiva per `main` oppure due protezioni perfettamente coerenti.
+- Lovable presente tra gli actor che possono bypassare / pushare.
+- Nessun `No bypass` che annulli quell'eccezione.
+- Se ci sono required checks, Lovable deve poterli bypassare oppure quei checks devono valere solo per le PR umane.
 
-Nessuna modifica a `main`, GitHub workflow, secrets, edge functions, `supabase/config.toml`. Nessuna modifica a stack o routing. Tutti gli interventi reversibili e isolati a un componente.
-
-## Cosa NON farò
-
-- Non cambierò CORS, allowlist, edge functions o segreti — sono già verificati funzionanti per il dominio di produzione.
-- Non chiederò di re-pubblicare manualmente — Lovable dice già "Up to date".
-- Non toccherò `main` né suggerirò push.
-
-## Cosa serve da te
-
-Niente. Tutti gli strumenti necessari (browser, deploy, edit) sono disponibili in default mode. Approva il piano e procedo subito con l'apertura del sito pubblicato in browser headless per leggere errori console/network reali, poi applico il fix mirato.
+Se vuoi, appena approvi il prossimo step in modalita' build, il piano operativo sara':
+- aggiornare `README.md` e `AGENTS.md` per correggere la parte oggi fuorviante su `Do not allow bypassing`;
+- aggiungere una checklist breve e precisa della configurazione GitHub corretta;
+- poi farti fare una micro-verifica finale con `git fetch` e `git log origin/main --oneline -5`.
