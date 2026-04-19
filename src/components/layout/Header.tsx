@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Sun, Moon, Trophy } from "lucide-react";
+import { Menu, X, Sun, Moon, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,11 +29,11 @@ export default function Header({ theme, toggleTheme }: HeaderProps) {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg gold-gradient">
-            <Trophy className="h-5 w-5 text-primary-foreground" />
+            <CalendarDays className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="font-heading text-lg font-bold tracking-wider uppercase hidden sm:inline">
             <span className="text-gold-gradient">Calendar</span>{" "}
-            <span className="text-foreground">Sports</span>
+            <span className="text-foreground">Events</span>
           </span>
         </Link>
 

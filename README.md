@@ -1,9 +1,13 @@
-# Calendar Sports
+# Calendar Events
 
-Applicazione web sportiva multi-sezione per consultare eventi imminenti,
-calendari e classifiche di Jannik Sinner, Juventus, Formula 1 e MotoGP.
+Applicazione web di eventi sportivi e streaming multi-sezione per
+consultare eventi imminenti, calendari e classifiche di Jannik Sinner,
+Juventus, Formula 1 e MotoGP, oltre a palinsesti TV serali e nuove uscite
+sui principali provider streaming.
 
-Versione repository corrente: `2.0.2`.
+Versione repository corrente: `2.0.0` (rebrand reset da "Calendar Sports"
+a "Calendar Events"). Il footer dell'app mostra la versione corrente
+leggendola da `src/lib/version.ts`.
 
 ## Origine del progetto
 
@@ -26,7 +30,9 @@ incoraggino push automatici o superficiali su `main`.
 
 ## Release baseline
 
-La baseline documentata del repository e' la release `2.0.2`.
+La baseline documentata del repository e' la release `2.0.0` (rebrand
+reset). Le release storiche `2.0.0`, `2.0.1`, `2.0.2` restano archiviate
+nel `changelog.md`.
 
 Questa release rappresenta il punto in cui sono stati allineati:
 
@@ -40,9 +46,9 @@ Questa release rappresenta il punto in cui sono stati allineati:
   Supabase auto-generato;
 - hook pre-commit `husky` + `lint-staged` per bloccare violazioni in locale.
 
-La release `2.0.2` descrive lo stato del repository e delle sue policy
-operative. Non implica, da sola, che una corrispondente versione live sia gia'
-stata pubblicata su Lovable.
+La release `2.0.0` (rebrand) descrive lo stato del repository e delle
+sue policy operative. Non implica, da sola, che una corrispondente
+versione live sia gia' stata pubblicata su Lovable.
 
 ## Cosa fa l'app
 

@@ -12,7 +12,7 @@ Lovable**.
 
 ## Contesto del progetto
 
-- Applicazione web sportiva sviluppata come SPA React.
+- Applicazione web di eventi sportivi e streaming sviluppata come SPA React.
 - Progetto nato inizialmente su **Lovable** e poi evoluto in GitHub e
   localmente.
 - Stack reale: React, Vite, TypeScript, Tailwind, shadcn/ui, Radix, React Query,
