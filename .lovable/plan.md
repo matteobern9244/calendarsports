@@ -1,45 +1,35 @@
 
+The build is failing on `sports-motogp/index.ts` lines 128 and 150 — the non-null assertions I supposedly added in an earlier turn aren't actually present (or were lost). Need to verify the current state of the file before planning the fix. Also the user reports no data loads in preview AND published app — this is almost certainly because the edge functions failed to deploy due to these TS errors, so the old version is running OR all 4 functions are broken.
 
-## Piano di implementazione — 5 richieste
+Let me check the actual file state first.
 
-### 1. Verifica badge DAZN/SKY (Juventus + Home)
-Testerò la edge function `sports-football` per verificare che i dati broadcaster vengano restituiti. Se funzionano, i badge sono già implementati sia nella pagina Juventus che nella Home.
+Plan:
 
-### 2. Champions League e Coppa Italia per Juventus
-Attualmente il calendario Juventus mostra solo partite di Serie A (Sky Sport). Per aggiungere Champions League e Coppa Italia:
-- **Edge function `sports-football`**: aggiungere nuove chiamate a Sky Sport per le competizioni UEFA Champions League e Coppa Italia (competition IDs diversi dal `21` della Serie A), unirle nel calendario e ordinare per data.
-- **Frontend**: mostrare un badge con il nome della competizione (Serie A / UCL / Coppa Italia) accanto a ogni partita.
-- **Home page**: il subtitle includerà la competizione corretta.
-- **Sincronizza**: già coperto (invalida tutte le query).
+## Diagnosi
 
-### 3. Foto piloti mancanti — F1 e MotoGP
-- **F1**: OpenF1 potrebbe non coprire tutti i piloti (riserve, stagioni passate). Aggiungere una mappa statica di fallback con headshot URLs per i piloti 2025/2026 dal CDN ufficiale F1 (come fatto per MotoGP). Il frontend mostra già la foto se `photoUrl` è presente; basta garantire che il backend la fornisca sempre.
-- **MotoGP**: La mappa `MOTOGP_RIDER_PHOTOS` potrebbe non matchare tutti i nomi di Sky Sport. Migliorare la logica di matching e aggiungere eventuali piloti mancanti. Mostrare un avatar placeholder quando non c'è foto.
-- **Frontend**: usare un fallback icon/avatar quando `photoUrl` è null, così non c'è mai uno spazio vuoto.
+Il build delle Edge Functions sta fallendo con 2 errori TypeScript in `supabase/functions/sports-motogp/index.ts` (righe 128 e 150): `cells[0]` è `possibly 'undefined'`. Finché il build non passa, **nessuna delle 4 edge functions viene ridistribuita** — di conseguenza preview e produzione non caricano dati nuovi (e se la versione precedente non è mai stata deployata con successo dopo le ultime modifiche al CORS/rate-limit, le chiamate falliscono del tutto).
 
-### 4. Logo scuderia in Classifica Costruttori F1
-- **Edge function `sports-f1`**: nel case `constructor-standings`, aggiungere una mappa statica `constructorId → logoUrl` per i team F1 2025 (Red Bull, Ferrari, McLaren, Mercedes, etc.) usando le immagini dal CDN ufficiale o Wikipedia commons.
-- **Frontend `Formula1Page.tsx`**: nella tabella Costruttori, aggiungere un `<img>` prima del nome scuderia (come già fatto per le squadre in Classifica Serie A).
+Questo è un problema di **codice**, non di configurazione/secrets: tutti i secrets richiesti sono già presenti (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, ecc.) e non serve nulla da parte tua su GitHub o nelle impostazioni.
 
-### 5. Logo team in Classifica Costruttori MotoGP
-- **Edge function `sports-motogp`**: nel case `constructor-standings`, aggiungere una mappa statica `teamName → logoUrl` per i team MotoGP 2026 (Ducati, Aprilia, KTM, Yamaha, Honda).
-- **Frontend `MotoGPPage.tsx`**: stessa logica — aggiungere `<img>` nella tabella costruttori.
+## Fix proposto
 
----
+Verifico prima lo stato reale di `sports-motogp/index.ts` (righe 120-160) per capire perché le non-null assertions annunciate in precedenza non risultano applicate. Poi:
 
-### Dettagli tecnici
+1. **Correzione TS in `supabase/functions/sports-motogp/index.ts`** — sostituisco l'accesso `cells[0]` / `cells[N]` con un pattern sicuro:
+   ```ts
+   const c0 = cells[0]; const c1 = cells[1]; // ecc.
+   if (!c0 || !c1 || ...) continue;
+   const pos = parseInt(c0.replace(...).trim());
+   ```
+   Questo soddisfa il type-checker Deno senza usare `!` (più robusto se il parsing HTML cambia).
 
-**File modificati:**
-- `supabase/functions/sports-football/index.ts` — nuovi competition IDs per UCL/Coppa Italia, merge calendario
-- `supabase/functions/sports-f1/index.ts` — mappa fallback foto piloti + mappa loghi costruttori
-- `supabase/functions/sports-motogp/index.ts` — mappa loghi team costruttori
-- `src/pages/Formula1Page.tsx` — avatar fallback piloti + logo costruttori in tabella
-- `src/pages/MotoGPPage.tsx` — avatar fallback piloti + logo costruttori in tabella
-- `src/pages/JuventusPage.tsx` — badge competizione (Serie A/UCL/Coppa Italia)
-- `src/pages/Index.tsx` — subtitle con competizione corretta
+2. **Deploy esplicito** delle 4 edge functions con `supabase--deploy_edge_functions` per garantire che la nuova versione vada online subito.
 
-**Competition IDs Sky Sport (da verificare):**
-- Serie A: `21`
-- Champions League: da trovare tramite fetch
-- Coppa Italia: da trovare tramite fetch
+3. **Verifica end-to-end** con `supabase--curl_edge_functions` su un endpoint per ciascuna funzione (status 200 + `success: true`).
 
+4. **Report finale** con esito di ciascun endpoint e conferma che preview/produzione tornano a caricare dati.
+
+## File toccati
+- `supabase/functions/sports-motogp/index.ts` (solo le 2 zone di parsing classifiche)
+
+Nessuna modifica a `main`, a workflow Git, a secrets o a configurazione Lovable. Nessun rischio per il sync GitHub↔Lovable.
