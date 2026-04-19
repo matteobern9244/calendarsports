@@ -55,7 +55,10 @@ Assunzione operativa del repository:
 Regole per agenti AI che operano fuori da Lovable (es. Codex, Copilot in IDE):
 
 - Non pushare mai direttamente su `main`.
-- Lavorare su `develop` o su feature branch e proporre PR verso `main`.
+- Lavorare su `develop` o su feature branch derivati da `develop` e proporre
+  PR verso `develop`.
+- L'arrivo su `main` deve avvenire solo con una PR separata `develop` ->
+  `main`.
 - Se devi proporre merge, dichiara sempre l'impatto potenziale sul sync
   Lovable e sulla versione live.
 - Non cambiare il branch di default o la struttura dei remote senza richiesta
@@ -70,42 +73,33 @@ Regole per Lovable (questo agente, in-editor):
   GitHub di Lovable (`lovable-dev[bot]` o equivalente) e bloccare push diretti
   da utenti umani.
 
-Configurazione consigliata su GitHub (da applicare manualmente, non via
-codice).
+Configurazione GitHub finale richiesta.
 
-**IMPORTANTE**: usa **una sola** fonte di protezione per `main`. Avere sia
-una Ruleset moderna sia una Branch protection rule classica attive insieme
-si somma e blocca anche l'app Lovable, perche' la regola piu' restrittiva
-vince. La configurazione consigliata e' la Ruleset moderna.
+**IMPORTANTE**: usa **una sola** fonte di protezione per `main`.
 
-### Opzione A consigliata: Ruleset moderna (Settings -> Rules -> Rulesets)
+- Tenere attiva solo la Ruleset moderna repository-level che matcha
+  esattamente `refs/heads/main`.
+- Tenere assente o disattivata la Branch protection rule classica su `main`.
+- Consentire bypass solo all'app GitHub di Lovable (`lovable-dev`) con
+  `bypass_mode = always`.
+- Attivare nella Ruleset solo queste branch rules:
+  - `deletion`
+  - `non_fast_forward`
+  - `pull_request` con almeno 1 approval e `dismiss_stale_reviews_on_push`
+  - `required_status_checks` strict con i job stabili del workflow PR verso
+    `main`.
+- Non attivare `required_linear_history`, `required_signatures`,
+  `required_deployments`, `code_scanning` o flag equivalenti a
+  `Do not allow bypassing` / `Enforce for admins`.
 
-- Target: branch `main` (esatto, non pattern `*`).
-- Require a pull request before merging.
-- Require status checks to pass (CI lint/test/build).
-- Bypass list: aggiungere l'app GitHub di Lovable (`lovable-dev`) come
-  actor con bypass mode = `Always`. Il bypass deve coprire sia la PR
-  requirement sia gli status checks richiesti.
-- **NON** attivare opzioni equivalenti a `Do not allow bypassing the above
-  settings`: annullano la bypass list e bloccano anche Lovable.
-- Verificare che non esista una seconda Ruleset con pattern `*` o `main*`
-  che intercetta comunque `main` senza bypass.
+Con questa configurazione:
 
-### Opzione B alternativa: Branch protection rule classica
-
-- Settings -> Branches -> Branch protection rule per `main`.
-- Require a pull request before merging (per i merge da `develop`).
-- Restrict who can push to matching branches -> consentire l'app GitHub
-  di Lovable (`lovable-dev`). Le restrizioni di push devono includere
-  esplicitamente le GitHub Apps, non solo utenti/team.
-- Lasciare disattivato `Do not allow bypassing the above settings`,
-  altrimenti Lovable viene bloccata anche se autorizzata.
-
-Se entrambe le configurazioni sono attive contemporaneamente, disattivare
-la classica e tenere solo la Ruleset (o viceversa). Non lasciarle insieme.
-
-Cosi' `main` resta sincronizzato 1:1 con Lovable e gli umani contribuiscono
-solo via PR da `develop`.
+- Lovable continua a poter pushare direttamente su `main` per il sync.
+- Gli umani lavorano su feature branch -> `develop`.
+- L'arrivo umano su `main` avviene solo con PR `develop` -> `main`.
+- Il workflow `guard-main-source.yml` blocca le PR verso `main` che non
+  provengono da `develop`, ma non interferisce con i push automatici di
+  Lovable su `main`.
 
 ### Sintomo tipico di mis-configurazione
 
@@ -113,11 +107,10 @@ Lovable mostra: `Push was rejected by branch protection rules. Please
 disable required status checks or allow the GitHub app to bypass branch
 protections.` In questo caso:
 
-1. Verifica se `main` matcha sia Ruleset sia Branch protection classica.
-2. Verifica che il bypass per `lovable-dev` copra anche i required
-   status checks, non solo la PR requirement.
-3. Verifica che non sia attivo nessun flag `No bypass` / `Do not allow
-   bypassing` su nessuna delle due regole.
+1. Branch protection classica ancora attiva oltre alla Ruleset su `main`.
+2. Bypass per `lovable-dev` non in mode `always` o non esteso anche ai
+  required status checks.
+3. Flag `Do not allow bypassing` / `Enforce for admins` attivo.
 
 ## Mappa minima del codice da leggere prima di intervenire
 

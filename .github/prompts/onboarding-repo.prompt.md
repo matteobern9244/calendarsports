@@ -21,6 +21,8 @@ Vincoli:
 - non assumere che i dati esterni siano stabili;
 - tratta `main` come branch sensibile per il possibile sync con
   Lovable;
+- esplicita che il flusso umano corretto e' feature branch -> `develop` ->
+  `main`, senza push diretti su `main`;
 - evidenzia dove il progetto usa scraping, fallback statici o dataset
   hardcoded.
 

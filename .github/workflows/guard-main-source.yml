@@ -20,8 +20,11 @@ jobs:
     steps:
       - name: Enforce develop as source branch for main
         run: |
-          if [ "${{ github.head_ref }}" != "develop" ]; then
-            echo "Only pull requests from develop to main are allowed."
-            echo "Current source branch: ${{ github.head_ref }}"
-            exit 1
+          if [ "${{ github.head_ref }}" = "develop" ]; then
+            echo "Source branch is develop. Guard passed."
+            exit 0
           fi
+
+          echo "::error title=Invalid source branch::Only pull requests from develop to main are allowed."
+          echo "Current source branch: ${{ github.head_ref }}"
+          exit 1
