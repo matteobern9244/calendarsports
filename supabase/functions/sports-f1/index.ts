@@ -61,6 +61,14 @@ Deno.serve(async (req) => {
     const action = url.searchParams.get('action');
     const season = url.searchParams.get('season') || new Date().getFullYear().toString();
 
+    // Validate season strictly to prevent URL path injection on upstream APIs
+    if (!/^\d{4}$/.test(season)) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid season parameter' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     let data: any;
 
     switch (action) {
