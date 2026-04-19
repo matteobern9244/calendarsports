@@ -35,6 +35,7 @@ export function SparkleLoop({
   intervalMs = 4500,
   radius = 18,
   size = 4,
+  glow = false,
 }: SparkleLoopProps) {
   const reduce = useReducedMotion();
   const [tick, setTick] = useState(0);
