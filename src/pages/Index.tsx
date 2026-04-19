@@ -334,12 +334,6 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            <Button asChild size="sm" className="shrink-0 self-start sm:self-auto gap-2">
-              <Link to="/streaming">
-                Apri Streaming
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
           </div>
 
           {/* Filtri rapidi: chip scrollabili su mobile, wrap su desktop */}
