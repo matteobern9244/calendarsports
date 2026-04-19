@@ -11,6 +11,64 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
+> **Nota**: tutte le voci sotto sono UI/UX only sopra la baseline `2.1.0`.
+> Nessun cambio di stack, fonti dati, schema payload, edge function, branch
+> policy o policy Lovable. La versione applicativa esposta dal footer e da
+> `src/lib/version.ts` resta `2.1.0`.
+
+### Added
+
+- **Countdown live** al prossimo evento sportivo dentro ogni `EventCard`:
+  nuovo componente `src/components/common/EventCountdown.tsx` (tick `1s` via
+  `setInterval`) che mostra giorni / ore / minuti / secondi residui rispetto
+  a `startDate` (ISO). Per eventi entro una finestra di ±3 ore dall'inizio
+  mostra un badge "Inizio imminente" con pallino rosso pulsante. Integrato in
+  `EventCard` tramite la nuova prop `startDate?: string` e applicato a tutte
+  le pagine: Home (`Index.tsx`), Sinner, Juventus (card custom partite, con
+  `EventCountdown` impostato direttamente nella colonna risultato), F1 e
+  MotoGP. Quando lo `status` e' `completato` il countdown non viene
+  renderizzato.
+- **Highlight "Prossimo" assoluto in Home**: la prima card di "Prossimi
+  Eventi" (lista gia' ordinata cronologicamente in `Index.tsx`) riceve
+  `highlight={true}`, che attiva bordo gold pieno + ring + badge gradient
+  "Prossimo" sopra la card. Le altre card mantengono il bordo gold tenue.
+- **Restyling premium delle card eventi** (`EventCard.tsx`): bordo
+  `border-[hsl(var(--gold))]/20` con hover `/55`, top accent line gold a
+  gradiente, glow radiale gold soft on-hover, hover lift `y: -4` con shadow
+  `-18px hsl(var(--gold)/0.45)`, badge "Prossimo" con gradiente
+  `gold-dark -> gold -> gold-light`. Stesso trattamento applicato alle card
+  custom partite di `JuventusPage.tsx` per coerenza visiva (hover lift `y:
+  -3`, shadow gold, top line, glow radiale, badge gradient).
+- **Glow pulsante gold** sull'icona della voce di navigazione attiva
+  (`Header.tsx`), sincronizzato con il loop di scintille (`SparkleLoop`).
+
+### Fixed
+
+- **Regressione di leggibilita' nelle card** (`EventCard.tsx`): rimosso
+  `overflow-hidden` dal container (clippava badge "Prossimo" sporgente,
+  countdown e contenuto wrappato) e aggiunto `relative z-[1]` ai contenitori
+  figli (header, titolo, sottotitolo, riga date/time, children) in modo che
+  il testo resti sempre sopra il glow radiale di hover. La riga date/time ha
+  `flex-wrap` + `whitespace-nowrap` sui singoli token per evitare break
+  innaturali. Verificato su Home, Sinner, F1, MotoGP, desktop 1366x768 e
+  mobile 375x812.
+- **Regressione di leggibilita' nelle card partite Juventus**
+  (`JuventusPage.tsx`): rimosso `overflow-hidden` dalla card custom, aggiunto
+  `relative z-[1]` ai blocchi competizione/data/broadcaster e al blocco
+  risultato/countdown, glow radiale spostato a `inset-0`. Layout broadcaster
+  passato a `flex-wrap` per evitare clipping di "DAZN | SKY".
+
+### Verified
+
+- Verifica anti-regressione manuale via browser tool su tutte le pagine
+  sport (Home, Sinner, Juventus, F1, MotoGP) sia in viewport desktop
+  (`1366x768`) sia mobile (`375x812`): countdown vivi, badge "Prossimo"
+  visibile sulla prima card della Home e sulla prima card eligible delle
+  pagine sport, nessun overflow o testo coperto da effetti di sfondo, card
+  finite (Juventus `FullTime`, Sinner `completato`) non mostrano countdown
+  come da logica.
+
+
 ## [2.1.0] - 2026-04-19 (rebrand "Calendar Events")
 
 > **Nota**: release minor che marca il cambio identita' di prodotto da
