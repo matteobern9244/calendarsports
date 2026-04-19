@@ -22,6 +22,9 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 - Secondo tentativo di push da Lovable per validare bypass su Ruleset
   dopo rimozione del flag "No bypass" e disattivazione protezione
   classica.
+- Terzo tentativo di push da Lovable dopo disattivazione di
+  "Require status checks to pass" sulla Ruleset di `main`, per isolare
+  se il blocco residuo dipendeva dai required checks.
 
 ## [2.0.2] - 2026-04-19
 
