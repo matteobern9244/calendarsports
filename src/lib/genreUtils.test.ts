@@ -54,7 +54,7 @@ describe("inferGenre", () => {
     it("rileva Talk Show", () => {
       expect(inferGenre("rai", "Rai 3", "Cartabianca")).toBe("Talk Show");
       expect(inferGenre("mediaset", "Canale 5", "Striscia la Notizia")).toBe("Talk Show");
-      expect(inferGenre("la7", "La7", "DiMartedi")).toBe("Talk Show");
+      expect(inferGenre("mediaset", "Rete 4", "DiMartedi")).toBe("Talk Show");
     });
 
     it("rileva Film generico", () => {
