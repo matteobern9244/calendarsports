@@ -85,10 +85,6 @@ Configurazione GitHub finale richiesta.
 - Attivare nella Ruleset solo queste branch rules:
   - `deletion`
   - `non_fast_forward`
-  - `pull_request` senza approval obbligatoria e con
-    `dismiss_stale_reviews_on_push`
-  - `required_status_checks` strict con i job stabili del workflow PR verso
-    `main`.
 - Non attivare `required_linear_history`, `required_signatures`,
   `required_deployments`, `code_scanning` o flag equivalenti a
   `Do not allow bypassing` / `Enforce for admins`.
@@ -99,9 +95,9 @@ Con questa configurazione:
 - Gli umani lavorano su feature branch -> `develop`.
 - L'arrivo umano su `main` avviene solo con PR `develop` -> `main`.
 - Le PR verso `develop` e `main` devono avere `auto-merge` attivo con metodo
-  `squash` appena vengono aperte o aggiornate.
-- Se i check richiesti sono verdi, GitHub deve fondere automaticamente la PR
-  non appena risultano soddisfatte le altre condizioni di merge applicabili.
+  `squash` dopo esito positivo dei workflow PR richiesti dal flusso umano.
+- Il vincolo umano su `main` resta di processo e di workflow, non di branch
+  rule incompatibile con il sync automatico di Lovable.
 - Il workflow `guard-main-source.yml` blocca le PR verso `main` che non
   provengono da `develop`, ma non interferisce con i push automatici di
   Lovable su `main`.
@@ -113,8 +109,8 @@ disable required status checks or allow the GitHub app to bypass branch
 protections.` In questo caso:
 
 1. Branch protection classica ancora attiva oltre alla Ruleset su `main`.
-2. Bypass per `lovable-dev` non in mode `always` o non esteso anche ai
-  required status checks.
+2. Nella Ruleset di `main` sono rimasti `pull_request` o
+  `required_status_checks`, incompatibili con il push diretto di Lovable.
 3. Flag `Do not allow bypassing` / `Enforce for admins` attivo.
 
 ## Mappa minima del codice da leggere prima di intervenire
