@@ -33,7 +33,11 @@ interface UpcomingEvent {
 interface TvHighlight {
   family: StreamingFamilyId;
   channel: string;
+  channelNumber?: number;
   time: string;
+  startMs: number;
+  hourRome: number;
+  minuteRome: number;
   title: string;
 }
 
@@ -67,21 +71,29 @@ export default function HomePage() {
   // Aggrega tutti i programmi reali da tutte le famiglie con etichetta family
   const allHighlights = useMemo<TvHighlight[]>(() => {
     const rows: TvHighlight[] = [];
+    const timeFmt = new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
     tvQueries.forEach((q, idx) => {
       const fam = STREAMING_FAMILIES[idx].id;
       const data = q.data as TvFamilyPayload | undefined;
       if (!data?.programsAvailable) return;
       for (const ch of data.channels ?? []) {
         for (const p of ch.programs) {
+          const d = new Date(p.start);
+          const hhmm = timeFmt.format(d);
+          const [hStr, mStr] = hhmm.split(":");
           rows.push({
             family: fam,
             channel: ch.name,
-            time: new Intl.DateTimeFormat("it-IT", {
-              timeZone: "Europe/Rome",
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false,
-            }).format(new Date(p.start)),
+            channelNumber: ch.number,
+            time: hhmm,
+            startMs: d.getTime(),
+            hourRome: parseInt(hStr, 10),
+            minuteRome: parseInt(mStr, 10),
             title: p.title,
           });
         }
@@ -90,14 +102,53 @@ export default function HomePage() {
     return rows;
   }, [tvQueries]);
 
+  // "Prima fascia serale" italiana: ~20:30 - 22:30 Europe/Rome.
+  // Selezioniamo per ogni canale il primo programma in quella finestra,
+  // poi ordiniamo per famiglia (RAI -> Mediaset -> Sky Sport -> Sky Cinema
+  // -> Discovery) e per numero canale.
+  const familyOrder = useMemo(() => {
+    const m: Record<StreamingFamilyId, number> = {} as Record<StreamingFamilyId, number>;
+    STREAMING_FAMILIES.forEach((f, i) => { m[f.id] = i; });
+    return m;
+  }, []);
+
   const tonightHighlights = useMemo(() => {
-    const filtered = familyFilter === "all"
+    const inPrimeWindow = (h: TvHighlight) => {
+      const minutes = h.hourRome * 60 + h.minuteRome;
+      return minutes >= 20 * 60 + 15 && minutes <= 22 * 60 + 30;
+    };
+    const pool = familyFilter === "all"
       ? allHighlights
       : allHighlights.filter((r) => r.family === familyFilter);
-    return [...filtered]
-      .sort((a, b) => a.time.localeCompare(b.time))
-      .slice(0, 8);
-  }, [allHighlights, familyFilter]);
+
+    // Per ogni canale: prendi il primo programma in prima serata
+    // (fallback al primo dopo le 19 se nessuno cade nella finestra stretta)
+    const byChannel = new Map<string, TvHighlight>();
+    for (const h of pool) {
+      const key = `${h.family}|${h.channel}`;
+      const existing = byChannel.get(key);
+      const inWindow = inPrimeWindow(h);
+      if (!existing) {
+        byChannel.set(key, h);
+        continue;
+      }
+      const existingInWindow = inPrimeWindow(existing);
+      if (inWindow && !existingInWindow) byChannel.set(key, h);
+      else if (inWindow === existingInWindow && h.startMs < existing.startMs) {
+        byChannel.set(key, h);
+      }
+    }
+
+    return Array.from(byChannel.values())
+      .filter(inPrimeWindow)
+      .sort((a, b) => {
+        const fa = familyOrder[a.family] - familyOrder[b.family];
+        if (fa !== 0) return fa;
+        const cn = (a.channelNumber ?? 9999) - (b.channelNumber ?? 9999);
+        if (cn !== 0) return cn;
+        return a.startMs - b.startMs;
+      });
+  }, [allHighlights, familyFilter, familyOrder]);
 
   const familyLabelMap = useMemo(() => {
     const m: Record<StreamingFamilyId, string> = {} as Record<StreamingFamilyId, string>;
@@ -201,7 +252,7 @@ export default function HomePage() {
                   <span className="text-gold-gradient">Stasera in TV</span>
                 </h2>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Prime time da Sky Cinema, RAI, Mediaset, Discovery — fonte staseraintv.com
+                  Prima serata (20:30–22:30) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
                 </p>
               </div>
             </div>
@@ -244,26 +295,35 @@ export default function HomePage() {
           </div>
 
           {tonightHighlights.length > 0 ? (
-            <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40">
-              {tonightHighlights.map((row, i) => (
-                <li
-                  key={`${row.channel}-${row.time}-${i}`}
-                  className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
-                >
-                  <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm">
-                    {row.time}
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 max-w-[110px] sm:max-w-none truncate"
+            <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 max-h-[480px] overflow-y-auto">
+              {tonightHighlights.map((row, i) => {
+                const prev = tonightHighlights[i - 1];
+                const showFamilyDivider = !prev || prev.family !== row.family;
+                return (
+                  <li
+                    key={`${row.family}-${row.channel}-${row.time}-${i}`}
+                    className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
                   >
-                    {row.channel}
-                  </Badge>
-                  <span className="font-medium truncate min-w-0 text-xs sm:text-sm">
-                    {row.title}
-                  </span>
-                </li>
-              ))}
+                    {showFamilyDivider && (
+                      <span className="hidden sm:inline-flex font-heading text-[9px] uppercase tracking-widest text-primary/70 w-20 shrink-0">
+                        {familyLabelMap[row.family]}
+                      </span>
+                    )}
+                    <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm">
+                      {row.time}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 max-w-[110px] sm:max-w-none truncate"
+                    >
+                      {row.channel}
+                    </Badge>
+                    <span className="font-medium truncate min-w-0 text-xs sm:text-sm">
+                      {row.title}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <div className="rounded-md border border-dashed border-border/60 bg-card/30 px-4 py-6 text-center text-sm text-muted-foreground">
