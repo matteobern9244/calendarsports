@@ -1,0 +1,26 @@
+{
+  "name": "Calendar Events",
+  "short_name": "Calendar Events",
+  "description": "Eventi sportivi (Sinner, Juventus, F1, MotoGP) e palinsesti TV / nuove uscite streaming in un'unica app.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0B1A33",
+  "background_color": "#0B1A33",
+  "lang": "it",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
