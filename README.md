@@ -489,3 +489,5 @@ progetti exportati.
 - [supabase/functions/sports-football/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-football/index.ts)
 - [supabase/functions/sports-tennis/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-tennis/index.ts)
 - [supabase/functions/sports-motogp/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-motogp/index.ts)
+- [supabase/functions/streaming-tv/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/streaming-tv/index.ts) (FRAGILE: scraper non ancora integrati, lista canali statica)
+- [supabase/functions/streaming-releases/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/streaming-releases/index.ts) (richiede secret `TMDB_API_KEY`)
