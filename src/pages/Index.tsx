@@ -18,6 +18,7 @@ import {
 } from "@/hooks/useStreamingData";
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
 import { useSyncAll } from "@/hooks/useSyncAll";
+import { inferGenre } from "@/lib/genreUtils";
 
 
 interface UpcomingEvent {
