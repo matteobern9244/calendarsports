@@ -438,12 +438,119 @@ async function fetchStasera(slug: string, date: string): Promise<Program[]> {
   }
 }
 
+// ===== superguidatv.it parser =====
+// Pattern verificato 2026-04-19 sulle pagine
+// `https://www.superguidatv.it/programmazione-canale/oggi/<path>/`.
+// Le righe HH:MM precedono blocchi che contengono il titolo seguito da
+// `Categoria (durata')` (es. "Sport (40')", "Calcio (125')").
+// Solo "oggi" e' supportato (la fonte non espone domani/ieri in URL stabile).
+function parseSuperguidatvHtml(html: string, date: string): Program[] {
+  // Cattura HH:MM seguito (entro 600 char) da "Categoria (NN')".
+  const re = /(\d{1,2}):(\d{2})([\s\S]{1,600}?)([A-Za-zÀ-ÿ' ]{3,40})\s*\((\d{1,3})['']\)/g;
+  const programs: Program[] = [];
+  const seen = new Set<string>();
+  let m: RegExpExecArray | null;
+  let prevStartMs = -1;
+  let dayShift = 0;
+  while ((m = re.exec(html)) !== null) {
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (hh > 27 || mm > 59) continue;
+    const between = m[3];
+    const categoryRaw = m[4].trim();
+    const durationMin = parseInt(m[5], 10);
+    if (durationMin <= 0 || durationMin > 600) continue;
+    const cleaned = decodeEntities(between.replace(/<[^>]+>/g, " "))
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!cleaned) continue;
+    const segments = cleaned.split(/\s\|\s|\s{2,}/).map((s) => s.trim()).filter(Boolean);
+    let title = segments[segments.length - 1] || cleaned;
+    title = title.replace(/\s*\(St\.\s*\d{4}.*?\)\s*$/i, "").trim();
+    if (!title || title.length < 2) continue;
+    if (/^(in\s*onda|ultim['’]ora|prossim[ao])$/i.test(title)) continue;
+
+    const baseDate = new Date(`${date}T00:00:00Z`);
+    if (dayShift > 0) baseDate.setUTCDate(baseDate.getUTCDate() + dayShift);
+    let dateForRow = baseDate.toISOString().slice(0, 10);
+    let startIso = buildRomeIso(dateForRow, hh, mm);
+    let startMs = new Date(startIso).getTime();
+    if (prevStartMs > 0 && startMs < prevStartMs - 30 * 60 * 1000) {
+      dayShift += 1;
+      const shifted = new Date(`${date}T00:00:00Z`);
+      shifted.setUTCDate(shifted.getUTCDate() + dayShift);
+      dateForRow = shifted.toISOString().slice(0, 10);
+      startIso = buildRomeIso(dateForRow, hh, mm);
+      startMs = new Date(startIso).getTime();
+    }
+    prevStartMs = startMs;
+
+    const genre = categoryRaw
+      .toLowerCase()
+      .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+
+    const endIso = new Date(startMs + durationMin * 60 * 1000).toISOString();
+    const key = `${startIso}|${title.slice(0, 50)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    programs.push({ start: startIso, end: endIso, title, genre });
+  }
+  programs.sort((a, b) => a.start.localeCompare(b.start));
+  // Merge ripetizioni adiacenti dello stesso titolo (la fonte spesso ripete).
+  const dedup: Program[] = [];
+  for (const p of programs) {
+    const prev = dedup[dedup.length - 1];
+    if (prev && prev.title === p.title &&
+        Math.abs(new Date(p.start).getTime() - new Date(prev.end).getTime()) < 5 * 60 * 1000) {
+      prev.end = p.end;
+      continue;
+    }
+    dedup.push(p);
+  }
+  return dedup;
+}
+
+async function fetchSuperguidatv(path: string, date: string): Promise<Program[]> {
+  const cacheKey = `sg:${path}:${date}`;
+  const cached = fetchCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < TTL_MS) return cached.programs;
+
+  if (date !== todayRomeISO()) {
+    fetchCache.set(cacheKey, { at: Date.now(), programs: [] });
+    return [];
+  }
+  const url = `https://www.superguidatv.it/programmazione-canale/oggi/${path}/`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "it-IT,it;q=0.9",
+      },
+    });
+    if (!res.ok) {
+      console.warn("[streaming-tv] superguidatv non-OK", res.status, path);
+      fetchCache.set(cacheKey, { at: Date.now(), programs: [] });
+      return [];
+    }
+    const html = await res.text();
+    const programs = parseSuperguidatvHtml(html, date);
+    fetchCache.set(cacheKey, { at: Date.now(), programs });
+    return programs;
+  } catch (err) {
+    console.warn("[streaming-tv] superguidatv fetch error", path, err);
+    return [];
+  }
+}
+
 async function fetchProgramsForChannel(
   channel: Channel,
   date: string,
 ): Promise<Program[]> {
-  if (!channel.staseraSlug) return [];
-  return await fetchStasera(channel.staseraSlug, date);
+  if (channel.staseraSlug) return await fetchStasera(channel.staseraSlug, date);
+  if (channel.superguidatvPath) return await fetchSuperguidatv(channel.superguidatvPath, date);
+  return [];
 }
 
 // Limita la concorrenza per non hammerare staseraintv.com.
