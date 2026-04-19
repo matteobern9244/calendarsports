@@ -134,4 +134,34 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Premium gold action button — coerente col brand Calendar Events */
+  .btn-gold {
+    background: linear-gradient(135deg, hsl(var(--gold-dark)), hsl(var(--gold)) 50%, hsl(var(--gold-light)));
+    color: hsl(var(--primary-foreground));
+    border: 1px solid hsl(var(--gold-dark) / 0.6);
+    box-shadow:
+      0 1px 0 hsl(var(--gold-light) / 0.5) inset,
+      0 8px 24px -8px hsl(var(--gold) / 0.55),
+      0 2px 6px -2px hsl(var(--navy-dark) / 0.4);
+    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+  .btn-gold:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+    box-shadow:
+      0 1px 0 hsl(var(--gold-light) / 0.6) inset,
+      0 12px 28px -8px hsl(var(--gold) / 0.7),
+      0 4px 10px -2px hsl(var(--navy-dark) / 0.45);
+  }
+  .btn-gold:active:not(:disabled) {
+    transform: translateY(0);
+    filter: brightness(0.97);
+  }
+  .btn-gold:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
 }
+
