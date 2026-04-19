@@ -1,79 +1,67 @@
 
+## Piano: fix palinsesti mancanti + verifica copertura canali + badge genere robusto + durata
 
-User wants to add to the previous staseraintv.com plan:
-1. Quick channel/family filters in the Home "Stasera in TV" banner
-2. Full responsive behavior
-3. README + changelog updates (already in plan, reconfirm)
+Estende le richieste già aperte: badge genere su tutte le righe, durata `1h 25 min`, e ora **anche fix dei palinsesti vuoti** (Sky Sport in primis) con verifica reale di TUTTI i canali esposti nella scheda "Stasera in TV".
 
-Keep the plan concise and additive.
+### 1. Audit reale di tutti i palinsesti
 
-## Piano: estensione "Stasera in TV" Home + responsive + docs
+Prima di toccare codice, eseguo un audit live:
+- Per ogni canale in `FAMILIES` (`supabase/functions/streaming-tv/index.ts`) con `staseraSlug` definito → curl a `https://www.staseraintv.com/programmi_stasera_<slug>.html` e verifica che il parser estragga ≥3 programmi nella fascia 19–24.
+- Per i canali Sky Sport (oggi senza `staseraSlug` → `programs=[]`) cerco fonte alternativa pubblica:
+  - Tentativo 1: `staseraintv.com` con slug alternativi (`skysport_uno`, `sky-sport-uno`, `sport_sky`, ecc.) tramite probe HTTP.
+  - Tentativo 2: pagina indice `https://www.staseraintv.com/canali_sportivi.html` (se esiste) per scoprire gli slug reali.
+  - Tentativo 3: fallback su `programmi-tv.cloud` o `tvzap.kataweb.it` (entrambi pubblici, scraping dichiarato fragile in README).
+- Documento il risultato dell'audit nel changelog.
 
-Estende il piano già approvato (switch a `staseraintv.com` per scraping completo di tutte le famiglie). Aggiunge filtri rapidi user-friendly nella home e responsive verificato.
+**Esito atteso e onesto**: per i canali dove nessuna fonte espone il palinsesto reale, **NON inventiamo dati**. La UI mostrerà "Palinsesto non disponibile" per quel canale specifico, e il filtro "Sky Sport" mostrerà solo i canali effettivamente coperti (o messaggio empty-state esplicito se nessuno è coperto). Questo rispetta `mem://constraints/data-policy`.
 
-### 1. Filtri rapidi nella card "Stasera in TV" (Home)
+### 2. Fix edge function `streaming-tv`
+
+In `supabase/functions/streaming-tv/index.ts`:
+- Aggiungo gli slug Sky Sport scoperti durante l'audit (solo quelli verificati con HTTP 200 + parser ≥3 righe).
+- Per i canali ancora scoperti, lascio `staseraSlug` undefined ma aggiungo un commento `// VERIFICATO 2026-04-19: nessuna fonte pubblica espone questo canale` per evitare future modifiche speculative.
+- Rendo più robusta l'estrazione del genere (`enrichTitle`):
+  - Fallback aggiuntivo: scan delle parentesi nel raw text grezzo della stessa riga `HH:MM - Titolo (Genere)` quando il rich block non c'è.
+  - Allargo `GENRE_WHITELIST` con generi visti spesso ma mancanti (es. `Telefilm`, `Serie`, `Soap Opera`, `Magazine`, `Approfondimento`, `Meteo`, `Inchiesta`).
+
+### 3. Frontend: durata + layout
 
 In `src/pages/Index.tsx`:
-
-- Sopra la lista degli highlights aggiungo una **toggle bar** orizzontale con chip selezionabili:
-  - `Tutti` (default)
-  - `Sky Sport`
-  - `Sky Cinema`
-  - `RAI`
-  - `Mediaset`
-  - `Discovery`
-- Componente: riuso `ToggleGroup` shadcn (`src/components/ui/toggle-group.tsx`) con `type="single"`, default `"all"`.
-- Stato locale `selectedFamily: "all" | StreamingFamilyId` (no URL state per la Home, è un widget compatto).
-- I dati vengono già fetchati con `useQueries` su tutte e 5 le famiglie (dal piano precedente). Il filtro è puramente client-side: se `selectedFamily === "all"` mescolo tutto e mostro top 6 per orario; altrimenti filtro le righe della famiglia selezionata e mostro top 6.
-- Ogni riga mantiene il badge canale per chiarezza.
-- Empty state per famiglia: se la famiglia selezionata non ha dati → messaggio inline "Palinsesto non disponibile per <famiglia>" + suggerimento di tornare a "Tutti".
-
-### 2. Responsive
-
-Verifica esplicita su 3 viewport:
-- **Mobile** (<640px): chip filtri scrollabili orizzontalmente con `overflow-x-auto` + `scrollbar-hide`, nessun wrap, tap target ≥ 40px. Righe highlights: orario + canale badge + titolo truncato a 1 riga.
-- **Tablet** (640–1024px): chip su singola riga con wrap se necessario.
-- **Desktop** (≥1024px): chip inline accanto al titolo "Stasera in TV" se c'è spazio, altrimenti sotto.
-
-Layout righe highlights resta `flex items-center gap-3` con `min-w-0` + `truncate` sul titolo (già presente). Nessun nuovo breakpoint custom: solo classi Tailwind standard (`sm:`, `md:`, `lg:`).
-
-### 3. Resto del piano (invariato, già approvato)
-
-- Edge function `streaming-tv` riscritta con slug `staseraintv.com` per tutte le 5 famiglie.
-- Parser regex `/^(\d{1,2}):(\d{2}) - (.+?)$/gm`.
-- Cache 1h per `(slug, date)`.
-- `StreamingPage.tsx`: rimozione disclaimer "solo Discovery", nuovo disclaimer "Fonte: staseraintv.com".
+- Helper `formatDuration(min: number): string` → `"45 min"` se <60, `"1h 25 min"` altrimenti, `""` se ≤0.
+- Render dopo il badge genere: `<span className="text-xs text-muted-foreground whitespace-nowrap">{formatDuration(p.durationMin)}</span>`.
+- Layout invariato (`flex-wrap items-baseline`), già responsive.
+- Quando una famiglia selezionata ha tutti i canali scoperti → empty state "Palinsesto non disponibile per questa famiglia. Torna a 'Tutti'."
 
 ### 4. Documentazione
 
-- **`README.md`**: aggiorno la sezione Streaming dichiarando:
-  - Fonte reale: `staseraintv.com` (scraping pubblico, fragile per definizione).
-  - Copertura: tutte e 5 le famiglie (Sky Sport, Sky Cinema, RAI, Mediaset, Discovery).
-  - Home "Stasera in TV": filtri rapidi per famiglia, responsive.
-- **`changelog.md`** sotto `[Unreleased]`:
-  - `Added`: filtri rapidi per famiglia nella card "Stasera in TV" della Home.
-  - `Changed`: scraping TV esteso a tutte le famiglie via `staseraintv.com` (sostituisce `guida.tv`).
-  - `Note operative`: fonte di terze parti, può cambiare struttura senza preavviso.
+**`README.md`** — sezione Streaming:
+- Tabella aggiornata "Copertura palinsesti per canale" con stato `coperto` / `non coperto` post-audit.
+- Nota: badge genere mostrato solo quando la fonte lo espone; durata sempre calcolata da start/end.
+
+**`changelog.md`** — sezione `[Unreleased]`:
+- `Added`: badge genere reso più robusto (fallback parentesi nel titolo grezzo, whitelist estesa); durata programma `Xh Ym min` accanto al badge.
+- `Fixed`: copertura palinsesti — audit completo di tutti i canali; aggiunti slug Sky Sport verificati; canali senza fonte pubblica dichiarati esplicitamente come "non coperti" invece di restare silenziosamente vuoti.
+- `Note operative`: ribadita fragilità scraping; lista canali ancora scoperti.
 
 ### File toccati
 
-- `supabase/functions/streaming-tv/index.ts` (slug staseraintv + parser nuovo)
-- `src/pages/Index.tsx` (multi-famiglia + filtri rapidi + responsive)
-- `src/pages/StreamingPage.tsx` (disclaimer)
-- `README.md`
-- `changelog.md`
+- `supabase/functions/streaming-tv/index.ts` (slug aggiornati + genre extraction più robusta)
+- `src/pages/Index.tsx` (durata + empty state per famiglia tutta scoperta)
+- `README.md` (tabella copertura)
+- `changelog.md` (Unreleased)
 
 ### Verifica end-to-end
 
-1. Deploy `streaming-tv` + curl su tutte e 5 le famiglie.
-2. Home: chip "Tutti" mostra mix realistico; ogni chip famiglia filtra correttamente.
-3. Resize 360px / 768px / 1280px: chip scrollabili su mobile, layout pulito.
-4. `npm run lint` + `npm run build`.
+1. Audit HTTP iniziale (curl su ogni slug candidato per Sky Sport e verifica righe parsate).
+2. Redeploy `streaming-tv` + curl per `family=sky-sport` → almeno 1 canale con programmi reali, oppure tutti dichiarati esplicitamente vuoti.
+3. Curl su tutte le 5 famiglie → conferma che ogni canale con `staseraSlug` ritorna ≥3 programmi prime time.
+4. Home `/`: ogni riga mostra titolo + (genere se noto) + durata; filtro Sky Sport non vuoto se almeno un canale è coperto.
+5. `npm run lint` + `npm run build`.
 
-### Vincoli rispettati
+### Vincoli rispettati (AGENTS.md + memory)
 
-- Nessuna modifica a `src/integrations/supabase/*`, `supabase/config.toml`, env, secrets, branch policy.
+- Nessun dato inventato: canali scoperti restano dichiaratamente vuoti.
+- Fragilità scraping ribadita in README + changelog.
+- Nessuna modifica a env, secrets, branch policy, file auto-generati, `supabase/config.toml`.
 - Nessuna nuova dipendenza.
-- Fragilità dichiarata in UI, README, changelog.
-- Nessun dato inventato: famiglie senza dati → empty state esplicito.
-
+- Italian-only UI mantenuta.
