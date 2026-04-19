@@ -1,6 +1,16 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Tv2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  Film,
+  Radio,
+  Trophy,
+  Tv,
+  Tv2,
+  type LucideIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +22,18 @@ import {
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
 import { formatDuration } from "@/lib/dateUtils";
 import { inferGenre } from "@/lib/genreUtils";
+
+// Pittogrammi per famiglia: scelti per evocare l'identita' del broadcaster
+// senza dipendere da loghi proprietari (Radio = RAI servizio pubblico,
+// Tv = Mediaset generalista, Trophy = Sky Sport, Film = Sky Cinema,
+// Compass = Discovery / esplorazione).
+const FAMILY_ICONS: Record<StreamingFamilyId, LucideIcon> = {
+  rai: Radio,
+  mediaset: Tv,
+  "sky-sport": Trophy,
+  "sky-cinema": Film,
+  discovery: Compass,
+};
 
 interface TvHighlight {
   family: StreamingFamilyId;
@@ -230,22 +252,35 @@ export default function TonightTvList() {
                         className="h-[3px] bg-primary border-y border-primary/40 list-none"
                       />
                     )}
-                    {showFamilyDivider && (
-                      <li className="sm:hidden px-2.5 pt-2 pb-1 bg-primary/5">
-                        <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-primary/80">
-                          {familyLabelMap[row.family]}
-                        </span>
-                      </li>
-                    )}
+                    {showFamilyDivider && (() => {
+                      const FamilyIcon = FAMILY_ICONS[row.family];
+                      return (
+                        <li className="sm:hidden flex items-center gap-1.5 px-2.5 pt-2 pb-1 bg-primary/5">
+                          <FamilyIcon className="h-3.5 w-3.5 text-primary/80 shrink-0" aria-hidden="true" />
+                          <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-primary/80">
+                            {familyLabelMap[row.family]}
+                          </span>
+                        </li>
+                      );
+                    })()}
                     <li className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm">
-                      <span
-                        className={`hidden sm:inline-flex items-center font-heading font-bold text-xs uppercase tracking-wider w-24 shrink-0 ${
-                          showFamilyDivider ? "text-primary/80" : "text-transparent"
-                        }`}
-                        aria-hidden={!showFamilyDivider}
-                      >
-                        {familyLabelMap[row.family]}
-                      </span>
+                      {(() => {
+                        const FamilyIcon = FAMILY_ICONS[row.family];
+                        return (
+                          <span
+                            className={`hidden sm:inline-flex items-center gap-1.5 font-heading font-bold text-xs uppercase tracking-wider w-24 shrink-0 ${
+                              showFamilyDivider ? "text-primary/80" : "text-transparent"
+                            }`}
+                            aria-hidden={!showFamilyDivider}
+                          >
+                            <FamilyIcon
+                              className={`h-3.5 w-3.5 shrink-0 ${showFamilyDivider ? "text-primary/80" : "text-transparent"}`}
+                              aria-hidden="true"
+                            />
+                            {familyLabelMap[row.family]}
+                          </span>
+                        );
+                      })()}
                       <span className="font-mono font-bold text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm leading-none">
                         {row.time}
                       </span>
