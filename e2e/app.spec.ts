@@ -63,3 +63,30 @@ test("shows a loading state before Formula 1 data resolves", async ({ page }) =>
   await expect(page.getByText("Caricamento calendario F1...")).toBeVisible();
   await expect(page.getByText("Gran Premio di Imola")).toBeVisible();
 });
+
+test("Stasera in TV: separatore oro tra famiglie e etichette mobile visibili", async ({ page }) => {
+  await installSportsApiMocks(page);
+
+  // Forza viewport mobile per attivare il rendering delle etichette famiglia
+  // mobile (le etichette desktop vivono in una colonna laterale).
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+
+  // La scheda esiste e mostra programmi di entrambe le famiglie mockate.
+  await expect(page.getByRole("heading", { name: "Stasera in TV" })).toBeVisible();
+  await expect(page.getByText("Test Programma RAI 1")).toBeVisible();
+  await expect(page.getByText("Test Programma Canale 5")).toBeVisible();
+
+  // Almeno un separatore oro tra famiglie (RAI -> Mediaset).
+  const dividers = page.locator('[data-testid="family-divider"]');
+  await expect(dividers).toHaveCount(1);
+  await expect(dividers.first()).toHaveAttribute("data-family", "mediaset");
+
+  // Etichette famiglia mobile visibili sopra ogni gruppo (RAI + Mediaset).
+  const mobileLabels = page.locator('[data-testid="family-label-mobile"]');
+  await expect(mobileLabels).toHaveCount(2);
+  await expect(mobileLabels.nth(0)).toContainText("RAI");
+  await expect(mobileLabels.nth(0)).toBeVisible();
+  await expect(mobileLabels.nth(1)).toContainText("Mediaset");
+  await expect(mobileLabels.nth(1)).toBeVisible();
+});

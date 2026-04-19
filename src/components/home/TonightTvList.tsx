@@ -249,13 +249,19 @@ export default function TonightTvList() {
                     {showFamilyDivider && i > 0 && (
                       <li
                         aria-hidden="true"
+                        data-testid="family-divider"
+                        data-family={row.family}
                         className="h-[3px] bg-primary border-y border-primary/40 list-none"
                       />
                     )}
                     {showFamilyDivider && (() => {
                       const FamilyIcon = FAMILY_ICONS[row.family];
                       return (
-                        <li className="sm:hidden flex items-center gap-1.5 px-2.5 pt-2 pb-1 bg-primary/5">
+                        <li
+                          data-testid="family-label-mobile"
+                          data-family={row.family}
+                          className="sm:hidden flex items-center gap-1.5 px-2.5 pt-2 pb-1 bg-primary/5"
+                        >
                           <FamilyIcon className="h-3.5 w-3.5 text-primary/80 shrink-0" aria-hidden="true" />
                           <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-primary/80">
                             {familyLabelMap[row.family]}
