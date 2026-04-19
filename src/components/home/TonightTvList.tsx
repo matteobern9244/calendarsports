@@ -208,35 +208,34 @@ export default function TonightTvList() {
           </div>
         </div>
 
-        {/* Filtri rapidi: chip scrollabili su mobile, wrap su desktop */}
-        <div className="-mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto sm:overflow-visible scrollbar-hide">
-          <ToggleGroup
-            type="single"
-            value={familyFilter}
-            onValueChange={(v) => v && setFamilyFilter(v as FilterValue)}
-            className="inline-flex sm:flex sm:flex-wrap justify-start gap-1.5 min-w-max sm:min-w-0"
+        {/* Filtri rapidi: griglia 3 colonne su mobile (2 righe), wrap libero su desktop.
+            Niente scroll orizzontale: tutte le 6 chip devono essere sempre visibili. */}
+        <ToggleGroup
+          type="single"
+          value={familyFilter}
+          onValueChange={(v) => v && setFamilyFilter(v as FilterValue)}
+          className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:justify-start"
+        >
+          <ToggleGroupItem
+            value="all"
+            size="sm"
+            aria-label="Mostra tutte le famiglie"
+            className="h-9 w-full sm:w-auto px-2 sm:px-3 text-[11px] font-heading uppercase tracking-wider border border-primary/30 bg-card/60 text-foreground hover:bg-primary/15 hover:text-foreground hover:border-primary/60 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:border-primary data-[state=on]:shadow-[0_0_0_1px_hsl(var(--gold)/0.6)]"
           >
+            Tutti
+          </ToggleGroupItem>
+          {STREAMING_FAMILIES.map((f) => (
             <ToggleGroupItem
-              value="all"
+              key={f.id}
+              value={f.id}
               size="sm"
-              aria-label="Mostra tutte le famiglie"
-              className="h-9 px-3 text-[11px] font-heading uppercase tracking-wider border border-primary/30 bg-card/60 text-foreground hover:bg-primary/15 hover:text-foreground hover:border-primary/60 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:border-primary data-[state=on]:shadow-[0_0_0_1px_hsl(var(--gold)/0.6)]"
+              aria-label={`Filtra ${f.label}`}
+              className="h-9 w-full sm:w-auto px-2 sm:px-3 text-[11px] font-heading uppercase tracking-wider whitespace-nowrap border border-primary/30 bg-card/60 text-foreground hover:bg-primary/15 hover:text-foreground hover:border-primary/60 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:border-primary data-[state=on]:shadow-[0_0_0_1px_hsl(var(--gold)/0.6)]"
             >
-              Tutti
+              {f.label}
             </ToggleGroupItem>
-            {STREAMING_FAMILIES.map((f) => (
-              <ToggleGroupItem
-                key={f.id}
-                value={f.id}
-                size="sm"
-                aria-label={`Filtra ${f.label}`}
-                className="h-9 px-3 text-[11px] font-heading uppercase tracking-wider whitespace-nowrap border border-primary/30 bg-card/60 text-foreground hover:bg-primary/15 hover:text-foreground hover:border-primary/60 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:border-primary data-[state=on]:shadow-[0_0_0_1px_hsl(var(--gold)/0.6)]"
-              >
-                {f.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
+          ))}
+        </ToggleGroup>
 
         {tonightHighlights.length > 0 ? (
           <>
