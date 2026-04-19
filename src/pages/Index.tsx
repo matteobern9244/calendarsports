@@ -7,9 +7,8 @@ import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
 import { useQueries } from "@tanstack/react-query";
-import { RefreshCw, Tv2, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { RefreshCw, Tv2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -334,12 +333,6 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            <Button asChild size="sm" className="shrink-0 self-start sm:self-auto gap-2">
-              <Link to="/streaming">
-                Apri Streaming
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
           </div>
 
           {/* Filtri rapidi: chip scrollabili su mobile, wrap su desktop */}
