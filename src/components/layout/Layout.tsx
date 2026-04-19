@@ -14,8 +14,6 @@ export default function Layout() {
       <footer className="border-t border-border/50 py-6">
         <div className="container text-center text-xs text-muted-foreground">
           <span className="font-heading tracking-wider uppercase">Calendar Sports Events</span>
-          <span className="mx-2">·</span>
-          <span>Tutti i dati provengono da fonti ufficiali</span>
         </div>
       </footer>
     </div>
