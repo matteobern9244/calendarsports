@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Calendar, Clock } from "lucide-react";
 import { motion } from "framer-motion";
+import EventCountdown from "./EventCountdown";
 
 interface EventCardProps {
   sport: string;
@@ -9,6 +10,8 @@ interface EventCardProps {
   subtitle?: string;
   date: string;
   time?: string;
+  /** ISO date string of the event start, used for live countdown */
+  startDate?: string;
   status?: "prossimo" | "in_corso" | "completato";
   highlight?: boolean;
   children?: React.ReactNode;
@@ -21,6 +24,7 @@ export default function EventCard({
   subtitle,
   date,
   time,
+  startDate,
   status = "prossimo",
   highlight = false,
   children,
