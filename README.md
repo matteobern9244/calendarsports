@@ -94,12 +94,22 @@ Funzionalita' trasversali:
   ogni riga di programma e' divisa su due livelli (riga 1: ora + canale
   + durata; riga 2: titolo + genere) per garantire la leggibilita' dei
   titoli lunghi; layout desktop a singola riga invariato;
-- **icona PWA dedicata** (`public/favicon.png`, 1024x1024) usata sia
-  come favicon che come icona installabile dal manifest
-  (`public/manifest.webmanifest`, `purpose: any` + `maskable`):
-  calendario gold su sfondo navy coerente col brand, sostituisce
-  l'icona generica del browser quando l'app viene aggiunta alla home
-  su iOS/Android.
+- **chip filtro famiglia con icone e griglia mobile 3x2**
+  (`src/components/home/TonightTvList.tsx`): le 6 chip filtro
+  ("Tutti / RAI / Mediaset / Sky Sport / Sky Cinema / Discovery")
+  mostrano un'icona Lucide caratterizzante accanto all'etichetta
+  (`LayoutGrid`, `Radio`, `Tv`, `Trophy`, `Film`, `Compass`) e su
+  mobile sono disposte in una griglia `grid-cols-3` su due righe
+  (niente scroll orizzontale, tutte le 6 famiglie sempre visibili);
+  contrasto migliorato in stato inattivo (bordo + sfondo card +
+  testo full-foreground) per leggibilita' in dark mode;
+- **icona PWA dedicata "Calendar Events"** (`public/favicon.png`,
+  1024x1024) usata sia come favicon che come icona installabile dal
+  manifest (`public/manifest.webmanifest`, `purpose: any` +
+  `maskable`): scritta "CALENDAR EVENTS" su due righe in oro
+  metallico su sfondo navy coerente col brand, leggibile anche a
+  dimensione icona home screen, sostituisce l'icona generica del
+  browser quando l'app viene aggiunta alla home su iOS/Android.
 
 ### Streaming: fonte dati TV
 

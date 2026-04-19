@@ -41,28 +41,54 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   -3`, shadow gold, top line, glow radiale, badge gradient).
 - **Glow pulsante gold** sull'icona della voce di navigazione attiva
   (`Header.tsx`), sincronizzato con il loop di scintille (`SparkleLoop`).
-- **Icona PWA dedicata** (`public/favicon.png`, 1024x1024 PNG): nuova
-  icona quadrata coerente con il brand "Calendar Events" (calendario
-  gold su sfondo navy `#0B1A33`, monogramma "CE"), usata sia come
-  favicon (`<link rel="icon">` e `apple-touch-icon` in `index.html`) sia
-  come icona PWA installabile (`public/manifest.webmanifest`, entries
-  `purpose: any` e `purpose: maskable`). Sostituisce il riferimento
-  precedente a un `favicon.png` non presente nel repository, eliminando
-  l'icona generica del browser su Add-to-Home-Screen iOS/Android.
+- **Icona PWA dedicata "Calendar Events"** (`public/favicon.png`,
+  1024x1024 PNG): icona quadrata con scritta "CALENDAR EVENTS" su due
+  righe in oro metallico (`#D4AF37` -> `#F5D272`) su sfondo navy
+  `#0B1A33`, piccolo pittogramma calendario gold sopra il testo e linee
+  di accento gold. Usata sia come favicon (`<link rel="icon">` +
+  `apple-touch-icon` in `index.html`) sia come icona PWA installabile
+  (`public/manifest.webmanifest`, entries `purpose: any` e
+  `purpose: maskable`). Sostituisce il riferimento precedente a un
+  `favicon.png` non presente nel repository, eliminando l'icona generica
+  del browser su Add-to-Home-Screen iOS/Android. La scritta e'
+  perfettamente leggibile anche a dimensione icona home screen.
+- **Icone famiglia nelle chip filtro "Stasera in TV"**
+  (`src/components/home/TonightTvList.tsx`): ogni chip mostra ora
+  un'icona Lucide caratterizzante accanto all'etichetta — `LayoutGrid`
+  per "Tutti", `Radio` per RAI, `Tv` per Mediaset, `Trophy` per Sky
+  Sport, `Film` per Sky Cinema, `Compass` per Discovery — riusando lo
+  stesso mapping `FAMILY_ICONS` gia' utilizzato per le label di gruppo
+  nella lista programmi, per coerenza visiva tra filtri e righe.
 
 ### Fixed
 
-- **Leggibilita' "Stasera in TV" su mobile**
-  (`src/components/home/TonightTvList.tsx`): le righe della tabella
-  collassavano ora, badge canale, titolo lungo, badge genere e durata
-  sulla stessa riga, rendendo i titoli (es. "Roberta Valente Notaio in
-  Sorrento - Stagione 1 Episodio 3 - Cuba Libre") difficili da leggere
-  su viewport stretti (≤640px). Introdotto layout responsive a 2 righe
-  esclusivo del breakpoint mobile (`sm:hidden`): riga 1 con ora + badge
-  canale + durata (allineata a destra via `ml-auto`), riga 2 con titolo
+- **Leggibilita' "Stasera in TV" su mobile** — righe della tabella
+  (`src/components/home/TonightTvList.tsx`): le righe collassavano ora,
+  badge canale, titolo lungo, badge genere e durata sulla stessa riga,
+  rendendo i titoli (es. "Roberta Valente Notaio in Sorrento - Stagione
+  1 Episodio 3 - Cuba Libre") difficili da leggere su viewport stretti
+  (≤640px). Introdotto layout responsive a 2 righe esclusivo del
+  breakpoint mobile (`sm:hidden`): riga 1 con ora + badge canale +
+  durata (allineata a destra via `ml-auto`), riga 2 con titolo
   full-width + badge genere. Layout desktop (`hidden sm:flex`)
   invariato. Nessuna modifica alla logica di filtraggio, ordinamento
   prima serata, paginazione o ai dati sottostanti.
+- **Leggibilita' chip filtro "Stasera in TV"**
+  (`src/components/home/TonightTvList.tsx`): le chip non-attive avevano
+  contrasto insufficiente (background trasparente, testo muted), poco
+  leggibili in dark mode. Aggiunto bordo `border-primary/30`, sfondo
+  `bg-card/60` e testo `text-foreground` in stato inattivo, hover
+  `bg-primary/15` con bordo `border-primary/60`, stato attivo gold
+  pieno (`bg-primary` + `text-primary-foreground`) con ring gold via
+  `shadow-[0_0_0_1px_hsl(var(--gold)/0.6)]`.
+- **Visibilita' completa chip filtro su mobile**
+  (`src/components/home/TonightTvList.tsx`): la riga di chip era
+  `overflow-x-auto` su mobile, facendo apparire "Discovery" tagliata
+  fuori schermo dopo "Sky Cinema" senza indicatore di scroll. Sostituito
+  scroll orizzontale con griglia `grid grid-cols-3 gap-1.5` esclusiva
+  mobile (2 righe x 3 colonne: TUTTI/RAI/MEDIASET sopra, SKY SPORT/SKY
+  CINEMA/DISCOVERY sotto). Su desktop layout invariato (`sm:flex
+  sm:flex-wrap`).
 - **Regressione di leggibilita' nelle card** (`EventCard.tsx`): rimosso
   `overflow-hidden` dal container (clippava badge "Prossimo" sporgente,
   countdown e contenuto wrappato) e aggiunto `relative z-[1]` ai contenitori
