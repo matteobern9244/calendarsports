@@ -42,6 +42,9 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   `package.json` e `package-lock.json`.
 - Verificato il ripristino del sync diretto Lovable -> GitHub su `main` dopo
   l'aggiornamento della Ruleset minima compatibile.
+- Il drift del lockfile impedisce di portare a verde tutti i workflow che
+  eseguono `npm ci` senza una modifica esplicita ai file package, esclusa da
+  questa change set.
 
 ## [2.0.2] - 2026-04-19
 

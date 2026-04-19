@@ -57,7 +57,6 @@ jobs:
             echo "PR checks are not fully green yet. Nothing to do."
             exit 0
           fi
-
           if [ -n "$auto_merge" ]; then
             echo "Auto-merge already enabled with method: $auto_merge"
             exit 0
