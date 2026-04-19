@@ -5,7 +5,7 @@ import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
+import { formatDateIT, formatTimeIT, formatDuration } from "@/lib/dateUtils";
 import { useQueries } from "@tanstack/react-query";
 import { RefreshCw, Tv2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,16 +49,6 @@ const container = {
   hidden: {},
   show: { transition: { staggerChildren: 0.08 } },
 };
-
-// Formatta una durata in minuti come "45 min" o "1h 25 min".
-// Ritorna stringa vuota per durate non valide o nulle.
-function formatDuration(min: number): string {
-  if (!Number.isFinite(min) || min <= 0) return "";
-  if (min < 60) return `${min} min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m} min`;
-}
 
 type FilterValue = "all" | StreamingFamilyId;
 
