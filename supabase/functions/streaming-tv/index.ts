@@ -445,30 +445,34 @@ async function fetchStasera(slug: string, date: string): Promise<Program[]> {
 // `Categoria (durata')` (es. "Sport (40')", "Calcio (125')").
 // Solo "oggi" e' supportato (la fonte non espone domani/ieri in URL stabile).
 function parseSuperguidatvHtml(html: string, date: string): Program[] {
-  // Cattura HH:MM seguito (entro 600 char) da "Categoria (NN')".
-  const re = /(\d{1,2}):(\d{2})([\s\S]{1,600}?)([A-Za-zÀ-ÿ' ]{3,40})\s*\((\d{1,3})['']\)/g;
+  const timeMatches = [...html.matchAll(/<p class="[^"]*sgtv-w-20[^"]*">(\d{1,2}:\d{2})<\/p>/g)];
+  const titleMatches = [...html.matchAll(/<p class="[^"]*sgtv-truncate sgtv-text-lg sgtv-leading-tight[^"]*">([^<]+)<\/p>/g)];
+  const metaMatches = [...html.matchAll(/<p class="[^"]*sgtv-truncate sgtv-border-l-\[10px\][^"]*">([^<]+)<\/p>/g)];
+
+  const rowCount = Math.min(timeMatches.length, titleMatches.length, metaMatches.length);
+  if (rowCount === 0) return [];
+
   const programs: Program[] = [];
   const seen = new Set<string>();
-  let m: RegExpExecArray | null;
   let prevStartMs = -1;
   let dayShift = 0;
-  while ((m = re.exec(html)) !== null) {
-    const hh = parseInt(m[1], 10);
-    const mm = parseInt(m[2], 10);
+  for (let i = 0; i < rowCount; i += 1) {
+    const [hhStr, mmStr] = timeMatches[i][1].split(":");
+    const hh = parseInt(hhStr, 10);
+    const mm = parseInt(mmStr, 10);
     if (hh > 27 || mm > 59) continue;
-    const between = m[3];
-    const categoryRaw = m[4].trim();
-    const durationMin = parseInt(m[5], 10);
-    if (durationMin <= 0 || durationMin > 600) continue;
-    const cleaned = decodeEntities(between.replace(/<[^>]+>/g, " "))
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!cleaned) continue;
-    const segments = cleaned.split(/\s\|\s|\s{2,}/).map((s) => s.trim()).filter(Boolean);
-    let title = segments[segments.length - 1] || cleaned;
-    title = title.replace(/\s*\(St\.\s*\d{4}.*?\)\s*$/i, "").trim();
+
+    const title = decodeEntities(titleMatches[i][1]).replace(/\s+/g, " ").trim();
     if (!title || title.length < 2) continue;
     if (/^(in\s*onda|ultim['’]ora|prossim[ao])$/i.test(title)) continue;
+
+    const meta = decodeEntities(metaMatches[i][1]).replace(/\s+/g, " ").trim();
+    const metaMatch = meta.match(/^(.{3,40}?)\s*\((\d{1,3})['’]?\)$/);
+    if (!metaMatch) continue;
+
+    const categoryRaw = metaMatch[1].trim();
+    const durationMin = parseInt(metaMatch[2], 10);
+    if (durationMin <= 0 || durationMin > 600) continue;
 
     const baseDate = new Date(`${date}T00:00:00Z`);
     if (dayShift > 0) baseDate.setUTCDate(baseDate.getUTCDate() + dayShift);
