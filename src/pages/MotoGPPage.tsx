@@ -71,6 +71,7 @@ export default function MotoGPPage() {
                   subtitle={location}
                   date={startDate ? formatDateIT(startDate) : "—"}
                   time={e.time ? formatTimeIT(e.time, startDate) : undefined}
+                  startDate={e.time && startDate ? `${startDate}T${e.time}` : startDate}
                   status={status}
                   highlight={i === highlightIndex}
                 >

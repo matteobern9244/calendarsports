@@ -61,6 +61,7 @@ export default function SinnerPage() {
                   sport={r.tournament || 'ATP'}
                   title={r.opponent ? `vs. ${r.opponent}` : r.tournament}
                   date={r.date ? formatDateIT(r.date) : '—'}
+                  startDate={r.date}
                   status={r.date ? getEventStatus(r.date) : 'completato'}
                   highlight={i === highlightIndex}
                 >
