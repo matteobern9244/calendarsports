@@ -93,12 +93,15 @@ export default function HomePage() {
           const d = new Date(p.start);
           const hhmm = timeFmt.format(d);
           const [hStr, mStr] = hhmm.split(":");
+          const endMs = p.end ? new Date(p.end).getTime() : d.getTime() + 30 * 60 * 1000;
+          const durationMin = Math.max(0, Math.round((endMs - d.getTime()) / 60000));
           rows.push({
             family: fam,
             channel: ch.name,
             channelNumber: ch.number,
             time: hhmm,
             startMs: d.getTime(),
+            durationMin,
             hourRome: parseInt(hStr, 10),
             minuteRome: parseInt(mStr, 10),
             title: p.title,
