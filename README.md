@@ -46,9 +46,14 @@ stata pubblicata su Lovable.
 
 ## Cosa fa l'app
 
-L'app espone cinque viste principali:
+L'app espone sei viste principali:
 
-- `Home`: aggrega i prossimi eventi rilevanti da tutte le sezioni.
+- `Home`: aggrega i prossimi eventi rilevanti da tutte le sezioni e include
+  il banner **Stasera in TV** con aggregazione multi-famiglia (Sky Cinema,
+  RAI, Mediaset, Discovery), filtri rapidi per famiglia
+  (`ToggleGroup` responsive) e top 8 programmi prime time ordinati per orario.
+- `Streaming` (`/streaming`): tab TV stasera (palinsesto reale per famiglia)
+  + tab Nuove uscite (TMDB con range date e filtro Film/Serie).
 - `Jannik Sinner`: profilo sintetico, risultati e calendario tornei.
 - `Juventus`: calendario partite e classifica Serie A.
 - `Formula 1`: calendario GP, classifica piloti e costruttori.
@@ -59,7 +64,25 @@ Funzionalita' trasversali:
 - tema light/dark;
 - sincronizzazione client-side tramite invalidazione delle query;
 - selezione stagione per ogni sezione;
-- UI costruita con componenti shadcn/ui e Radix.
+- UI costruita con componenti shadcn/ui e Radix;
+- responsive completo (mobile/tablet/desktop) sui banner Home.
+
+### Streaming: fonte dati TV
+
+Il palinsesto reale viene scraperato da `www.staseraintv.com` (pubblico).
+**Fragile per definizione**: se la fonte cambia struttura HTML, il parser
+si rompe e i programmi diventano vuoti (mai dati inventati).
+
+Copertura attuale (verificata 2026-04-19):
+
+- **RAI**: Rai 1-5, Movie, Premium, Gulp, YoYo, Storia, Scuola, Sport +HD.
+- **Mediaset**: Canale 5, Italia 1/2, Rete 4, Iris, 20, La5, Cine34,
+  Boing, Cartoonito, Top Crime, Focus, Mediaset Extra.
+- **Sky Cinema**: Uno, Collection, Family, Action, Romance.
+- **Discovery & co.**: Real Time, DMax, Nove, Discovery Channel/Turbo,
+  Food Network, HGTV, Giallo, K2, Frisbee.
+- **Sky Sport**: NON coperto da staseraintv.com -> i canali sono elencati
+  ma con `programs=[]` e la UI dichiara "Palinsesto non disponibile".
 
 ## Stack tecnico reale
 
@@ -489,5 +512,5 @@ progetti exportati.
 - [supabase/functions/sports-football/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-football/index.ts)
 - [supabase/functions/sports-tennis/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-tennis/index.ts)
 - [supabase/functions/sports-motogp/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-motogp/index.ts)
-- [supabase/functions/streaming-tv/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/streaming-tv/index.ts) (FRAGILE: scraper non ancora integrati, lista canali statica)
+- [supabase/functions/streaming-tv/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/streaming-tv/index.ts) (FRAGILE: scraping `staseraintv.com`, parser regex)
 - [supabase/functions/streaming-releases/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/streaming-releases/index.ts) (richiede secret `TMDB_API_KEY`)

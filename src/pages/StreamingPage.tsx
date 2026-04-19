@@ -230,13 +230,10 @@ export default function StreamingPage() {
 
           {tvQuery.isSuccess && channels.length > 0 && (
             <>
-              {!tvQuery.data?.programsAvailable && (
-                <p className="text-xs text-muted-foreground italic">
-                  Palinsesto in fase di integrazione: i canali sono elencati,
-                  i programmi reali sono al momento disponibili solo per
-                  Discovery (Real Time, DMax).
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground italic">
+                Fonte palinsesto: <span className="font-mono">staseraintv.com</span> (scraping pubblico).
+                I dati possono variare o non essere disponibili per alcuni canali (es. Sky Sport non e' coperto dalla fonte).
+              </p>
               <Accordion type="multiple" className="space-y-2">
                 {visibleChannels.map((ch) => (
                   <AccordionItem

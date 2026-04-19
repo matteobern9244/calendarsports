@@ -2,14 +2,13 @@
 // Restituisce il palinsesto prime time (19:00-24:00 Europe/Rome) di oggi
 // per famiglia di canali (sky-sport, sky-cinema, rai, mediaset, discovery).
 //
-// FRAGILITA' MASSIMA: per Real Time/DMax facciamo scraping diretto delle
-// pagine pubbliche di www.guida.tv (struttura HTML soggetta a cambio
-// senza preavviso). I feed XMLTV community di iptv-org NON sono
-// distribuiti come file statici: vanno generati con un grabber, quindi
-// non li possiamo consumare a runtime. Sky/RAI/Mediaset restano stub
-// vuoti: i canali sono elencati come navigazione, ma `programsAvailable
-// =false` viene dichiarato cosi' la UI mostra uno stato onesto. Mai
-// dati inventati: se lo scraping fallisce, programs=[].
+// FRAGILITA' DICHIARATA: scraping diretto delle pagine pubbliche di
+// www.staseraintv.com (struttura HTML soggetta a cambio senza preavviso).
+// Pattern verificato 2026-04-19: ogni pagina canale contiene un blocco
+// con righe `HH:MM - Titolo<br>` complete del palinsesto giornaliero.
+// Mai dati inventati: se lo scraping fallisce o un canale non e' coperto
+// dalla fonte (es. Sky Sport non e' presente su staseraintv.com),
+// `programs=[]` e la UI dichiara stato "non disponibile".
 
 import {
   buildCorsHeaders,
@@ -22,8 +21,9 @@ type Channel = {
   name: string;
   logo: string | null;
   number?: number;
-  // Path guida.tv (es. "82847384/real-time") per scraping Discovery
-  guidatvPath?: string;
+  // Slug staseraintv.com per scraping (es. "rai1", "canale5", "sky_uno").
+  // Se undefined il canale non ha fonte e ritorna programs=[].
+  staseraSlug?: string;
 };
 
 type Program = {
@@ -39,6 +39,10 @@ type FamilyId = "sky-sport" | "sky-cinema" | "rai" | "mediaset" | "discovery";
 const FAMILY_RE = /^(sky-sport|sky-cinema|rai|mediaset|discovery)$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+// Slug verificati 2026-04-19 via curl su staseraintv.com.
+// Sky Sport NON e' coperto dalla fonte: tutti gli slug `sky_sport_*` ritornano
+// 404. Lasciamo i canali nella whitelist senza staseraSlug -> programs=[],
+// la UI dichiara onestamente "Palinsesto non disponibile".
 const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
   "sky-sport": {
     label: "Sky Sport (Now TV)",
@@ -59,73 +63,66 @@ const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
   "sky-cinema": {
     label: "Sky Cinema (Now TV)",
     channels: [
-      { id: "sky-cinema-uno", name: "Sky Cinema Uno", logo: null, number: 301 },
+      { id: "sky-cinema-uno", name: "Sky Cinema Uno", logo: null, number: 301, staseraSlug: "sky_cinema1" },
+      { id: "sky-cinema-collection", name: "Sky Cinema Collection", logo: null, number: 303, staseraSlug: "sky_cinema_collection" },
+      { id: "sky-cinema-family", name: "Sky Cinema Family", logo: null, number: 304, staseraSlug: "sky_cinema_family" },
+      { id: "sky-cinema-action", name: "Sky Cinema Action", logo: null, number: 305, staseraSlug: "sky_cinema_action" },
+      { id: "sky-cinema-romance", name: "Sky Cinema Romance", logo: null, number: 307, staseraSlug: "sky_cinema_romance" },
+      // Non coperti dalla fonte:
       { id: "sky-cinema-due", name: "Sky Cinema Due", logo: null, number: 302 },
-      { id: "sky-cinema-collection", name: "Sky Cinema Collection", logo: null, number: 303 },
-      { id: "sky-cinema-family", name: "Sky Cinema Family", logo: null, number: 304 },
-      { id: "sky-cinema-action", name: "Sky Cinema Action", logo: null, number: 305 },
       { id: "sky-cinema-suspense", name: "Sky Cinema Suspense", logo: null, number: 306 },
-      { id: "sky-cinema-romance", name: "Sky Cinema Romance", logo: null, number: 307 },
       { id: "sky-cinema-drama", name: "Sky Cinema Drama", logo: null, number: 308 },
       { id: "sky-cinema-comedy", name: "Sky Cinema Comedy", logo: null, number: 309 },
-      { id: "sky-cinema-uno-plus24", name: "Sky Cinema Uno +24", logo: null, number: 310 },
-      { id: "sky-cinema-due-plus24", name: "Sky Cinema Due +24", logo: null, number: 311 },
     ],
   },
   rai: {
     label: "RAI",
     channels: [
-      { id: "rai-1", name: "Rai 1", logo: null, number: 1 },
-      { id: "rai-2", name: "Rai 2", logo: null, number: 2 },
-      { id: "rai-3", name: "Rai 3", logo: null, number: 3 },
-      { id: "rai-4", name: "Rai 4", logo: null, number: 21 },
-      { id: "rai-5", name: "Rai 5", logo: null, number: 23 },
-      { id: "rai-movie", name: "Rai Movie", logo: null, number: 24 },
-      { id: "rai-premium", name: "Rai Premium", logo: null, number: 25 },
-      { id: "rai-gulp", name: "Rai Gulp", logo: null, number: 42 },
-      { id: "rai-yoyo", name: "Rai Yoyo", logo: null, number: 43 },
-      { id: "rai-storia", name: "Rai Storia", logo: null, number: 54 },
-      { id: "rai-scuola", name: "Rai Scuola", logo: null, number: 57 },
-      { id: "rai-news24", name: "Rai News 24", logo: null, number: 48 },
-      { id: "rai-sport", name: "Rai Sport", logo: null, number: 58 },
-      { id: "rai-sport-plus", name: "Rai Sport +", logo: null, number: 58 },
+      { id: "rai-1", name: "Rai 1", logo: null, number: 1, staseraSlug: "rai1" },
+      { id: "rai-2", name: "Rai 2", logo: null, number: 2, staseraSlug: "rai2" },
+      { id: "rai-3", name: "Rai 3", logo: null, number: 3, staseraSlug: "rai3" },
+      { id: "rai-4", name: "Rai 4", logo: null, number: 21, staseraSlug: "rai4" },
+      { id: "rai-5", name: "Rai 5", logo: null, number: 23, staseraSlug: "rai5" },
+      { id: "rai-movie", name: "Rai Movie", logo: null, number: 24, staseraSlug: "raimovie" },
+      { id: "rai-premium", name: "Rai Premium", logo: null, number: 25, staseraSlug: "rai_premium" },
+      { id: "rai-gulp", name: "Rai Gulp", logo: null, number: 42, staseraSlug: "rai_gulp" },
+      { id: "rai-yoyo", name: "Rai Yoyo", logo: null, number: 43, staseraSlug: "rai_yoyo" },
+      { id: "rai-storia", name: "Rai Storia", logo: null, number: 54, staseraSlug: "rai_storia" },
+      { id: "rai-scuola", name: "Rai Scuola", logo: null, number: 57, staseraSlug: "rai_scuola" },
+      { id: "rai-sport", name: "Rai Sport +HD", logo: null, number: 58, staseraSlug: "rai_sport_hd" },
     ],
   },
   mediaset: {
     label: "Mediaset",
     channels: [
-      { id: "canale-5", name: "Canale 5", logo: null, number: 5 },
-      { id: "italia-1", name: "Italia 1", logo: null, number: 6 },
-      { id: "rete-4", name: "Rete 4", logo: null, number: 4 },
-      { id: "iris", name: "Iris", logo: null, number: 22 },
-      { id: "20", name: "20", logo: null, number: 20 },
-      { id: "la5", name: "La5", logo: null, number: 30 },
-      { id: "cine34", name: "Cine34", logo: null, number: 34 },
-      { id: "tgcom24", name: "TGcom24", logo: null, number: 51 },
-      { id: "italia-2", name: "Italia 2", logo: null, number: 66 },
-      { id: "boing", name: "Boing", logo: null, number: 40 },
-      { id: "cartoonito", name: "Cartoonito", logo: null, number: 46 },
-      { id: "top-crime", name: "Top Crime", logo: null, number: 39 },
-      { id: "focus", name: "Focus", logo: null, number: 35 },
+      { id: "canale-5", name: "Canale 5", logo: null, number: 5, staseraSlug: "canale5" },
+      { id: "italia-1", name: "Italia 1", logo: null, number: 6, staseraSlug: "italia1" },
+      { id: "rete-4", name: "Rete 4", logo: null, number: 4, staseraSlug: "rete4" },
+      { id: "iris", name: "Iris", logo: null, number: 22, staseraSlug: "iris" },
+      { id: "20", name: "20 Mediaset", logo: null, number: 20, staseraSlug: "canale20mediaset" },
+      { id: "la5", name: "La5", logo: null, number: 30, staseraSlug: "la5" },
+      { id: "cine34", name: "Cine34", logo: null, number: 34, staseraSlug: "cine34" },
+      { id: "italia-2", name: "Italia 2", logo: null, number: 66, staseraSlug: "italia2" },
+      { id: "boing", name: "Boing", logo: null, number: 40, staseraSlug: "boing" },
+      { id: "cartoonito", name: "Cartoonito", logo: null, number: 46, staseraSlug: "cartoonito" },
+      { id: "top-crime", name: "Top Crime", logo: null, number: 39, staseraSlug: "topcrime" },
+      { id: "focus", name: "Focus", logo: null, number: 35, staseraSlug: "focustv" },
+      { id: "mediaset-extra", name: "Mediaset Extra", logo: null, number: 55, staseraSlug: "mediaset_extra" },
     ],
   },
   discovery: {
-    label: "Discovery (Real Time + DMax)",
+    label: "Discovery (Real Time + DMax + Nove)",
     channels: [
-      {
-        id: "real-time",
-        name: "Real Time",
-        logo: null,
-        number: 31,
-        guidatvPath: "82847384/real-time",
-      },
-      {
-        id: "dmax",
-        name: "DMax",
-        logo: null,
-        number: 52,
-        guidatvPath: "68776588/dmax-italia",
-      },
+      { id: "real-time", name: "Real Time", logo: null, number: 31, staseraSlug: "realtime" },
+      { id: "dmax", name: "DMax", logo: null, number: 52, staseraSlug: "dmax" },
+      { id: "nove", name: "Nove", logo: null, number: 9, staseraSlug: "nove" },
+      { id: "discovery-channel", name: "Discovery Channel", logo: null, number: 401, staseraSlug: "discovery_channel" },
+      { id: "discovery-turbo", name: "Discovery Turbo", logo: null, number: 402, staseraSlug: "discovery_turbo" },
+      { id: "food-network", name: "Food Network", logo: null, number: 33, staseraSlug: "food_network" },
+      { id: "hgtv", name: "HGTV", logo: null, number: 56, staseraSlug: "hgtv" },
+      { id: "giallo", name: "Giallo", logo: null, number: 38, staseraSlug: "giallotv" },
+      { id: "k2", name: "K2", logo: null, number: 41, staseraSlug: "k2" },
+      { id: "frisbee", name: "Frisbee", logo: null, number: 44, staseraSlug: "frisbee" },
     ],
   },
 };
@@ -164,9 +161,8 @@ function decodeEntities(s: string): string {
 }
 
 // Costruisce ISO timestamp partendo da YYYY-MM-DD + HH:MM (Europe/Rome).
-// Europe/Rome ha DST: usiamo l'offset corrente del giorno (CET +0100 / CEST +0200).
+// Europe/Rome ha DST: usiamo l'offset corrente del giorno.
 function buildRomeIso(date: string, hh: number, mm: number): string {
-  // Probe: crea data alle 12:00 UTC del giorno e calcola offset Europe/Rome
   const probe = new Date(`${date}T12:00:00Z`);
   const fmt = new Intl.DateTimeFormat("en-US", {
     timeZone: "Europe/Rome",
@@ -179,7 +175,6 @@ function buildRomeIso(date: string, hh: number, mm: number): string {
   const offH = m ? parseInt(m[2], 10) : 1;
   const offM = m && m[3] ? parseInt(m[3], 10) : 0;
   const offMin = sign * (offH * 60 + offM);
-  // hh:mm Rome -> UTC ms
   const utcMs = Date.UTC(
     parseInt(date.slice(0, 4), 10),
     parseInt(date.slice(5, 7), 10) - 1,
@@ -191,31 +186,40 @@ function buildRomeIso(date: string, hh: number, mm: number): string {
   return new Date(utcMs).toISOString();
 }
 
-// Estrae i programmi dalla pagina guida.tv di un canale.
-// Pattern (verificato 2026-04-19):
-//   <tr><td width="110"><h5 class="thin">HH:MM</h5></td>
-//   <td><h5 class="thin"><a href="...">TITOLO</a></h5>
-//   <h6>... <i>info</i></h6></td></tr>
-function parseGuidatvHtml(html: string, date: string): Program[] {
+// Estrae i programmi dalla pagina staseraintv.com di un canale.
+// Pattern verificato 2026-04-19: il blocco palinsesto giornaliero contiene
+// righe formato `HH:MM - Titolo<br>` (separate da newline o tag <br>).
+// Esempio:
+//   06:00 - RaiNews24<br>07:00 - TG 1<br>21:30 - Roberta Valente...<br>
+function parseStaseraintvHtml(html: string, date: string): Program[] {
+  // Estrai tutti i match HH:MM - Title fino al prossimo <br> o newline.
+  // Il titolo puo' contenere trattini interni: catturiamo finche' non
+  // troviamo <br> o un newline o l'inizio di un nuovo blocco HH:MM.
+  const re = /(\d{1,2}):(\d{2})\s*-\s*([^<\r\n]+?)(?=<br|\r|\n|<\/h|<\/d|$)/g;
   const programs: Program[] = [];
-  const rowRe =
-    /<tr>\s*<td[^>]*>\s*<h5[^>]*class="thin"[^>]*>\s*(\d{1,2}):(\d{2})\s*<\/h5>\s*<\/td>\s*<td[^>]*>\s*<h5[^>]*class="thin"[^>]*>([\s\S]*?)<\/h5>([\s\S]*?)<\/td>\s*<\/tr>/g;
   let m: RegExpExecArray | null;
   let prevStartMs = -1;
   let dayShift = 0;
-  while ((m = rowRe.exec(html)) !== null) {
+  const seen = new Set<string>();
+
+  while ((m = re.exec(html)) !== null) {
     const hh = parseInt(m[1], 10);
     const mm = parseInt(m[2], 10);
     if (hh > 27 || mm > 59) continue;
-    // Il palinsesto puo' iniziare prima delle 06:00 del giorno successivo
-    // (notte). Quando l'orario "torna indietro" rispetto al precedente,
-    // shift di +1 giorno.
+
+    let titleRaw = m[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    titleRaw = decodeEntities(titleRaw);
+    if (!titleRaw || titleRaw.length < 2) continue;
+    // Ignora rumore: link di navigazione, attributi
+    if (/^(continua|stagione|episodio)$/i.test(titleRaw)) continue;
+
     const baseDate = new Date(`${date}T00:00:00Z`);
     if (dayShift > 0) baseDate.setUTCDate(baseDate.getUTCDate() + dayShift);
     let dateForRow = baseDate.toISOString().slice(0, 10);
     let startIso = buildRomeIso(dateForRow, hh, mm);
     let startMs = new Date(startIso).getTime();
-    if (prevStartMs > 0 && startMs < prevStartMs) {
+    if (prevStartMs > 0 && startMs < prevStartMs - 30 * 60 * 1000) {
+      // Wrap-around al giorno successivo (notte)
       dayShift += 1;
       const shifted = new Date(`${date}T00:00:00Z`);
       shifted.setUTCDate(shifted.getUTCDate() + dayShift);
@@ -225,32 +229,21 @@ function parseGuidatvHtml(html: string, date: string): Program[] {
     }
     prevStartMs = startMs;
 
-    const titleHtml = m[3];
-    const extraHtml = m[4];
-    // estrai testo del link / del h5
-    const linkMatch = titleHtml.match(/<a[^>]*>([\s\S]*?)<\/a>/);
-    const titleRaw = (linkMatch ? linkMatch[1] : titleHtml)
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    const title = decodeEntities(titleRaw) || "(senza titolo)";
-
-    // info aggiuntiva dal <h6><i>...</i></h6>
-    const infoMatch = extraHtml.match(/<i[^>]*>([\s\S]*?)<\/i>/);
-    const info = infoMatch
-      ? decodeEntities(
-          infoMatch[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
-        )
-      : undefined;
+    // Dedupe (lo stesso programma puo' apparire nel "prime time" e nella
+    // griglia completa)
+    const key = `${startIso}|${titleRaw.slice(0, 50)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
 
     programs.push({
       start: startIso,
-      end: startIso, // chiuso sotto con start del prossimo
-      title,
-      description: info,
+      end: startIso,
+      title: titleRaw,
     });
   }
-  // chiudi end con start del successivo (default +30m sull'ultimo)
+
+  // Ordina e chiudi end con start del successivo
+  programs.sort((a, b) => a.start.localeCompare(b.start));
   for (let i = 0; i < programs.length - 1; i += 1) {
     programs[i].end = programs[i + 1].start;
   }
@@ -262,20 +255,37 @@ function parseGuidatvHtml(html: string, date: string): Program[] {
   return programs;
 }
 
-// Cache 1h per (channel,date)
+// Cache 1h per (slug, date)
 type CacheEntry = { at: number; programs: Program[] };
-const guidatvCache = new Map<string, CacheEntry>();
+const fetchCache = new Map<string, CacheEntry>();
 const TTL_MS = 60 * 60 * 1000;
 
-async function fetchGuidatv(
-  guidatvPath: string,
-  date: string,
-): Promise<Program[]> {
-  const cacheKey = `${guidatvPath}:${date}`;
-  const cached = guidatvCache.get(cacheKey);
+async function fetchStasera(slug: string, date: string): Promise<Program[]> {
+  const cacheKey = `${slug}:${date}`;
+  const cached = fetchCache.get(cacheKey);
   if (cached && Date.now() - cached.at < TTL_MS) return cached.programs;
 
-  const url = `https://www.guida.tv/programmi-tv/palinsesto/canale/${guidatvPath}.html?dt=${date}`;
+  // staseraintv.com ha solo 3 endpoint temporali per canale:
+  //   ieri, oggi (programmi_stasera_), domani (programmi_domani_).
+  // Per data arbitraria fuori da questa finestra ritorniamo [].
+  const today = todayRomeISO();
+  const tomorrow = new Date(`${today}T12:00:00Z`);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const tomorrowIso = tomorrow.toISOString().slice(0, 10);
+  const yesterday = new Date(`${today}T12:00:00Z`);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yesterdayIso = yesterday.toISOString().slice(0, 10);
+
+  let prefix = "programmi_stasera_";
+  if (date === tomorrowIso) prefix = "programmi_domani_";
+  else if (date === yesterdayIso) prefix = "programmi_ieri_";
+  else if (date !== today) {
+    // fuori finestra
+    fetchCache.set(cacheKey, { at: Date.now(), programs: [] });
+    return [];
+  }
+
+  const url = `https://www.staseraintv.com/${prefix}${slug}.html`;
   try {
     const res = await fetch(url, {
       headers: {
@@ -286,26 +296,47 @@ async function fetchGuidatv(
       },
     });
     if (!res.ok) {
-      console.warn("[streaming-tv] guida.tv non-OK", res.status, guidatvPath);
+      console.warn("[streaming-tv] staseraintv non-OK", res.status, slug);
+      fetchCache.set(cacheKey, { at: Date.now(), programs: [] });
       return [];
     }
     const html = await res.text();
-    const programs = parseGuidatvHtml(html, date);
-    guidatvCache.set(cacheKey, { at: Date.now(), programs });
+    const programs = parseStaseraintvHtml(html, date);
+    fetchCache.set(cacheKey, { at: Date.now(), programs });
     return programs;
   } catch (err) {
-    console.warn("[streaming-tv] guida.tv fetch error", guidatvPath, err);
+    console.warn("[streaming-tv] staseraintv fetch error", slug, err);
     return [];
   }
 }
 
 async function fetchProgramsForChannel(
-  family: FamilyId,
   channel: Channel,
   date: string,
 ): Promise<Program[]> {
-  if (family !== "discovery" || !channel.guidatvPath) return [];
-  return await fetchGuidatv(channel.guidatvPath, date);
+  if (!channel.staseraSlug) return [];
+  return await fetchStasera(channel.staseraSlug, date);
+}
+
+// Limita la concorrenza per non hammerare staseraintv.com.
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  async function worker() {
+    while (true) {
+      const idx = cursor;
+      cursor += 1;
+      if (idx >= items.length) return;
+      results[idx] = await fn(items[idx]);
+    }
+  }
+  const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+  await Promise.all(workers);
+  return results;
 }
 
 Deno.serve(async (req) => {
@@ -339,21 +370,18 @@ Deno.serve(async (req) => {
     const date = DATE_RE.test(dateParam) ? dateParam : todayRomeISO();
     const familyCfg = FAMILIES[family as FamilyId];
 
-    const channels = await Promise.all(
-      familyCfg.channels.map(async (ch) => {
-        const programs = await fetchProgramsForChannel(family as FamilyId, ch, date)
-          .then((list) => list.filter((p) => isPrimeTime(p.start)))
-          .catch(() => [] as Program[]);
-        // Espone solo i campi per il frontend (no guidatvPath/xmltvId)
-        return {
-          id: ch.id,
-          name: ch.name,
-          logo: ch.logo,
-          number: ch.number,
-          programs,
-        };
-      }),
-    );
+    const channels = await mapWithConcurrency(familyCfg.channels, 5, async (ch) => {
+      const programs = await fetchProgramsForChannel(ch, date)
+        .then((list) => list.filter((p) => isPrimeTime(p.start)))
+        .catch(() => [] as Program[]);
+      return {
+        id: ch.id,
+        name: ch.name,
+        logo: ch.logo,
+        number: ch.number,
+        programs,
+      };
+    });
 
     const payload = {
       family,
