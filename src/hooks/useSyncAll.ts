@@ -19,6 +19,7 @@ export function useSyncAll() {
   const [syncing, setSyncing] = useState(false);
   const [syncStep, setSyncStep] = useState<string>("");
   const [syncProgress, setSyncProgress] = useState(0);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
 
   const sync = useCallback(async () => {
     setSyncing(true);
