@@ -24,19 +24,28 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
     pill **Tutti / Film / Serie**, selettore data **Oggi / 3 giorni / 7
     giorni**, dialog di dettaglio al click sul poster (overview, voto,
     cast top 6, link al provider e a TMDB).
-- Edge function `streaming-tv` con scraping reale di `www.guida.tv` per i
-  canali Discovery (Real Time, DMax). Cache in-memory 1h per canale/giorno.
-  FRAGILE: parser HTML basato su regex, soggetto a rotture se il markup
-  guida.tv cambia. Sky/RAI/Mediaset restano elencati ma con
-  `programsAvailable=false`.
+- Edge function `streaming-tv` con scraping reale di
+  `www.staseraintv.com` esteso a tutte le famiglie supportate dalla
+  fonte: **RAI** (12 canali), **Mediaset** (13 canali), **Sky Cinema**
+  (5 canali: Uno, Collection, Family, Action, Romance), **Discovery**
+  (Real Time, DMax, Nove, Discovery Channel/Turbo, Food Network, HGTV,
+  Giallo, K2, Frisbee). Cache in-memory 1h per `(slug, date)`,
+  concorrenza limitata a 5 fetch paralleli.
+  FRAGILE: parser regex su HTML di terze parti, soggetto a rotture se
+  staseraintv.com cambia struttura. Sky Sport NON e' coperto dalla
+  fonte (verificato: tutti gli slug `sky_sport_*` ritornano 404):
+  i canali Sky Sport restano elencati ma con `programs=[]` e la UI
+  dichiara onestamente "non disponibile".
 - Edge function `streaming-releases` su TMDB `/discover` con range
   `dateFrom`/`dateTo` (default oggi..oggi+7), nuova action `credits`
   (`type`+`id`) per cast top 10, cache in-memory 1h (24h per credits).
   Gestione esplicita dell'assenza di `TMDB_API_KEY` (`configured=false`).
-- Quadro reale **Stasera in TV** in Home: prime time Real Time + DMax
-  ordinato per orario (max 6 righe), fallback ai pill famiglie quando
-  i programmi non sono disponibili.
-  famiglie canali via deep-link `?family=`.
+- Quadro reale **Stasera in TV** in Home con aggregazione multi-famiglia
+  (5 query parallele) e **filtri rapidi** user-friendly: chip
+  selezionabili `Tutti / Sky Sport / Sky Cinema / RAI / Mediaset /
+  Discovery` su `ToggleGroup`, top 8 righe ordinate per orario,
+  responsive (chip scrollabili orizzontalmente su mobile, wrap su
+  desktop). Empty state esplicito per famiglia senza dati.
 
 ### Changed
 
