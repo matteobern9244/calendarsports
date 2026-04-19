@@ -40,6 +40,7 @@ interface TvHighlight {
   hourRome: number;
   minuteRome: number;
   title: string;
+  genre?: string;
 }
 
 const container = {
