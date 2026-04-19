@@ -22,6 +22,38 @@ export default tseslint.config(
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
       "@typescript-eslint/no-explicit-any": "off",
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/integrations/supabase/client",
+              message:
+                "Importa il client Supabase da '@/lib/supabaseClient' invece che dal file auto-generato. Vedi AGENTS.md → 'Import del client Supabase'.",
+            },
+          ],
+          patterns: [
+            {
+              group: [
+                "**/integrations/supabase/client",
+                "src/integrations/supabase/client",
+              ],
+              message:
+                "Importa il client Supabase da '@/lib/supabaseClient'. Il file auto-generato non e' sicuro in build di produzione (env var non sempre iniettate).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Il wrapper sicuro e il file auto-generato possono restare liberi dalla regola.
+    files: [
+      "src/lib/supabaseClient.ts",
+      "src/integrations/supabase/client.ts",
+    ],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 );
