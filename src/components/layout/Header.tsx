@@ -25,15 +25,15 @@ export default function Header({ theme, toggleTheme }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/80 backdrop-blur-xl">
-      <div className="container flex h-20 md:h-24 items-center justify-between">
+      <div className="container flex h-16 md:h-20 items-center justify-between">
         {/* Logo */}
         <Link to="/" aria-label="Calendar Events — vai alla home" className="flex items-center shrink-0">
           <img
-            src="/og-image.jpg"
+            src="/logo-header.jpg"
             alt="Calendar Events"
-            className="h-14 md:h-20 w-auto rounded-md object-contain"
-            width={1216}
-            height={640}
+            className="h-10 md:h-14 w-auto rounded-md object-contain"
+            width={2064}
+            height={512}
           />
         </Link>
 
