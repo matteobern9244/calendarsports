@@ -239,6 +239,11 @@ export default function HomePage() {
     ? familyLabelMap[familyFilter]
     : null;
 
+  // Reset paginazione quando cambia il filtro famiglia
+  useEffect(() => {
+    setTvPage(0);
+  }, [familyFilter]);
+
   // Paginazione interna alla scheda Stasera in TV
   const totalTvPages = Math.max(1, Math.ceil(tonightHighlights.length / TV_PAGE_SIZE));
   const safePage = Math.min(tvPage, totalTvPages - 1);
