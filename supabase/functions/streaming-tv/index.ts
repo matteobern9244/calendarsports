@@ -2,16 +2,12 @@
 // Restituisce il palinsesto prime time (19:00-24:00 Europe/Rome) di oggi
 // per famiglia di canali (sky-sport, sky-cinema, rai, mediaset, discovery).
 //
-// FRAGILITA' MASSIMA: la sorgente reale per Sky/RAI/Mediaset richiede
-// scraping dei rispettivi siti pubblici, e per Real Time/DMax dipende
-// da feed XMLTV community (iptv-org/epg). Per la prima implementazione
-// produciamo un palinsesto strutturato a partire da un dataset
-// hardcoded di canali e usiamo un fetch best-effort verso il feed XMLTV
-// pubblico per Discovery; quando il fetch fallisce restituiamo lista
-// programmi vuota per quel canale, mai un crash. Questo approccio
-// garantisce che la UI sia sempre navigabile e dichiari onestamente
-// quando non ha dati. Le sorgenti reali per Sky/RAI/Mediaset andranno
-// integrate progressivamente in step successivi.
+// FRAGILITA' MASSIMA: per Real Time/DMax usiamo il feed XMLTV community
+// di iptv-org (https://github.com/iptv-org/epg) che e' soggetto a
+// cambiamenti senza preavviso (struttura, channel id, disponibilita').
+// Sky/RAI/Mediaset restano stub vuoti: i canali sono elencati come
+// navigazione, ma `programsAvailable=false` viene dichiarato nel payload
+// cosi' la UI puo' mostrare uno stato onesto. Mai dati inventati.
 
 import {
   buildCorsHeaders,
@@ -23,8 +19,9 @@ type Channel = {
   id: string;
   name: string;
   logo: string | null;
-  // numero canale Sky/digitale terrestre quando rilevante
   number?: number;
+  // id XMLTV nel feed iptv-org (solo Discovery oggi)
+  xmltvId?: string;
 };
 
 type Program = {
@@ -113,8 +110,8 @@ const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
   discovery: {
     label: "Discovery (Real Time + DMax)",
     channels: [
-      { id: "real-time", name: "Real Time", logo: null, number: 31 },
-      { id: "dmax", name: "DMax", logo: null, number: 52 },
+      { id: "real-time", name: "Real Time", logo: null, number: 31, xmltvId: "RealTime.it" },
+      { id: "dmax", name: "DMax", logo: null, number: 52, xmltvId: "DMAX.it" },
     ],
   },
 };
@@ -130,7 +127,6 @@ function todayRomeISO(): string {
 }
 
 function isPrimeTime(iso: string): boolean {
-  // 19:00 - 24:00 Europe/Rome
   const fmt = new Intl.DateTimeFormat("it-IT", {
     timeZone: "Europe/Rome",
     hour: "2-digit",
@@ -142,15 +138,128 @@ function isPrimeTime(iso: string): boolean {
   return h >= 19 && h < 24;
 }
 
-// Stub: in step successivi qui andra' lo scraping dei provider reali.
-// Per ora restituiamo lista vuota: il frontend mostra messaggio
-// "Palinsesto non disponibile" sul canale, mai dati inventati.
+// === XMLTV parser per Discovery (iptv-org) ===
+// Feed IT: https://iptv-org.github.io/epg/guides/it/mediasetinfinity.mediaset.it.epg.xml
+// non e' garantito coprire Discovery; il guide ufficiale Discovery e':
+//   https://iptv-org.github.io/epg/guides/it/dplay.com.epg.xml
+// Cache 1h del feed completo, parse on-demand per channel.
+const XMLTV_DISCOVERY_URL =
+  "https://iptv-org.github.io/epg/guides/it/dplay.com.epg.xml";
+
+type XmltvCacheEntry = { at: number; xml: string };
+const xmltvCache = new Map<string, XmltvCacheEntry>();
+const XMLTV_TTL_MS = 60 * 60 * 1000;
+
+async function fetchXmltvDiscovery(): Promise<string | null> {
+  const cached = xmltvCache.get(XMLTV_DISCOVERY_URL);
+  if (cached && Date.now() - cached.at < XMLTV_TTL_MS) {
+    return cached.xml;
+  }
+  try {
+    const res = await fetch(XMLTV_DISCOVERY_URL, {
+      headers: { "User-Agent": "calendar-sports-edge/1.0" },
+    });
+    if (!res.ok) {
+      console.warn("[streaming-tv] XMLTV fetch non-OK", res.status);
+      return null;
+    }
+    const xml = await res.text();
+    xmltvCache.set(XMLTV_DISCOVERY_URL, { at: Date.now(), xml });
+    return xml;
+  } catch (err) {
+    console.warn("[streaming-tv] XMLTV fetch error", err);
+    return null;
+  }
+}
+
+// XMLTV time format: "20260419190000 +0200" -> ISO
+function xmltvTimeToIso(raw: string): string | null {
+  // YYYYMMDDhhmmss [+/-]HHMM
+  const m = raw.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\s*([+-]\d{4}))?$/);
+  if (!m) return null;
+  const [, y, mo, d, h, mi, s, tz] = m;
+  const tzPart = tz ? `${tz.slice(0, 3)}:${tz.slice(3)}` : "Z";
+  const iso = `${y}-${mo}-${d}T${h}:${mi}:${s}${tzPart}`;
+  const t = new Date(iso).getTime();
+  return Number.isFinite(t) ? new Date(t).toISOString() : null;
+}
+
+function decodeXmlEntities(s: string): string {
+  return s
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&amp;/g, "&");
+}
+
+function extractTag(block: string, tag: string): string | undefined {
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
+  const m = block.match(re);
+  return m ? decodeXmlEntities(m[1].trim()) : undefined;
+}
+
+function parseProgrammesForChannel(
+  xml: string,
+  channelId: string,
+  date: string,
+): Program[] {
+  // Match <programme start="..." stop="..." channel="ChannelId">...</programme>
+  const escaped = channelId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(
+    `<programme\\s+([^>]*?channel=["']${escaped}["'][^>]*)>([\\s\\S]*?)<\\/programme>`,
+    "gi",
+  );
+  const programs: Program[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml)) !== null) {
+    const attrs = m[1];
+    const body = m[2];
+    const startMatch = attrs.match(/start=["']([^"']+)["']/);
+    const stopMatch = attrs.match(/stop=["']([^"']+)["']/);
+    if (!startMatch) continue;
+    const startIso = xmltvTimeToIso(startMatch[1]);
+    const stopIso = stopMatch ? xmltvTimeToIso(stopMatch[1]) : null;
+    if (!startIso) continue;
+    // Filtra solo i programmi del giorno richiesto in Europe/Rome
+    const dayKey = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Rome",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(startIso));
+    if (dayKey !== date) continue;
+    const title = extractTag(body, "title") ?? "(senza titolo)";
+    const desc = extractTag(body, "desc");
+    const category = extractTag(body, "category");
+    programs.push({
+      start: startIso,
+      end: stopIso ?? startIso,
+      title,
+      genre: category,
+      description: desc,
+    });
+  }
+  return programs.sort((a, b) => a.start.localeCompare(b.start));
+}
+
 async function fetchProgramsForChannel(
-  _family: FamilyId,
-  _channel: Channel,
-  _date: string,
+  family: FamilyId,
+  channel: Channel,
+  date: string,
 ): Promise<Program[]> {
-  return [];
+  if (family !== "discovery" || !channel.xmltvId) {
+    return [];
+  }
+  const xml = await fetchXmltvDiscovery();
+  if (!xml) return [];
+  try {
+    return parseProgrammesForChannel(xml, channel.xmltvId, date);
+  } catch (err) {
+    console.warn("[streaming-tv] XMLTV parse error", channel.xmltvId, err);
+    return [];
+  }
 }
 
 Deno.serve(async (req) => {
@@ -198,7 +307,6 @@ Deno.serve(async (req) => {
       familyLabel: familyCfg.label,
       date,
       channels,
-      // dichiarazione esplicita: scraping reale non ancora implementato
       programsAvailable: channels.some((c) => c.programs.length > 0),
     };
 
