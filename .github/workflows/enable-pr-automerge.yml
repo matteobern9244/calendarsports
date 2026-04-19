@@ -63,4 +63,15 @@ jobs:
             exit 0
           fi
 
-          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash
+          merge_output=$(gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash 2>&1) || {
+            echo "$merge_output"
+
+            if echo "$merge_output" | grep -q "enablePullRequestAutoMerge"; then
+              echo "Auto-merge is not available for this branch configuration. Nothing to do."
+              exit 0
+            fi
+
+            exit 1
+          }
+
+          echo "$merge_output"
