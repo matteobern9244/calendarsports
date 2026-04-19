@@ -25,6 +25,9 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   `actions/setup-node@v6`, `actions/upload-artifact@v7`.
 - Aggiunto workflow repository-level per abilitare automaticamente
   `auto-merge` con metodo `squash` sulle PR verso `develop` e `main`.
+- Rimossa la richiesta di review obbligatoria dalla Ruleset di `main`, cosi'
+  le PR `develop` -> `main` si auto-fondono appena i check richiesti sono
+  verdi.
 - Required checks finali candidati per la Ruleset di `main`: `quality` ed
   `e2e` dal workflow PR.
 - Documentazione operativa e prompt repository-local allineati alla policy

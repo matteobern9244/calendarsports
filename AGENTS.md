@@ -85,7 +85,8 @@ Configurazione GitHub finale richiesta.
 - Attivare nella Ruleset solo queste branch rules:
   - `deletion`
   - `non_fast_forward`
-  - `pull_request` con almeno 1 approval e `dismiss_stale_reviews_on_push`
+  - `pull_request` senza approval obbligatoria e con
+    `dismiss_stale_reviews_on_push`
   - `required_status_checks` strict con i job stabili del workflow PR verso
     `main`.
 - Non attivare `required_linear_history`, `required_signatures`,
@@ -100,8 +101,7 @@ Con questa configurazione:
 - Le PR verso `develop` e `main` devono avere `auto-merge` attivo con metodo
   `squash` appena vengono aperte o aggiornate.
 - Se i check richiesti sono verdi, GitHub deve fondere automaticamente la PR
-  non appena risultano soddisfatte anche le altre condizioni di merge
-  applicabili, ad esempio una review obbligatoria su `main`.
+  non appena risultano soddisfatte le altre condizioni di merge applicabili.
 - Il workflow `guard-main-source.yml` blocca le PR verso `main` che non
   provengono da `develop`, ma non interferisce con i push automatici di
   Lovable su `main`.
