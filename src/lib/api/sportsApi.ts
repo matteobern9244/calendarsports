@@ -1,13 +1,12 @@
+import { SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY } from "@/lib/supabaseClient";
+
 async function callEdgeFunction(functionName: string, params: Record<string, string>) {
   const queryString = new URLSearchParams(params).toString();
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-  const url = `${supabaseUrl}/functions/v1/${functionName}?${queryString}`;
+  const url = `${SUPABASE_PROJECT_URL}/functions/v1/${functionName}?${queryString}`;
   const response = await fetch(url, {
     headers: {
-      "Authorization": `Bearer ${anonKey}`,
-      "apikey": anonKey,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "apikey": SUPABASE_ANON_KEY,
     },
   });
 

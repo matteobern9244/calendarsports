@@ -3,7 +3,7 @@
 Applicazione web sportiva multi-sezione per consultare eventi imminenti,
 calendari e classifiche di Jannik Sinner, Juventus, Formula 1 e MotoGP.
 
-Versione repository corrente: `2.0.1`.
+Versione repository corrente: `2.0.2`.
 
 ## Origine del progetto
 
@@ -26,16 +26,21 @@ incoraggino push automatici o superficiali su `main`.
 
 ## Release baseline
 
-La baseline documentata del repository e' la release `2.0.1`.
+La baseline documentata del repository e' la release `2.0.2`.
 
 Questa release rappresenta il punto in cui sono stati allineati:
 
 - cleanup del versionamento dei file ambiente;
 - workflow GitHub Actions per `develop` e per le PR verso `main`;
 - test locali e CI piu' ripetibili;
-- documentazione operativa coerente con il rischio GitHub <-> Lovable.
+- documentazione operativa coerente con il rischio GitHub <-> Lovable;
+- fix del caricamento dati nel bundle di produzione (wrapper Supabase con
+  fallback hardcoded sui valori pubblici);
+- ErrorBoundary globale e regola ESLint che blocca import diretti dal client
+  Supabase auto-generato;
+- hook pre-commit `husky` + `lint-staged` per bloccare violazioni in locale.
 
-La release `2.0.1` descrive lo stato del repository e delle sue policy
+La release `2.0.2` descrive lo stato del repository e delle sue policy
 operative. Non implica, da sola, che una corrispondente versione live sia gia'
 stata pubblicata su Lovable.
 
@@ -277,6 +282,34 @@ Punti chiave:
 - ogni funzione incapsula logica di fetch, scraping, fallback e rate limiting
   basilare.
 
+### Import del client Supabase nel frontend
+
+Per qualunque uso del client Supabase JS SDK (auth, realtime,
+`functions.invoke`, storage, query DB) importa sempre da
+`@/lib/supabaseClient`, non da `@/integrations/supabase/client`.
+
+Il file `src/integrations/supabase/client.ts` e' auto-generato e read-only,
+e legge `import.meta.env.VITE_SUPABASE_URL` /
+`VITE_SUPABASE_PUBLISHABLE_KEY` direttamente. In alcuni build di produzione
+queste variabili non vengono iniettate nel bundle: il client viene quindi
+creato con `URL = undefined` e le richieste finiscono su
+`https://<host>/undefined/functions/v1/...` (fallback HTML 200, mai JSON,
+React Query in loading infinito).
+
+`src/lib/supabaseClient.ts` ricrea il client usando le stesse variabili
+con fallback hardcoded sui valori pubblici (project URL e anon key),
+garantendo che funzioni in qualunque build. Esporta inoltre
+`SUPABASE_PROJECT_URL` e `SUPABASE_ANON_KEY` per chiamate `fetch` manuali
+verso le edge functions (gia' usate da `src/lib/api/sportsApi.ts`).
+
+```ts
+// OK
+import { supabase } from "@/lib/supabaseClient";
+
+// Da evitare nei nuovi import
+import { supabase } from "@/integrations/supabase/client";
+```
+
 Il repo non contiene una documentazione operativa completa per sviluppo edge
 locale. In pratica oggi il percorso piu' lineare e':
 
@@ -289,23 +322,90 @@ locale. In pratica oggi il percorso piu' lineare e':
 
 Questo e' il punto piu' sensibile del repository.
 
-- Lovable documenta il sync GitHub <-> Lovable sul branch di default;
-- per questo repo va assunto che `main` sia il branch a rischio sync;
-- le attivita' di analisi, sviluppo e refactor dovrebbero avvenire fuori da
-  `main`, salvo istruzioni esplicite;
-- nessun documento di questo repo deve suggerire push automatici su `main`;
-- il deploy della versione di produzione resta manuale da eseguire in Lovable da
-  parte tua.
+- Lovable sincronizza in modo bidirezionale e automatico sul branch di
+  default del repo, che per questo progetto e' `main`.
+- Ogni modifica fatta dall'editor Lovable produce un commit automatico su
+  `main`. Lovable e' quindi l'unico canale autorizzato a scrivere
+  direttamente su `main`.
+- Gli sviluppatori umani non pushano mai direttamente su `main`. Lavorano su
+  `develop` (o feature branch derivati da `develop`) e arrivano su `main`
+  solo tramite pull request.
+- Il deploy in produzione resta manuale da eseguire in Lovable
+  (Publish -> Update).
 
 Policy operativa corrente del repository:
 
-- `main` deve ricevere modifiche solo tramite pull request da `develop`;
-- su `main` non vanno fatti push diretti;
-- il merge verso `main` deve restare bloccato finche' non passano tutti i check
-  GitHub Actions richiesti;
-- i workflow CI validano `lint`, `test`, `build` ed E2E frontend;
-- gli E2E usano fixture e mocking delle Edge Functions, quindi validano router,
-  UI e shape dati senza dipendere dai provider esterni live.
+- `main` accetta scritture solo da:
+  - l'app GitHub di Lovable (sync automatico bidirezionale);
+  - merge di pull request provenienti da `develop`.
+- Su `main` non vanno fatti push diretti da utenti umani.
+- Il merge verso `main` deve restare bloccato finche' non passano tutti i
+  check GitHub Actions richiesti.
+- I workflow CI validano `lint`, `test`, `build` ed E2E frontend.
+- Gli E2E usano fixture e mocking delle Edge Functions, quindi validano
+  router, UI e shape dati senza dipendere dai provider esterni live.
+
+### Configurazione GitHub consigliata (branch protection)
+
+**Regola d'oro**: usare **una sola** fonte di protezione per `main`. Avere
+sia una Ruleset moderna sia una Branch protection rule classica attive
+contemporaneamente fa sommare le restrizioni e finisce per bloccare anche
+l'app Lovable, perche' la regola piu' restrittiva vince sempre.
+
+#### Opzione A consigliata: Ruleset moderna
+
+In `Settings -> Rules -> Rulesets`, creare/modificare una Ruleset che
+matcha esattamente il branch `main`:
+
+- Require a pull request before merging.
+- Require status checks to pass (lint, test, build, e2e).
+- Bypass list: aggiungere l'app GitHub di Lovable (`lovable-dev`) come
+  actor con bypass mode = `Always`. Il bypass deve coprire sia la PR
+  requirement sia gli status checks.
+- **NON** attivare opzioni tipo `Do not allow bypassing the above
+  settings`: annullano la bypass list e rifiutano anche i push di
+  Lovable.
+- Verificare che non esistano altre Ruleset con pattern `*` o `main*`
+  che intercettano comunque `main` senza la stessa bypass list.
+
+#### Opzione B alternativa: Branch protection rule classica
+
+In `Settings -> Branches -> Branch protection rule` per `main`:
+
+- Require a pull request before merging.
+- Restrict who can push to matching branches -> includere esplicitamente
+  l'app GitHub di Lovable (`lovable-dev`). Le restrizioni devono coprire
+  le GitHub Apps, non solo utenti/team.
+- Lasciare **disattivato** `Do not allow bypassing the above settings`,
+  altrimenti Lovable resta bloccata anche se autorizzata.
+
+#### Diagnostica errore "Push was rejected by branch protection rules"
+
+Se Lovable mostra questo errore, controllare in ordine:
+
+1. `main` matcha contemporaneamente Ruleset + Branch protection classica?
+   Se si', disattivare una delle due e tenere la Ruleset.
+2. Il bypass per `lovable-dev` copre anche i required status checks (non
+   solo la PR requirement)?
+3. E' attivo qualche flag tipo `No bypass` / `Do not allow bypassing` su
+   una delle due regole? Se si', disattivarlo.
+4. Esiste una Ruleset secondaria con pattern `*` o `main*` senza bypass
+   per Lovable? Se si', allinearla o restringere il pattern.
+
+Risultato pratico:
+
+- Lovable continua a pushare su `main` per il sync automatico.
+- Gli umani possono contribuire solo via PR da `develop` verso `main`.
+- Nessun push diretto umano su `main` e' possibile, neppure per errore.
+
+### Sync GitHub -> Lovable
+
+- Il sync e' event-driven sul branch di default (`main`).
+- Quando un commit arriva su `main` (sia da Lovable, sia da merge di PR
+  umane), Lovable aggiorna automaticamente il progetto in editor.
+- Non esiste un pulsante "Sync now": e' automatico.
+- Se da locale non vedi i commit fatti da Lovable, esegui
+  `git fetch --all --prune` e verifica `git log origin/main --oneline`.
 
 Se cambi branch policy, default branch o integrazione GitHub in Lovable,
 aggiorna immediatamente questa documentazione e `AGENTS.md`.

@@ -1,45 +1,50 @@
 
+Obiettivo: individuare quale regola GitHub sta ancora bloccando i push di Lovable su `main`.
 
-## Piano di implementazione — 5 richieste
+Fatti verificati:
+- Nel repo, `README.md` e `AGENTS.md` descrivono `main` come branch sincronizzato da Lovable.
+- Tu hai confermato che su GitHub sono attivi sia una Ruleset sia una Branch protection rule classica.
+- Hai aggiunto il bypass solo nella Ruleset.
+- Hai ancora attivo `Do not allow bypassing the above settings` / opzione equivalente.
 
-### 1. Verifica badge DAZN/SKY (Juventus + Home)
-Testerò la edge function `sports-football` per verificare che i dati broadcaster vengano restituiti. Se funzionano, i badge sono già implementati sia nella pagina Juventus che nella Home.
+Diagnosi piu' probabile:
+1. La Branch protection rule classica su `main` sta ancora vincendo o si sta sommando alla Ruleset.
+2. Il flag `No bypass` sta annullando il bypass che hai dato all'app Lovable.
+3. Se esistono anche required checks / required workflows o una restrict-push separata nella regola classica, Lovable puo' restare bloccato anche se nella Ruleset hai creato un bypass.
 
-### 2. Champions League e Coppa Italia per Juventus
-Attualmente il calendario Juventus mostra solo partite di Serie A (Sky Sport). Per aggiungere Champions League e Coppa Italia:
-- **Edge function `sports-football`**: aggiungere nuove chiamate a Sky Sport per le competizioni UEFA Champions League e Coppa Italia (competition IDs diversi dal `21` della Serie A), unirle nel calendario e ordinare per data.
-- **Frontend**: mostrare un badge con il nome della competizione (Serie A / UCL / Coppa Italia) accanto a ogni partita.
-- **Home page**: il subtitle includerà la competizione corretta.
-- **Sincronizza**: già coperto (invalida tutte le query).
+Piano di verifica, in ordine:
+1. Apri GitHub e controlla se `main` matcha due protezioni contemporaneamente:
+   - `Settings -> Rules -> Rulesets`
+   - `Settings -> Branches -> Branch protection rules`
+   Se entrambe toccano `main`, considera questa la causa numero uno.
 
-### 3. Foto piloti mancanti — F1 e MotoGP
-- **F1**: OpenF1 potrebbe non coprire tutti i piloti (riserve, stagioni passate). Aggiungere una mappa statica di fallback con headshot URLs per i piloti 2025/2026 dal CDN ufficiale F1 (come fatto per MotoGP). Il frontend mostra già la foto se `photoUrl` è presente; basta garantire che il backend la fornisca sempre.
-- **MotoGP**: La mappa `MOTOGP_RIDER_PHOTOS` potrebbe non matchare tutti i nomi di Sky Sport. Migliorare la logica di matching e aggiungere eventuali piloti mancanti. Mostrare un avatar placeholder quando non c'è foto.
-- **Frontend**: usare un fallback icon/avatar quando `photoUrl` è null, così non c'è mai uno spazio vuoto.
+2. Isola una sola fonte di verita':
+   - Opzione consigliata: tieni la Ruleset moderna come regola attiva per `main`.
+   - Disattiva o elimina temporaneamente la Branch protection rule classica su `main`, oppure rimuovi da lei ogni blocco che puo' intercettare i push.
 
-### 4. Logo scuderia in Classifica Costruttori F1
-- **Edge function `sports-f1`**: nel case `constructor-standings`, aggiungere una mappa statica `constructorId → logoUrl` per i team F1 2025 (Red Bull, Ferrari, McLaren, Mercedes, etc.) usando le immagini dal CDN ufficiale o Wikipedia commons.
-- **Frontend `Formula1Page.tsx`**: nella tabella Costruttori, aggiungere un `<img>` prima del nome scuderia (come già fatto per le squadre in Classifica Serie A).
+3. Nella Ruleset di `main`, verifica tre punti distinti:
+   - Lovable e' nella bypass list degli actor ammessi.
+   - Il bypass copre non solo la pull request requirement, ma anche eventuali required status checks / required workflows, se presenti.
+   - Non c'e' un flag equivalente a `Do not allow bypassing` che renda inutile la bypass list.
 
-### 5. Logo team in Classifica Costruttori MotoGP
-- **Edge function `sports-motogp`**: nel case `constructor-standings`, aggiungere una mappa statica `teamName → logoUrl` per i team MotoGP 2026 (Ducati, Aprilia, KTM, Yamaha, Honda).
-- **Frontend `MotoGPPage.tsx`**: stessa logica — aggiungere `<img>` nella tabella costruttori.
+4. Se invece vuoi tenere la Branch protection rule classica:
+   - Controlla che anche li' Lovable sia autorizzato.
+   - Controlla `Restrict who can push to matching branches`: se attivo, Lovable deve comparire esplicitamente tra gli actor autorizzati.
+   - Disattiva `Do not allow bypassing the above settings`, altrimenti il bypass rischia di non servire.
 
----
+5. Controlla i blocchi piu' comuni che spesso restano nascosti:
+   - Required status checks / required workflows ancora obbligatori per i push diretti.
+   - Restrict who can push configurato solo per utenti/team ma non per GitHub App.
+   - Una seconda Ruleset piu' generale che matcha comunque `main`.
+   - Un branch pattern tipo `*` o `main*` che prende anche `main`.
 
-### Dettagli tecnici
+Configurazione finale attesa:
+- Una sola protezione effettiva per `main` oppure due protezioni perfettamente coerenti.
+- Lovable presente tra gli actor che possono bypassare / pushare.
+- Nessun `No bypass` che annulli quell'eccezione.
+- Se ci sono required checks, Lovable deve poterli bypassare oppure quei checks devono valere solo per le PR umane.
 
-**File modificati:**
-- `supabase/functions/sports-football/index.ts` — nuovi competition IDs per UCL/Coppa Italia, merge calendario
-- `supabase/functions/sports-f1/index.ts` — mappa fallback foto piloti + mappa loghi costruttori
-- `supabase/functions/sports-motogp/index.ts` — mappa loghi team costruttori
-- `src/pages/Formula1Page.tsx` — avatar fallback piloti + logo costruttori in tabella
-- `src/pages/MotoGPPage.tsx` — avatar fallback piloti + logo costruttori in tabella
-- `src/pages/JuventusPage.tsx` — badge competizione (Serie A/UCL/Coppa Italia)
-- `src/pages/Index.tsx` — subtitle con competizione corretta
-
-**Competition IDs Sky Sport (da verificare):**
-- Serie A: `21`
-- Champions League: da trovare tramite fetch
-- Coppa Italia: da trovare tramite fetch
-
+Se vuoi, appena approvi il prossimo step in modalita' build, il piano operativo sara':
+- aggiornare `README.md` e `AGENTS.md` per correggere la parte oggi fuorviante su `Do not allow bypassing`;
+- aggiungere una checklist breve e precisa della configurazione GitHub corretta;
+- poi farti fare una micro-verifica finale con `git fetch` e `git log origin/main --oneline -5`.

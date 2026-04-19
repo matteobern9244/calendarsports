@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Layout from "@/components/layout/Layout";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 import Index from "./pages/Index";
 import SinnerPage from "./pages/SinnerPage";
 import JuventusPage from "./pages/JuventusPage";
@@ -22,24 +23,27 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/sinner" element={<SinnerPage />} />
-            <Route path="/juventus" element={<JuventusPage />} />
-            <Route path="/formula1" element={<Formula1Page />} />
-            <Route path="/motogp" element={<MotoGPPage />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/sinner" element={<SinnerPage />} />
+              <Route path="/juventus" element={<JuventusPage />} />
+              <Route path="/formula1" element={<Formula1Page />} />
+              <Route path="/motogp" element={<MotoGPPage />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
+
