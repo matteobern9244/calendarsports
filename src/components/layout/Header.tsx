@@ -38,18 +38,19 @@ export default function Header({ theme, toggleTheme }: HeaderProps) {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-1 py-1 backdrop-blur-md shadow-sm">
           {navItems.map((item) => {
             const active = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "px-3 py-2 text-xs font-heading font-semibold tracking-widest uppercase transition-colors rounded-md",
+                  "relative px-3 lg:px-4 py-1.5 text-[11px] lg:text-xs font-heading font-semibold tracking-widest uppercase rounded-full transition-all duration-200",
                   active
-                    ? "text-primary bg-primary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? "text-primary-foreground bg-gradient-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] shadow-[0_4px_14px_-4px_hsl(var(--gold)/0.55),0_1px_0_hsl(var(--gold-light)/0.6)_inset]"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/70"
                 )}
               >
                 {item.label}
