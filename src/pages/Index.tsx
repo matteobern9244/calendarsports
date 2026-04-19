@@ -186,57 +186,6 @@ export default function HomePage() {
     return m;
   }, []);
 
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncProgress(0);
-    const toastId = toast.loading("Avvio sincronizzazione...");
-    try {
-      // 1. Sport
-      setSyncStep("Aggiornamento dati sportivi...");
-      toast.loading("Aggiornamento dati sportivi...", { id: toastId });
-      await queryClient.invalidateQueries({
-        predicate: (q) => {
-          const k = q.queryKey?.[0];
-          return typeof k === "string" && !k.startsWith("streaming-");
-        },
-        refetchType: "all",
-      });
-      setSyncProgress(33);
-
-      // 2. Palinsesti TV (gia' attivi sulla home)
-      setSyncStep("Aggiornamento palinsesti TV...");
-      toast.loading("Aggiornamento palinsesti TV...", { id: toastId });
-      await queryClient.invalidateQueries({
-        queryKey: ["streaming-tv"],
-        refetchType: "all",
-      });
-      setSyncProgress(66);
-
-      // 3. Nuove uscite (non montate sulla home: prefetch esplicito)
-      setSyncStep("Aggiornamento nuove uscite streaming...");
-      toast.loading("Aggiornamento nuove uscite streaming...", { id: toastId });
-      const today = todayRomeISO();
-      const dateTo = addDaysISO(today, 14);
-      await Promise.all(
-        STREAMING_PROVIDERS.map((p) =>
-          queryClient.prefetchQuery({
-            queryKey: ["streaming-releases", p.id, today, dateTo],
-            queryFn: () => streamingApi.getReleasesByProvider(p.id, today, dateTo),
-            staleTime: 0,
-          }),
-        ),
-      );
-      setSyncProgress(100);
-
-      toast.success("Tutti i dati sono stati aggiornati!", { id: toastId });
-    } catch {
-      toast.error("Errore durante la sincronizzazione", { id: toastId });
-    } finally {
-      setSyncStep("");
-      setSyncing(false);
-      setTimeout(() => setSyncProgress(0), 600);
-    }
-  };
 
   const events = useMemo(() => {
     const upcoming: UpcomingEvent[] = [];
