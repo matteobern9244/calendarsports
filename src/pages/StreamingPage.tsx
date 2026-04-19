@@ -13,6 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Pagination,
   PaginationContent,
   PaginationItem,
@@ -24,11 +31,13 @@ import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
 import EmptyState from "@/components/common/EmptyState";
 import ErrorState from "@/components/common/ErrorState";
+import ReleaseDetailDialog from "@/components/streaming/ReleaseDetailDialog";
 import {
   STREAMING_FAMILIES,
   STREAMING_PROVIDERS,
   useReleasesByProvider,
   useTvByFamily,
+  type ReleaseItem,
 } from "@/hooks/useStreamingData";
 import type {
   StreamingFamilyId,
@@ -39,6 +48,21 @@ import { cn } from "@/lib/utils";
 const CHANNELS_PER_PAGE = 6;
 const RELEASES_PER_PAGE = 8;
 
+type RangeId = "1d" | "3d" | "7d";
+type KindId = "all" | "movie" | "tv";
+
+const RANGES: { id: RangeId; label: string; days: number }[] = [
+  { id: "1d", label: "Oggi", days: 0 },
+  { id: "3d", label: "Prossimi 3 giorni", days: 2 },
+  { id: "7d", label: "Prossimi 7 giorni", days: 6 },
+];
+
+const KINDS: { id: KindId; label: string }[] = [
+  { id: "all", label: "Tutti" },
+  { id: "movie", label: "Film" },
+  { id: "tv", label: "Serie" },
+];
+
 function formatHour(iso: string): string {
   return new Intl.DateTimeFormat("it-IT", {
     timeZone: "Europe/Rome",
@@ -48,12 +72,35 @@ function formatHour(iso: string): string {
   }).format(new Date(iso));
 }
 
+function todayRomeISO(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function addDaysISO(dateIso: string, days: number): string {
+  const d = new Date(`${dateIso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 function isFamily(value: string | null): value is StreamingFamilyId {
   return !!value && STREAMING_FAMILIES.some((f) => f.id === value);
 }
 
 function isProvider(value: string | null): value is StreamingProviderId {
   return !!value && STREAMING_PROVIDERS.some((p) => p.id === value);
+}
+
+function isRange(value: string | null): value is RangeId {
+  return !!value && RANGES.some((r) => r.id === value);
+}
+
+function isKind(value: string | null): value is KindId {
+  return !!value && KINDS.some((k) => k.id === value);
 }
 
 export default function StreamingPage() {
@@ -68,29 +115,50 @@ export default function StreamingPage() {
   const initialProvider = isProvider(params.get("provider"))
     ? (params.get("provider") as StreamingProviderId)
     : "netflix";
+  const initialRange = isRange(params.get("range"))
+    ? (params.get("range") as RangeId)
+    : "1d";
+  const initialKind = isKind(params.get("kind"))
+    ? (params.get("kind") as KindId)
+    : "all";
   const initialPage = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
 
   const [family, setFamily] = useState<StreamingFamilyId>(initialFamily);
   const [provider, setProvider] = useState<StreamingProviderId>(initialProvider);
+  const [range, setRange] = useState<RangeId>(initialRange);
+  const [kindFilter, setKindFilter] = useState<KindId>(initialKind);
   const [page, setPage] = useState<number>(initialPage);
+  const [selected, setSelected] = useState<ReleaseItem | null>(null);
 
   // Sync URL state
   useEffect(() => {
     const next = new URLSearchParams();
     next.set("tab", tab);
-    if (tab === "tv") next.set("family", family);
-    else next.set("provider", provider);
+    if (tab === "tv") {
+      next.set("family", family);
+    } else {
+      next.set("provider", provider);
+      if (range !== "1d") next.set("range", range);
+      if (kindFilter !== "all") next.set("kind", kindFilter);
+    }
     if (page > 1) next.set("page", String(page));
     setParams(next, { replace: true });
-  }, [tab, family, provider, page, setParams]);
+  }, [tab, family, provider, range, kindFilter, page, setParams]);
 
-  // Reset page when switching family/provider/tab
+  // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [family, provider, tab]);
+  }, [family, provider, range, kindFilter, tab]);
 
   const tvQuery = useTvByFamily(family);
-  const releasesQuery = useReleasesByProvider(provider);
+
+  const { dateFrom, dateTo } = useMemo(() => {
+    const today = todayRomeISO();
+    const days = RANGES.find((r) => r.id === range)?.days ?? 0;
+    return { dateFrom: today, dateTo: addDaysISO(today, days) };
+  }, [range]);
+
+  const releasesQuery = useReleasesByProvider(provider, dateFrom, dateTo);
 
   const channels = tvQuery.data?.channels ?? [];
   const channelsPageCount = Math.max(1, Math.ceil(channels.length / CHANNELS_PER_PAGE));
@@ -103,22 +171,34 @@ export default function StreamingPage() {
     [channels, page],
   );
 
-  const items = releasesQuery.data?.items ?? [];
-  const itemsPageCount = Math.max(1, Math.ceil(items.length / RELEASES_PER_PAGE));
+  const allItems = releasesQuery.data?.items ?? [];
+  const filteredItems = useMemo(
+    () =>
+      kindFilter === "all"
+        ? allItems
+        : allItems.filter((i) => i.type === kindFilter),
+    [allItems, kindFilter],
+  );
+  const itemsPageCount = Math.max(1, Math.ceil(filteredItems.length / RELEASES_PER_PAGE));
   const visibleItems = useMemo(
     () =>
-      items.slice(
+      filteredItems.slice(
         (page - 1) * RELEASES_PER_PAGE,
         page * RELEASES_PER_PAGE,
       ),
-    [items, page],
+    [filteredItems, page],
   );
+
+  const providerLabel =
+    releasesQuery.data?.providerLabel ??
+    STREAMING_PROVIDERS.find((p) => p.id === provider)?.label ??
+    provider;
 
   return (
     <div className="container py-8 space-y-8">
       <SectionHeader
         title="Streaming"
-        subtitle="Palinsesto TV serale e nuove uscite del giorno"
+        subtitle="Palinsesto TV serale e nuove uscite della settimana"
       />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "tv" | "releases")}>
@@ -153,7 +233,8 @@ export default function StreamingPage() {
               {!tvQuery.data?.programsAvailable && (
                 <p className="text-xs text-muted-foreground italic">
                   Palinsesto in fase di integrazione: i canali sono elencati,
-                  i programmi reali verranno aggiunti al rilascio dei feed.
+                  i programmi reali sono al momento disponibili solo per
+                  Discovery (Real Time, DMax).
                 </p>
               )}
               <Accordion type="multiple" className="space-y-2">
@@ -216,8 +297,40 @@ export default function StreamingPage() {
         </TabsContent>
 
         {/* === TAB RELEASES === */}
-        <TabsContent value="releases" className="space-y-6">
+        <TabsContent value="releases" className="space-y-5">
           <ProviderSelector value={provider} onChange={setProvider} />
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+            <Select value={range} onValueChange={(v) => setRange(v as RangeId)}>
+              <SelectTrigger className="w-full sm:w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RANGES.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex gap-2">
+              {KINDS.map((k) => (
+                <Button
+                  key={k.id}
+                  size="sm"
+                  variant={kindFilter === k.id ? "default" : "outline"}
+                  onClick={() => setKindFilter(k.id)}
+                  className={cn(
+                    "rounded-full font-heading uppercase tracking-wider text-xs",
+                    kindFilter === k.id && "shadow-md",
+                  )}
+                >
+                  {k.label}
+                </Button>
+              ))}
+            </div>
+          </div>
 
           {releasesQuery.isLoading && <LoadingState message="Caricamento uscite..." />}
           {releasesQuery.isError && (
@@ -231,13 +344,13 @@ export default function StreamingPage() {
           )}
           {releasesQuery.isSuccess &&
             releasesQuery.data?.configured &&
-            items.length === 0 && (
+            filteredItems.length === 0 && (
               <EmptyState
-                message={`Nessuna uscita oggi su ${releasesQuery.data.providerLabel}.`}
+                message={`Nessuna uscita per ${providerLabel} con i filtri selezionati.`}
               />
             )}
 
-          {releasesQuery.isSuccess && items.length > 0 && (
+          {releasesQuery.isSuccess && filteredItems.length > 0 && (
             <>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -245,35 +358,42 @@ export default function StreamingPage() {
                 className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
               >
                 {visibleItems.map((item) => (
-                  <Card key={`${item.type}-${item.tmdbId}`} className="overflow-hidden">
-                    {item.poster ? (
-                      <img
-                        src={item.poster}
-                        alt={item.title}
-                        loading="lazy"
-                        className="w-full aspect-[2/3] object-cover"
-                      />
-                    ) : (
-                      <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center">
-                        <Sparkles className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                    )}
-                    <CardContent className="p-3 space-y-1">
-                      <p className="font-heading text-sm font-semibold leading-tight line-clamp-2">
-                        {item.title}
-                      </p>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <Badge variant="outline" className="text-[10px]">
-                          {item.type === "movie" ? "Film" : "Serie"}
-                        </Badge>
-                        {item.voteAverage !== null && item.voteAverage > 0 && (
-                          <span className="font-mono">
-                            ★ {item.voteAverage.toFixed(1)}
-                          </span>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <button
+                    key={`${item.type}-${item.tmdbId}`}
+                    type="button"
+                    onClick={() => setSelected(item)}
+                    className="text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                  >
+                    <Card className="overflow-hidden transition-transform group-hover:-translate-y-0.5 group-hover:shadow-lg">
+                      {item.poster ? (
+                        <img
+                          src={item.poster}
+                          alt={item.title}
+                          loading="lazy"
+                          className="w-full aspect-[2/3] object-cover"
+                        />
+                      ) : (
+                        <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center">
+                          <Sparkles className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <CardContent className="p-3 space-y-1">
+                        <p className="font-heading text-sm font-semibold leading-tight line-clamp-2">
+                          {item.title}
+                        </p>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <Badge variant="outline" className="text-[10px]">
+                            {item.type === "movie" ? "Film" : "Serie"}
+                          </Badge>
+                          {item.voteAverage !== null && item.voteAverage > 0 && (
+                            <span className="font-mono">
+                              ★ {item.voteAverage.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </button>
                 ))}
               </motion.div>
 
@@ -288,6 +408,13 @@ export default function StreamingPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <ReleaseDetailDialog
+        item={selected}
+        provider={provider}
+        providerLabel={providerLabel}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }
