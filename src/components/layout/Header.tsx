@@ -12,6 +12,7 @@ import {
   F1BrandIcon,
   MotoGPBrandIcon,
 } from "./BrandIcons";
+import { SparkleLoop } from "./SparkleLoop";
 
 interface HeaderProps {
   theme: "light" | "dark";
