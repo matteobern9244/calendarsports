@@ -82,12 +82,45 @@ Leggere inoltre, se l'intervento tocca documentazione o setup:
 - `src/pages/Formula1Page.tsx`: calendario F1, piloti, costruttori.
 - `src/pages/MotoGPPage.tsx`: calendario MotoGP, piloti, costruttori.
 - `src/lib/api/sportsApi.ts`: adapter client verso le Edge Functions.
+- `src/lib/supabaseClient.ts`: client Supabase sicuro con fallback hardcoded
+  per URL e anon key (entrambi pubblici), usato in produzione quando le
+  variabili Vite non vengono iniettate nel bundle.
 - `src/hooks/useSportsData.ts`: query React Query usate dalle pagine.
 - `supabase/functions/sports-f1`: Jolpica/OpenF1 + fallback statici.
 - `supabase/functions/sports-football`: Sky Sport + Lega Serie A.
 - `supabase/functions/sports-tennis`: dataset statico Sinner 2026.
 - `supabase/functions/sports-motogp`: Sky Sport + calendario statico 2026 +
   mapping statici.
+
+## Import del client Supabase
+
+**Regola**: per qualunque uso del client Supabase JS SDK (auth, realtime,
+`functions.invoke`, storage, query DB) importa sempre da
+`@/lib/supabaseClient`, **non** da `@/integrations/supabase/client`.
+
+Motivo: il file `src/integrations/supabase/client.ts` e' auto-generato e
+read-only, e legge `import.meta.env.VITE_SUPABASE_URL` /
+`VITE_SUPABASE_PUBLISHABLE_KEY` direttamente. In alcuni build di produzione
+queste variabili non vengono iniettate nel bundle e il client viene creato
+con `URL = undefined`, causando richieste rotte verso
+`https://<host>/undefined/functions/v1/...` (fallback HTML 200, mai JSON,
+React Query in loading infinito).
+
+`src/lib/supabaseClient.ts` ricrea il client usando le stesse env var con
+fallback hardcoded sui valori pubblici (project URL + anon key), garantendo
+che il client funzioni in qualunque build. Esporta anche
+`SUPABASE_PROJECT_URL` e `SUPABASE_ANON_KEY` per chiamate `fetch` manuali
+verso le edge functions.
+
+Esempio:
+
+```ts
+// OK
+import { supabase } from "@/lib/supabaseClient";
+
+// Da evitare nei nuovi import
+import { supabase } from "@/integrations/supabase/client";
+```
 
 ## Regole di modifica
 
