@@ -84,9 +84,10 @@ export default function HomePage() {
       const data = q.data as TvFamilyPayload | undefined;
       if (!data?.programsAvailable) return;
       for (const ch of data.channels ?? []) {
-        // Per RAI mostriamo in home solo Rai 1 e Rai 2 per non saturare
-        // la scheda Stasera in TV con tutti i 12 canali RAI.
+        // In home limitiamo le famiglie ai canali principali per non
+        // saturare la scheda Stasera in TV.
         if (fam === "rai" && ch.id !== "rai-1" && ch.id !== "rai-2") continue;
+        if (fam === "mediaset" && ch.id !== "canale-5" && ch.id !== "italia-1") continue;
         for (const p of ch.programs) {
           const d = new Date(p.start);
           const hhmm = timeFmt.format(d);
