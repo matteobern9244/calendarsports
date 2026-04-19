@@ -1,6 +1,16 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Tv2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  Film,
+  Radio,
+  Trophy,
+  Tv,
+  Tv2,
+  type LucideIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +22,18 @@ import {
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
 import { formatDuration } from "@/lib/dateUtils";
 import { inferGenre } from "@/lib/genreUtils";
+
+// Pittogrammi per famiglia: scelti per evocare l'identita' del broadcaster
+// senza dipendere da loghi proprietari (Radio = RAI servizio pubblico,
+// Tv = Mediaset generalista, Trophy = Sky Sport, Film = Sky Cinema,
+// Compass = Discovery / esplorazione).
+const FAMILY_ICONS: Record<StreamingFamilyId, LucideIcon> = {
+  rai: Radio,
+  mediaset: Tv,
+  "sky-sport": Trophy,
+  "sky-cinema": Film,
+  discovery: Compass,
+};
 
 interface TvHighlight {
   family: StreamingFamilyId;
