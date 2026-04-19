@@ -45,6 +45,8 @@ import type {
 } from "@/lib/api/sportsApi";
 import { cn } from "@/lib/utils";
 import { todayRomeISO, addDaysISO } from "@/lib/dateUtils";
+import { Progress } from "@/components/ui/progress";
+import { useSyncAll } from "@/hooks/useSyncAll";
 
 const CHANNELS_PER_PAGE = 6;
 const RELEASES_PER_PAGE = 8;
