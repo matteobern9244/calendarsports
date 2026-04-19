@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Sun, Moon, CalendarDays } from "lucide-react";
+import { Menu, X, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,14 +27,14 @@ export default function Header({ theme, toggleTheme }: HeaderProps) {
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/80 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg gold-gradient">
-            <CalendarDays className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="font-heading text-lg font-bold tracking-wider uppercase hidden sm:inline">
-            <span className="text-gold-gradient">Calendar</span>{" "}
-            <span className="text-foreground">Events</span>
-          </span>
+        <Link to="/" aria-label="Calendar Events — vai alla home" className="flex items-center">
+          <img
+            src="/og-image.jpg"
+            alt="Calendar Events"
+            className="h-10 w-auto rounded-md object-contain"
+            width={1216}
+            height={640}
+          />
         </Link>
 
         {/* Desktop nav */}
