@@ -310,36 +310,71 @@ export default function HomePage() {
           </div>
 
           {tonightHighlights.length > 0 ? (
-            <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 max-h-[480px] overflow-y-auto">
-              {tonightHighlights.map((row, i) => {
-                const prev = tonightHighlights[i - 1];
-                const showFamilyDivider = !prev || prev.family !== row.family;
-                return (
-                  <li
-                    key={`${row.family}-${row.channel}-${row.time}-${i}`}
-                    className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
-                  >
-                    {showFamilyDivider && (
-                      <span className="hidden sm:inline-flex font-heading text-[9px] uppercase tracking-widest text-primary/70 w-20 shrink-0">
-                        {familyLabelMap[row.family]}
-                      </span>
-                    )}
-                    <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm">
-                      {row.time}
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 max-w-[110px] sm:max-w-none truncate"
+            <>
+              <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40">
+                {pagedHighlights.map((row, i) => {
+                  const prev = pagedHighlights[i - 1];
+                  const showFamilyDivider = !prev || prev.family !== row.family;
+                  return (
+                    <li
+                      key={`${row.family}-${row.channel}-${row.time}-${i}`}
+                      className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
                     >
-                      {row.channel}
-                    </Badge>
-                    <span className="font-medium truncate min-w-0 text-xs sm:text-sm">
-                      {row.title}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+                      <span
+                        className={`hidden sm:inline-flex font-heading text-[9px] uppercase tracking-widest w-20 shrink-0 ${
+                          showFamilyDivider ? "text-primary/70" : "text-transparent"
+                        }`}
+                        aria-hidden={!showFamilyDivider}
+                      >
+                        {showFamilyDivider ? familyLabelMap[row.family] : familyLabelMap[row.family]}
+                      </span>
+                      <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm">
+                        {row.time}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 max-w-[110px] sm:max-w-none truncate"
+                      >
+                        {row.channel}
+                      </Badge>
+                      <span className="font-medium truncate min-w-0 text-xs sm:text-sm">
+                        {row.title}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {totalTvPages > 1 && (
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTvPage((p) => Math.max(0, p - 1))}
+                    disabled={safePage === 0}
+                    className="h-8 px-2 gap-1 text-xs"
+                    aria-label="Pagina precedente"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Precedente</span>
+                  </Button>
+                  <span className="text-[11px] font-heading uppercase tracking-wider text-muted-foreground">
+                    Pagina {safePage + 1} / {totalTvPages} · {tonightHighlights.length} canali
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTvPage((p) => Math.min(totalTvPages - 1, p + 1))}
+                    disabled={safePage >= totalTvPages - 1}
+                    className="h-8 px-2 gap-1 text-xs"
+                    aria-label="Pagina successiva"
+                  >
+                    <span className="hidden sm:inline">Successiva</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="rounded-md border border-dashed border-border/60 bg-card/30 px-4 py-6 text-center text-sm text-muted-foreground">
               {filteredFamilyLabel ? (
