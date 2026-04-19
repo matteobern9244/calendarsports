@@ -11,128 +11,125 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-04-19 (rebrand reset)
+
+> **Nota**: la numerazione semantica torna a `2.0.0` per marcare il cambio
+> identita' di prodotto da **"Calendar Sports"** a **"Calendar Events"**.
+> Le voci storiche `2.0.0`, `2.0.1`, `2.0.2` precedenti restano archiviate
+> piu' sotto come riferimento storico e non vengono riscritte.
+
 ### Added
 
-- Scheda **Stasera in TV** in Home: ogni riga programma ora mostra, oltre
-  al titolo, un piccolo badge **genere** (Fiction, Film, Sport, Show, ecc.)
-  quando la fonte lo espone, e la **durata** del programma nel formato
-  `45 min` o `1h 25 min` calcolata da `start`/`end`. Layout invariato e
-  responsive (`flex-wrap items-baseline` per wrap pulito su mobile).
-- Edge function `streaming-tv`: estrazione genere resa piu' robusta. Oltre
-  al match sui blocchi "scheda" descrittivi (titolo "ricco" come
-  `Racconto di una notte ... (Fiction)`), aggiunto fallback diretto sulla
-  riga grezza `HH:MM - TITOLO (GENERE)` quando il rich block non contiene
-  parentesi finale. **Whitelist generi estesa** con voci viste spesso ma
-  precedentemente filtrate: `Telefilm`, `Serie`, `Soap Opera`, `Soap`,
-  `Magazine`, `Approfondimento`, `Inchiesta`, `Meteo`, `Game Show`,
-  `Religione`, `Educativo`, `Cultura`, `Viaggi`, `Ciclismo`.
+- **Rebrand applicazione**: nome prodotto cambiato da "Calendar Sports"
+  a **"Calendar Events"**. Header con icona `CalendarDays` (Lucide) al
+  posto di `Trophy`, logo testuale "Calendar Events" con accento gold
+  sulla prima parola, footer semplificato a `CALENDAR EVENTS · v2.0.0`.
+- Nuovo file `src/lib/version.ts` come unica fonte di verita' per
+  `APP_VERSION` e `APP_NAME`, importato dal footer in
+  `src/components/layout/Layout.tsx`.
+- Sezione **Streaming** completa (`/streaming`) come prima voce di
+  navigazione dopo Home, con due tab:
+  - **TV stasera**: selettore famiglia canali (Sky Sport, Sky Cinema,
+    RAI, Mediaset, Discovery), accordion per canale, paginazione (6
+    canali per pagina), filtro server-side prime time 19:00-24:00
+    Europe/Rome, stato sincronizzato in URL
+    (`?tab=tv&family=rai&page=2`).
+  - **Nuove uscite**: selettore provider (Netflix, Prime Video, Disney+,
+    HBO Max), griglia poster TMDB con paginazione (8 per pagina), filtro
+    pill **Tutti / Film / Serie**, selettore data **Oggi / 3 giorni / 7
+    giorni**, dialog di dettaglio con overview, voto, cast top 6, link
+    al provider e a TMDB.
+- Edge function `streaming-tv` con scraping reale di
+  `www.staseraintv.com` esteso a tutte le famiglie supportate dalla
+  fonte: **RAI** (12 canali), **Mediaset** (13 canali), **Sky Cinema**
+  (5 canali), **Discovery** (Real Time, DMax, Nove, Discovery
+  Channel/Turbo, Food Network, HGTV, Giallo, K2, Frisbee). Cache
+  in-memory 1h per `(slug, date)`, concorrenza limitata a 5 fetch
+  paralleli.
+- Edge function `streaming-releases` su TMDB `/discover` con range
+  `dateFrom`/`dateTo` (default oggi..oggi+7), action `credits`
+  (`type`+`id`) per cast top 10, cache in-memory 1h (24h per credits).
+- Componente dedicato `src/components/home/TonightTvList.tsx` estratto
+  da `Index.tsx` per ridurre complessita' e isolare la scheda
+  "Stasera in TV".
+- Quadro reale **Stasera in TV** in Home con aggregazione
+  multi-famiglia (5 query parallele) e filtri rapidi user-friendly
+  (chip selezionabili `Tutti / RAI / Mediaset / Sky Sport / Sky Cinema
+  / Discovery`), un programma per canale nella fascia di prima serata
+  (21:00 - 22:30), paginazione interna (8 canali per pagina), label
+  famiglia e separatori oro tra gruppi su mobile, con icone Lucide
+  (`Radio`, `Tv`, `Trophy`, `Film`, `Compass`).
+- Badge **genere** + **durata** programma (`45 min` / `1h 25 min`) in
+  ogni riga di "Stasera in TV", con utility `formatDuration` in
+  `src/lib/dateUtils.ts` e test unitari Vitest sui casi limite (0,
+  NaN, 1h esatta).
+- **Sportitalia** aggiunto alla famiglia "Sport" in modo che il filtro
+  mostri sempre almeno un palinsesto reale; whitelist generi estesa
+  (`Telefilm`, `Serie`, `Soap Opera`, `Soap`, `Magazine`,
+  `Approfondimento`, `Inchiesta`, `Meteo`, `Game Show`, `Religione`,
+  `Educativo`, `Cultura`, `Viaggi`, `Ciclismo`).
+- Test E2E Playwright per la presenza dei separatori oro e delle
+  etichette famiglia mobile nella scheda "Stasera in TV", con mock
+  `streaming-tv` in `e2e/support/mockSportsApi.ts`.
+- Suite GitHub **Copilot repo-local** (instructions + prompts +
+  `.vscode/extensions.json`) e configurazione **Dependabot** per `npm`
+  e `github-actions` con PR verso `develop`, assegnazione a
+  `@matteobern9244`, grouping conservativo e cooldown 30 giorni sui
+  major.
+- Workflow guardrail per disabilitare `auto-merge` sulle PR Dependabot
+  quando GitHub Copilot lascia una review non `APPROVED`.
+
+### Changed
+
+- Footer applicazione: ora mostra solo `CALENDAR EVENTS · v{APP_VERSION}`
+  centrato, in `font-heading tracking-wider uppercase`.
+- `package.json`: `"version"` riportato a `"2.0.0"` come reset rebrand
+  (downgrade SemVer dichiarato e voluto).
+- `index.html`: aggiornati `<title>`, `<meta name="description">`,
+  `<meta name="author">`, `og:title`, `twitter:title`, `og:description`,
+  `twitter:description` con la nuova identita' "Calendar Events".
+- README e AGENTS.md aggiornati con nuovo nome prodotto e nuova baseline.
+- Configurazione GitHub di `main` riallineata al modello finale: una sola
+  Ruleset moderna repository-level, bypass riservato a `lovable-dev`,
+  nessuna Branch protection classica in parallelo. Workflow GitHub
+  Actions riallineati al flusso `feature -> develop -> main` con CI su
+  push solo per `develop` e CI su PR per `develop` e `main`.
+- Aggiornate le action GitHub a major stabili
+  (`actions/checkout@v6`, `actions/setup-node@v6`,
+  `actions/upload-artifact@v7`).
 
 ### Fixed
 
 - **Copertura palinsesti famiglia "Sport"**: prima la famiglia Sky Sport
   ritornava esclusivamente canali con `programs=[]`. Audit completo
-  2026-04-19 di TUTTI i 41 slug attivi: ognuno ritorna >=12 righe `HH:MM`
-  reali da `staseraintv.com`. Per la famiglia Sport e' stato aggiunto
-  **Sportitalia** (canale 60 DTT, slug `sportitalia`, ~21 righe/giorno
-  con genere `Sport` correttamente estratto), in modo che il filtro
-  "Sport" mostri sempre almeno un palinsesto reale invece di una scheda
-  vuota.
-- I canali Sky Sport branded (Uno, Calcio, Tennis, F1, MotoGP, Arena,
-  Football, Action, Golf, Max, 24) restano dichiaratamente **non
-  coperti**: tutti gli slug candidati su `staseraintv.com` (`sky_sport_*`,
-  `skysport_*`, `sky_sport1`, ecc.) ritornano 404; le fonti alternative
-  (`guidatv.sky.it`, `programmi.sky.it`) usano rendering client-side e
-  non espongono il palinsesto in HTML statico parsabile;
-  `tvzap.kataweb.it` e' protetto da Cloudflare. Nessun dato inventato:
-  la UI continua a dichiarare onestamente "Palinsesto non disponibile"
-  per quei canali.
-
-### Added (precedenti)
-
-- Nuova sezione **Streaming** (`/streaming`) come prima voce di
-  navigazione dopo Home. Pagina con due tab:
-  - **TV stasera**: selettore famiglia canali (Sky Sport, Sky Cinema, RAI,
-    Mediaset, Discovery), accordion per canale, paginazione (6 canali per
-    pagina), filtro server-side prime time 19:00-24:00 Europe/Rome, stato
-    sincronizzato in URL (`?tab=tv&family=rai&page=2`).
-  - **Nuove uscite**: selettore provider (Netflix, Prime Video, Disney+,
-    HBO Max), griglia poster TMDB con paginazione (8 per pagina), filtro
-    pill **Tutti / Film / Serie**, selettore data **Oggi / 3 giorni / 7
-    giorni**, dialog di dettaglio al click sul poster (overview, voto,
-    cast top 6, link al provider e a TMDB).
-- Edge function `streaming-tv` con scraping reale di
-  `www.staseraintv.com` esteso a tutte le famiglie supportate dalla
-  fonte: **RAI** (12 canali), **Mediaset** (13 canali), **Sky Cinema**
-  (5 canali: Uno, Collection, Family, Action, Romance), **Discovery**
-  (Real Time, DMax, Nove, Discovery Channel/Turbo, Food Network, HGTV,
-  Giallo, K2, Frisbee). Cache in-memory 1h per `(slug, date)`,
-  concorrenza limitata a 5 fetch paralleli.
-  FRAGILE: parser regex su HTML di terze parti, soggetto a rotture se
-  staseraintv.com cambia struttura. Sky Sport NON e' coperto dalla
-  fonte (verificato: tutti gli slug `sky_sport_*` ritornano 404):
-  i canali Sky Sport restano elencati ma con `programs=[]` e la UI
-  dichiara onestamente "non disponibile".
-- Edge function `streaming-releases` su TMDB `/discover` con range
-  `dateFrom`/`dateTo` (default oggi..oggi+7), nuova action `credits`
-  (`type`+`id`) per cast top 10, cache in-memory 1h (24h per credits).
-  Gestione esplicita dell'assenza di `TMDB_API_KEY` (`configured=false`).
-- Quadro reale **Stasera in TV** in Home con aggregazione multi-famiglia
-  (5 query parallele) e **filtri rapidi** user-friendly: chip
-  selezionabili `Tutti / RAI / Mediaset / Sky Sport / Sky Cinema /
-  Discovery` su `ToggleGroup` (ordine identico nei chip e nella lista),
-  un programma per canale nella **fascia di prima serata (dalle 21:00
-  in poi, fino a 22:30)**, **paginazione interna** alla scheda (8 canali
-  per pagina, controlli Precedente/Successiva con conteggio), allineamento
-  delle righe stabilizzato grazie a una colonna famiglia di larghezza
-  fissa, responsive (chip scrollabili orizzontalmente su mobile, wrap su
-  desktop). Empty state esplicito per famiglia senza dati.
-
-### Changed
-
-
-- Aggiunta configurazione reale di `Dependabot` per `npm` e
-  `github-actions`, con PR di version update indirizzate a `develop`,
-  assegnazione a `matteobern9244`, grouping conservativo e cooldown di 30 giorni
-  sui major update `npm`.
-- Aggiunti guardrail sui workflow di `auto-merge` per disabilitare la fusione
-  automatica delle sole PR Dependabot quando GitHub Copilot lascia una review
-  non `APPROVED`, mantenendo invece il comportamento normale sulle altre PR.
-- README aggiornato con una nota operativa esplicita sul flusso Dependabot,
-  sui limiti dei security updates verso `main` e sull'interazione con Copilot
-  code review.
-
-- Configurazione GitHub di `main` riallineata al modello finale con una sola
-  Ruleset moderna repository-level, bypass riservato a `lovable-dev` e nessuna
-  Branch protection classica in parallelo.
-- Workflow GitHub Actions riallineati al flusso feature branch -> `develop` ->
-  `main`: CI su push solo per `develop`, CI su PR per `develop` e `main`,
-  `guard-main-source` confermato come blocco delle sole PR verso `main` da
-  branch diversi da `develop`.
-- Aggiornate le action GitHub usate nei workflow a major stabili compatibili
-  con il runtime piu' recente dei runner: `actions/checkout@v6`,
-  `actions/setup-node@v6`, `actions/upload-artifact@v7`.
-- Aggiunto workflow repository-level per abilitare automaticamente
-  `auto-merge` con metodo `squash` sulle PR verso `develop` e `main`,
-  riallineato per attivarsi solo dopo esiti PR compatibili con il flusso
-  umano.
-- Ruleset di `main` semplificata al set minimo compatibile con il sync
-  Lovable: solo blocco deletion e force-push, senza gate di PR o required
-  checks sulla branch sincronizzata direttamente dall'app.
-- Documentazione operativa e prompt repository-local allineati alla policy
-  finale di branch protection, sync Lovable e regole per agenti AI.
-- Nessuna modifica al codice applicativo, ai secret, ai file env,
-  `supabase/config.toml`, alle edge functions o ai lockfile di progetto.
+  2026-04-19 di TUTTI i 41 slug attivi: ognuno ritorna >=12 righe
+  `HH:MM` reali da `staseraintv.com`. Sportitalia aggiunto come canale
+  Sport coperto (~21 righe/giorno). I canali Sky Sport branded restano
+  dichiaratamente non coperti (verificato: tutti gli slug
+  `sky_sport_*` su `staseraintv.com` ritornano 404; fonti alternative
+  `guidatv.sky.it` e `programmi.sky.it` sono client-side rendered;
+  `tvzap.kataweb.it` e' protetto da Cloudflare). Nessun dato inventato:
+  la UI continua a dichiarare onestamente "Palinsesto non disponibile".
+- Edge function `streaming-tv`: estrazione genere resa piu' robusta con
+  fallback diretto sulla riga grezza `HH:MM - TITOLO (GENERE)` quando
+  il rich block descrittivo non contiene parentesi finale.
+- (Riportato dalla 2.0.2) Bundle di produzione: env injection
+  `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` non sempre
+  iniettata. Mitigato dal wrapper `src/lib/supabaseClient.ts` con
+  fallback hardcoded sui valori pubblici.
 
 ### Note operative
 
-- La verifica locale conferma che `npm run lint`, `npm run test` e
-  `npm run build` passano, mentre `npm ci` fallisce per drift preesistente tra
-  `package.json` e `package-lock.json`.
-- Verificato il ripristino del sync diretto Lovable -> GitHub su `main` dopo
-  l'aggiornamento della Ruleset minima compatibile.
-- Il drift del lockfile impedisce di portare a verde tutti i workflow che
-  eseguono `npm ci` senza una modifica esplicita ai file package, esclusa da
-  questa change set.
+- Il rebrand e' puramente cosmetico lato UI/metadati/docs: nessun
+  impatto su routing, fonti dati, edge functions, secrets, branch
+  policy o sync Lovable <-> GitHub.
+- Il downgrade SemVer `2.0.2 -> 2.0.0` e' esplicito e voluto come reset
+  identita' prodotto. Le release storiche restano archiviate sotto.
+- `npm run lint`, `npm run test` e `npm run build` da eseguire come
+  verifica finale. Il drift preesistente tra `package.json` e
+  `package-lock.json` puo' ancora far fallire `npm ci` finche' il
+  lockfile non viene rigenerato (fuori scope di questa change set).
+
 
 ## [2.0.2] - 2026-04-19
 
