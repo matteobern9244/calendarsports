@@ -36,6 +36,7 @@ interface TvHighlight {
   channelNumber?: number;
   time: string;
   startMs: number;
+  durationMin: number;
   hourRome: number;
   minuteRome: number;
   title: string;
