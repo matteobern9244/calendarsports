@@ -422,7 +422,7 @@ export default function HomePage() {
                         )}
                       </div>
                       </li>
-                    </>
+                    </Fragment>
                   );
                 })}
               </ul>
