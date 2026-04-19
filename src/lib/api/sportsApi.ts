@@ -58,6 +58,31 @@ export const tennisApi = {
     callEdgeFunction("sports-tennis", { action: "results", season: String(season) }),
 };
 
+// === Streaming API (TV palinsesto + nuove uscite) ===
+export type StreamingFamilyId =
+  | "sky-sport"
+  | "sky-cinema"
+  | "rai"
+  | "mediaset"
+  | "discovery";
+
+export type StreamingProviderId = "netflix" | "prime" | "disney" | "hbo";
+
+export const streamingApi = {
+  getTvByFamily: (family: StreamingFamilyId, date?: string) =>
+    callEdgeFunction("streaming-tv", {
+      action: "prime-time",
+      family,
+      ...(date ? { date } : {}),
+    }),
+  getReleasesByProvider: (provider: StreamingProviderId, date?: string) =>
+    callEdgeFunction("streaming-releases", {
+      action: "new-today",
+      provider,
+      ...(date ? { date } : {}),
+    }),
+};
+
 // === MotoGP API (Official API / scraping) ===
 export const motogpApi = {
   getCalendar: (season: number) =>
