@@ -57,8 +57,25 @@ export interface ReleaseItem {
 export interface ReleasesPayload {
   provider: StreamingProviderId;
   providerLabel: string;
+  providerHomepage?: string;
   date: string;
+  dateFrom: string;
+  dateTo: string;
   items: ReleaseItem[];
+  configured: boolean;
+}
+
+export interface CastMember {
+  id: number;
+  name: string;
+  character: string;
+  profile: string | null;
+}
+
+export interface CreditsPayload {
+  type: "movie" | "tv";
+  id: string;
+  cast: CastMember[];
   configured: boolean;
 }
 
@@ -70,10 +87,26 @@ export function useTvByFamily(family: StreamingFamilyId) {
   });
 }
 
-export function useReleasesByProvider(provider: StreamingProviderId) {
+export function useReleasesByProvider(
+  provider: StreamingProviderId,
+  dateFrom?: string,
+  dateTo?: string,
+) {
   return useQuery<ReleasesPayload>({
-    queryKey: ["streaming-releases", provider],
-    queryFn: () => streamingApi.getReleasesByProvider(provider),
+    queryKey: ["streaming-releases", provider, dateFrom ?? "", dateTo ?? ""],
+    queryFn: () => streamingApi.getReleasesByProvider(provider, dateFrom, dateTo),
     staleTime: 60 * 60 * 1000,
+  });
+}
+
+export function useReleaseCredits(
+  type: "movie" | "tv" | null,
+  id: number | null,
+) {
+  return useQuery<CreditsPayload>({
+    queryKey: ["streaming-credits", type, id],
+    queryFn: () => streamingApi.getReleaseCredits(type as "movie" | "tv", id as number),
+    enabled: !!type && !!id,
+    staleTime: 24 * 60 * 60 * 1000,
   });
 }
