@@ -295,26 +295,35 @@ export default function HomePage() {
           </div>
 
           {tonightHighlights.length > 0 ? (
-            <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40">
-              {tonightHighlights.map((row, i) => (
-                <li
-                  key={`${row.channel}-${row.time}-${i}`}
-                  className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
-                >
-                  <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm">
-                    {row.time}
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 max-w-[110px] sm:max-w-none truncate"
+            <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 max-h-[480px] overflow-y-auto">
+              {tonightHighlights.map((row, i) => {
+                const prev = tonightHighlights[i - 1];
+                const showFamilyDivider = !prev || prev.family !== row.family;
+                return (
+                  <li
+                    key={`${row.family}-${row.channel}-${row.time}-${i}`}
+                    className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
                   >
-                    {row.channel}
-                  </Badge>
-                  <span className="font-medium truncate min-w-0 text-xs sm:text-sm">
-                    {row.title}
-                  </span>
-                </li>
-              ))}
+                    {showFamilyDivider && (
+                      <span className="hidden sm:inline-flex font-heading text-[9px] uppercase tracking-widest text-primary/70 w-20 shrink-0">
+                        {familyLabelMap[row.family]}
+                      </span>
+                    )}
+                    <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm">
+                      {row.time}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 max-w-[110px] sm:max-w-none truncate"
+                    >
+                      {row.channel}
+                    </Badge>
+                    <span className="font-medium truncate min-w-0 text-xs sm:text-sm">
+                      {row.title}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <div className="rounded-md border border-dashed border-border/60 bg-card/30 px-4 py-6 text-center text-sm text-muted-foreground">
