@@ -49,9 +49,11 @@ stata pubblicata su Lovable.
 L'app espone sei viste principali:
 
 - `Home`: aggrega i prossimi eventi rilevanti da tutte le sezioni e include
-  il banner **Stasera in TV** con aggregazione multi-famiglia (Sky Cinema,
-  RAI, Mediaset, Discovery), filtri rapidi per famiglia
-  (`ToggleGroup` responsive) e top 8 programmi prime time ordinati per orario.
+  il banner **Stasera in TV** con aggregazione multi-famiglia ordinata
+  RAI -> Mediaset -> Sky Sport -> Sky Cinema -> Discovery, filtri rapidi
+  per famiglia (`ToggleGroup` responsive), un programma per canale nella
+  fascia di **prima serata (dalle 21:00 in poi)** e paginazione interna
+  alla scheda (8 canali per pagina).
 - `Streaming` (`/streaming`): tab TV stasera (palinsesto reale per famiglia)
   + tab Nuove uscite (TMDB con range date e filtro Film/Serie).
 - `Jannik Sinner`: profilo sintetico, risultati e calendario tornei.
