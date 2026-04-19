@@ -322,26 +322,26 @@ export default function HomePage() {
                   return (
                     <li
                       key={`${row.family}-${row.channel}-${row.time}-${i}`}
-                      className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
+                      className="flex items-start gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 text-sm"
                     >
                       <span
-                        className={`hidden sm:inline-flex font-heading text-[9px] uppercase tracking-widest w-20 shrink-0 ${
+                        className={`hidden sm:inline-flex font-heading text-[9px] uppercase tracking-widest w-20 shrink-0 pt-0.5 ${
                           showFamilyDivider ? "text-primary/70" : "text-transparent"
                         }`}
                         aria-hidden={!showFamilyDivider}
                       >
-                        {showFamilyDivider ? familyLabelMap[row.family] : familyLabelMap[row.family]}
+                        {familyLabelMap[row.family]}
                       </span>
-                      <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm">
+                      <span className="font-mono text-primary w-11 sm:w-12 shrink-0 text-xs sm:text-sm pt-0.5">
                         {row.time}
                       </span>
                       <Badge
                         variant="outline"
-                        className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 max-w-[110px] sm:max-w-none truncate"
+                        className="text-[9px] sm:text-[10px] uppercase tracking-wider shrink-0 whitespace-nowrap mt-0.5"
                       >
                         {row.channel}
                       </Badge>
-                      <span className="font-medium truncate min-w-0 text-xs sm:text-sm">
+                      <span className="font-medium min-w-0 flex-1 text-xs sm:text-sm leading-snug break-words">
                         {row.title}
                       </span>
                     </li>
