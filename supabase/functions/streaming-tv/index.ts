@@ -243,11 +243,11 @@ function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?:
   // Whitelist generi noti per evitare di confondere parentesi descrittive
   // (es. "(Replica)", "(2023)").
   const GENRE_WHITELIST = new Set([
-    "Fiction", "Film", "Serie Tv", "Serie Tv Drammatica",
+    "Fiction", "Film", "Serie Tv", "Serie Tv Drammatica", "Miniserie",
     "Sport", "Calcio", "Tennis", "Motori", "Formula 1", "Motogp",
     "Documentario", "Reality", "Talk Show", "Show", "Varieta'", "Varieta",
     "Intrattenimento", "Cartoni", "Cartoni Animati", "Animazione",
-    "News", "Telegiornale", "Attualita'", "Attualita",
+    "News", "Telegiornale", "Attualita'", "Attualita", "Rubrica",
     "Cucina", "Lifestyle", "Musica", "Quiz", "Cinema",
     "Commedia", "Azione", "Thriller", "Avventura", "Horror", "Romantico",
     "Drammatico", "Biografico", "Storico", "Western", "Fantascienza",
