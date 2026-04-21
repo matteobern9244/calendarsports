@@ -390,13 +390,31 @@ export default function StreamingPage() {
           {releasesQuery.isSuccess &&
             releasesQuery.data?.configured &&
             filteredItems.length === 0 && (
-              <EmptyState
-                message={`Nessuna uscita per ${providerLabel} con i filtri selezionati.`}
-              />
+              <div className="flex flex-col items-center gap-3">
+                <EmptyState
+                  message={`Nessuna uscita catalogata da TMDB per ${providerLabel} nella finestra selezionata. Le uscite si basano sulla data di prima pubblicazione mondiale, non sull'ingresso sulla piattaforma.`}
+                />
+                {range !== "90d" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRange("90d")}
+                    className="rounded-full font-heading uppercase tracking-wider text-xs"
+                  >
+                    Allarga finestra
+                  </Button>
+                )}
+              </div>
             )}
 
           {releasesQuery.isSuccess && filteredItems.length > 0 && (
             <>
+              {releasesQuery.data?.widenedWindow && (
+                <p className="text-xs text-muted-foreground italic">
+                  Mostriamo una finestra estesa perche' nel range richiesto non
+                  c'erano novita' indicizzate da TMDB per {providerLabel}.
+                </p>
+              )}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
