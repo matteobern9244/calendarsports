@@ -145,3 +145,11 @@ export const motogpApi = {
   getConstructorStandings: (season: number) =>
     callEdgeFunction("sports-motogp", { action: "constructor-standings", season: String(season) }),
 };
+
+// === Highlights API (YouTube RSS) ===
+export type HighlightSport = "juventus" | "f1" | "motogp";
+
+export const highlightsApi = {
+  list: (sport: HighlightSport, limit = 12) =>
+    callEdgeFunction("highlights-youtube", { sport, limit: String(limit) }),
+};
