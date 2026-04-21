@@ -112,7 +112,7 @@ export default function StreamingPage() {
     : "netflix";
   const initialRange = isRange(params.get("range"))
     ? (params.get("range") as RangeId)
-    : "30d";
+    : "7d";
   const initialKind = isKind(params.get("kind"))
     ? (params.get("kind") as KindId)
     : "all";
