@@ -52,6 +52,34 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Fixed
 
+- **"Nuove uscite" sempre vuote**: la sezione `/streaming?tab=releases`
+  mostrava `EmptyState` anche per provider attivi (Netflix, Prime, HBO Max)
+  perche' i range UI di default ("Oggi", "Prossimi 3 giorni", "Prossimi 7
+  giorni") erano troppo stretti rispetto al modo in cui TMDB indicizza i
+  cataloghi streaming. TMDB Discover filtra per `primary_release_date` (film)
+  / `first_air_date` (serie), non per data di ingresso sulla piattaforma in
+  Italia, quindi finestre da 1-7 giorni restituiscono spesso 0 risultati anche
+  con `TMDB_API_KEY` configurata e provider corretto. Tre interventi
+  conservativi:
+  1. **`src/pages/StreamingPage.tsx`**: sostituiti i tre range con finestre
+     piu' realistiche — `7d` (Prossimi 7 giorni), `30d` (Prossimi 30 giorni,
+     **nuovo default**), `90d` (Finestra estesa: -30 / +60 giorni).
+  2. **`supabase/functions/streaming-releases/index.ts`**: aggiunto fallback
+     trasparente lato backend. Quando la finestra richiesta restituisce 0
+     items, l'edge function ritenta automaticamente con
+     `dateFrom -= 14 giorni` e `dateTo += 30 giorni`, mantenendo provider e
+     `watch_region=IT` invariati. Il payload espone `widenedWindow: boolean`
+     e i campi `effectiveFrom` / `effectiveTo` per tracciabilita'. Cache
+     invariata (1h, chiave per `provider:dateFrom:dateTo`).
+  3. **EmptyState informativo**: messaggio aggiornato che spiega la natura
+     del filtro TMDB + bottone "Allarga finestra" che imposta `range = "90d"`
+     quando la finestra corrente e' vuota; quando il fallback widened scatta,
+     un hint italic informa che si sta mostrando una finestra estesa.
+  Verifica: curl edge function con Netflix range 7d → ritorna ≥10 items
+  (widenedWindow=true), HBO Max range 30d → ritorna 3 items
+  (widenedWindow=true). Versione applicativa invariata `2.1.0` (bugfix).
+  Nessun cambio di provider TMDB, secret, scraping o dipendenze.
+
 - **Leggibilita' "Stasera in TV" su mobile**
   (`src/components/home/TonightTvList.tsx`): le righe della tabella
   collassavano ora, badge canale, titolo lungo, badge genere e durata
