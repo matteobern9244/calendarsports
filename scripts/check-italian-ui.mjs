@@ -339,6 +339,45 @@ function extractCandidates(src) {
     });
   }
 
+  // document.title = `...` (template literal). Cattura solo la parte
+  // statica iniziale prima di eventuali interpolazioni ${...}.
+  const docTitleTemplatePattern = /\bdocument\.title\s*=\s*`([^`${]+)`?/g;
+  for (const m of src.matchAll(docTitleTemplatePattern)) {
+    const value = m[1].trim();
+    if (!value) continue;
+    candidates.push({
+      kind: "document-title",
+      value,
+      index: m.index,
+    });
+  }
+
+  // Titoli modali Radix/shadcn: <DialogTitle>...</DialogTitle> e simili.
+  const dialogTitleTagPattern =
+    /<(DialogTitle|AlertDialogTitle|SheetTitle|DrawerTitle|SidebarTitle)\b[^>]*>([^<>{}]+)</g;
+  for (const m of src.matchAll(dialogTitleTagPattern)) {
+    const value = m[2].trim();
+    if (!value) continue;
+    if (!/[A-Za-zÀ-ÿ]/.test(value)) continue;
+    candidates.push({
+      kind: `dialog-title:${m[1]}`,
+      value,
+      index: m.index,
+    });
+  }
+
+  // Prop title="..." su componenti che contengono Dialog/Modal/Sheet/Drawer
+  // nel nome (es. <ConfirmDialog title="...">).
+  const dialogTitlePropPattern =
+    /<(\w*(?:Dialog|Modal|Sheet|Drawer)\w*)\b[^>]*\btitle\s*=\s*"([^"]+)"/g;
+  for (const m of src.matchAll(dialogTitlePropPattern)) {
+    candidates.push({
+      kind: `dialog-title-prop:${m[1]}`,
+      value: m[2].trim(),
+      index: m.index,
+    });
+  }
+
   return candidates;
 }
 
