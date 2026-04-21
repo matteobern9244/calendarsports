@@ -187,6 +187,7 @@ export default function TonightTvList() {
             durationMin,
             hourRome: parseInt(hStr, 10),
             minuteRome: parseInt(mStr, 10),
+            endTime: hasExplicitEnd ? endHHMM : "",
             endMinutesFromMidnight,
             hasExplicitEnd,
             title: p.title,
