@@ -178,15 +178,27 @@ export default function MotoGPPage() {
                     <TableRow key={c.position}>
                       <TableCell className="font-heading font-bold">{c.position}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          {c.logoUrl && (
-                            <img
-                              src={c.logoUrl}
-                              alt={c.team}
-                              className="h-6 w-10 object-contain flex-shrink-0"
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                            />
-                          )}
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="h-10 w-14 rounded-md border-2 flex items-center justify-center flex-shrink-0 p-1"
+                            style={
+                              c.constructor && MOTOGP_CONSTRUCTOR_COLORS[c.constructor]
+                                ? {
+                                    borderColor: MOTOGP_CONSTRUCTOR_COLORS[c.constructor].border,
+                                    backgroundColor: MOTOGP_CONSTRUCTOR_COLORS[c.constructor].bg,
+                                  }
+                                : { borderColor: 'hsl(var(--border))' }
+                            }
+                          >
+                            {c.logoUrl && (
+                              <img
+                                src={c.logoUrl}
+                                alt={c.team}
+                                className="h-full w-full object-contain"
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            )}
+                          </div>
                           <span className="font-semibold">{c.team}</span>
                         </div>
                       </TableCell>
