@@ -52,6 +52,12 @@ type FilterValue = "all" | StreamingFamilyId;
 
 const TV_PAGE_SIZE = 8;
 
+// Prima serata italiana: dalle 21:00 incluse alle 22:59 incluse.
+// I programmi che iniziano alle 23:00 o dopo appartengono alla
+// seconda serata e non devono comparire nella scheda Home.
+const PRIME_TIME_START_MIN = 21 * 60;       // 21:00
+const PRIME_TIME_END_EXCLUSIVE_MIN = 23 * 60; // 23:00 (escluso)
+
 /**
  * Scheda "Stasera in TV" della Home: aggrega i palinsesti delle 5 famiglie
  * (RAI, Mediaset, Sky Sport, Sky Cinema, Discovery), filtra per prima serata
@@ -125,12 +131,14 @@ export default function TonightTvList() {
   }, []);
 
   const tonightHighlights = useMemo(() => {
-    // Finestra estesa 20:30-23:00 Europe/Rome per non escludere kickoff
-    // sportivi (Coppa Italia 20:40, Champions/Serie A 20:45) e prime serate
-    // anticipate. La soglia MIN_DURATION elimina poi tg/promo/filler.
+    // Prima serata italiana: 21:00 - 22:59 Europe/Rome. I kickoff anticipati
+    // (20:30/20:45) restano esclusi: per quelli c'e' la sezione Streaming.
     const inPrimeWindow = (h: TvHighlight) => {
       const minutes = h.hourRome * 60 + h.minuteRome;
-      return minutes >= 20 * 60 + 30 && minutes <= 23 * 60;
+      return (
+        minutes >= PRIME_TIME_START_MIN &&
+        minutes < PRIME_TIME_END_EXCLUSIVE_MIN
+      );
     };
     // Soglia 40 min: con la finestra piu' larga servono criteri piu' stretti
     // per il "vero" programma di prima serata. Calcio 100+, fiction 90+,
@@ -206,7 +214,7 @@ export default function TonightTvList() {
                 <span className="text-gold-gradient">Stasera in TV</span>
               </h2>
               <p className="text-xs text-muted-foreground mt-1">
-                Prima serata (dalle 20:30) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
+                Prima serata (dalle 21:00) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
               </p>
             </div>
           </div>
