@@ -415,7 +415,7 @@ export default function TonightTvList() {
                         return (
                           <article
                             aria-label={ariaParts.join(", ")}
-                            className="sm:hidden flex flex-col gap-1.5"
+                            className="sm:hidden flex flex-col gap-2"
                           >
                         {/* Riga 1: ora + canale + durata */}
                         <div className="flex items-center gap-2 flex-wrap" aria-hidden="true">
@@ -429,14 +429,14 @@ export default function TonightTvList() {
                             {row.channel}
                           </Badge>
                           {formatDuration(row.durationMin) && (
-                            <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono leading-none ml-auto">
+                            <span className="text-[11px] text-foreground/75 whitespace-nowrap font-mono leading-none ml-auto">
                               {formatDuration(row.durationMin)}
                             </span>
                           )}
                         </div>
                         {/* Riga 2: titolo + genere */}
                         <div className="flex items-start gap-2 flex-wrap" aria-hidden="true">
-                          <span className="font-medium text-[13px] leading-snug break-words flex-1 min-w-0">
+                          <span className="font-medium text-[13px] leading-snug break-words flex-1 min-w-0 text-foreground">
                             {row.title}
                           </span>
                           <Badge
