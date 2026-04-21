@@ -39,47 +39,27 @@ export default function EventCountdown({ startDate, className }: EventCountdownP
   const target = useMemo(() => new Date(startDate).getTime(), [startDate]);
   const valid = Number.isFinite(target);
 
-  // Decisione di risoluzione: serve "second" solo nell'ultima ora prima
-  // dell'evento, dove i secondi vengono effettivamente mostrati. Per
-  // determinarla usiamo lo snapshot "minute" (stabile) cosi' la
-  // sottoscrizione cambia solo ai cambi minuto, non ad ogni secondo.
-  const minuteSnapshot = useSyncExternalStore(
-    (cb) => subscribeCountdown(cb, "minute"),
-    getNowMinute,
-    getNowMinute,
-  );
-  // I secondi vengono mostrati nel JSX ogni volta che `days === 0`, cioe'
-  // nelle ultime 24h prima dell'evento. Allineiamo `needsSeconds` a quella
-  // stessa condizione: cosi' il tick a 1s scatta esattamente quando il
-  // segmento `s` e' visibile, evitando il bug del countdown "fermo" tra
-  // T-24h e T-1h. La decisione e' calcolata sul `minuteSnapshot` (stabile)
-  // quindi cambia solo ai cambi minuto, non ad ogni secondo.
-  const needsSeconds = useMemo(() => {
-    if (!valid) return false;
-    const mp = getPartsAt(target, minuteSnapshot);
-    return mp.totalMs > 0 && mp.days === 0;
-  }, [target, valid, minuteSnapshot]);
-
-  const secondSnapshot = useSyncExternalStore(
-    (cb) => subscribeCountdown(cb, needsSeconds ? "second" : "minute"),
-    needsSeconds ? getNowSecond : getNowMinute,
-    needsSeconds ? getNowSecond : getNowMinute,
+  // Real-time: tutti i countdown si abbonano al clock globale a risoluzione
+  // "second" cosi' i secondi scorrono sempre, senza eccezioni. Il clock e'
+  // unico per l'intera app (vedi countdownClock.ts) e tutti i chip
+  // condividono lo stesso istante nello stesso commit React, quindi non
+  // esiste flicker o sfasamento tra card adiacenti. Quando la tab e' in
+  // background il timer si ferma e riparte al ritorno con un tick immediato.
+  const now = useSyncExternalStore(
+    (cb) => subscribeCountdown(cb, "second"),
+    getNowSecond,
+    getNowSecond,
   );
 
-  // In modalita' "minute" il `secondSnapshot` resta uguale al `minuteSnapshot`
-  // (vedi countdownClock: lo store ritorna `nowMinute` quando il subscriber
-  // chiede risoluzione "minute"), quindi `activeSnapshot` cambia solo ai
-  // cambi minuto e il `useMemo` non si ricalcola intra-minuto.
-  const activeSnapshot = needsSeconds ? secondSnapshot : minuteSnapshot;
   const parts = useMemo(
-    () => getPartsAt(valid ? target : 0, activeSnapshot),
-    [target, valid, activeSnapshot],
+    () => getPartsAt(valid ? target : 0, now),
+    [target, valid, now],
   );
 
   if (!valid) return null;
 
   // Live window: ±3h around start time
-  const isLive = parts.totalMs === 0 && Date.now() - target < 3 * 3600 * 1000;
+  const isLive = parts.totalMs === 0 && now - target < 3 * 3600 * 1000;
   const isPast = parts.totalMs === 0 && !isLive;
 
   if (isPast) return null;
@@ -127,12 +107,9 @@ export default function EventCountdown({ startDate, className }: EventCountdownP
         )}
         <span className="font-bold">{pad(parts.minutes)}</span>
         <span className="text-[9px] uppercase text-muted-foreground">m</span>
-        {!showDays && (
-          <>
-            <span className="font-bold">{pad(parts.seconds)}</span>
-            <span className="text-[9px] uppercase text-muted-foreground">s</span>
-          </>
-        )}
+        {/* Secondi sempre visibili: countdown realmente in real-time */}
+        <span className="font-bold">{pad(parts.seconds)}</span>
+        <span className="text-[9px] uppercase text-muted-foreground">s</span>
       </div>
     </div>
   );
