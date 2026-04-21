@@ -1,109 +1,102 @@
 
 
-## Fallback deterministico per placeholder EV-* con multipli rich title competitor
+## Chip genere garantito su ogni riga di "Stasera in TV"
 
-### Problema
+### Problema osservato (screenshot)
 
-Oggi in `supabase/functions/streaming-tv/index.ts` la funzione `enrichTitle`, quando il raw è un placeholder generico (`EV-SP`, `EV-CN`, `EV-FILM`, `EV-TV`) e il match per prefisso fallisce, applica due fallback in cascata:
+Nello screenshot, le righe `RAI 1 - Affari Tuoi` e `RAI 2 - Belve` non mostrano il chip genere (rettangoli rossi vuoti), mentre tutte le altre lo hanno. Causa: `inferGenre` in `src/lib/genreUtils.ts` ha una lista keyword hardcoded e parziale. "Affari Tuoi" e "Belve" non matchano:
+- `Affari Tuoi` non è in `/quiz|reazione a catena|l'eredita|caduta libera/` (è un game show ma non listato).
+- `Belve` non è in `/striscia|paperissima|zelig|le iene|propaganda|porta a porta|piazzapulita|dimartedi|cartabianca|stasera italia/` (è un talk ma non listato).
 
-1. **Match per orario esatto** (`hh:mm`): se trova un rich title con `hh/mm` identici al raw, lo sceglie. In caso di parità sceglie il **più lungo come stringa**.
-2. **Match per genere atteso** (es. `EV-SP` → genere ∈ {Sport, Calcio, Tennis, ...}): se ci sono più rich title col genere giusto, sceglie il **più lungo come stringa**.
+Risultato: `inferGenre` ritorna `undefined` → in `TonightTvList.tsx` riga 380-388 e 444-453 il chip non viene renderizzato (`g ? <Badge> : null`). UI incoerente: alcune righe hanno chip, altre no.
 
-Limite osservato: "il più lungo come stringa" non è deterministico né corretto in scenari realistici. Esempio Canale 5 con doppia trasmissione sportiva sequenziale (es. `EV-SP` 20:40 partita + `EV-SP` 23:00 highlights). Se entrambi i rich title hanno genere "Sport", il fallback B seleziona il titolo lessicalmente più lungo, ignorando la **vicinanza temporale** col raw, e può associare gli highlights delle 23:00 alla riga delle 20:40.
+L'utente vuole **vedere sempre il chip per ogni riga**, con gestione robusta che non dipenda dall'esaustività di una lista keyword.
 
-Inoltre, il fallback per orario esatto (priorità 2) non considera il genere atteso del placeholder: se il rich title con `hh:mm` esatto è di genere sbagliato (es. una breve promo "Anteprima Tg5 (News)" alle 20:40 mentre il vero evento sportivo è "Calcio - Coppa Italia (Sport)"), può vincere quello sbagliato.
+### Strategia: garanzia formale con cascata di fallback
 
-### Soluzione
+Riscrivere `inferGenre` per restituire **sempre** una stringa non-undefined, con cascata deterministica:
 
-Rendere il fallback **deterministico** combinando vincolo di genere e distanza temporale, in un'unica funzione di scoring.
+1. **Genere fornito dall'edge function** (`row.genre` da scraping staseraintv) → usato così com'è. (Già attuale priorità in `TonightTvList.tsx`.)
+2. **Match per keyword specifico nel titolo** (logica attuale, espansa con più programmi italiani noti).
+3. **Match per famiglia/canale** (Sky Cinema → Film, Sky Sport → Sport, canali sport/cinema → idem).
+4. **Match per pattern strutturale del titolo** (presenza di `(Genere)` finale, `St. X - Ep. Y` → Serie Tv, ecc.).
+5. **Default per famiglia (fallback garantito)**:
+   - `rai` → `Tv` (programma generalista RAI)
+   - `mediaset` → `Tv` (programma generalista Mediaset)
+   - `sky-sport` → `Sport`
+   - `sky-cinema` → `Film`
+   - `discovery` → `Lifestyle`
 
-#### A. Backend — `supabase/functions/streaming-tv/index.ts`
+Cambio firma: `inferGenre(family, channel, title): string` (era `string | undefined`). Il valore "garantito" non è un'invenzione fuorviante: rappresenta una classificazione macro coerente col canale, allineata alla policy "real data only" perché basata su segnali reali (famiglia + canale + titolo), non su mock.
 
-Refactor di `enrichTitle` mantenendo l'ordine di priorità ma sostituendo i due fallback B/C con un singolo passaggio di scoring quando il raw è un placeholder `EV-*`:
+### Espansione lista keyword (priorità 2)
 
-**Priorità 1 (invariata)**: match per prefisso di token (≥3 token comuni o ≥15 char).
+Aggiungere alla lista `inferGenre` programmi italiani comuni mancanti. Lista compilata a partire dal palinsesto reale RAI/Mediaset/Discovery 2025/2026:
 
-**Priorità 2 (nuova logica per placeholder)**: se `rawUpper` è un placeholder noto in `PLACEHOLDER_TO_GENRE`, scorrere tutti i rich title e calcolare uno **score** per ognuno:
-- **Filtro hard**: il genere del rich title (estratto dall'ultima `(...)`) deve appartenere al set `wanted` del placeholder. Se non appartiene, il rich title è scartato (score = -∞).
-- **Score per i candidati validi**:
-  - **+1000** se `cand.hh === rawHh && cand.mm === rawMm` (match orario esatto).
-  - **-distanceMinutes** dove `distanceMinutes = |cand.hh*60 + cand.mm - rawHh*60 - rawMm|` (clamp a max 720 = 12h per evitare overflow su gap notte/mattina).
-  - **+lengthBonus** = `min(cand.title.length, 100) * 0.01` come tiebreaker stabile (penalizza pochissimo i titoli corti, massimo +1.0 punti — molto meno della distanza temporale).
-- Se `rawHh`/`rawMm` sono `undefined`, usare solo il filtro hard di genere + lengthBonus.
-- Se nessun candidato passa il filtro genere, fallback al match per orario esatto **senza** vincolo di genere (priorità 3 attuale conservata come safety net), e infine alla cosmetizzazione del raw.
+- **Quiz/Game show**: aggiungere `affari tuoi`, `the wall`, `avanti un altro`, `chi vuol essere milionario`, `soliti ignoti`.
+- **Talk Show**: aggiungere `belve`, `che tempo che fa`, `domenica in`, `verissimo`, `pomeriggio cinque`, `quarta repubblica`, `controcorrente`, `zona bianca`, `dritto e rovescio`, `accordi e disaccordi`, `otto e mezzo`, `in onda`.
+- **Reality**: aggiungere `gf vip`, `the voice`, `tu si que vales`, `italia s got talent`.
+- **Documentario**: aggiungere `ulisse`, `superquark`, `geo`, `kilimangiaro`, `passato e presente`.
+- **Fiction**: nuova categoria → `il commissario montalbano`, `don matteo`, `un posto al sole`, `cuori`, `mina settembre`, `che dio ci aiuti`, `imma tataranni`, `doc nelle tue mani`, `blanca`, `lolita lobosco`, `i bastardi di pizzofalcone`, `makari`, `carosello carosone`. Categoria mappata a `Fiction`.
+- **Cooking**: nuova categoria → `bake off`, `cucine da incubo`, `4 ristoranti`, `hell['s] kitchen`, `4 hotel`, `family food fight`. Categoria mappata a `Cooking`.
+- **Lifestyle**: nuova categoria per Discovery → `casa a prima vista`, `cortesie per gli ospiti`, `cake star`, `vado a vivere in campagna`, `little big italy`. Mappata a `Lifestyle`.
 
-**Priorità 3 (invariata, non-placeholder)**: per raw che NON sono placeholder e non hanno match per prefisso, conservare l'attuale match per orario esatto (con preferenza per il più lungo) — comportamento corrente preservato per casi non-placeholder.
+### Pattern strutturali (priorità 4)
 
-**Priorità 4 (invariata)**: cosmetizzazione del raw quando nessun match.
+- `\([A-Za-zÀ-ÿ ]{3,30}\)\s*$` → estrazione del genere già presente nel titolo (es. `Le Iene presentano - Il verdetto (Inchieste)` → `Inchieste`). Mappato a `Talk Show` se "inchieste"/"reportage", altrimenti usato così com'è dopo capitalizzazione e validazione contro una whitelist.
+- `St\.\s*\d+|stagione \d+|s\d+e\d+|episodio \d+|puntata` → `Serie Tv` se non match Fiction prima.
+- `presenta|edizione del|edizione delle` insieme a `\btg|telegiornale` → `News`.
+- `puntata del \d+` su canale RAI/Mediaset generalista senza altro segnale → `Tv` (mantiene struttura riconoscibile).
 
-Questo garantisce:
-- `EV-SP` 20:40 con candidati `Calcio - Coppa Italia (Sport)` 20:40 + `Calcio Highlights (Sport)` 23:00 → vince il primo (score 1000+0.x vs -140+0.x).
-- `EV-SP` 20:40 con candidati `Anteprima Tg5 (News)` 20:40 + `Calcio - Coppa Italia (Sport)` 20:40 → vince Coppa Italia (Tg5 scartato dal filtro genere).
-- `EV-CN` 21:15 con candidati `Il Padrino (Film)` 21:20 + `Promo (Film)` 23:50 → vince Padrino (distanza 5 min vs 155 min).
+### Cambio firma e callsite
 
-#### B. Test — `src/lib/streamingTitleEnrichment.test.ts`
+`inferGenre` da `(family, channel, title): string | undefined` a `(family, channel, title): string`. Tre callsite in `TonightTvList.tsx`:
+- riga 313: `const g = row.genre || inferGenre(...)`. Resta valido. `g` ora è sempre `string`.
+- riga 376-377: `aria-label={g ? \`Genere ${g}\` : undefined}` → `aria-label={\`Genere ${g}\`}` (sempre presente).
+- riga 380-388: rimuove ramo `g ? ... : null`, sempre renderizza Badge.
+- riga 408 + 444-453: stesso pattern, rimuove condizionale, sempre Badge.
 
-Estendere il file esistente (copia tipata di `enrichTitle` per test puro, dato che la edge function gira su Deno e non è coperta dal runner Vitest del frontend) con i nuovi casi:
-
-1. **Più rich title con stesso genere "Sport", orari diversi**: raw `EV-SP` `hh=20 mm=40`, candidati `Calcio - Coppa Italia (Sport)` 20:40 + `Calcio Highlights Notte (Sport)` 23:00 → atteso titolo `Calcio - Coppa Italia`.
-2. **Più rich title con orario esatto, generi diversi**: raw `EV-SP` `hh=20 mm=40`, candidati `Anteprima Tg5 (News)` 20:40 + `Calcio - Coppa Italia (Sport)` 20:40 → atteso `Calcio - Coppa Italia` con genere `Sport`.
-3. **Raw senza orario, solo filtro genere + lengthBonus**: raw `EV-SP` senza hh/mm, candidati `Calcio (Sport)` + `Calcio - Coppa Italia - Inter Vs Como (Sport)` → atteso il più lungo (lengthBonus tiebreaker).
-4. **Nessun candidato del genere atteso, fallback safety net**: raw `EV-SP` 20:40, candidati solo `Tg5 - Notte (News)` 20:40 → atteso fallback al match per orario esatto senza genere → titolo `Tg5 - Notte` (preserva comportamento corrente come safety net).
-5. **Test esistenti** (placeholder EV-CN, EV-SP single-match, prefisso normale, no-match cosmetico) → tutti devono restare verdi.
-
-Aggiornare il file con la nuova versione tipata di `enrichTitle` mantenendo il commento di limite (divergenza copia/live non rilevata dal CI, validazione runtime via curl post-deploy).
-
-#### C. Validazione manuale post-deploy
-
-```bash
-curl '.../streaming-tv?action=prime-time&family=mediaset' \
-  | jq '.data.channels[] | select(.id=="canale-5") | .programs[] | {start, title, genre}'
-```
-Atteso: la riga delle 20:40 mostra il titolo dell'evento principale (non highlights tardo-notturni), genere `Sport`.
-
-#### D. Documentazione
-
-- `changelog.md`: voce `### Changed` — "Scraping TV: scoring deterministico per placeholder generici (EV-SP/EV-CN/EV-TV) — vince il rich title col genere atteso più vicino temporalmente al raw, evitando associazioni spurie tra eventi sequenziali sullo stesso canale".
+`aria-hidden={g ? undefined : true}` → rimosso, cella sempre annunciata.
 
 ### File modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `supabase/functions/streaming-tv/index.ts` | EDIT | Refactor di `enrichTitle`: per raw placeholder `EV-*` introdurre singola passata di scoring (filtro hard genere + bonus 1000 per orario esatto + penalità distanza minuti + lengthBonus tiebreaker). Safety net: se nessun candidato passa il filtro genere, fallback al match per orario esatto attuale. Comportamento per raw non-placeholder invariato. Nessun cambio firma, response JSON o lista canali. |
-| `src/lib/streamingTitleEnrichment.test.ts` | EDIT | Aggiornare la copia tipata di `enrichTitle` con la nuova logica di scoring. Aggiungere 4 nuovi casi test (multipli candidati genere uguale orari diversi, multipli candidati orario uguale generi diversi, no-orario lengthBonus, safety net senza candidati di genere). Mantenere i 5 test esistenti verdi. |
-| `changelog.md` | EDIT | `### Changed`: descrizione fallback deterministico per placeholder EV-*. |
+| `src/lib/genreUtils.ts` | EDIT | Cambio firma → `string`. Espansione keyword (Fiction, Cooking, Lifestyle aggiunte; Quiz/Talk Show/Reality/Documentario estesi). Estrazione `(Genere)` finale dal titolo con whitelist. Pattern strutturali (St./Ep./Stagione → Serie Tv). Default deterministico per famiglia in fondo (`rai`/`mediaset` → `Tv`, `sky-sport` → `Sport`, `sky-cinema` → `Film`, `discovery` → `Lifestyle`). Commenti spiegano cascata e perché non è "dato inventato". |
+| `src/lib/genreUtils.test.ts` | EDIT | Aggiungere casi: `Affari Tuoi` su RAI 1 → `Quiz`; `Belve` su RAI 2 → `Talk Show`; `Don Matteo` → `Fiction`; `Bake Off Italia` → `Cooking`; `Casa a Prima Vista` su Discovery → `Lifestyle`; titolo sconosciuto su RAI 1 → `Tv` (default famiglia); titolo sconosciuto su Sky Sport → `Sport`; estrazione `(Inchieste)` da `Le Iene presentano - Il verdetto (Inchieste)` → mappato a `Talk Show`. Aggiornare i test esistenti che si aspettavano `undefined` (riga "nessun match -> undefined") al nuovo comportamento (`Tv`). |
+| `src/components/home/TonightTvList.tsx` | EDIT | Riga 313: `const g = row.genre || inferGenre(...)` resta. Rimuovere condizionali `g ?` su Badge (desktop riga 380-388, mobile riga 444-453). Rimuovere `aria-hidden={g ? undefined : true}` su cella genere (riga 377): annunciata sempre. `aria-label` cella genere desktop sempre `\`Genere ${g}\``. ariaParts mobile (riga 415): `if (g)` rimosso, sempre `ariaParts.push(\`genere ${g}\`)`. |
+| `src/components/home/TonightTvList.test.tsx` | EDIT | Aggiornare il test esistente per riflettere chip genere sempre presente (se c'è un'asserzione che ammette assenza, renderla strict). |
+| `changelog.md` | EDIT | `### Changed`: "Stasera in TV: chip genere garantito su ogni riga grazie a cascata di fallback (keyword estese, estrazione genere dal titolo, default deterministico per famiglia). Affari Tuoi → Quiz, Belve → Talk Show, Don Matteo → Fiction, ecc. Eliminate righe senza chip." |
 
 ### Cosa NON cambia
 
-- Lista canali in `FAMILIES` (Canale 5 e tutti gli altri preservati).
-- Comportamento per raw non-placeholder (match per prefisso e match per orario esatto attuali invariati).
-- Firma `Program`, struttura JSON di risposta, `extractRichTitles` (già ritorna `RichTitle[]` con `hh/mm` opzionali).
-- `parseStaseraintvHtml`, `enrichTitle` per casi normali, frontend `TonightTvList.tsx`, hook React Query.
-- Layout, accessibilità, CSS Grid `display: contents`, mobile.
-- Nessuna nuova dipendenza, segreto, env var, branch policy.
+- Lista canali in `FAMILIES` (preservata).
+- Logica edge function `streaming-tv` (nessun deploy backend).
+- Layout grid CSS, accessibilità ARIA struttura, paginazione, filtri famiglia.
+- Layout mobile/desktop, divider colorato, hook React Query.
+- Nessuna nuova dipendenza, env var, segreto.
 
 ### Rischi e mitigazioni
 
-- **Genere mappato male in `PLACEHOLDER_TO_GENRE`**: il set `wanted` per `EV-SP` include {Sport, Calcio, Tennis, Motori, Basket, Pallavolo, Pallacanestro, Rugby, Volley, Nuoto, Ciclismo}. Se la pagina staseraintv usa un genere fuori dal set (es. `Atletica`), il candidato viene scartato → safety net riporta al match orario esatto generico → titolo comunque sensato. Aggiunta nota nel codice per facile estensione del set.
-- **lengthBonus troppo alto**: cappato a +1.0 punti totali (factor 0.01 × 100 char max), molto inferiore alla penalità distanza (1 minuto = -1 punto). Tiebreaker affidabile solo a parità sostanziale di orario.
-- **Distanza notte/mattina** (es. raw 23:50, cand 00:10 = 20 min reali ma calcolo 1420 min): clamp a 720 min limita il danno; in pratica i palinsesti staseraintv sono sempre pre-mezzanotte per la prima serata, scenario non critico.
-- **Backtracking regex / performance**: nessun cambio regex, solo logica di scoring O(n) sui rich title (tipicamente <50 per pagina). Nessun impatto.
-- **Rollback semplice**: se osservato un peggioramento, rivertire il blocco `if (placeholder in PLACEHOLDER_TO_GENRE)` ripristina la logica precedente (codice già in stato testato).
+- **Default `Tv` su RAI/Mediaset troppo generico**: scelto perché onesto (significa "programma TV generalista non classificato"). Alternativa "Varietà" rischia di essere errata (un quiz non è un varietà). Documentato come fallback esplicito.
+- **Cambio firma `string | undefined` → `string`**: i callsite sono tutti in `TonightTvList.tsx`. TypeScript segnalerà eventuali altri usi al build. Nessun impatto su edge function.
+- **Test esistenti rotti**: il caso "nessun match → undefined" cambia; aggiornato esplicitamente nel piano.
+- **Regressione non visiva**: nessuna, il chip ora appare dove prima non c'era.
+- **Lingua**: tutti i nuovi default (`Tv`, `Fiction`, `Cooking`, `Lifestyle`, `Sport`, `Film`) accettabili in italiano contemporaneo. `check:italian` passa (sono nomi categoria, già presenti nello stesso file).
 
-### Validazione finale
+### Validazione
 
-1. `npm run lint`, `npm run build`, `npm run test` (incluso `streamingTitleEnrichment.test.ts` esteso).
+1. `npm run lint`, `npm run build`, `npm run test` (incluso `genreUtils.test.ts` esteso).
 2. `npm run check:italian` exit 0.
-3. Deploy edge function `streaming-tv`.
-4. `curl streaming-tv?action=prime-time&family=mediaset` → titolo Canale 5 20:40 corretto + genere `Sport`.
-5. Apertura preview, scheda "Stasera in TV": Canale 5 mostra il main event corretto, non programmi tardo-serali spuri.
+3. Apertura preview "Stasera in TV": ogni riga visualizza un chip genere coerente, nessun rettangolo vuoto.
+4. Casi spot-check da screenshot: `Affari Tuoi` → `QUIZ`; `Belve` → `TALK SHOW`; `Calcio - Coppa Italia` → `SPORT` (già funzionante); `Le Iene presentano (Inchieste)` → `TALK SHOW`; `Sport 24 Today` → `SPORT`.
 
 ### Checklist post-edit
 
-1. `streaming-tv/index.ts`: `enrichTitle` ha nuovo blocco di scoring per placeholder `EV-*` (filtro genere + scoring orario+lunghezza); safety net preservato; canali intatti.
-2. `streamingTitleEnrichment.test.ts`: 9 casi totali (5 esistenti + 4 nuovi) tutti verdi; copia di `enrichTitle` aggiornata.
-3. Edge function deployata e validata via curl.
-4. Test verde in CI.
+1. `genreUtils.ts`: firma `string`, cascata documentata, lista keyword estesa, default per famiglia in fondo.
+2. `genreUtils.test.ts`: nuovi casi verdi, test "undefined" aggiornato.
+3. `TonightTvList.tsx`: tre callsite ripuliti dai condizionali `g ?`, chip sempre renderizzato.
+4. `TonightTvList.test.tsx`: asserzioni allineate.
 5. `changelog.md` aggiornato in `### Changed`.
 6. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
