@@ -127,6 +127,15 @@ export default function MotoGPPage() {
                               #{s.number}
                             </span>
                           )}
+                          {s.nationality && (
+                            <img
+                              src={`https://flagcdn.com/${s.nationality}.svg`}
+                              alt={`Bandiera ${s.nationality.toUpperCase()}`}
+                              className="h-3.5 w-5 object-cover rounded-sm flex-shrink-0 border border-border/40"
+                              loading="lazy"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          )}
                           <span className="font-semibold">{s.name}</span>
                         </div>
                       </TableCell>

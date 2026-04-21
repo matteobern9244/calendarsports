@@ -18,6 +18,19 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **MotoGP/F1 – bandiera nazionalità nella classifica piloti**: aggiunta
+  mini bandiera SVG (~20x14px) accanto al nome pilota nella tab
+  "Classifica Piloti" sia su `/motogp` sia su `/formula1`. Caricata da
+  `https://flagcdn.com/{cc}.svg` (CDN pubblico). Per F1 usa il campo
+  `nationality` già esposto da Jolpica, mappato a ISO-2 lato frontend
+  (`src/lib/f1Utils.ts`). Per MotoGP aggiunto campo
+  `nationality: string | null` (ISO-2 lowercase) nel payload `standings`
+  con mappa statica `MOTOGP_RIDER_NATIONALITY_BY_SURNAME` allineata 1:1
+  alla mappa numeri di gara. Backward-compatible. Piloti/driver senza
+  nazionalità mappata (wildcard MotoGP, eventuale nazionalità F1 non in
+  mappa) non mostrano la bandiera — nessun fallback inventato, nessun
+  broken image grazie a `onError`. Richiede deploy edge function
+  `sports-motogp`. Versione applicativa invariata `2.1.0`.
 - **MotoGP – numero di gara nella classifica piloti**: aggiunto badge tondo
   con il numero di gara accanto alla foto del pilota nella tab "Classifica
   Piloti" di `/motogp`. Mappa statica per la griglia 2026 in
