@@ -118,7 +118,12 @@ export default function MotoGPPage() {
           {stLoading && <LoadingState message="Caricamento classifica piloti..." />}
           {stError && <ErrorState message="Errore nel caricamento della classifica" onRetry={() => stRefetch()} />}
           {!stLoading && !stError && (!standings || standings.length === 0) && (
-            <EmptyState message="Classifica piloti non disponibile per questa stagione" />
+            <UnavailableExternalSource
+              title={`Classifica Piloti ${season}`}
+              description="La classifica piloti del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale MotoGP qui sotto per consultare la graduatoria aggiornata, con punti, vittorie e prestazioni di ogni pilota della classe regina."
+              externalLink="https://www.motogp.com/it/world-standing/motogp"
+              externalLabel="Apri classifica su MotoGP.com"
+            />
           )}
           {standings && standings.length > 0 && (
             <div className="rounded-xl border border-border overflow-hidden">
@@ -196,7 +201,12 @@ export default function MotoGPPage() {
           {csLoading && <LoadingState message="Caricamento classifica costruttori..." />}
           {csError && <ErrorState message="Errore nel caricamento della classifica" onRetry={() => csRefetch()} />}
           {!csLoading && !csError && (!constructors || constructors.length === 0) && (
-            <EmptyState message="Classifica costruttori non disponibile per questa stagione" />
+            <UnavailableExternalSource
+              title={`Classifica Costruttori ${season}`}
+              description="La classifica costruttori del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale MotoGP qui sotto per consultare la graduatoria delle case motociclistiche, con punti totali e vittorie."
+              externalLink="https://www.motogp.com/it/world-standing/motogp/constructor"
+              externalLabel="Apri classifica su MotoGP.com"
+            />
           )}
           {constructors && constructors.length > 0 && (
             <div className="rounded-xl border border-border overflow-hidden">
