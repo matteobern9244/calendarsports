@@ -1,63 +1,44 @@
 
 
-## Title accessibile mini-card Slam: italiano completo
+## Rimozione chip "Orari in ora italiana"
 
-### Stato attuale
+### Obiettivo
 
-In `src/components/sinner/PlayerHeader.tsx` (riga ~234) ogni mini-card Slam ha:
+Rimuovere ovunque il chip `TimezoneBadge` ("Orari in ora italiana") senza lasciare riferimenti morti.
 
-```tsx
-title={`${full}: ${r.raw}`}
-```
+### Audit
 
-dove `r.raw` è il valore grezzo restituito dal backend (es. `V`, `F`, `4T`, `RR`). Quindi il tooltip mostra `Australian Open: V` invece di `Australian Open: Vittoria`. Anche `full` contiene nomi propri ufficiali (`Australian Open`, `Roland Garros`, `Wimbledon`, `US Open`, `ATP Finals`) che restano invariati perché nomi propri di tornei.
+Uso del componente `TimezoneBadge` nel codice:
 
-### Modifica
+- `src/components/common/TimezoneBadge.tsx` — definizione del componente.
+- `src/pages/Index.tsx` — import + render nella toolbar in alto a destra (accanto al pulsante Sincronizza).
+- `src/pages/StreamingPage.tsx` — da verificare presenza analoga (header pagina streaming).
 
-**File**: `src/components/sinner/PlayerHeader.tsx` (solo questo).
+Il chip non e' usato altrove (Sinner, Juventus, F1, MotoGP non lo importano).
 
-Sostituire l'attributo `title` per usare l'etichetta italiana già calcolata + anni a 4 cifre, allineandolo a quanto già visibile nella card e all'`aria-label`:
-
-```tsx
-title={
-  r.years.length > 0
-    ? `${full}: ${label} (${r.years.join(", ")})`
-    : `${full}: ${label}`
-}
-```
-
-Risultato tooltip:
-- Vittoria con anni: `Australian Open: Vittoria (2024, 2025)`
-- Risultato senza anni: `ATP Finals: Round Robin`
-- Codice ignoto (fallback): mostra il raw, ma `resultLabel()` già restituisce il raw quando manca il mapping → comportamento conservato senza inglese aggiuntivo (i raw correnti `V/F/SF/QF/4T/3T/2T/1T/RR` sono tutti già mappati).
-
-### Cosa NON cambia
-
-- Layout, colori, gradient oro, icona trofeo, grid responsive → invariati.
-- `aria-label` già in italiano → invariato.
-- Contenuto visibile della mini-card → invariato.
-- `RESULT_LABELS` → invariato.
-- Backend, dati, versione `2.1.0` → invariati.
-- Nessuna nuova dipendenza.
-
-### Validazione
-
-1. Hover desktop su `AO` (vittoria 2024, 2025): tooltip mostra `Australian Open: Vittoria (2024, 2025)`.
-2. Hover su `Finals` (Round Robin): tooltip mostra `ATP Finals: Round Robin`.
-3. `npm run check:italian` → exit 0 (nessuna nuova parola inglese; `Round`/`Robin` già in allowlist).
-4. `npm run lint` invariato.
-
-### File modificati
+### Modifiche
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `src/components/sinner/PlayerHeader.tsx` | EDIT | Sostituito `title={`${full}: ${r.raw}`}` con versione che usa `label` italiano (già calcolato via `resultLabel`) + anni a 4 cifre tra parentesi quando disponibili. |
-| `changelog.md` | EDIT | `### Changed`: "Profilo Sinner — tooltip mini-card Grande Slam ora in italiano completo (es. `Australian Open: Vittoria (2024, 2025)`), allineato all'`aria-label` e al testo visibile." |
+| `src/pages/Index.tsx` | EDIT | Rimuovere `<TimezoneBadge />` dalla riga toolbar e l'import `TimezoneBadge from "@/components/common/TimezoneBadge"`. Mantenere il resto della toolbar (label ultimo aggiornamento, pulsante Sincronizza, Progress) invariato. |
+| `src/pages/StreamingPage.tsx` | EDIT (condizionale) | Se presente, rimuovere render + import di `TimezoneBadge` allo stesso modo. |
+| `src/components/common/TimezoneBadge.tsx` | DELETE | File rimosso perche' non piu' referenziato da nessun consumer. |
+| `changelog.md` | EDIT | `### Removed`: "Chip `Orari in ora italiana` rimosso da Home e Streaming. Componente `TimezoneBadge` eliminato. Nessun cambio funzionale: tutti gli orari restano formattati nel fuso `Europe/Rome` come prima." |
+
+### Cosa NON cambia
+
+- Formattazione orari: continua a usare `Europe/Rome` via `dateUtils` e `Intl.DateTimeFormat`.
+- Layout toolbar Home: il pulsante Sincronizza e la label ultimo aggiornamento restano allineati a destra.
+- Versione applicativa `2.1.0`.
+- Nessun impatto su backend, dati, route, hook React Query.
+- Guard CI italiano (`check-italian-ui.mjs`) invariato.
 
 ### Checklist post-edit
 
-1. Hover su tutte le 5 mini-card: nessuna sigla EN nel tooltip.
-2. `npm run check:italian` → exit 0.
-3. `changelog.md` aggiornato.
-4. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
+1. `grep -r TimezoneBadge src/` → 0 occorrenze.
+2. Home `/`: toolbar in alto a destra mostra solo label "Ultimo aggiornamento ..." + pulsante Sincronizza.
+3. `/streaming?tab=tv&family=rai`: nessun chip orario residuo.
+4. `npm run lint` e `npm run build` invariati (nessun import non risolto).
+5. `changelog.md` aggiornato.
+6. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
