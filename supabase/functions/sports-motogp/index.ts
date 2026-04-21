@@ -136,6 +136,45 @@ const MOTOGP_RIDER_NUMBERS_BY_SURNAME: Record<string, number> = {
   'bradl': 6,
 };
 
+// MotoGP rider nationalities keyed by surname (or surname-initial for ambiguous cases).
+// ISO-3166-1 alpha-2 lowercase codes, used to render flags via flagcdn.com.
+// Based on official MotoGP 2026 starting grid. Wildcard/replacements not mapped: returned as null.
+const MOTOGP_RIDER_NATIONALITY_BY_SURNAME: Record<string, string> = {
+  'bagnaia': 'it',
+  'marquez-m': 'es',
+  'marquez-a': 'es',
+  'marc marquez': 'es',
+  'alex marquez': 'es',
+  'martin': 'es',
+  'acosta': 'es',
+  'bastianini': 'it',
+  'bezzecchi': 'it',
+  'vinales': 'es',
+  'viñales': 'es',
+  'quartararo': 'fr',
+  'binder': 'za',
+  'miller': 'au',
+  'morbidelli': 'it',
+  'di giannantonio': 'it',
+  'fernandez-r': 'es',
+  'fernandez-a': 'es',
+  'fernandez': 'es',
+  'zarco': 'fr',
+  'marini': 'it',
+  'mir': 'es',
+  'rins': 'es',
+  'ogura': 'jp',
+  'razgatlioglu': 'tr',
+  'aldeguer': 'es',
+  'moreira': 'br',
+  'garcia': 'es',
+  'pirro': 'it',
+  'savadori': 'it',
+  'pedrosa': 'es',
+  'crutchlow': 'gb',
+  'bradl': 'de',
+};
+
 function expandRiderName(skyName: string): string {
   const normalized = skyName.toLowerCase().trim();
   const parts = normalized.replace(/\./g, '').trim().split(/\s+/);
@@ -226,6 +265,36 @@ function findRiderNumber(name: string): number | null {
   return null;
 }
 
+function findRiderNationality(name: string): string | null {
+  const normalized = name.toLowerCase().trim();
+  const parts = normalized.replace(/\./g, '').trim().split(/\s+/);
+  const initial = parts.length > 1 && parts[parts.length - 1].length <= 2 ? parts[parts.length - 1] : null;
+  const surname = initial ? parts.slice(0, -1).join(' ') : normalized;
+
+  // Special handling for Marquez brothers
+  if (surname === 'marquez' && initial) {
+    if (initial === 'm') return MOTOGP_RIDER_NATIONALITY_BY_SURNAME['marc marquez'] ?? null;
+    if (initial === 'a') return MOTOGP_RIDER_NATIONALITY_BY_SURNAME['alex marquez'] ?? null;
+  }
+
+  // Try surname-initial key (handles Fernandez R./A.)
+  if (initial && MOTOGP_RIDER_NATIONALITY_BY_SURNAME[`${surname}-${initial}`]) {
+    return MOTOGP_RIDER_NATIONALITY_BY_SURNAME[`${surname}-${initial}`];
+  }
+
+  // Direct surname match
+  if (MOTOGP_RIDER_NATIONALITY_BY_SURNAME[surname]) return MOTOGP_RIDER_NATIONALITY_BY_SURNAME[surname];
+
+  // Accent-insensitive fallback
+  const surnameNormalized = surname.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  for (const [key, code] of Object.entries(MOTOGP_RIDER_NATIONALITY_BY_SURNAME)) {
+    const keyNormalized = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (surnameNormalized === keyNormalized) return code;
+  }
+
+  return null;
+}
+
 function getTeamConstructor(teamName: string): string | null {
   const t = teamName.toLowerCase();
   if (t.includes('ducati') || t.includes('vr46') || t.includes('pramac')) return 'ducati';
@@ -237,7 +306,7 @@ function getTeamConstructor(teamName: string): string | null {
 }
 
 async function fetchSkyStandings(): Promise<{
-  pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null }>;
+  pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null; nationality: string | null }>;
   teams: Array<{ position: number; team: string; points: number; logoUrl: string | null }>;
 }> {
   const res = await fetch(SKY_SPORT_MOTOGP_URL, {
@@ -246,7 +315,7 @@ async function fetchSkyStandings(): Promise<{
   if (!res.ok) throw new Error(`Sky Sport returned ${res.status}`);
   const html = await res.text();
 
-  const pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null }> = [];
+  const pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null; nationality: string | null }> = [];
   const teams: Array<{ position: number; team: string; points: number; logoUrl: string | null }> = [];
 
   // Parse pilot standings table
@@ -266,7 +335,7 @@ async function fetchSkyStandings(): Promise<{
           const teamRaw = c3.replace(/<[^>]+>/g, '').trim();
           const pts = parseInt(c4.replace(/<[^>]+>/g, '').trim());
           if (!isNaN(pos) && nameRaw) {
-            pilots.push({ position: pos, name: expandRiderName(nameRaw), team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw), number: findRiderNumber(nameRaw) });
+            pilots.push({ position: pos, name: expandRiderName(nameRaw), team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw), number: findRiderNumber(nameRaw), nationality: findRiderNationality(nameRaw) });
           }
         }
       }

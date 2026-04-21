@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { User } from "lucide-react";
+import { f1NationalityToIso } from "@/lib/f1Utils";
 
 export default function Formula1Page() {
   const { seasons, setSeason } = useSeasonPreferences();
@@ -103,6 +104,18 @@ export default function Formula1Page() {
                               <User className="h-4 w-4 text-muted-foreground" />
                             </div>
                           )}
+                          {(() => {
+                            const iso = f1NationalityToIso(d.nationality);
+                            return iso ? (
+                              <img
+                                src={`https://flagcdn.com/${iso}.svg`}
+                                alt={`Bandiera ${iso.toUpperCase()}`}
+                                className="h-3.5 w-5 object-cover rounded-sm flex-shrink-0 border border-border/40"
+                                loading="lazy"
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            ) : null;
+                          })()}
                           <div>
                             <span className="font-semibold">{d.driver}</span>
                             <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">{d.driverCode}</span>
