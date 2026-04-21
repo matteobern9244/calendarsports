@@ -18,6 +18,20 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Tema chiaro/scuro – transizioni fluide e palette oro/blu rifinita**:
+  aggiunto script inline anti-FOUC in `index.html` che applica la classe
+  tema da `localStorage` prima del render React (no flash al boot).
+  Aggiornata palette light in `src/index.css` con tinta blu più
+  percepibile (background `220 30% 96%`, card `220 25% 99%`, secondary
+  navy `220 60% 25%`, border `220 25% 84%`) per rafforzare l'identità
+  oro/blu anche in light. Aggiunte transizioni globali fluide ~280ms su
+  proprietà di colore (`background-color`, `border-color`, `color`,
+  `fill`, `stroke`, `box-shadow`) con rispetto di
+  `prefers-reduced-motion`. Sincronizzato `color-scheme` su
+  `documentElement` per chrome nativo (scrollbar, input). Badge
+  broadcaster DAZN/Sky in Home ora con varianti light/dark dedicate.
+  Nessun cambio funzionale, versione invariata `2.1.0`.
+
 - **MotoGP – colori brand costruttori nella classifica costruttori**: il
   logo di ogni team nella tab "Classifica Costruttori" su `/motogp` è ora
   racchiuso in una cornice con bordo colorato e sfondo soft basato
