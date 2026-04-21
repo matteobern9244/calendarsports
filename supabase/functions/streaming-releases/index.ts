@@ -300,12 +300,16 @@ Deno.serve(async (req) => {
       // /watch/providers (results.IT.flatrate include providerId).
       const checks = await Promise.all(
         candidates.map((c) =>
-          tmdbItemAvailableIT(c.kind, c.raw.id, providerCfg.id, apiKey),
+          tmdbItemProviderInfoIT(c.kind, c.raw.id, providerCfg.id, apiKey),
         ),
       );
       const validated = candidates
-        .filter((_, i) => checks[i])
-        .map((c) => normalizeItem(c.raw, c.kind));
+        .filter((_, i) => checks[i].available)
+        .map((c, idx) => {
+          // ri-mappa l'indice originale per recuperare il deepLink corretto
+          const originalIndex = candidates.indexOf(c);
+          return normalizeItem(c.raw, c.kind, checks[originalIndex]?.deepLink ?? null);
+        });
       return sortItems(validated);
     };
 
