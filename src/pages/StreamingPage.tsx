@@ -186,11 +186,20 @@ export default function StreamingPage() {
 
   const allItems = releasesQuery.data?.items ?? [];
   const filteredItems = useMemo(
-    () =>
-      kindFilter === "all"
-        ? allItems
-        : allItems.filter((i) => i.type === kindFilter),
-    [allItems, kindFilter],
+    () => {
+      let items = allItems;
+      if (kindFilter !== "all") {
+        items = items.filter((i) => i.type === kindFilter);
+      }
+      if (onlyUpcoming) {
+        items = items.filter((i) => {
+          const d = daysUntilRome(i.releaseDate);
+          return d !== null && d >= 0;
+        });
+      }
+      return items;
+    },
+    [allItems, kindFilter, onlyUpcoming],
   );
   const itemsPageCount = Math.max(1, Math.ceil(filteredItems.length / RELEASES_PER_PAGE));
   const visibleItems = useMemo(
