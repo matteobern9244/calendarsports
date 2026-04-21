@@ -61,6 +61,9 @@ export interface ReleasesPayload {
   date: string;
   dateFrom: string;
   dateTo: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  widenedWindow?: boolean;
   items: ReleaseItem[];
   configured: boolean;
 }
