@@ -1,18 +1,50 @@
 import { cn } from "@/lib/utils";
 import SectionHeader from "@/components/common/SectionHeader";
 import SeasonSelector from "@/components/common/SeasonSelector";
-import EventCard from "@/components/common/EventCard";
 import EventCountdown from "@/components/common/EventCountdown";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
-import { formatDateIT, prioritizeNextUpcoming } from "@/lib/dateUtils";
+import { formatDateIT } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { useEffect, useMemo, useState } from "react";
+
+const PAGE_SIZE = 12;
+
+type PaginatedCalendar = {
+  items: any[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  nextUpcomingIndex: number;
+};
+
+function buildPageList(current: number, total: number): (number | "ellipsis")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | "ellipsis")[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  if (start > 2) pages.push("ellipsis");
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (end < total - 1) pages.push("ellipsis");
+  pages.push(total);
+  return pages;
+}
 
 const COMPETITION_COLORS: Record<string, string> = {
   'Serie A': 'bg-emerald-600/20 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400 border-emerald-600/30',
@@ -23,7 +55,38 @@ const COMPETITION_COLORS: Record<string, string> = {
 export default function JuventusPage() {
   const { seasons, setSeason } = useSeasonPreferences();
   const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useSerieAStandings(seasons.juventus);
-  const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useJuventusCalendar(seasons.juventus);
+  const [page, setPage] = useState(1);
+  const [userInteracted, setUserInteracted] = useState(false);
+  const { data: calendarData, isLoading: calLoading, error: calError, refetch: calRefetch } = useJuventusCalendar(
+    seasons.juventus,
+    page,
+    PAGE_SIZE,
+  );
+
+  // Reset to page 1 and clear interaction flag when season changes
+  useEffect(() => {
+    setPage(1);
+    setUserInteracted(false);
+  }, [seasons.juventus]);
+
+  const calendar = calendarData as PaginatedCalendar | undefined;
+
+  // Smart landing: jump to the page containing the next upcoming match on first load
+  useEffect(() => {
+    if (userInteracted) return;
+    if (!calendar || typeof calendar.nextUpcomingIndex !== "number") return;
+    if (calendar.nextUpcomingIndex < 0) return;
+    const targetPage = Math.floor(calendar.nextUpcomingIndex / PAGE_SIZE) + 1;
+    if (targetPage !== calendar.page) {
+      setPage(targetPage);
+    }
+    setUserInteracted(true);
+  }, [calendar, userInteracted]);
+
+  const goToPage = (p: number) => {
+    setUserInteracted(true);
+    setPage(p);
+  };
 
   return (
     <div className="container py-8 sm:py-12">
@@ -89,16 +152,28 @@ export default function JuventusPage() {
         </TabsContent>
 
         <TabsContent value="calendario">
-          {calLoading && <LoadingState message="Caricamento calendario da Sky Sport..." />}
+          {calLoading && !calendar && <LoadingState message="Caricamento calendario da Sky Sport..." />}
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
-          {!calLoading && !calError && (!calendar || calendar.length === 0) && <EmptyState message="Calendario partite non disponibile" />}
-          {calendar && calendar.length > 0 && (() => {
-            const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
-              calendar,
-              (match: any) => match.date,
-              (match: any) => match.status !== 'FullTime'
-            );
+          {!calLoading && !calError && calendar && calendar.total === 0 && <EmptyState message="Calendario partite non disponibile" />}
+          {calendar && calendar.items.length > 0 && (() => {
+            const items = calendar.items;
+            const pageStart = (calendar.page - 1) * calendar.pageSize;
+            // The "Prossima" highlight is on the global next upcoming match — show it
+            // only when the current page actually contains it.
+            const highlightIndex =
+              calendar.nextUpcomingIndex >= pageStart && calendar.nextUpcomingIndex < pageStart + items.length
+                ? calendar.nextUpcomingIndex - pageStart
+                : -1;
+            const orderedCalendar = items;
+            const rangeStart = pageStart + 1;
+            const rangeEnd = pageStart + items.length;
+            const pageList = buildPageList(calendar.page, calendar.totalPages);
             return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-xs text-muted-foreground font-heading uppercase tracking-wider">
+                <span>Partite {rangeStart}–{rangeEnd} di {calendar.total}</span>
+                <span className="hidden sm:inline">Pagina {calendar.page} / {calendar.totalPages}</span>
+              </div>
             <motion.div className="grid gap-3 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
               {orderedCalendar.map((m: any, i: number) => {
                 const isFinished = m.status === 'FullTime';
@@ -197,6 +272,55 @@ export default function JuventusPage() {
                 );
               })}
             </motion.div>
+              {calendar.totalPages > 1 && (
+                <Pagination>
+                  <PaginationContent className="flex-wrap justify-center gap-1">
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        aria-disabled={calendar.page <= 1}
+                        className={cn(calendar.page <= 1 && "pointer-events-none opacity-50")}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (calendar.page > 1) goToPage(calendar.page - 1);
+                        }}
+                      />
+                    </PaginationItem>
+                    {pageList.map((p, idx) =>
+                      p === "ellipsis" ? (
+                        <PaginationItem key={`e-${idx}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            href="#"
+                            isActive={p === calendar.page}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              goToPage(p);
+                            }}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        aria-disabled={calendar.page >= calendar.totalPages}
+                        className={cn(calendar.page >= calendar.totalPages && "pointer-events-none opacity-50")}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (calendar.page < calendar.totalPages) goToPage(calendar.page + 1);
+                        }}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
             );
           })()}
         </TabsContent>

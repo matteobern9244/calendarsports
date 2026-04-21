@@ -40,8 +40,12 @@ export const f1Api = {
 export const footballApi = {
   getStandings: (season: number) =>
     callEdgeFunction("sports-football", { action: "standings", season: String(season) }),
-  getCalendar: (season: number) =>
-    callEdgeFunction("sports-football", { action: "calendar", season: String(season) }),
+  getCalendar: (season: number, page?: number, pageSize?: number) => {
+    const params: Record<string, string> = { action: "calendar", season: String(season) };
+    if (page !== undefined) params.page = String(page);
+    if (pageSize !== undefined) params.pageSize = String(pageSize);
+    return callEdgeFunction("sports-football", params);
+  },
   getJuventusInfo: (season: number) =>
     callEdgeFunction("sports-football", { action: "next-match", season: String(season) }),
 };

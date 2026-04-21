@@ -294,7 +294,30 @@ Deno.serve(async (req) => {
           return new Date(a.date).getTime() - new Date(b.date).getTime();
         });
 
-        data = allMatches;
+        // Optional pagination (backward compatible: when neither page nor pageSize is
+        // provided, return the flat array as before).
+        const pageParam = url.searchParams.get('page');
+        const pageSizeParam = url.searchParams.get('pageSize');
+        if (pageParam !== null || pageSizeParam !== null) {
+          const parsedPageSize = Number.parseInt(pageSizeParam ?? '12', 10);
+          const parsedPage = Number.parseInt(pageParam ?? '1', 10);
+          const pageSize = Number.isFinite(parsedPageSize)
+            ? Math.min(50, Math.max(1, parsedPageSize))
+            : 12;
+          const total = allMatches.length;
+          const totalPages = Math.max(1, Math.ceil(total / pageSize));
+          const page = Number.isFinite(parsedPage)
+            ? Math.min(totalPages, Math.max(1, parsedPage))
+            : 1;
+          // Global index of the next upcoming (non-finished) match, useful for the UI
+          // landing logic. -1 when no upcoming match exists.
+          const nextUpcomingIndex = allMatches.findIndex((m) => m.status !== 'FullTime');
+          const start = (page - 1) * pageSize;
+          const items = allMatches.slice(start, start + pageSize);
+          data = { items, total, page, pageSize, totalPages, nextUpcomingIndex };
+        } else {
+          data = allMatches;
+        }
         break;
       }
 
