@@ -51,6 +51,26 @@ export default function SinnerPage() {
     setResultsPage(1);
   }, [season]);
 
+  // Prefetch della pagina successiva: appena i dati della pagina
+  // corrente arrivano e sappiamo quante pagine totali esistono,
+  // chiediamo silenziosamente a React Query di scaricare anche la
+  // pagina N+1. Quando l'utente clicca "Successiva" i dati sono gia'
+  // in cache e la transizione e' istantanea (niente overlay di
+  // caricamento, niente sfarfallio). Il prefetch e' deduplicato dal
+  // queryClient: chiamarlo piu' volte sulla stessa chiave non genera
+  // richieste extra.
+  const totalResultPages = resultsPagination?.totalPages ?? 0;
+  useEffect(() => {
+    if (!totalResultPages) return;
+    const nextPage = resultsPage + 1;
+    if (nextPage > totalResultPages) return;
+    queryClient.prefetchQuery({
+      queryKey: ["sinner", "results", season, nextPage, RESULTS_PAGE_SIZE],
+      queryFn: () => tennisApi.getResults(season, nextPage, RESULTS_PAGE_SIZE),
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [queryClient, season, resultsPage, totalResultPages]);
+
   // Compatibilita' di forma: il backend ora restituisce
   // `{ items, pagination }`, ma per sicurezza accettiamo anche il
   // vecchio shape `MatchRow[]` (es. cache stale o fallback).
