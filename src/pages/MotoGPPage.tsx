@@ -63,7 +63,7 @@ export default function MotoGPPage() {
           {!calLoading && !calError && (!calendar || calendar.length === 0) && (
             <UnavailableExternalSource
               title={`Calendario MotoGP ${season}`}
-              description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale MotoGP qui sotto per consultare tutte le giornate dei GP, gli orari delle sessioni (libere, qualifiche, Sprint e gara) e i circuiti del Mondiale."
+              description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale MotoGP qui sotto per consultare tutte le tappe del Mondiale, gli orari delle sessioni (libere, qualifiche, Sprint e gara) e i circuiti su cui si correrà."
               externalLink="https://www.motogp.com/it/calendar"
               externalLabel="Vedi calendario su MotoGP.com"
               ctaHint="Tocca qui per orari Sprint e gara"
