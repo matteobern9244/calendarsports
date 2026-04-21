@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/pagination";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { footballApi } from "@/lib/api/sportsApi";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import TeamLogo from "@/components/common/TeamLogo";
 import { Sparkles } from "lucide-react";
@@ -60,6 +62,7 @@ const COMPETITION_COLORS: Record<string, string> = {
 
 export default function JuventusPage() {
   const season = getCurrentJuventusSeason();
+  const queryClient = useQueryClient();
   const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useSerieAStandings(season);
   const [page, setPage] = useState(1);
   const [userInteracted, setUserInteracted] = useState(false);
@@ -111,6 +114,45 @@ export default function JuventusPage() {
     }
     setUserInteracted(true);
   }, [calendar, userInteracted]);
+
+  // Prefetch della pagina successiva del calendario Juventus quando la
+  // pagina corrente e' stabile, cosi' lo scorrimento "Successiva" e'
+  // istantaneo. Inoltre, se la "Prossima Partita" risiede su una pagina
+  // diversa da quella visualizzata, garantiamo il prefetch di quella
+  // pagina cross-page per ridurre lo sfarfallio in atterraggio anche dopo
+  // il primo render (es. cambi di pagina manuali fatti dall'utente che
+  // tornano lontani dal next match).
+  useEffect(() => {
+    if (!calendar) return;
+    const totalPages = calendar.totalPages ?? 0;
+    const currentPage = calendar.page ?? page;
+
+    // Prefetch next page (currentPage + 1) when not on the last page.
+    if (totalPages > 0 && currentPage + 1 <= totalPages) {
+      const next = currentPage + 1;
+      queryClient.prefetchQuery({
+        queryKey: ["juventus", "calendar", season, next, PAGE_SIZE],
+        queryFn: () => footballApi.getCalendar(season, next, PAGE_SIZE),
+        staleTime: 5 * 60 * 1000,
+      });
+    }
+
+    // Prefetch the page containing the global "next upcoming" match if it
+    // differs from the current page (cross-page warm-up for the
+    // "Prossima Partita" card).
+    if (
+      nextMatchPage !== null &&
+      nextMatchPage !== currentPage &&
+      nextMatchPage >= 1 &&
+      (totalPages === 0 || nextMatchPage <= totalPages)
+    ) {
+      queryClient.prefetchQuery({
+        queryKey: ["juventus", "calendar", season, nextMatchPage, PAGE_SIZE],
+        queryFn: () => footballApi.getCalendar(season, nextMatchPage, PAGE_SIZE),
+        staleTime: 5 * 60 * 1000,
+      });
+    }
+  }, [queryClient, season, calendar, nextMatchPage, page]);
 
   const goToPage = (p: number) => {
     setUserInteracted(true);
