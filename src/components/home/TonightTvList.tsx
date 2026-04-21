@@ -201,8 +201,18 @@ export default function TonightTvList() {
     // 20:40 -> 22:50) resta visibile perche' attraversa la fascia,
     // mentre programmi che iniziano alle 23:00 o dopo, o che
     // finiscono entro le 21:00, vengono esclusi.
+    //
+    // Programmi senza orario di fine reale (`hasExplicitEnd === false`)
+    // ricevono un trattamento dedicato: vengono inclusi solo quando
+    // l'inizio cade prima delle 23:00 (la fascia li potrebbe coprire),
+    // senza richiedere il check sulla fine, perche' la durata effettiva
+    // non e' nota. Vengono comunque marcati come "dati incompleti" cosi'
+    // l'UI mostra il banner con link alla Guida TV ufficiale.
     const overlapsPrimeWindow = (h: TvHighlight) => {
       const startMin = h.hourRome * 60 + h.minuteRome;
+      if (!h.hasExplicitEnd) {
+        return startMin < PRIME_TIME_END_EXCLUSIVE_MIN;
+      }
       return (
         startMin < PRIME_TIME_END_EXCLUSIVE_MIN &&
         h.endMinutesFromMidnight > PRIME_TIME_START_MIN
