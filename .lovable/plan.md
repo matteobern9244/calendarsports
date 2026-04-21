@@ -1,67 +1,53 @@
 
 
-## Garantire validità "Nuove uscite" in Italia
+## Badge "giorni mancanti" sulle release
 
-### Problema
+### Cosa aggiungere
 
-L'edge function `streaming-releases` chiama TMDB Discover con `watch_region=IT` + `with_watch_providers={id}`, ma **non filtra per tipo di monetizzazione**. Risultato: TMDB include titoli che il provider ha solo in modalità "buy/rent" (es. acquisto su Prime Video Store) o "ads", facendoli passare come "Nuova uscita su Netflix/Disney+" anche se in IT non sono nel catalogo flat dell'abbonamento.
+Accanto al titolo di ogni card nella griglia "Nuove uscite" (tab `releases` di `/streaming`), un piccolo badge che indica la distanza in giorni dalla `releaseDate` rispetto a oggi (fuso `Europe/Rome`):
 
-Inoltre, Discover non garantisce al 100% la disponibilità IT corrente del singolo titolo: TMDB può restituire un match basato su finestra storica anche se la disponibilità è scaduta. Per "Nuove uscite valide in Italia" serve una verifica per-item su `/{type}/{id}/watch/providers` (regione `IT`).
+- `releaseDate < oggi` → "Già uscito" (variante neutra/muted)
+- `releaseDate === oggi` → "Oggi" (variante gold, accento brand)
+- `releaseDate === domani` → "Domani" (variante gold soft)
+- `releaseDate > domani` → "Tra N giorni" (variante outline)
+- `releaseDate` mancante o invalida → nessun badge
 
-### Soluzione (2 livelli)
-
-**A. Filtro monetizzazione lato Discover** — in `supabase/functions/streaming-releases/index.ts`, funzione `tmdbDiscover`:
-
-- Aggiungere `with_watch_monetization_types=flatrate` (solo abbonamento, escluso buy/rent/ads).
-- Mantenere `watch_region=IT` e `with_watch_providers` invariati.
-
-Questo già elimina la maggior parte dei falsi positivi (titoli "su Prime Video" ma solo a noleggio).
-
-**B. Validazione per-item su `/watch/providers`** — sempre nella stessa edge function:
-
-- Dopo aver raccolto i risultati Discover (movie + tv), eseguire una chiamata `GET /{type}/{id}/watch/providers` per ciascun item (in parallelo, max ~40 chiamate per finestra, accettabile).
-- Tenere solo gli item dove `results.IT.flatrate` esiste e contiene il `provider_id` richiesto.
-- Cache TTL invariato (1h sui risultati di lista). Le verifiche per-item finiscono nella stessa cache di lista, non serve cache separata.
-- Se la lista validata risulta vuota, applicare lo stesso fallback di finestra estesa già esistente.
-
-**C. Trasparenza UI** — in `StreamingPage.tsx`:
-
-- Aggiornare la nota informativa sotto il selettore range: "Solo titoli inclusi nell'abbonamento del provider in Italia (fonte TMDB watch providers, regione IT)."
-- Nessun cambio di layout/tab/filtri.
+Calcolo della differenza in **giorni di calendario** (non ore): si confrontano le date in timezone `Europe/Rome` azzerando l'orario, così "oggi" resta coerente per tutto il giorno italiano.
 
 ### File da modificare
 
 | File | Modifica |
 |---|---|
-| `supabase/functions/streaming-releases/index.ts` | Aggiungere `with_watch_monetization_types=flatrate` in `tmdbDiscover`; nuova funzione `tmdbWatchProviders(kind,id)` + filtro per-item su `results.IT.flatrate`; applicato sia nella query iniziale sia nel fallback widened. |
-| `src/pages/StreamingPage.tsx` | Aggiungere riga informativa "Solo titoli in abbonamento in Italia" sopra/sotto il selettore range nel tab Releases. |
-| `changelog.md` | Voce sotto 2.1.0: "Streaming: Nuove uscite ora validate per disponibilità reale in abbonamento in Italia (TMDB watch providers, monetization=flatrate)." |
-| `README.md` | Aggiornare nota sezione Streaming: spiegare il doppio filtro (monetization flatrate + verifica per-item watch providers IT). |
+| `src/lib/dateUtils.ts` | Nuova funzione `daysUntilRome(dateIso: string): number \| null` che ritorna la differenza in giorni di calendario tra `dateIso` e oggi in `Europe/Rome`. Ritorna `null` per input non valido. |
+| `src/components/streaming/ReleaseCountdownBadge.tsx` (nuovo) | Componente piccolo che riceve `releaseDate: string` e renderizza il badge con label + variante stile coerente con design tokens (gold per "Oggi"/"Domani", outline per futuro, muted per passato). Usa `Badge` di shadcn o un `<span>` con classi tailwind allineate al resto della UI streaming. |
+| `src/pages/StreamingPage.tsx` | Importare il nuovo badge e renderizzarlo nella griglia release accanto al titolo della card (stesso blocco dove oggi vengono mostrati `title` + `formatDateIT(releaseDate)`). |
+| `changelog.md` | Voce sotto 2.1.0: "Streaming: badge 'giorni mancanti' su ciascuna nuova uscita (Oggi / Domani / Tra N giorni / Già uscito)." |
 
 ### Comportamento atteso
 
-- Provider Netflix/Disney+/HBO Max: tutti gli item mostrati sono effettivamente nel catalogo IT in abbonamento al momento della query.
-- Provider Prime Video: scompaiono i titoli a noleggio/acquisto del Prime Video Store, restano solo quelli inclusi in Prime.
-- Versione resta **2.1.0** (bugfix di correttezza dati, non release).
+- Badge sempre visibile su ogni card release con `releaseDate` valida.
+- Layout card invariato: il badge si affianca al titolo o va sotto su mobile se manca spazio (wrap naturale via `flex-wrap`).
+- Nessun cambio a `ReleaseDetailDialog`, filtri, range, fallback widened.
+- Versione resta **2.1.0**.
 
 ### Cosa NON cambia
 
-- Niente nuove dipendenze, niente nuove tabelle, niente nuovi secret.
-- Provider TMDB e API key invariati.
-- Layout, tab, filtri, paginazione UI invariati.
-- Logica fallback widened invariata (eredita automaticamente i nuovi filtri).
+- Shape payload edge function `streaming-releases`.
+- Hook `useReleasesByProvider` e `ReleasesPayload`.
+- Logica filtraggio IT (flatrate + per-item validation).
+- Default famiglia TV su RAI, default range `30d`.
 
-### Rischi noti
+### Dettagli tecnici
 
-- ~40 chiamate extra per query non cached aumentano la latenza della prima richiesta di ~500-1500ms. Mitigato dalla cache 1h già presente. Accettabile per garantire correttezza.
-- TMDB rate limit (~50 req/sec) ampiamente sotto soglia.
+- `daysUntilRome` usa `Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" })` per ottenere `YYYY-MM-DD` di oggi e della release, poi calcola la differenza in giorni via `Date.UTC` per evitare drift DST. Stesso pattern già usato in `todayRomeISO` e `addDaysISO`.
+- Badge sfrutta classi tailwind con tokens semantici (`bg-[hsl(var(--gold))]/10`, `border-[hsl(var(--gold))]/30`, `text-foreground`, `text-muted-foreground`) — niente colori hardcoded.
+- Accessibilità: `aria-label="Mancano N giorni all'uscita"` o equivalente per i casi non banali.
 
 ### Checklist post-edit
 
-1. Curl test: `provider=netflix`, range `30d` → tutti gli item presenti devono avere TMDB `watch/providers` con `IT.flatrate` contenente Netflix (id 8).
-2. Curl test: `provider=prime` → verificare che titoli noleggio/acquisto siano filtrati.
-3. UI check `/streaming?tab=releases` per ogni provider, desktop e mobile.
-4. `npm run lint` + `npm run build`.
-5. Aggiornare `changelog.md` e `README.md` (versione invariata 2.1.0).
-6. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
+1. Verifica visiva su `/streaming?tab=releases` desktop + mobile per ogni provider.
+2. Verifica casi edge: release di oggi, di domani, futura, passata (può capitare con `widenedWindow`).
+3. `npm run lint` + `npm run build`.
+4. Aggiornare `changelog.md` (versione invariata 2.1.0).
+5. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
 
