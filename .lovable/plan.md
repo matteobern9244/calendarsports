@@ -1,121 +1,91 @@
 
 
-## Badge "Ora italiana" sulle pagine eventi
+## Pagina "Preferenze" — gestione stagioni salvate
 
 ### Obiettivo
 
-Aggiungere un piccolo badge informativo accanto al titolo di ogni pagina con eventi che dichiari esplicitamente: "Tutti gli orari sono in ora italiana locale" + sigla fuso corrente (`CET` da fine ottobre a fine marzo, `CEST` da fine marzo a fine ottobre), calcolata runtime così è sempre corretta.
+Nuova pagina `/preferenze` dove l'utente vede in un colpo d'occhio le stagioni attualmente selezionate per Sinner, Juventus, Formula 1 e MotoGP, può modificarle e ricevere conferma visiva immediata. Le preferenze sono già persistite in `localStorage` (chiave `cse-seasons`) tramite `useSeasonPreferences`, quindi il lavoro è solo di UI + integrazione.
 
-### Dove
+### Stato attuale (verificato)
 
-Pagine eventi che mostrano orari:
-- `src/pages/Index.tsx` (Home — Prossimi Eventi + Stasera in TV)
-- `src/pages/Formula1Page.tsx`
-- `src/pages/MotoGPPage.tsx`
-- `src/pages/JuventusPage.tsx`
-- `src/pages/SinnerPage.tsx`
-- `src/pages/StreamingPage.tsx`
+- `src/hooks/useSeasonPreferences.ts` espone `{ seasons, setSeason }` con persistenza locale per `sinner | juventus | f1 | motogp`. Default: max(currentYear, 2026).
+- `src/components/common/SeasonSelector.tsx` è un selettore a chip riutilizzabile.
+- Le pagine sportive usano già l'hook ⇒ ogni cambio in `/preferenze` si riflette istantaneamente sulle pagine, perché entrambe leggono lo stesso `localStorage` (anche se l'hook non broadcast cross-tab, all'interno della stessa sessione lo state viene rilettuto al successivo mount; per garantire sync immediato anche tra componenti già montati si aggiunge un piccolo evento custom — vedi nota tecnica).
+- `src/App.tsx`, `src/components/layout/Header.tsx`: route + nav esistenti.
 
-### Approccio
+### UX della pagina
 
-**1. Nuovo componente `src/components/common/TimezoneBadge.tsx`**
+Header con `SectionHeader title="Preferenze"` + sottotitolo "Gestisci le stagioni predefinite per le tue sezioni preferite. Le scelte vengono salvate sul tuo dispositivo."
 
-Componente piccolo, riutilizzabile, accessibile. Mostra icona `Clock` di lucide + testo `Orari in ora italiana · CEST` (o `CET`). Tooltip su hover con messaggio esteso: "Tutti gli orari mostrati sono nel fuso Europe/Rome".
+4 card identiche, una per sport, in griglia responsive (1 col mobile, 2 col tablet, 4 col desktop):
 
-```tsx
-import { Clock } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-
-function getRomeTimezoneAbbreviation(): string {
-  try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Europe/Rome",
-      timeZoneName: "short",
-    }).formatToParts(new Date());
-    const tz = parts.find(p => p.type === "timeZoneName")?.value;
-    // Normalizza: a volte ritorna "GMT+1"/"GMT+2" → mappiamo a CET/CEST
-    if (tz === "GMT+1" || tz === "UTC+1") return "CET";
-    if (tz === "GMT+2" || tz === "UTC+2") return "CEST";
-    return tz || "CET";
-  } catch {
-    return "CET";
-  }
-}
-
-export default function TimezoneBadge({ className }: { className?: string }) {
-  const tz = getRomeTimezoneAbbreviation();
-  return (
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--gold))]/30",
-              "bg-[hsl(var(--gold))]/10 px-2.5 py-1 text-[10px] font-heading font-semibold uppercase tracking-wider",
-              "text-[hsl(var(--gold))]",
-              className
-            )}
-            aria-label={`Tutti gli orari sono in ora italiana locale (${tz})`}
-          >
-            <Clock className="h-3 w-3" aria-hidden="true" />
-            Orari in ora italiana · {tz}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">
-          Tutti gli orari mostrati sono nel fuso Europe/Rome ({tz}).
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
+```text
+┌─────────────────────────────┐
+│  [icona sport]  Sinner      │
+│  Stagione attuale           │
+│       2026                  │  ← grande, gold gradient
+│  ─────────────────          │
+│  [2026] [2025] [2024] ...   │  ← SeasonSelector
+│                             │
+│  ✓ Salvato (chip verde)     │  ← appare 2s dopo il cambio
+└─────────────────────────────┘
 ```
 
-Note tecniche:
-- Calcolo `CET`/`CEST` runtime via `Intl.DateTimeFormat` con `timeZone: "Europe/Rome"` e `timeZoneName: "short"`. Niente date hardcoded di passaggio DST.
-- Stile coerente con palette oro esistente, niente colori hardcoded.
-- Accessibile: `aria-label` sul wrapper, `aria-hidden` sull'icona, tooltip per screen reader.
-- `Tooltip` già disponibile in `src/components/ui/tooltip.tsx`.
+Sotto le 4 card, una riga con due azioni secondarie:
 
-**2. Posizionamento nelle pagine**
+- `Ripristina ai valori predefiniti` (resetta tutte le stagioni a `max(currentYear, 2026)`).
+- Toast di conferma all'azione.
 
-Inserire il badge subito sotto/accanto al `SectionHeader` principale di ogni pagina, in modo discreto ma visibile. Esempio:
+### Conferma visiva immediata
 
-```tsx
-<div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-  <SectionHeader title="Formula 1" />
-  <TimezoneBadge />
-</div>
-```
+Per ogni card, quando l'utente clicca un anno diverso da quello salvato:
 
-Per `Index.tsx` (Home) il badge va nella riga superiore vicino al pulsante "Sincronizza", per non aggiungere rumore alla griglia eventi.
+1. Lo stato si aggiorna istantaneamente (`setSeason(...)`).
+2. Compare un chip verde "✓ Salvato" sotto il selettore con un'animazione fade-in (Framer Motion già usato altrove).
+3. Il chip si dissolve dopo 1.8s.
+4. In parallelo, un toast Sonner discreto: "Stagione Formula 1 aggiornata a 2025".
 
-### File modificati
+Implementazione: `useState<Set<keyof SeasonPreferences>>` per tenere traccia delle card "appena salvate", con `setTimeout` di 1800ms per rimuoverle. Niente librerie nuove.
 
-| File | Modifica |
-|---|---|
-| `src/components/common/TimezoneBadge.tsx` | **NUOVO** — componente con `Intl.DateTimeFormat` + tooltip Radix. |
-| `src/pages/Index.tsx` | Badge inline nella header row sopra "Stasera in TV". |
-| `src/pages/Formula1Page.tsx` | Badge accanto a `SectionHeader`. |
-| `src/pages/MotoGPPage.tsx` | Badge accanto a `SectionHeader`. |
-| `src/pages/JuventusPage.tsx` | Badge accanto a `SectionHeader`. |
-| `src/pages/SinnerPage.tsx` | Badge accanto a `SectionHeader`. |
-| `src/pages/StreamingPage.tsx` | Badge accanto a `SectionHeader`. |
-| `changelog.md` | Voce sotto Unreleased: "Aggiunto badge 'Orari in ora italiana · CET/CEST' nelle pagine eventi, sigla DST calcolata runtime via `Intl.DateTimeFormat`." |
+### Sync cross-componente
+
+`useSeasonPreferences` oggi tiene state locale per istanza dell'hook → due componenti montati che usano lo stesso hook hanno state separati, e il cambio in `/preferenze` non si propaga finché l'altra pagina non viene rimontata.
+
+Soluzione minima e sicura: aggiungere un piccolo bus basato su `window.dispatchEvent(new CustomEvent("cse-seasons-changed", { detail: next }))` nello `setSeason`, e un `useEffect` nell'hook che ascolta l'evento e fa `setSeasons(detail)`. Niente Zustand, niente Context, niente refactor. Compatibile con tutto il codice esistente perché l'API dell'hook resta identica.
+
+### Navigazione
+
+- Aggiungere voce **Preferenze** nell'`Header.tsx` come ultimo link, con icona `Settings` di lucide-react. Stile coerente con gli altri `NavLink`.
+- Aggiungere `Route` in `src/App.tsx`: `<Route path="/preferenze" element={<PreferencesPage />} />`. Lazy import non necessario (pagina leggera).
+
+### File modificati / creati
+
+| File | Tipo | Modifica |
+|---|---|---|
+| `src/pages/PreferencesPage.tsx` | NUOVO | Pagina con 4 card + reset + chip "Salvato". |
+| `src/hooks/useSeasonPreferences.ts` | EDIT | Aggiunge dispatch `CustomEvent` in `setSeason` + listener in `useEffect` per sync cross-componente. Aggiunge `resetSeasons()` ai valori di default. API esistente invariata. |
+| `src/components/layout/Header.tsx` | EDIT | Aggiunge link `/preferenze` con icona `Settings`. |
+| `src/App.tsx` | EDIT | Aggiunge `<Route path="/preferenze" .../>`. |
+| `changelog.md` | EDIT | Voce sotto `### Added`: "Pagina Preferenze (`/preferenze`) per visualizzare e modificare le stagioni salvate di Sinner, Juventus, F1 e MotoGP, con conferma visiva immediata e reset ai valori predefiniti." |
 
 ### Cosa NON cambia
 
-- Logica di formattazione date/orari (già su `Europe/Rome` in `dateUtils.ts` e nei singoli componenti). Il badge è solo informativo.
-- Struttura pagine, route, dati, hook React Query: invariati.
+- Comportamento delle pagine sportive.
+- Chiave `localStorage` (`cse-seasons`) e shape della struttura.
+- Tema, palette, tipografia.
+- Stack, routing, hook React Query.
 - Versione resta **2.1.0**.
 
 ### Checklist post-edit
 
-1. Badge visibile e leggibile in light + dark.
-2. Sigla mostra `CEST` ora (ad aprile 2026), `CET` automaticamente da fine ottobre.
-3. Tooltip funziona con mouse + tastiera (focus).
-4. Nessun overflow su mobile (badge a capo se header è stretto).
-5. `npm run lint` + `npm run build`.
-6. Aggiornare `changelog.md`.
-7. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
+1. `/preferenze` mostra le 4 card con la stagione corrente in grande.
+2. Click su un anno → chip verde "Salvato" + toast + `localStorage` aggiornato.
+3. Aprire `/formula1` in un altro tab dopo aver cambiato in `/preferenze`: la stagione corretta viene letta al mount.
+4. Navigare da `/preferenze` direttamente a `/formula1` (stessa sessione, senza reload): la stagione riflette la scelta appena fatta.
+5. Pulsante "Ripristina" riporta tutte e 4 le stagioni al default e mostra toast.
+6. Link "Preferenze" visibile e attivo nell'Header.
+7. Light + dark: card leggibili, chip verde leggibile in entrambi.
+8. `npm run lint` + `npm run build`.
+9. Aggiornare `changelog.md`.
+10. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
 
