@@ -18,6 +18,16 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **MotoGP – colori brand costruttori nella classifica costruttori**: il
+  logo di ogni team nella tab "Classifica Costruttori" su `/motogp` è ora
+  racchiuso in una cornice con bordo colorato e sfondo soft basato
+  sull'identità visiva del costruttore (Ducati rosso, Aprilia nero, KTM
+  arancione, Yamaha blu, Honda rosso). Backend `sports-motogp` espone un
+  nuovo campo `constructor: string | null` nel payload
+  `constructor-standings` (riusa `getTeamConstructor`); colori statici
+  vivono solo nel frontend (`MOTOGP_CONSTRUCTOR_COLORS` in
+  `src/pages/MotoGPPage.tsx`). Team senza constructor mappato mostrano
+  cornice neutra. Backward-compatible.
 - **MotoGP/F1 – bandiera nazionalità nella classifica piloti**: aggiunta
   mini bandiera SVG (~20x14px) accanto al nome pilota nella tab
   "Classifica Piloti" sia su `/motogp` sia su `/formula1`. Caricata da

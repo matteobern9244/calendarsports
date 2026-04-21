@@ -12,6 +12,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { User } from "lucide-react";
 
+const MOTOGP_CONSTRUCTOR_COLORS: Record<string, { border: string; bg: string }> = {
+  ducati:  { border: '#CC0000', bg: 'rgba(204, 0, 0, 0.08)' },
+  aprilia: { border: '#000000', bg: 'rgba(0, 0, 0, 0.06)' },
+  ktm:     { border: '#FF6600', bg: 'rgba(255, 102, 0, 0.10)' },
+  yamaha:  { border: '#003DA5', bg: 'rgba(0, 61, 165, 0.08)' },
+  honda:   { border: '#E40521', bg: 'rgba(228, 5, 33, 0.08)' },
+};
+
 export default function MotoGPPage() {
   const { seasons, setSeason } = useSeasonPreferences();
   const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useMotoGPCalendar(seasons.motogp);
@@ -170,15 +178,27 @@ export default function MotoGPPage() {
                     <TableRow key={c.position}>
                       <TableCell className="font-heading font-bold">{c.position}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          {c.logoUrl && (
-                            <img
-                              src={c.logoUrl}
-                              alt={c.team}
-                              className="h-6 w-10 object-contain flex-shrink-0"
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                            />
-                          )}
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="h-10 w-14 rounded-md border-2 flex items-center justify-center flex-shrink-0 p-1"
+                            style={
+                              c.constructor && MOTOGP_CONSTRUCTOR_COLORS[c.constructor]
+                                ? {
+                                    borderColor: MOTOGP_CONSTRUCTOR_COLORS[c.constructor].border,
+                                    backgroundColor: MOTOGP_CONSTRUCTOR_COLORS[c.constructor].bg,
+                                  }
+                                : { borderColor: 'hsl(var(--border))' }
+                            }
+                          >
+                            {c.logoUrl && (
+                              <img
+                                src={c.logoUrl}
+                                alt={c.team}
+                                className="h-full w-full object-contain"
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            )}
+                          </div>
                           <span className="font-semibold">{c.team}</span>
                         </div>
                       </TableCell>
