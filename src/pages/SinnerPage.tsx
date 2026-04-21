@@ -135,9 +135,41 @@ export default function SinnerPage() {
               resultItems,
               (result: any) => result.date,
             );
+            // Quando React Query sta gia' fetchando una nuova pagina ma
+            // sta ancora mostrando i dati precedenti (`placeholderData`),
+            // segnaliamo lo stato di caricamento sia visivamente
+            // (overlay attenuato + spinner) sia per gli screen reader
+            // (`role="status"` con `aria-live="polite"`). Cosi' l'utente
+            // capisce che la lista in vista e' ancora quella vecchia in
+            // attesa dell'aggiornamento.
+            const isPageChanging = resFetching && !resLoading;
             return (
             <>
-            <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
+            <div className="relative">
+              {isPageChanging && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm"
+                >
+                  <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 shadow-md">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
+                    <span className="text-xs font-heading uppercase tracking-wider text-foreground">
+                      Caricamento risultati...
+                    </span>
+                  </div>
+                </div>
+              )}
+              <motion.div
+                className={cn(
+                  "grid gap-4 sm:grid-cols-2 transition-opacity duration-200",
+                  isPageChanging && "opacity-50 pointer-events-none",
+                )}
+                aria-busy={isPageChanging}
+                initial="hidden"
+                animate="show"
+                variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+              >
               {orderedResults.map((r: any, i: number) => (
                 <EventCard
                   key={i}
@@ -167,7 +199,8 @@ export default function SinnerPage() {
                   </div>
                 </EventCard>
               ))}
-            </motion.div>
+              </motion.div>
+            </div>
             {resultsPagination && resultsPagination.totalPages > 1 && (
               <nav
                 aria-label="Paginazione risultati"
@@ -177,7 +210,7 @@ export default function SinnerPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setResultsPage((p) => Math.max(1, p - 1))}
-                  disabled={resultsPagination.page <= 1 || resLoading}
+                  disabled={resultsPagination.page <= 1 || resFetching}
                   className="h-9 px-3 gap-1 text-xs font-heading uppercase tracking-wider"
                   aria-label="Pagina precedente dei risultati"
                 >
@@ -195,7 +228,7 @@ export default function SinnerPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setResultsPage((p) => Math.min(resultsPagination.totalPages, p + 1))}
-                  disabled={resultsPagination.page >= resultsPagination.totalPages || resLoading}
+                  disabled={resultsPagination.page >= resultsPagination.totalPages || resFetching}
                   className="h-9 px-3 gap-1 text-xs font-heading uppercase tracking-wider"
                   aria-label="Pagina successiva dei risultati"
                 >
