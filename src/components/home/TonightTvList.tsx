@@ -52,6 +52,12 @@ type FilterValue = "all" | StreamingFamilyId;
 
 const TV_PAGE_SIZE = 8;
 
+// Prima serata italiana: dalle 21:00 incluse alle 22:59 incluse.
+// I programmi che iniziano alle 23:00 o dopo appartengono alla
+// seconda serata e non devono comparire nella scheda Home.
+const PRIME_TIME_START_MIN = 21 * 60;       // 21:00
+const PRIME_TIME_END_EXCLUSIVE_MIN = 23 * 60; // 23:00 (escluso)
+
 /**
  * Scheda "Stasera in TV" della Home: aggrega i palinsesti delle 5 famiglie
  * (RAI, Mediaset, Sky Sport, Sky Cinema, Discovery), filtra per prima serata
