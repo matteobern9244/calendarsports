@@ -39,9 +39,6 @@ export default function HighlightsSection({
           <h2 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight uppercase text-gold-gradient">
             Highlights
           </h2>
-          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-            Ultimi video dal canale ufficiale · aggiornati ogni 10 minuti
-          </p>
         </div>
         <a
           href={playlistUrl}
