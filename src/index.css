@@ -61,6 +61,15 @@
     --brand-ktm: 24 100% 50%;
     --brand-yamaha: 215 100% 32%;
     --brand-honda: 354 95% 46%;
+
+    /* Broadcaster aggiuntivi (Serie A / UCL / Coppa Italia) */
+    --brand-now: 270 90% 42%;
+    --brand-amazon: 197 100% 34%;
+    --brand-mediaset: 215 100% 30%;
+    --brand-rai: 215 100% 24%;
+    --brand-tv8: 24 100% 42%;
+    --brand-discovery: 201 100% 36%;
+    --brand-eurosport: 145 90% 28%;
   }
 
   .dark {
@@ -117,6 +126,15 @@
     --brand-ktm: 24 100% 55%;
     --brand-yamaha: 215 90% 55%;
     --brand-honda: 354 85% 58%;
+
+    /* Broadcaster aggiuntivi — leggermente schiariti per dark */
+    --brand-now: 270 85% 70%;
+    --brand-amazon: 197 90% 62%;
+    --brand-mediaset: 215 90% 65%;
+    --brand-rai: 215 85% 68%;
+    --brand-tv8: 24 100% 62%;
+    --brand-discovery: 201 90% 62%;
+    --brand-eurosport: 145 70% 55%;
   }
 }
 
