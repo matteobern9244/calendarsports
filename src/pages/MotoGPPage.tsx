@@ -52,7 +52,13 @@ export default function MotoGPPage() {
         </TabsList>
 
         <TabsContent value="calendario">
-          {calLoading && <LoadingState message="Caricamento calendario MotoGP..." />}
+          {calLoading && (
+            <LoadingState
+              message="Caricamento calendario MotoGP..."
+              externalLink="https://www.motogp.com/it/calendar"
+              externalLabel="Scopri ora su MotoGP.com"
+            />
+          )}
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
           {!calLoading && !calError && (!calendar || calendar.length === 0) && (
             <UnavailableExternalSource
@@ -116,7 +122,13 @@ export default function MotoGPPage() {
         </TabsContent>
 
         <TabsContent value="piloti">
-          {stLoading && <LoadingState message="Caricamento classifica piloti..." />}
+          {stLoading && (
+            <LoadingState
+              message="Caricamento classifica piloti..."
+              externalLink="https://www.motogp.com/it/world-standing/motogp"
+              externalLabel="Scopri ora su MotoGP.com"
+            />
+          )}
           {stError && <ErrorState message="Errore nel caricamento della classifica" onRetry={() => stRefetch()} />}
           {!stLoading && !stError && (!standings || standings.length === 0) && (
             <UnavailableExternalSource
@@ -200,7 +212,13 @@ export default function MotoGPPage() {
         </TabsContent>
 
         <TabsContent value="costruttori">
-          {csLoading && <LoadingState message="Caricamento classifica costruttori..." />}
+          {csLoading && (
+            <LoadingState
+              message="Caricamento classifica costruttori..."
+              externalLink="https://www.motogp.com/it/world-standing/motogp/constructor"
+              externalLabel="Scopri ora su MotoGP.com"
+            />
+          )}
           {csError && <ErrorState message="Errore nel caricamento della classifica" onRetry={() => csRefetch()} />}
           {!csLoading && !csError && (!constructors || constructors.length === 0) && (
             <UnavailableExternalSource
