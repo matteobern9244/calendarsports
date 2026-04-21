@@ -275,16 +275,6 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
             </div>
           )}
 
-          {(props.source || statsUpdated) && (
-            <p className="mt-5 flex items-center gap-1.5 border-t border-border/30 pt-3 text-xs text-muted-foreground">
-              <Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span>
-                {props.source ? `Fonte: ${props.source}` : null}
-                {props.source && statsUpdated ? " · " : ""}
-                {statsUpdated ? `Statistiche aggiornate al ${statsUpdated}` : null}
-              </span>
-            </p>
-          )}
         </div>
       </div>
     </section>
