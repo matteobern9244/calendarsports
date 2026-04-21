@@ -224,3 +224,98 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
     expect(screen.queryAllByText("Tg5 Notte")).toHaveLength(0);
   });
 });
+
+describe("TonightTvList - programmi senza orario di fine (dati incompleti)", () => {
+  beforeEach(() => {
+    setFixtures({});
+    vi.clearAllMocks();
+  });
+
+  it("include un programma senza end se inizia prima delle 23:00 Rome", () => {
+    setFixtures({
+      rai: [
+        {
+          id: "rai-1",
+          name: "RAI 1",
+          number: 1,
+          programs: [
+            // 22:00 Europe/Rome, end mancante
+            { start: "2026-04-21T20:00:00Z", end: "", title: "Diretta Speciale" },
+          ],
+        },
+      ],
+    });
+    render(<TonightTvList />);
+    expect(screen.getAllByText("Diretta Speciale").length).toBeGreaterThan(0);
+    // Avviso "dati incompleti" + link alla Guida TV ufficiale RAI
+    expect(screen.getByRole("status")).toHaveTextContent(/Guida TV ufficiale/i);
+    const link = screen.getByRole("link", { name: /Apri Guida TV RAI/i });
+    expect(link).toHaveAttribute("href", "https://www.rai.it/guidatv/");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("ESCLUDE un programma senza end che inizia alle 23:00 o dopo", () => {
+    setFixtures({
+      rai: [
+        {
+          id: "rai-1",
+          name: "RAI 1",
+          number: 1,
+          programs: [
+            // 23:30 Europe/Rome, end mancante
+            { start: "2026-04-21T21:30:00Z", end: "", title: "Notturno Senza Fine" },
+          ],
+        },
+      ],
+    });
+    render(<TonightTvList />);
+    expect(screen.queryAllByText("Notturno Senza Fine")).toHaveLength(0);
+  });
+
+  it("non mostra l'avviso quando tutti i programmi hanno orario di fine reale", () => {
+    setFixtures({
+      rai: [
+        {
+          id: "rai-1",
+          name: "RAI 1",
+          number: 1,
+          programs: [
+            program("2026-04-21T19:30:00Z", "2026-04-21T21:25:00Z", "Fiction Completa"),
+          ],
+        },
+      ],
+    });
+    render(<TonightTvList />);
+    expect(screen.getAllByText("Fiction Completa").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: /Apri Guida TV/i })).not.toBeInTheDocument();
+  });
+
+  it("mostra un link distinto per ciascuna famiglia con dati incompleti", () => {
+    setFixtures({
+      rai: [
+        {
+          id: "rai-1",
+          name: "RAI 1",
+          number: 1,
+          programs: [
+            { start: "2026-04-21T20:00:00Z", end: "", title: "RAI Open" },
+          ],
+        },
+      ],
+      mediaset: [
+        {
+          id: "canale-5",
+          name: "Canale 5",
+          number: 5,
+          programs: [
+            { start: "2026-04-21T20:00:00Z", end: "", title: "Mediaset Open" },
+          ],
+        },
+      ],
+    });
+    render(<TonightTvList />);
+    expect(screen.getByRole("link", { name: /Apri Guida TV RAI/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Apri Guida TV Mediaset/i })).toBeInTheDocument();
+  });
+});
