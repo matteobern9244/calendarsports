@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Ruler, Weight, Hand, MapPin, UserRound, Info, Trophy } from "lucide-react";
+import { Ruler, Weight, Hand, MapPin, UserRound, Trophy } from "lucide-react";
 
 export interface SlamResultProp {
   best: string | null;
@@ -72,7 +72,6 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
   const [imgError, setImgError] = useState(false);
   const rankingLabel = props.ranking != null ? `#${props.ranking}` : "—";
   const rankingDate = formatRankingDate(props.rankingDate);
-  const statsUpdated = formatRankingDate(props.statsUpdatedAt);
   const visibleSlams = props.slamResults
     ? SLAM_LABELS.filter(({ key }) => props.slamResults?.[key] && props.slamResults[key]?.best)
     : [];
