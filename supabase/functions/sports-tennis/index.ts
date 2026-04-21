@@ -1,7 +1,10 @@
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from '../_shared/security.ts';
 
 // =====================================================================
-// SOURCE: Wikipedia (en.wikipedia.org) - public HTML scraping
+// SOURCES:
+//   - player-info  -> it.wikipedia.org/wiki/Jannik_Sinner   (profilo, ranking, palmarès Slam)
+//   - schedule/results/next-event -> en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season
+//     (la pagina IT della stagione 2026 non esiste in modo stabile)
 // CACHE:  30 minutes server-side to respect fair use
 // LIMITS: latency 24-48h editor lag; scraper fragile to layout changes
 // =====================================================================
@@ -58,6 +61,99 @@ function parseInfobox(html: string): Record<string, string> {
     if (!out[k]) out[k] = stripTags(m[2]);
   }
   return out;
+}
+
+/**
+ * Parser per il template "sinottico" di Wikipedia Italia.
+ * Estrae coppie <th>label</th><td>value</td> dalla tabella infobox principale,
+ * mantenendo SOLO la prima occorrenza per ogni label (per Sinner: Singolare
+ * appare prima del Doppio, quindi i valori "Vittorie/sconfitte", "Titoli vinti",
+ * "Miglior ranking", "Ranking attuale" sono quelli del singolare).
+ */
+function parseSinottico(html: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  // Limito lo scraping alla prima tabella class="infobox sinottico" trovata.
+  const tableMatch = html.match(/<table[^>]*class="[^"]*\bsinottico\b[^"]*"[\s\S]*?<\/table>/);
+  const scope = tableMatch ? tableMatch[0] : html;
+  const re = /<tr[^>]*>\s*<th[^>]*>([\s\S]{1,300}?)<\/th>\s*<td[^>]*>([\s\S]{0,800}?)<\/td>\s*<\/tr>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(scope)) !== null) {
+    const k = stripTags(m[1]).toLowerCase();
+    if (!k || k.length > 60) continue;
+    if (!out[k]) out[k] = stripTags(m[2]);
+  }
+  return out;
+}
+
+/**
+ * Parser palmarès Slam dall'infobox IT. Cerca le righe della sezione
+ * "Risultati nei tornei del Grande Slam" + "Altri tornei" (Tour Finals).
+ * Output: { australianOpen, rolandGarros, wimbledon, usOpen, tourFinals }
+ * Ogni voce: { best: 'V'|'F'|'SF'|'QF'|... | null, years: number[], raw: string }
+ */
+interface SlamResult { best: string | null; years: number[]; raw: string }
+function parseSlamResults(html: string): {
+  australianOpen: SlamResult | null;
+  rolandGarros: SlamResult | null;
+  wimbledon: SlamResult | null;
+  usOpen: SlamResult | null;
+  tourFinals: SlamResult | null;
+} {
+  const tableMatch = html.match(/<table[^>]*class="[^"]*\bsinottico\b[^"]*"[\s\S]*?<\/table>/);
+  const scope = tableMatch ? tableMatch[0] : html;
+
+  function findRow(label: string): SlamResult | null {
+    // Cerca <td>...label...</td><td>RAW</td>
+    const re = new RegExp(
+      `<td[^>]*>[^<]*(?:<[^>]+>[^<]*)*?\\b${label}\\b[\\s\\S]{0,400}?<\\/td>\\s*<td[^>]*>([\\s\\S]{0,400}?)<\\/td>`,
+      'i',
+    );
+    const m = scope.match(re);
+    if (!m) return null;
+    const raw = stripTags(m[1]);
+    if (!raw) return null;
+    // Extract best result token at start: V, F, SF, QF, 4T, 3T, 2T, 1T, RR
+    const bestMatch = raw.match(/^\s*([A-Z0-9]{1,3})\b/);
+    const best = bestMatch ? bestMatch[1] : null;
+    const years = [...raw.matchAll(/\b(20\d{2})\b/g)].map((y) => parseInt(y[1]));
+    return { best, years, raw };
+  }
+
+  return {
+    australianOpen: findRow('Australian Open'),
+    rolandGarros: findRow('Roland Garros'),
+    wimbledon: findRow('Wimbledon'),
+    usOpen: findRow('US Open'),
+    tourFinals: findRow('Tour Finals'),
+  };
+}
+
+/**
+ * Estrae la data "Statistiche aggiornate al 12 aprile 2026" dal piede infobox IT.
+ * Restituisce ISO YYYY-MM-DD oppure null.
+ */
+function parseStatsUpdatedAt(html: string): string | null {
+  const m = html.match(/Statistiche\s+aggiornate\s+al[\s\S]{0,40}?(\d{1,2})\s+([a-zA-Zàèéìòù]+)\s+(\d{4})/i);
+  if (!m) return null;
+  const monthsIt: Record<string, string> = {
+    gennaio: '01', febbraio: '02', marzo: '03', aprile: '04', maggio: '05', giugno: '06',
+    luglio: '07', agosto: '08', settembre: '09', ottobre: '10', novembre: '11', dicembre: '12',
+  };
+  const mm = monthsIt[m[2].toLowerCase()];
+  if (!mm) return null;
+  return `${m[3]}-${mm}-${m[1].padStart(2, '0')}`;
+}
+
+function parseItalianDateInline(s: string): string | null {
+  const m = s.match(/(\d{1,2})\s+([a-zA-Zàèéìòù]+)\s+(\d{4})/);
+  if (!m) return null;
+  const monthsIt: Record<string, string> = {
+    gennaio: '01', febbraio: '02', marzo: '03', aprile: '04', maggio: '05', giugno: '06',
+    luglio: '07', agosto: '08', settembre: '09', ottobre: '10', novembre: '11', dicembre: '12',
+  };
+  const mm = monthsIt[m[2].toLowerCase()];
+  if (!mm) return null;
+  return `${m[3]}-${mm}-${m[1].padStart(2, '0')}`;
 }
 
 function parseDateText(s: string): string | null {
