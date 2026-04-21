@@ -4,7 +4,6 @@ import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
-import TimezoneBadge from "@/components/common/TimezoneBadge";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
@@ -34,9 +33,8 @@ export default function Formula1Page() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-2">
         <SectionHeader title="Formula 1" />
-        <TimezoneBadge />
       </div>
 
       <div className="mb-6">
