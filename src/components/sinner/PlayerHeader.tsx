@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
+export interface SlamResultProp {
+  best: string | null;
+  years: number[];
+  raw: string;
+}
+
 export interface PlayerHeaderProps {
   name: string;
   ranking: number | null;
@@ -8,6 +14,7 @@ export interface PlayerHeaderProps {
   careerHigh?: number | null;
   nationality?: string;
   height?: string;
+  weight?: string;
   birthPlace?: string;
   plays?: string;
   coach?: string;
@@ -16,6 +23,14 @@ export interface PlayerHeaderProps {
   prizeMoney?: string;
   photoUrl?: string;
   source?: string;
+  statsUpdatedAt?: string | null;
+  slamResults?: {
+    australianOpen: SlamResultProp | null;
+    rolandGarros: SlamResultProp | null;
+    wimbledon: SlamResultProp | null;
+    usOpen: SlamResultProp | null;
+    tourFinals: SlamResultProp | null;
+  } | null;
 }
 
 function formatRankingDate(iso?: string | null): string | null {
@@ -28,10 +43,27 @@ function formatRankingDate(iso?: string | null): string | null {
   }
 }
 
+const SLAM_LABELS: { key: keyof NonNullable<PlayerHeaderProps["slamResults"]>; short: string; full: string }[] = [
+  { key: "australianOpen", short: "AO", full: "Australian Open" },
+  { key: "rolandGarros", short: "RG", full: "Roland Garros" },
+  { key: "wimbledon", short: "W", full: "Wimbledon" },
+  { key: "usOpen", short: "US", full: "US Open" },
+  { key: "tourFinals", short: "Finals", full: "ATP Finals" },
+];
+
+function shortYears(years: number[]): string {
+  if (!years.length) return "";
+  return years.map((y) => String(y).slice(2)).join("·");
+}
+
 export default function PlayerHeader(props: PlayerHeaderProps) {
   const [imgError, setImgError] = useState(false);
   const rankingLabel = props.ranking != null ? `#${props.ranking}` : "—";
   const rankingDate = formatRankingDate(props.rankingDate);
+  const statsUpdated = formatRankingDate(props.statsUpdatedAt);
+  const visibleSlams = props.slamResults
+    ? SLAM_LABELS.filter(({ key }) => props.slamResults?.[key] && props.slamResults[key]?.best)
+    : [];
 
   return (
     <section
@@ -118,6 +150,9 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
             {props.height && (
               <div className="flex gap-2"><dt className="text-muted-foreground">Altezza</dt><dd className="font-medium">{props.height}</dd></div>
             )}
+            {props.weight && (
+              <div className="flex gap-2"><dt className="text-muted-foreground">Peso</dt><dd className="font-medium">{props.weight}</dd></div>
+            )}
             {props.plays && (
               <div className="flex gap-2"><dt className="text-muted-foreground">Mano</dt><dd className="font-medium">{props.plays}</dd></div>
             )}
@@ -129,8 +164,44 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
             )}
           </dl>
 
-          {props.source && (
-            <p className="mt-3 text-[11px] text-muted-foreground">Fonte dati: {props.source}</p>
+          {visibleSlams.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-2">
+                Grande Slam
+              </p>
+              <ul className="flex flex-wrap gap-2" aria-label="Risultati Grande Slam">
+                {visibleSlams.map(({ key, short, full }) => {
+                  const r = props.slamResults![key]!;
+                  const isWin = r.best === "V";
+                  return (
+                    <li
+                      key={key}
+                      title={`${full}: ${r.raw}`}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-heading",
+                        isWin
+                          ? "border-primary/40 bg-primary/10 text-primary"
+                          : "border-border bg-muted text-foreground",
+                      )}
+                    >
+                      <span className="font-bold">{short}</span>
+                      <span className="opacity-80">{r.best}</span>
+                      {r.years.length > 0 && (
+                        <span className="opacity-70">·{shortYears(r.years)}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          {(props.source || statsUpdated) && (
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              {props.source ? `Fonte: ${props.source}` : null}
+              {props.source && statsUpdated ? " · " : ""}
+              {statsUpdated ? `Statistiche aggiornate al ${statsUpdated}` : null}
+            </p>
           )}
         </div>
       </div>

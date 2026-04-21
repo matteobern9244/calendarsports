@@ -46,6 +46,7 @@ export default function SinnerPage() {
           careerHigh={playerInfo.careerHigh}
           nationality={playerInfo.nationality}
           height={playerInfo.height}
+          weight={playerInfo.weight}
           birthPlace={playerInfo.birthPlace}
           plays={playerInfo.plays}
           coach={playerInfo.coach}
@@ -53,6 +54,8 @@ export default function SinnerPage() {
           seasonTitles={playerInfo.seasonTitles}
           photoUrl={playerInfo.photoUrl}
           source={playerInfo.source}
+          statsUpdatedAt={playerInfo.statsUpdatedAt}
+          slamResults={playerInfo.slamResults}
         />
       )}
 
