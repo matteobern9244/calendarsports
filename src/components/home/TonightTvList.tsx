@@ -22,7 +22,7 @@ import {
   type TvFamilyPayload,
 } from "@/hooks/useStreamingData";
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
-import { formatDuration, formatDurationSpoken } from "@/lib/dateUtils";
+import { formatDuration, formatDurationSpoken, toRomeDate } from "@/lib/dateUtils";
 import { inferGenre } from "@/lib/genreUtils";
 
 // Pittogrammi per famiglia: scelti per evocare l'identita' del broadcaster
@@ -136,20 +136,28 @@ export default function TonightTvList() {
         if (fam === "rai" && ch.id !== "rai-1" && ch.id !== "rai-2") continue;
         if (fam === "mediaset" && ch.id !== "canale-5" && ch.id !== "italia-1") continue;
         for (const p of ch.programs) {
-          const d = new Date(p.start);
+          // Tutti gli orari sono normalizzati via `toRomeDate`: gli ISO
+          // "naive" senza offset (es. "2026-04-21T20:30:00") vengono
+          // trattati come UTC, in linea con la policy condivisa con le
+          // pagine Juventus/F1/MotoGP. Senza questa normalizzazione il
+          // client interpreterebbe la stringa come ora locale, con drift
+          // visibile per utenti fuori dal fuso italiano e in DST.
+          const d = toRomeDate(p.start);
+          if (!d) continue;
           const hhmm = timeFmt.format(d);
           const [hStr, mStr] = hhmm.split(":");
           const hasExplicitEnd = Boolean(p.end);
+          const endDate = hasExplicitEnd ? toRomeDate(p.end) : null;
           // Quando la fonte non fornisce l'orario di fine assumiamo una
           // durata "open-ended" pari alla finestra di prima serata: il
           // programma e' candidato per la visualizzazione purche' parta
           // prima delle 23:00 (vedi overlapsPrimeWindow piu' in basso).
           // La durata mostrata in cella resta pero' 0 cosi' l'utente non
           // legge una durata inventata.
-          const endMs = hasExplicitEnd
-            ? new Date(p.end).getTime()
+          const endMs = endDate
+            ? endDate.getTime()
             : d.getTime() + 24 * 60 * 60 * 1000; // sentinel "fine ignota"
-          const durationMin = hasExplicitEnd
+          const durationMin = endDate
             ? Math.max(0, Math.round((endMs - d.getTime()) / 60000))
             : 0;
           const endHHMM = timeFmt.format(new Date(endMs));
