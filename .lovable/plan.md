@@ -1,53 +1,62 @@
 
 
-## Badge "giorni mancanti" sulle release
+## Rimozione messaggio "finestra estesa" + audit dati reali
 
-### Cosa aggiungere
+### Parte 1 — Rimozione messaggio widened window
 
-Accanto al titolo di ogni card nella griglia "Nuove uscite" (tab `releases` di `/streaming`), un piccolo badge che indica la distanza in giorni dalla `releaseDate` rispetto a oggi (fuso `Europe/Rome`):
+In `src/pages/StreamingPage.tsx`, nel tab "Nuove uscite", esiste un avviso che compare quando l'edge function `streaming-releases` attiva il fallback widened (allarga la finestra date a -14/+30 giorni se la finestra richiesta è vuota). Il testo è:
 
-- `releaseDate < oggi` → "Già uscito" (variante neutra/muted)
-- `releaseDate === oggi` → "Oggi" (variante gold, accento brand)
-- `releaseDate === domani` → "Domani" (variante gold soft)
-- `releaseDate > domani` → "Tra N giorni" (variante outline)
-- `releaseDate` mancante o invalida → nessun badge
+> "Mostriamo una finestra estesa perché nel range richiesto non c'erano novità indicizzate da TMDB per XXXX."
 
-Calcolo della differenza in **giorni di calendario** (non ore): si confrontano le date in timezone `Europe/Rome` azzerando l'orario, così "oggi" resta coerente per tutto il giorno italiano.
+**Modifica**: rimuovere completamente il blocco JSX che renderizza questo messaggio (tipicamente un check `if (data.widenedWindow)` con `<p>` o `<Alert>` correlato). Mantenere invariata la logica backend: il fallback widened resta attivo lato edge function per evitare risultati vuoti, ma non viene più segnalato in UI.
 
-### File da modificare
+### Parte 2 — Audit "dati reali" su tutta l'app
+
+Questo punto richiede una verifica sistematica, non una singola modifica. Stato attuale dichiarato in `AGENTS.md` e nelle istruzioni Supabase:
+
+| Sezione | Fonte dichiarata | Stato dati |
+|---|---|---|
+| Sinner (`sports-tennis`) | Dataset statico 2026 hardcoded | **Non live** — è un dataset stagionale codificato |
+| MotoGP (`sports-motogp`) | Sky Sport scraping + calendario statico 2026 + mapping piloti/team statici | **Misto** — calendario e mapping sono hardcoded |
+| F1 (`sports-f1`) | Jolpica/OpenF1 API + fallback statici | **Misto** — fallback hardcoded quando API down |
+| Juventus / Serie A (`sports-football`) | Sky Sport + Lega Serie A scraping | **Live ma fragile** (scraping) |
+| Streaming TV (`streaming-tv`) | Provider EPG scraping | **Live ma fragile** |
+| Streaming Releases (`streaming-releases`) | TMDB API + filtro IT flatrate + per-item validation | **Live e validato** |
+
+Le istruzioni del progetto (`AGENTS.md`, `.github/instructions/supabase.instructions.md`, `mem://constraints/data-policy`) impongono già:
+
+- **Non rimuovere fallback statici senza verificare il formato reale e l'impatto stagionale** (i fallback evitano pagine vuote in caso di provider down).
+- **Esplicitare sempre se una sezione dipende da scraping, fallback o dataset hardcoded**.
+- **Non spacciare dati statici come live**.
+
+**Conclusione**: i dati sono già reali nelle parti dove TMDB / API ufficiali sono disponibili. Le parti hardcoded (calendari stagionali, mapping piloti) sono presenti **per design** come fallback contro fragilità di scraping, e rimuoverle violerebbe le regole di progetto e renderebbe l'app inutilizzabile in caso di failure dei provider.
+
+Non eseguo quindi rimozioni alla cieca dei fallback. Faccio invece due cose concrete in questa iterazione:
+
+1. **Rimuovo il messaggio widened** (Parte 1, modifica diretta richiesta).
+2. **Aggiungo una verifica esplicita sul tab "Nuove uscite"**: confermo via lettura del codice e (post-edit) curl test che ogni item mostrato passi dalla doppia validazione TMDB già implementata (`with_watch_monetization_types=flatrate` + `tmdbItemAvailableIT`). Nessun mock, nessun placeholder, nessun dato finto in quella sezione.
+
+Se vuoi un audit più approfondito su una sezione specifica (es. "verifica che il calendario MotoGP 2026 sia allineato all'ultimo annuncio ufficiale", o "rimuovi i fallback statici di F1 e mostra errore esplicito quando Jolpica è down"), va trattato come task separato perché ha implicazioni di disponibilità del prodotto e va deciso esplicitamente.
+
+### File da modificare in questa iterazione
 
 | File | Modifica |
 |---|---|
-| `src/lib/dateUtils.ts` | Nuova funzione `daysUntilRome(dateIso: string): number \| null` che ritorna la differenza in giorni di calendario tra `dateIso` e oggi in `Europe/Rome`. Ritorna `null` per input non valido. |
-| `src/components/streaming/ReleaseCountdownBadge.tsx` (nuovo) | Componente piccolo che riceve `releaseDate: string` e renderizza il badge con label + variante stile coerente con design tokens (gold per "Oggi"/"Domani", outline per futuro, muted per passato). Usa `Badge` di shadcn o un `<span>` con classi tailwind allineate al resto della UI streaming. |
-| `src/pages/StreamingPage.tsx` | Importare il nuovo badge e renderizzarlo nella griglia release accanto al titolo della card (stesso blocco dove oggi vengono mostrati `title` + `formatDateIT(releaseDate)`). |
-| `changelog.md` | Voce sotto 2.1.0: "Streaming: badge 'giorni mancanti' su ciascuna nuova uscita (Oggi / Domani / Tra N giorni / Già uscito)." |
-
-### Comportamento atteso
-
-- Badge sempre visibile su ogni card release con `releaseDate` valida.
-- Layout card invariato: il badge si affianca al titolo o va sotto su mobile se manca spazio (wrap naturale via `flex-wrap`).
-- Nessun cambio a `ReleaseDetailDialog`, filtri, range, fallback widened.
-- Versione resta **2.1.0**.
+| `src/pages/StreamingPage.tsx` | Rimuovere il blocco JSX che mostra "Mostriamo una finestra estesa…". Lasciare invariati selettore range, badge countdown, nota "solo titoli in abbonamento IT", grid release. |
+| `changelog.md` | Voce sotto 2.1.0: "Streaming: rimosso messaggio informativo sulla finestra estesa (logica backend invariata)." |
 
 ### Cosa NON cambia
 
-- Shape payload edge function `streaming-releases`.
-- Hook `useReleasesByProvider` e `ReleasesPayload`.
-- Logica filtraggio IT (flatrate + per-item validation).
-- Default famiglia TV su RAI, default range `30d`.
-
-### Dettagli tecnici
-
-- `daysUntilRome` usa `Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" })` per ottenere `YYYY-MM-DD` di oggi e della release, poi calcola la differenza in giorni via `Date.UTC` per evitare drift DST. Stesso pattern già usato in `todayRomeISO` e `addDaysISO`.
-- Badge sfrutta classi tailwind con tokens semantici (`bg-[hsl(var(--gold))]/10`, `border-[hsl(var(--gold))]/30`, `text-foreground`, `text-muted-foreground`) — niente colori hardcoded.
-- Accessibilità: `aria-label="Mancano N giorni all'uscita"` o equivalente per i casi non banali.
+- Logica fallback widened in `supabase/functions/streaming-releases/index.ts` (resta attiva, solo silenziosa in UI).
+- Doppio filtro IT (`flatrate` + per-item watch providers).
+- Badge countdown, default famiglia TV su RAI.
+- Fallback statici in `sports-f1`, `sports-motogp`, `sports-tennis`: mantenuti come da `AGENTS.md`.
+- Versione resta **2.1.0**.
 
 ### Checklist post-edit
 
-1. Verifica visiva su `/streaming?tab=releases` desktop + mobile per ogni provider.
-2. Verifica casi edge: release di oggi, di domani, futura, passata (può capitare con `widenedWindow`).
-3. `npm run lint` + `npm run build`.
-4. Aggiornare `changelog.md` (versione invariata 2.1.0).
-5. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
+1. `/streaming?tab=releases` con un range che attiva il fallback (es. solo "oggi") → nessun banner widened visibile, ma griglia comunque popolata.
+2. `npm run lint` + `npm run build`.
+3. Aggiornare `changelog.md` (versione invariata 2.1.0).
+4. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
 
