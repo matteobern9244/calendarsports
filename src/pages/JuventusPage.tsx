@@ -5,6 +5,7 @@ import EventCountdown from "@/components/common/EventCountdown";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
+import TimezoneBadge from "@/components/common/TimezoneBadge";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
 import { formatDateIT } from "@/lib/dateUtils";
@@ -91,7 +92,10 @@ export default function JuventusPage() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="Juventus" />
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <SectionHeader title="Juventus" />
+        <TimezoneBadge />
+      </div>
 
       <div className="mb-6">
         <SeasonSelector currentSeason={seasons.juventus} onSelect={(y) => setSeason("juventus", y)} />

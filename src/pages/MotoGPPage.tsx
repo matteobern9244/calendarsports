@@ -4,6 +4,7 @@ import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
+import TimezoneBadge from "@/components/common/TimezoneBadge";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useMotoGPCalendar, useMotoGPStandings, useMotoGPConstructorStandings } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
@@ -28,7 +29,10 @@ export default function MotoGPPage() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="MotoGP" />
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <SectionHeader title="MotoGP" />
+        <TimezoneBadge />
+      </div>
 
       <div className="mb-6">
         <SeasonSelector currentSeason={seasons.motogp} onSelect={(y) => setSeason("motogp", y)} />

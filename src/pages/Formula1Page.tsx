@@ -4,6 +4,7 @@ import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
+import TimezoneBadge from "@/components/common/TimezoneBadge";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useF1Calendar, useF1DriverStandings, useF1ConstructorStandings } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
@@ -21,7 +22,10 @@ export default function Formula1Page() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="Formula 1" />
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <SectionHeader title="Formula 1" />
+        <TimezoneBadge />
+      </div>
 
       <div className="mb-6">
         <SeasonSelector currentSeason={seasons.f1} onSelect={(y) => setSeason("f1", y)} />

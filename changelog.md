@@ -18,6 +18,7 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- Badge "Orari in ora italiana · CET/CEST" nelle pagine eventi (Home, Formula 1, MotoGP, Juventus, Sinner, Streaming). La sigla DST è calcolata runtime via `Intl.DateTimeFormat` con `timeZone: "Europe/Rome"`, quindi resta sempre coerente al passaggio CET ↔ CEST. Tooltip esplicativo accessibile via mouse e tastiera.
 - **Performance – transizioni globali tema scoped al toggle**: rimossa la
   regola permanente `*, *::before, *::after { transition: ... }` da
   `src/index.css`. La transizione 280ms ease su `background-color`,
