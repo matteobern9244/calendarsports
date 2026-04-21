@@ -54,7 +54,8 @@ export default function Formula1Page() {
               title={`Calendario F1 ${season}`}
               description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale Formula 1 qui sotto per consultare tutte le giornate dei GP, gli orari delle sessioni (prove libere, qualifiche e gara) e i circuiti del Mondiale."
               externalLink="https://www.formula1.com/en/racing/2025"
-              externalLabel="Apri calendario su Formula1.com"
+              externalLabel="Vedi calendario su Formula1.com"
+              ctaHint="Tocca qui per orari e circuiti del Mondiale"
             />
           )}
           {calendar && calendar.length > 0 && (() => {
@@ -163,7 +164,8 @@ export default function Formula1Page() {
               title={`Classifica Piloti ${season}`}
               description="La classifica piloti del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Formula 1 qui sotto per consultare la graduatoria aggiornata in tempo reale, con punti, vittorie e podi di ogni pilota."
               externalLink="https://www.formula1.com/en/results/2025/drivers"
-              externalLabel="Apri classifica su Formula1.com"
+              externalLabel="Vedi classifica piloti su Formula1.com"
+              ctaHint="Tocca qui per punti, vittorie e podi"
             />
           )}
         </TabsContent>
@@ -213,7 +215,8 @@ export default function Formula1Page() {
               title={`Classifica Costruttori ${season}`}
               description="La classifica costruttori del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Formula 1 qui sotto per consultare la graduatoria delle scuderie, con punti totali, vittorie e prestazioni dei team."
               externalLink="https://www.formula1.com/en/results/2025/team"
-              externalLabel="Apri classifica su Formula1.com"
+              externalLabel="Vedi classifica costruttori su Formula1.com"
+              ctaHint="Tocca qui per la graduatoria delle scuderie"
             />
           )}
         </TabsContent>
