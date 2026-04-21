@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Ruler, Weight, Hand, MapPin, UserRound, Info } from "lucide-react";
+import { Ruler, Weight, Hand, MapPin, UserRound, Info, Trophy } from "lucide-react";
 
 export interface SlamResultProp {
   best: string | null;
@@ -52,9 +52,20 @@ const SLAM_LABELS: { key: keyof NonNullable<PlayerHeaderProps["slamResults"]>; s
   { key: "tourFinals", short: "Finals", full: "ATP Finals" },
 ];
 
-function shortYears(years: number[]): string {
-  if (!years.length) return "";
-  return years.map((y) => String(y).slice(2)).join("·");
+const RESULT_LABELS: Record<string, string> = {
+  V: "Vittoria",
+  F: "Finale",
+  SF: "Semifinale",
+  QF: "Quarti",
+  "4T": "Ottavi",
+  "3T": "3° turno",
+  "2T": "2° turno",
+  "1T": "1° turno",
+  RR: "Round Robin",
+};
+
+function resultLabel(raw: string): string {
+  return RESULT_LABELS[raw] ?? raw;
 }
 
 export default function PlayerHeader(props: PlayerHeaderProps) {
