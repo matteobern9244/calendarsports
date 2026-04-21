@@ -106,10 +106,6 @@ export function inferGenre(
       return "Tv";
     case "discovery":
       return "Lifestyle";
-    case "sky-sport":
-      return "Sport";
-    case "sky-cinema":
-      return "Film";
     default:
       return "Tv";
   }
