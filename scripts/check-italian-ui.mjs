@@ -130,6 +130,9 @@ const ALLOWLIST_WORDS = new Set(
     // Formati tempo brevi accettati
     "AM",
     "PM",
+    // termini accettati nell'uso italiano corrente
+    "Home",
+    "Live",
   ].map((w) => w.toLowerCase()),
 );
 
