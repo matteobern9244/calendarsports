@@ -115,7 +115,16 @@ export default function Formula1Page() {
               externalLabel="Scopri ora su Formula1.com"
             />
           )}
-          {drvError && <ErrorState message="Errore nel caricamento della classifica" onRetry={() => drvRefetch()} />}
+          {drvError && (
+            <ErrorState
+              message={`Classifica piloti F1 ${season} non disponibile`}
+              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta la classifica ufficiale aggiornata gara dopo gara su Formula1.com."
+              onRetry={() => drvRefetch()}
+              externalLink="https://www.formula1.com/en/results/2025/drivers"
+              externalLabel="Vedi classifica piloti su Formula1.com"
+              ctaHint="Tocca qui per la classifica piloti ufficiale"
+            />
+          )}
           {drivers && drivers.length > 0 && (
             <div className="rounded-xl border border-border overflow-hidden">
               <Table>
@@ -199,7 +208,15 @@ export default function Formula1Page() {
               externalLabel="Scopri ora su Formula1.com"
             />
           )}
-          {conError && <ErrorState message="Errore nel caricamento della classifica" />}
+          {conError && (
+            <ErrorState
+              message={`Classifica costruttori F1 ${season} non disponibile`}
+              detail="La nostra fonte dati non risponde in questo momento. Puoi consultare la classifica costruttori ufficiale aggiornata sul sito Formula 1."
+              externalLink="https://www.formula1.com/en/results/2025/team"
+              externalLabel="Vedi classifica costruttori su Formula1.com"
+              ctaHint="Tocca qui per la classifica costruttori ufficiale"
+            />
+          )}
           {constructors && constructors.length > 0 && (
             <div className="rounded-xl border border-border overflow-hidden">
               <Table>
