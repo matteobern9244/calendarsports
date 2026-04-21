@@ -1,136 +1,146 @@
 
 
-## Layout a griglia tabellare per "Stasera in TV" (desktop)
+## Accessibilità griglia "Stasera in TV" con `display: contents`
 
-### Diagnosi
+### Contesto
 
-Lo screenshot mostra che, anche dopo l'ultima modifica, il chip genere e la durata appaiono disallineati riga-su-riga perché:
+Il layout desktop/tablet di `src/components/home/TonightTvList.tsx` usa CSS Grid sul `<ul>` con `<li sm:contents>`. Su browser moderni `display: contents` è gestito correttamente per la semantica `<ul>/<li>`, ma per garantire una lettura affidabile da screen reader (NVDA, JAWS, VoiceOver) su una struttura che visivamente è una **tabella di palinsesto**, la soluzione robusta è esporre esplicitamente i ruoli ARIA da grid pattern (`role="table"` / `role="row"` / `role="cell"`) con header associati.
 
-1. **Chip genere** ha larghezza variabile (`FICTION` ~52px, `TALK SHOW` ~78px, `NEWS` ~44px) → la sua estremità destra balla.
-2. **Durata** ha larghezza variabile (`2h` ~22px, `1h 55 min` ~58px) → idem.
-3. Con `flex-1` sul titolo + `shrink-0` sui chip, ogni riga calcola lo spazio in autonomia: nessuna colonna verticale stabile.
+Il pattern scelto è **ARIA Grid/Table** (W3C ARIA APG "Table" pattern), non "treegrid" né "listbox": è la rappresentazione corretta di un palinsesto tabellare bidimensionale.
 
-L'unico modo per avere **due colonne verticali realmente allineate** è passare da flexbox a **CSS Grid** sull'intera lista, condividendo lo stesso `grid-template-columns` su tutte le righe.
+### Obiettivo
 
-### Soluzione: CSS Grid condivisa
+Rendere la lista programmi pienamente accessibile:
 
-Trasformare il `<ul>` (desktop) in un grid container che applica le stesse 6 colonne a ogni riga `<li>`:
+1. Annunciare la struttura come tabella semantica con intestazioni di colonna.
+2. Annunciare il **gruppo famiglia** (RAI, Mediaset, ecc.) come `rowgroup` con etichetta accessibile, anche dove visivamente è solo un divider colorato.
+3. Garantire che ogni cella sia leggibile in ordine: Famiglia → Ora → Canale → Titolo → Genere → Durata, su qualsiasi viewport.
+4. Mantenere il layout visivo invariato (zero regressioni visive).
 
-```text
-[famiglia 8rem] [ora 3.5rem] [canale auto] [titolo 1fr] [genere 6rem] [durata 5rem]
-```
+### Strategia tecnica
 
-Larghezze fisse per famiglia, ora, genere, durata → garantiscono colonne perfette. Chip genere e durata ricevono `text-align: right` e `justify-self: end` per ancorare il contenuto al bordo destro di ciascuna cella.
+#### A. Ruoli ARIA espliciti
 
-### Layout responsive (3 breakpoint)
+Override dei ruoli impliciti `<ul>/<li>` (che con `display: contents` su alcuni screen reader storici venivano persi) tramite attributi `role`:
 
-**Mobile (`< sm`, < 640px)**: layout corrente a 2 righe stacked (durata top-right, titolo+genere sotto). Invariato — già leggibile su schermi stretti.
+- `<ul role="table" aria-label="Programmi in prima serata stasera">`
+- Riga divider famiglia → wrapper invisibile `role="rowgroup" aria-label="RAI"` non funziona inline; uso pattern alternativo: la riga divider diventa `role="rowheader"` invisibile contenente etichetta famiglia per screen reader (sr-only) oltre alla barra colorata visiva.
+- Riga programma `<li role="row">` (sostituisce semantica lista).
+- Ogni cella `<div role="cell">` (o `role="rowheader"` per la cella famiglia che apre il gruppo).
 
-**Tablet (`sm` ≤ width < `lg`, 640-1023px)**: grid a 5 colonne (omette colonna famiglia, mostrata già nel divider sopra):
-```text
-[ora 3.5rem] [canale 7rem] [titolo 1fr] [genere 5.5rem] [durata 4.5rem]
-```
+Decisione: NON usare `role="rowgroup"` perché richiederebbe wrappare gruppi di righe in un ulteriore container, rompendo la grid CSS condivisa. Uso invece il pattern "header row per gruppo": una riga dedicata con `role="row"` contenente una sola cella `role="rowheader"` con `colspan` logico (`aria-colspan` o semplicemente cella full-width che annuncia "Famiglia: RAI"). Lo screen reader leggerà "RAI" prima delle righe del gruppo.
 
-**Desktop (`lg` ≥ 1024px)**: grid a 6 colonne completa con colonna famiglia 8rem.
+#### B. Riga di intestazione visivamente nascosta
 
-Tutte le righe condividono `grid-template-columns` definito sull'`<ul>` (oppure su un wrapper `display: grid` con `grid-template-rows: auto` per ogni riga). Le `<li>` diventano `display: contents` per ereditare la griglia del padre, così le 6 celle di ogni riga si allineano verticalmente con le 6 celle delle altre righe. Questo è il pattern standard per "tabelle responsive con grid".
+Aggiungo come **prima riga** del grid una `<li role="row" className="sr-only sm:contents">` con 6 celle `role="columnheader"` per: Famiglia, Ora, Canale, Titolo, Genere, Durata. Le celle sono `sr-only` visivamente (hanno `class="sr-only"`) ma presenti nel DOM/grid: gli screen reader le annunciano come intestazioni di colonna ad ogni cella corrispondente nelle righe successive. Visivamente: zero impatto (utility `sr-only` con clip+absolute).
 
-### Modifica precisa
+Tailwind ha già `.sr-only` di default. Per mantenere il `display: contents` della riga e nascondere visivamente solo le celle, applico `sr-only` direttamente alle 6 celle figlie, non alla `<li>`.
 
-In `src/components/home/TonightTvList.tsx`, sezione desktop:
+#### C. Etichetta famiglia leggibile (mobile e tablet)
 
-1. **`<ul>` desktop**: aggiungere classi grid condizionali. Mantengo il `<ul>` corrente per mobile, ma su `sm:` lo trasformo in grid:
-   ```tsx
-   <ul className="
-     divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 overflow-hidden
-     sm:grid sm:divide-y-0
-     sm:[grid-template-columns:3.5rem_7rem_1fr_5.5rem_4.5rem]
-     lg:[grid-template-columns:8rem_3.5rem_7rem_1fr_5.5rem_4.5rem]
-   ">
-   ```
+La riga `family-label-mobile` (visibile su <lg) già contiene icona+testo famiglia. Aggiungo `role="rowheader"` alla cella interna così lo screen reader annuncia "Intestazione di riga: RAI" prima delle righe del gruppo. Il divider colorato 3px resta `aria-hidden="true"`.
 
-2. **`<li>` riga programma**: su `sm:` diventa `display: contents` per dissolversi nella griglia padre; il bordo top viene applicato a ogni cella della riga via `[&>*]:border-t [&>*]:border-border/40`. Su mobile mantiene il flex stacked.
-   ```tsx
-   <li className="
-     px-2.5 py-2.5 text-sm
-     sm:contents sm:[&>*]:py-2 sm:[&>*]:border-t sm:[&>*]:border-border/40
-   ">
-   ```
+Su `lg:` la cella famiglia inline (prima colonna del primo programma di un gruppo) riceve `role="rowheader"`; per le righe successive del gruppo la cella famiglia vuota riceve `role="cell" aria-hidden="true"` (così lo screen reader non legge celle vuote ripetute, ma la columnheader "Famiglia" della riga di intestazione la associa correttamente).
 
-3. **Celle desktop** (6 elementi figli diretti, ognuno con padding orizzontale dedicato):
-   - **Famiglia** (solo `lg:`): icona + label, oppure spazio vuoto se `!showFamilyDivider`. Classi: `hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2`.
-   - **Ora**: `hidden sm:flex sm:items-center sm:px-2 font-mono font-bold text-primary text-sm`.
-   - **Canale**: `hidden sm:flex sm:items-center sm:px-2` con `<Badge>` interno.
-   - **Titolo**: `hidden sm:flex sm:items-center sm:px-2 sm:min-w-0` con `<span class="truncate" title={row.title}>`.
-   - **Genere**: `hidden sm:flex sm:items-center sm:justify-end sm:px-2`. Chip allineato a destra; se `g` assente, cella vuota (mantiene la colonna).
-   - **Durata**: `hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap`. Aggiungere `tabular-nums` per allineare le cifre. Se vuota, cella vuota.
+#### D. `aria-label` significativi sui contenuti
 
-4. **Riga famiglia (divider + label mobile)**: invariate per mobile. Su `sm:` la label famiglia non serve più separata: la colonna famiglia (su `lg:`) o il divider colorato (su `sm:` < `lg:`) fanno il lavoro. Il divider `<li>` corrente con `h-[3px] bg-primary` resta visibile su tutti i breakpoint sopra il primo programma di una nuova famiglia: lo wrappo con `sm:col-span-full` per attraversare tutte le colonne grid.
+- Cella ora: `<div role="cell" aria-label="Inizio alle 21:30">21:30</div>`.
+- Cella canale: contiene `<Badge>` con testo già leggibile, aggiungo `aria-label="Canale RAI 1"` sulla cella.
+- Cella titolo: contenuto testuale, nessuna etichetta extra (già esplicito).
+- Cella genere: `aria-label="Genere FICTION"` quando presente; quando assente, cella riceve `aria-hidden="true"` e nessun contenuto.
+- Cella durata: `aria-label="Durata 1 ora e 55 minuti"` derivato da `formatDuration`. Aggiungo helper `formatDurationSpoken(min: number)` in `src/lib/dateUtils.ts` che ritorna stringa parlata italiana.
 
-5. **Removed**: la colonna famiglia "fantasma" (`text-transparent` per le righe non-prima del gruppo) che oggi finge alignment su `sm:` viene rimossa: su `sm:`-`md:` non c'è colonna famiglia (basta il divider colorato + label mobile riusata anche qui), su `lg:` la colonna esiste solo nelle righe `showFamilyDivider`.
+#### E. `aria-rowindex` / `aria-colindex` (opzionale)
 
-6. **Label famiglia su tablet** (`sm:` < `lg:`): rendere visibile la `<li data-testid="family-label-mobile">` fino a `lg:` (rinominandola eventualmente, ma mantengo il `data-testid` per compatibilità test). Cambio `sm:hidden` → `lg:hidden` e aggiungo `sm:col-span-full` quando dentro la grid.
+Per griglie virtualizzate o paginate ARIA raccomanda `aria-rowindex`/`aria-colindex` quando l'indice DOM differisce dall'indice logico. Qui c'è paginazione (`TV_PAGE_SIZE = 8`), quindi aggiungo:
 
-### Risultato visivo
+- Sul `<ul>`: `aria-rowcount={tonightHighlights.length + 1}` (+1 per header), `aria-colcount={6}`.
+- Su ogni riga programma: `aria-rowindex={safePage * TV_PAGE_SIZE + i + 2}` (1-based, +1 per header).
+- Su ogni cella: `aria-colindex={1..6}` corrispondente alla colonna.
 
-```text
-Desktop (≥1024px):
-┌──────────┬───────┬─────────┬──────────────────────────────┬─────────┬─────────┐
-│ ◉ RAI    │ 21:30 │ RAI 1   │ Il Commissario Montalbano    │ FICTION │1h 55 min│
-│          │ 21:00 │ RAI 2   │ Tg2 Post                     │ NEWS    │   20 min│
-├──────────┼───────┼─────────┼──────────────────────────────┼─────────┼─────────┤
-│ 📺 MEDIA │ 21:15 │ ITALIA1 │ Le Iene presentano           │TALK SHOW│3h 55 min│
-└──────────┴───────┴─────────┴──────────────────────────────┴─────────┴─────────┘
+Questo permette agli screen reader di annunciare "Riga 9 di 47, colonna 4 di 6: Il Commissario Montalbano".
 
-Tablet (640-1023px):
-┌───────┬─────────┬──────────────────────────────────────┬─────────┬─────────┐
-│ 21:30 │ RAI 1   │ Il Commissario Montalbano            │ FICTION │1h 55 min│
-└───────┴─────────┴──────────────────────────────────────┴─────────┴─────────┘
-(label famiglia su riga sopra, full-width)
+#### F. Live region per paginazione
 
-Mobile (<640px): layout 2 righe stacked invariato
-```
+Aggiungo `aria-live="polite"` sul `<span>` "Pagina X / Y · N canali" per annunciare il cambio pagina senza interrompere la navigazione.
 
-Tutte le colonne genere e durata cadono sulla stessa X verticale grazie al grid condiviso.
+#### G. Mobile (<sm) — semantica alternativa
 
-### Cosa NON cambia
+Su mobile il layout è stacked (2 righe per programma), non tabellare. Pattern proposto:
 
-- Layout mobile (<640px): identico.
-- Logica dati, filtri, paginazione, divider famiglia, header card.
-- `inferGenre`, `formatDuration`, `STREAMING_FAMILIES`, hook React Query.
-- `data-testid` esistenti (`family-divider`, `family-label-mobile`) preservati.
-- Nessun nuovo import.
+- `<ul>` rimane `role="table"` (su mobile gli screen reader navigano comunque per riga).
+- `<li>` programma rimane `role="row"`.
+- Le 4 informazioni (ora, canale, titolo, genere, durata) sono dentro 2 div visivi, ma applico `role="cell"` a ciascun elemento informativo individuale (ora, canale, durata, titolo, genere) → 5 celle role="cell" per riga, comunque associate alle columnheader della riga di intestazione.
 
-### Rischi e mitigazioni
+In alternativa, usare `role="article" aria-label="Programma: 21:30 RAI 1 Il Commissario Montalbano"` semplificato: lo screen reader annuncia tutto in una frase. Decido per questa seconda strategia su mobile perché più naturale per audio lineare.
 
-- **`display: contents` accessibility**: storicamente alcuni screen reader ignoravano `<li>` con `display: contents`. Oggi (Chromium 105+, Firefox 102+, Safari 16+) il bug è risolto. Verifico mantenendo semantica `<ul><li>` e aggiungendo `role="row"` opzionale se necessario.
-- **Titoli lunghi**: la cella titolo è `sm:min-w-0` con `truncate` interno, così la colonna `1fr` non si espande oltre lo spazio disponibile. Tooltip nativo `title` già presente.
-- **Larghezza chip genere > 5.5rem**: i chip uppercase con generi più lunghi dell'app (`TALK SHOW`, `DOCUMENTARI`, `INTRATTENIMENTO`?) potrebbero superare 5.5rem. Verifico l'enum reale in `inferGenre`/`genreUtils.ts` prima di fissare il valore; se necessario, alzo a 6.5rem desktop (e 6rem tablet). Da decidere in implementazione leggendo `genreUtils.ts`.
-- **`tabular-nums` su durata**: garantisce che `1h 55 min` e `1h 5 min` allineino le cifre (Inter ha tabular-nums).
+Implementazione: condizionale via classe `sm:hidden`/`sm:contents` non basta perché role è statico HTML. Soluzione: rendering doppio già esistente (mobile flex stacked + desktop grid celle) — applico ruoli appropriati a ciascuna versione.
+
+Decisione finale: 
+- Mobile (<sm): la `<li>` riceve `role="listitem"` (default `<ul>`/`<li>`) e contenuto in `<article aria-label="...">` con descrizione completa parlata.
+- Desktop (≥sm): la `<li>` riceve `role="row"` e celle separate.
+
+Per gestire ruoli condizionali in React: sempre usare doppio markup già presente (`hidden sm:contents` / `sm:hidden`), applicare `role` appropriato a ciascun blocco.
+
+#### H. Test accessibilità
+
+Aggiungo test in `src/components/home/TonightTvList.test.tsx` (nuovo file) con `@testing-library/react` e `vi`:
+
+- Verifica presenza `role="table"` con `aria-label`.
+- Verifica 6 `role="columnheader"` con testo corretto.
+- Verifica almeno una `role="row"` con celle `role="cell"`.
+- Verifica `aria-rowcount`, `aria-colcount` calcolati.
+- Verifica `aria-label` su cella durata in formato parlato italiano.
+
+Mock di `useQueries` per fornire dati TV deterministici (riusare struttura `TvFamilyPayload` da `STREAMING_FAMILIES`).
 
 ### File modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `src/components/home/TonightTvList.tsx` | EDIT | Trasformare `<ul>` desktop in CSS Grid con `grid-template-columns` definite per `sm:` e `lg:`. `<li>` programma diventa `sm:contents`. 6 celle figlie con padding/allineamento dedicato (genere + durata `justify-end`). Divider famiglia e label famiglia tablet con `sm:col-span-full`. Rimossa colonna famiglia "fantasma" trasparente. Verifica preliminare lunghezza max generi in `genreUtils.ts` per fissare colonna genere. |
-| `changelog.md` | EDIT | `### Changed`: "Stasera in TV: layout desktop/tablet ricostruito con CSS Grid condivisa, genere e durata allineati in colonne verticali stabili su tutte le righe; tabular-nums per durate; mobile invariato." |
+| `src/components/home/TonightTvList.tsx` | EDIT | Aggiunta `role="table"`, `aria-label`, `aria-rowcount`, `aria-colcount` su `<ul>`. Inserita riga sr-only di 6 `role="columnheader"`. Su `<li>` desktop: `role="row"` + `aria-rowindex`. Su celle desktop: `role="cell"` o `role="rowheader"` (cella famiglia prima riga gruppo) + `aria-colindex` + `aria-label` parlati. Su divider famiglia: `aria-hidden="true"` sulla barra, `role="rowheader"` sulla cella label. Su mobile blocco stacked: `<article>` interno con `aria-label` aggregato (ora, canale, titolo, genere, durata). Live region su paginazione status. Preservati `data-testid` esistenti. |
+| `src/lib/dateUtils.ts` | EDIT | Aggiunta funzione `formatDurationSpoken(minutes: number): string` che ritorna `"1 ora e 55 minuti"`, `"45 minuti"`, `"2 ore"`, gestendo singolare/plurale italiano. |
+| `src/lib/dateUtils.test.ts` | EDIT | Test per `formatDurationSpoken`: 0, 1, 60, 65, 90, 120, 125. |
+| `src/components/home/TonightTvList.test.tsx` | NEW | Test accessibilità: ruoli, columnheader, rowcount, aria-label durata parlata. Mock `useQueries` con dataset minimo deterministico. |
+| `changelog.md` | EDIT | `### Added`: "Accessibilità Stasera in TV: ruoli ARIA grid completi, etichette parlate per durata e intestazioni di colonna invisibili per screen reader. Indice riga/colonna esposto per navigazione assistita. Compatibile NVDA, JAWS, VoiceOver." |
+
+### Cosa NON cambia
+
+- Layout visivo desktop/tablet/mobile.
+- Logica dati, paginazione, filtri famiglia, divider colorato.
+- `inferGenre`, `STREAMING_FAMILIES`, hook React Query.
+- `data-testid` esistenti (`family-divider`, `family-label-mobile`).
+- Comportamento click, hover, tooltip nativo `title`.
+
+### Rischi e mitigazioni
+
+- **`display: contents` + ARIA roles su Safari < 16**: alcune versioni vecchie ignoravano i ruoli ereditati. Mitigazione: applico `role` esplicito sul `<li>` (non sul wrapper invisibile), così Safari lo rispetta. Test manuale su VoiceOver in fase di QA.
+- **Doppio annuncio "RAI"** se sia divider che cella famiglia hanno label: mitigazione → divider barra `aria-hidden="true"`, label famiglia mobile `role="rowheader"` su <lg, su lg solo cella prima colonna ha `role="rowheader"`.
+- **Paginazione e `aria-rowindex`**: alcuni screen reader non aggiornano in modo fluido. Aggiungo live region come fallback annuncio cambio pagina.
+- **Test `useQueries` mock**: richiede setup React Query `QueryClientProvider` nel test. Riuso pattern già esistente in altri test? Verifico `src/test/setup.ts` durante implementazione; se assente, aggiungo wrapper minimo nel test stesso.
 
 ### Validazione
 
-1. Viewport 1702px (desktop): aprire `/`, verificare che genere e durata di tutte le righe della scheda "Stasera in TV" cadano esattamente su due X verticali. Confronto visivo con screenshot allegato.
-2. Viewport 768px (tablet): label famiglia full-width sopra le righe del gruppo, 5 colonne allineate.
-3. Viewport 375px (mobile): layout 2 righe stacked invariato.
-4. Hover titolo lungo: tooltip nativo mostra titolo completo.
-5. Filtri famiglia, paginazione, divider colorato: invariati.
-6. `npm run lint`, `npm run build`, `npm run check:italian` invariati.
+1. `npm run build` + `npm run lint` invariati.
+2. `npm run test` include nuovo file test, tutti passano.
+3. Ispezione manuale DevTools Accessibility tree:
+   - Tabella riconosciuta con label "Programmi in prima serata stasera".
+   - 6 colonne con header espliciti.
+   - Righe numerate, celle annotate con colindex.
+4. Lighthouse accessibility score: nessuna regressione (target ≥95).
+5. Test manuale VoiceOver (macOS) e NVDA (se disponibile): annuncio corretto "Riga 3 di 47, colonna 4 di 6, Titolo: Il Commissario Montalbano".
+6. `npm run check:italian` exit 0 (tutte le `aria-label` in italiano).
+7. Layout visivo invariato: confronto screenshot pre/post a 375/768/1280/1920 px.
 
 ### Checklist post-edit
 
-1. `<ul>` desktop usa `sm:grid` con `grid-template-columns`.
-2. `<li>` programma usa `sm:contents`.
-3. Chip genere e durata visibilmente allineati su colonne verticali (verifica con screenshot post-edit).
-4. Mobile invariato.
-5. `data-testid` preservati.
-6. `changelog.md` aggiornato.
-7. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
+1. `<ul>` ha `role="table"`, `aria-label`, `aria-rowcount`, `aria-colcount`.
+2. Riga sr-only di columnheader presente come prima riga del grid.
+3. Ogni `<li>` programma desktop ha `role="row"` + `aria-rowindex`.
+4. Ogni cella desktop ha `role="cell"` (o `rowheader` per famiglia) + `aria-colindex` + `aria-label` quando il contenuto non è auto-esplicativo.
+5. Mobile usa `<article aria-label>` aggregato.
+6. Helper `formatDurationSpoken` in italiano coperto da test.
+7. Test accessibilità nuovo passa.
+8. `changelog.md` aggiornato in `### Added`.
+9. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
