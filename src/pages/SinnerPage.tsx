@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
@@ -10,6 +11,7 @@ import PlayerHeader from "@/components/sinner/PlayerHeader";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getCurrentSinnerSeason } from "@/lib/currentSeason";
 import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useSportsData";
+import { tennisApi } from "@/lib/api/sportsApi";
 import { formatDateIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,6 +29,7 @@ const RESULTS_PAGE_SIZE = 4;
 export default function SinnerPage() {
   const season = getCurrentSinnerSeason();
   const [resultsPage, setResultsPage] = useState(1);
+  const queryClient = useQueryClient();
   const { data: playerInfo } = useSinnerInfo();
   const {
     data: results,
