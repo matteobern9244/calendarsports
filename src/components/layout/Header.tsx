@@ -72,7 +72,7 @@ export default function Header() {
           <img
             src="/logo-header.jpg"
             alt="Calendar Events"
-            className="h-10 md:h-14 w-auto rounded-md object-contain"
+            className="h-10 md:h-14 w-auto rounded-md object-contain dark:mix-blend-screen"
             width={2064}
             height={512}
             decoding="async"
