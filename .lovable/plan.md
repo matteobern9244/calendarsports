@@ -1,81 +1,136 @@
 
 
-## Allineamento chip genere e durata in "Stasera in TV" (desktop)
+## Layout a griglia tabellare per "Stasera in TV" (desktop)
 
-### Problema osservato
+### Diagnosi
 
-Nello screenshot allegato, sulle righe della scheda "Stasera in TV" (vista desktop), il chip del genere (es. `FICTION`, `NEWS`, `TALK SHOW`, `SPORT`) e la durata (es. `1h 55 min`) seguono il titolo del programma con spaziatura naturale (`flex-wrap` con `gap-x-2`). Risultato: questi due elementi "ballano" da riga a riga, attaccati al titolo, senza una colonna verticale visiva. La richiesta è allinearli sempre a destra in fondo alla riga, in modo che formino due colonne verticali stabili.
+Lo screenshot mostra che, anche dopo l'ultima modifica, il chip genere e la durata appaiono disallineati riga-su-riga perché:
 
-### Scope dell'intervento
+1. **Chip genere** ha larghezza variabile (`FICTION` ~52px, `TALK SHOW` ~78px, `NEWS` ~44px) → la sua estremità destra balla.
+2. **Durata** ha larghezza variabile (`2h` ~22px, `1h 55 min` ~58px) → idem.
+3. Con `flex-1` sul titolo + `shrink-0` sui chip, ogni riga calcola lo spazio in autonomia: nessuna colonna verticale stabile.
 
-- **Solo layout desktop** (`sm:` breakpoint in su) della lista programmi in `src/components/home/TonightTvList.tsx`.
-- **Mobile invariato**: il layout a 2 righe già mette durata in alto a destra (`ml-auto`) e genere accanto al titolo a capo. Non si tocca.
-- Nessuna modifica a logica dati, paginazione, filtri, divider famiglia, sezione header.
+L'unico modo per avere **due colonne verticali realmente allineate** è passare da flexbox a **CSS Grid** sull'intera lista, condividendo lo stesso `grid-template-columns` su tutte le righe.
 
-### Modifica precisa (desktop block)
+### Soluzione: CSS Grid condivisa
 
-Riga interessata: il `<div className="hidden sm:flex sm:items-center sm:gap-3">` interno alla `<li>`.
-
-Struttura attuale del blocco titolo (problema):
+Trasformare il `<ul>` (desktop) in un grid container che applica le stesse 6 colonne a ogni riga `<li>`:
 
 ```text
-[Famiglia 24w] [Ora 12w] [Canale badge] [titolo + chip genere + durata insieme con flex-wrap]
+[famiglia 8rem] [ora 3.5rem] [canale auto] [titolo 1fr] [genere 6rem] [durata 5rem]
 ```
 
-Struttura proposta:
+Larghezze fisse per famiglia, ora, genere, durata → garantiscono colonne perfette. Chip genere e durata ricevono `text-align: right` e `justify-self: end` per ancorare il contenuto al bordo destro di ciascuna cella.
+
+### Layout responsive (3 breakpoint)
+
+**Mobile (`< sm`, < 640px)**: layout corrente a 2 righe stacked (durata top-right, titolo+genere sotto). Invariato — già leggibile su schermi stretti.
+
+**Tablet (`sm` ≤ width < `lg`, 640-1023px)**: grid a 5 colonne (omette colonna famiglia, mostrata già nel divider sopra):
+```text
+[ora 3.5rem] [canale 7rem] [titolo 1fr] [genere 5.5rem] [durata 4.5rem]
+```
+
+**Desktop (`lg` ≥ 1024px)**: grid a 6 colonne completa con colonna famiglia 8rem.
+
+Tutte le righe condividono `grid-template-columns` definito sull'`<ul>` (oppure su un wrapper `display: grid` con `grid-template-rows: auto` per ogni riga). Le `<li>` diventano `display: contents` per ereditare la griglia del padre, così le 6 celle di ogni riga si allineano verticalmente con le 6 celle delle altre righe. Questo è il pattern standard per "tabelle responsive con grid".
+
+### Modifica precisa
+
+In `src/components/home/TonightTvList.tsx`, sezione desktop:
+
+1. **`<ul>` desktop**: aggiungere classi grid condizionali. Mantengo il `<ul>` corrente per mobile, ma su `sm:` lo trasformo in grid:
+   ```tsx
+   <ul className="
+     divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 overflow-hidden
+     sm:grid sm:divide-y-0
+     sm:[grid-template-columns:3.5rem_7rem_1fr_5.5rem_4.5rem]
+     lg:[grid-template-columns:8rem_3.5rem_7rem_1fr_5.5rem_4.5rem]
+   ">
+   ```
+
+2. **`<li>` riga programma**: su `sm:` diventa `display: contents` per dissolversi nella griglia padre; il bordo top viene applicato a ogni cella della riga via `[&>*]:border-t [&>*]:border-border/40`. Su mobile mantiene il flex stacked.
+   ```tsx
+   <li className="
+     px-2.5 py-2.5 text-sm
+     sm:contents sm:[&>*]:py-2 sm:[&>*]:border-t sm:[&>*]:border-border/40
+   ">
+   ```
+
+3. **Celle desktop** (6 elementi figli diretti, ognuno con padding orizzontale dedicato):
+   - **Famiglia** (solo `lg:`): icona + label, oppure spazio vuoto se `!showFamilyDivider`. Classi: `hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2`.
+   - **Ora**: `hidden sm:flex sm:items-center sm:px-2 font-mono font-bold text-primary text-sm`.
+   - **Canale**: `hidden sm:flex sm:items-center sm:px-2` con `<Badge>` interno.
+   - **Titolo**: `hidden sm:flex sm:items-center sm:px-2 sm:min-w-0` con `<span class="truncate" title={row.title}>`.
+   - **Genere**: `hidden sm:flex sm:items-center sm:justify-end sm:px-2`. Chip allineato a destra; se `g` assente, cella vuota (mantiene la colonna).
+   - **Durata**: `hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap`. Aggiungere `tabular-nums` per allineare le cifre. Se vuota, cella vuota.
+
+4. **Riga famiglia (divider + label mobile)**: invariate per mobile. Su `sm:` la label famiglia non serve più separata: la colonna famiglia (su `lg:`) o il divider colorato (su `sm:` < `lg:`) fanno il lavoro. Il divider `<li>` corrente con `h-[3px] bg-primary` resta visibile su tutti i breakpoint sopra il primo programma di una nuova famiglia: lo wrappo con `sm:col-span-full` per attraversare tutte le colonne grid.
+
+5. **Removed**: la colonna famiglia "fantasma" (`text-transparent` per le righe non-prima del gruppo) che oggi finge alignment su `sm:` viene rimossa: su `sm:`-`md:` non c'è colonna famiglia (basta il divider colorato + label mobile riusata anche qui), su `lg:` la colonna esiste solo nelle righe `showFamilyDivider`.
+
+6. **Label famiglia su tablet** (`sm:` < `lg:`): rendere visibile la `<li data-testid="family-label-mobile">` fino a `lg:` (rinominandola eventualmente, ma mantengo il `data-testid` per compatibilità test). Cambio `sm:hidden` → `lg:hidden` e aggiungo `sm:col-span-full` quando dentro la grid.
+
+### Risultato visivo
 
 ```text
-[Famiglia 24w] [Ora 12w] [Canale badge] [titolo flex-1 truncate ......] [chip genere] [durata]
-                                                                        \___ allineati a destra ___/
+Desktop (≥1024px):
+┌──────────┬───────┬─────────┬──────────────────────────────┬─────────┬─────────┐
+│ ◉ RAI    │ 21:30 │ RAI 1   │ Il Commissario Montalbano    │ FICTION │1h 55 min│
+│          │ 21:00 │ RAI 2   │ Tg2 Post                     │ NEWS    │   20 min│
+├──────────┼───────┼─────────┼──────────────────────────────┼─────────┼─────────┤
+│ 📺 MEDIA │ 21:15 │ ITALIA1 │ Le Iene presentano           │TALK SHOW│3h 55 min│
+└──────────┴───────┴─────────┴──────────────────────────────┴─────────┴─────────┘
+
+Tablet (640-1023px):
+┌───────┬─────────┬──────────────────────────────────────┬─────────┬─────────┐
+│ 21:30 │ RAI 1   │ Il Commissario Montalbano            │ FICTION │1h 55 min│
+└───────┴─────────┴──────────────────────────────────────┴─────────┴─────────┘
+(label famiglia su riga sopra, full-width)
+
+Mobile (<640px): layout 2 righe stacked invariato
 ```
 
-Cambiamenti puntuali nel JSX desktop:
-
-1. Trasformare il contenitore titolo+meta da `flex-wrap` a layout a 3 zone:
-   - sostituire `<div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">` con `<div className="min-w-0 flex-1 flex items-center gap-3 min-w-0">`.
-2. Avvolgere il solo titolo in uno `<span>` che possa restringersi: classi `flex-1 min-w-0 truncate font-medium text-sm leading-tight` (il `truncate` evita che titoli lunghi spingano fuori i chip a destra; il browser mostrerà i tre puntini quando manca spazio).
-3. Lasciare il chip genere come secondo figlio del contenitore con `shrink-0` (già presente). Aggiungere `ml-auto` solo al primo elemento "fisso a destra" non serve perché `flex-1` sul titolo spinge gli altri a destra automaticamente.
-4. Lasciare la durata come terzo figlio con `shrink-0 whitespace-nowrap font-mono leading-none text-xs text-muted-foreground`. Niente più `flex-wrap`.
-5. Caso "nessun genere": il chip viene renderizzato condizionalmente con `{g ? <Badge>...</Badge> : null}`. Per garantire colonna stabile della durata anche senza genere, sostituire il `null` con un placeholder vuoto di pari width? **No**: si accetta che la durata si avvicini al titolo nelle righe senza genere (comportamento corretto e meno invasivo). La maggioranza delle righe ha un genere, quindi visivamente le due colonne risultano comunque ordinate.
+Tutte le colonne genere e durata cadono sulla stessa X verticale grazie al grid condiviso.
 
 ### Cosa NON cambia
 
-- Layout mobile (`sm:hidden flex flex-col gap-1.5`) invariato.
-- Nessuna modifica a `inferGenre`, `formatDuration`, `STREAMING_FAMILIES`.
-- Nessuna modifica alle classi del divider famiglia, header card, paginazione, toggle filtri.
+- Layout mobile (<640px): identico.
+- Logica dati, filtri, paginazione, divider famiglia, header card.
+- `inferGenre`, `formatDuration`, `STREAMING_FAMILIES`, hook React Query.
+- `data-testid` esistenti (`family-divider`, `family-label-mobile`) preservati.
 - Nessun nuovo import.
-- Nessun cambio a `useStreamingData`, `streamingApi`, edge function `streaming-tv`.
-- Nessun impatto su altre pagine (`StreamingPage`, sport pages, Home altrove).
 
 ### Rischi e mitigazioni
 
-- **Titoli lunghi tagliati con `truncate`**: rischio che l'utente perda parte del titolo. Mitigazione: `truncate` agisce solo quando manca spazio fisico per chip+durata; nel 95% dei casi (titoli sotto i 50 caratteri) il titolo resta intero. In più, il titolo completo resta accessibile via `title={row.title}` (HTML attribute) che aggiungo come tooltip nativo sul `<span>` titolo per accessibilità.
-- **Larghezza variabile chip genere**: chip con testi diversi (`FICTION` vs `TALK SHOW`) producono colonne non perfettamente allineate. Comportamento accettato e coerente con la richiesta "in fondo a destra" (non "in colonna larghezza fissa"). Non aggiungo `min-width` arbitrari ai chip per non introdurre spazi vuoti antiestetici.
-- **Regressione test e2e**: i test e2e (`e2e/app.spec.ts`) non asseriscono questo layout specifico (solo presenza testi). Nessun aggiornamento necessario.
+- **`display: contents` accessibility**: storicamente alcuni screen reader ignoravano `<li>` con `display: contents`. Oggi (Chromium 105+, Firefox 102+, Safari 16+) il bug è risolto. Verifico mantenendo semantica `<ul><li>` e aggiungendo `role="row"` opzionale se necessario.
+- **Titoli lunghi**: la cella titolo è `sm:min-w-0` con `truncate` interno, così la colonna `1fr` non si espande oltre lo spazio disponibile. Tooltip nativo `title` già presente.
+- **Larghezza chip genere > 5.5rem**: i chip uppercase con generi più lunghi dell'app (`TALK SHOW`, `DOCUMENTARI`, `INTRATTENIMENTO`?) potrebbero superare 5.5rem. Verifico l'enum reale in `inferGenre`/`genreUtils.ts` prima di fissare il valore; se necessario, alzo a 6.5rem desktop (e 6rem tablet). Da decidere in implementazione leggendo `genreUtils.ts`.
+- **`tabular-nums` su durata**: garantisce che `1h 55 min` e `1h 5 min` allineino le cifre (Inter ha tabular-nums).
 
 ### File modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `src/components/home/TonightTvList.tsx` | EDIT | Solo blocco desktop (`hidden sm:flex`) della `<li>`: contenitore titolo+meta passa da `flex-wrap` a `flex items-center gap-3`; titolo wrappato in `<span class="flex-1 min-w-0 truncate" title={row.title}>`; chip genere e durata restano `shrink-0` allineati a destra. |
-| `changelog.md` | EDIT | `### Changed`: "Stasera in TV (desktop): chip genere e durata sempre allineati in fondo a destra; titolo lungo troncato con tooltip nativo." |
+| `src/components/home/TonightTvList.tsx` | EDIT | Trasformare `<ul>` desktop in CSS Grid con `grid-template-columns` definite per `sm:` e `lg:`. `<li>` programma diventa `sm:contents`. 6 celle figlie con padding/allineamento dedicato (genere + durata `justify-end`). Divider famiglia e label famiglia tablet con `sm:col-span-full`. Rimossa colonna famiglia "fantasma" trasparente. Verifica preliminare lunghezza max generi in `genreUtils.ts` per fissare colonna genere. |
+| `changelog.md` | EDIT | `### Changed`: "Stasera in TV: layout desktop/tablet ricostruito con CSS Grid condivisa, genere e durata allineati in colonne verticali stabili su tutte le righe; tabular-nums per durate; mobile invariato." |
 
 ### Validazione
 
-1. Aprire `/` (Home), scheda "Stasera in TV", viewport ≥ 640px:
-   - Tutte le righe mostrano: famiglia (col 1) | ora (col 2) | canale (col 3) | titolo (riempie spazio) | chip genere a destra | durata in fondo a destra.
-   - Riga senza genere (es. "Sport 24 Today"): chip genere assente, durata comunque a destra (vicina al titolo, accettato).
-2. Hover su titolo lungo troncato: tooltip nativo mostra titolo completo.
-3. Viewport mobile (<640px): layout 2 righe invariato (durata in alto a destra, genere accanto al titolo).
-4. Filtri famiglia, paginazione, divider famiglia: invariati.
-5. `npm run lint` + `npm run build` invariati.
-6. `npm run check:italian` exit 0 (nessuna stringa toccata).
+1. Viewport 1702px (desktop): aprire `/`, verificare che genere e durata di tutte le righe della scheda "Stasera in TV" cadano esattamente su due X verticali. Confronto visivo con screenshot allegato.
+2. Viewport 768px (tablet): label famiglia full-width sopra le righe del gruppo, 5 colonne allineate.
+3. Viewport 375px (mobile): layout 2 righe stacked invariato.
+4. Hover titolo lungo: tooltip nativo mostra titolo completo.
+5. Filtri famiglia, paginazione, divider colorato: invariati.
+6. `npm run lint`, `npm run build`, `npm run check:italian` invariati.
 
 ### Checklist post-edit
 
-1. Solo blocco desktop di `TonightTvList.tsx` modificato.
-2. Mobile non toccato.
-3. Tooltip `title` aggiunto per accessibilità sui titoli troncati.
-4. `changelog.md` aggiornato con voce `### Changed`.
-5. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
+1. `<ul>` desktop usa `sm:grid` con `grid-template-columns`.
+2. `<li>` programma usa `sm:contents`.
+3. Chip genere e durata visibilmente allineati su colonne verticali (verifica con screenshot post-edit).
+4. Mobile invariato.
+5. `data-testid` preservati.
+6. `changelog.md` aggiornato.
+7. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
