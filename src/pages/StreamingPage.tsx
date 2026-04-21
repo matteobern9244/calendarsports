@@ -383,6 +383,19 @@ export default function StreamingPage() {
                   {k.label}
                 </Button>
               ))}
+              <Button
+                size="sm"
+                variant={onlyUpcoming ? "default" : "outline"}
+                onClick={() => setOnlyUpcoming((v) => !v)}
+                aria-pressed={onlyUpcoming}
+                className={cn(
+                  "rounded-full font-heading uppercase tracking-wider text-xs gap-1",
+                  onlyUpcoming && "shadow-md",
+                )}
+              >
+                <CalendarClock className="h-3.5 w-3.5" />
+                Solo in arrivo
+              </Button>
             </div>
           </div>
 
