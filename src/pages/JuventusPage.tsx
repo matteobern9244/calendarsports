@@ -482,6 +482,10 @@ export default function JuventusPage() {
             );
           })()}
         </TabsContent>
+
+        <TabsContent value="highlights">
+          <HighlightsSection sport="juventus" accentVar="gold" />
+        </TabsContent>
       </Tabs>
     </div>
   );

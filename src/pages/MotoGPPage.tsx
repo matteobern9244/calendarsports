@@ -234,6 +234,10 @@ export default function MotoGPPage() {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="highlights">
+          <HighlightsSection sport="motogp" accentVar="gold" />
+        </TabsContent>
       </Tabs>
     </div>
   );

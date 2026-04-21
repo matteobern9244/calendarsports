@@ -184,6 +184,10 @@ export default function Formula1Page() {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="highlights">
+          <HighlightsSection sport="f1" accentVar="gold" />
+        </TabsContent>
       </Tabs>
     </div>
   );
