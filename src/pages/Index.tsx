@@ -14,6 +14,8 @@ import TonightTvList from "@/components/home/TonightTvList";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { cn } from "@/lib/utils";
 import TimezoneBadge from "@/components/common/TimezoneBadge";
+import OfflineFallback from "@/components/common/OfflineFallback";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 interface UpcomingEvent {
   sport: string;
@@ -33,6 +35,7 @@ const container = {
 
 export default function HomePage() {
   const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
+  const { isOnline } = useOnlineStatus();
   const lastSyncLabel = useMemo(() => {
     if (!lastSyncAt) return null;
     return new Intl.DateTimeFormat("it-IT", {
@@ -43,10 +46,10 @@ export default function HomePage() {
     }).format(lastSyncAt);
   }, [lastSyncAt]);
 
-  const { data: f1Data, isLoading: f1Loading } = useF1NextRace();
-  const { data: juveCalendar, isLoading: juveLoading } = useJuventusCalendar(2025);
-  const { data: sinnerNext, isLoading: sinnerLoading } = useSinnerNextEvent();
-  const { data: motogpNext, isLoading: motogpLoading } = useMotoGPNextEvent();
+  const { data: f1Data, isLoading: f1Loading, error: f1Error, refetch: f1Refetch } = useF1NextRace();
+  const { data: juveCalendar, isLoading: juveLoading, error: juveError, refetch: juveRefetch } = useJuventusCalendar(2025);
+  const { data: sinnerNext, isLoading: sinnerLoading, error: sinnerError, refetch: sinnerRefetch } = useSinnerNextEvent();
+  const { data: motogpNext, isLoading: motogpLoading, error: motogpError, refetch: motogpRefetch } = useMotoGPNextEvent();
 
   const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
 
@@ -114,6 +117,28 @@ export default function HomePage() {
 
     return upcoming.sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
   }, [f1Data, juveCalendar, sinnerNext, motogpNext]);
+
+  // Fallback offline: nessun dato in cache da nessuna fonte e siamo offline
+  if (
+    !isOnline &&
+    f1Error && !f1Data &&
+    juveError && !juveCalendar &&
+    sinnerError && !sinnerNext &&
+    motogpError && !motogpNext
+  ) {
+    return (
+      <div className="container py-8 sm:py-12">
+        <OfflineFallback
+          onRetry={() => {
+            f1Refetch();
+            juveRefetch();
+            sinnerRefetch();
+            motogpRefetch();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-4 sm:py-6 space-y-8">

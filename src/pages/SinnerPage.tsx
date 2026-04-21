@@ -5,6 +5,8 @@ import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import TimezoneBadge from "@/components/common/TimezoneBadge";
+import OfflineFallback from "@/components/common/OfflineFallback";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useSportsData";
 import { formatDateIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
@@ -16,6 +18,15 @@ export default function SinnerPage() {
   const { data: playerInfo } = useSinnerInfo();
   const { data: results, isLoading: resLoading, error: resError, refetch: resRefetch } = useSinnerResults(seasons.sinner);
   const { data: schedule, isLoading: schLoading, error: schError, refetch: schRefetch } = useSinnerSchedule(seasons.sinner);
+  const { isOnline } = useOnlineStatus();
+
+  if (!isOnline && resError && !results && schError && !schedule && !playerInfo) {
+    return (
+      <div className="container py-8 sm:py-12">
+        <OfflineFallback onRetry={() => { resRefetch(); schRefetch(); }} />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 sm:py-12">

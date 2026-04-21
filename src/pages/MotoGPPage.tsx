@@ -5,6 +5,8 @@ import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import TimezoneBadge from "@/components/common/TimezoneBadge";
+import OfflineFallback from "@/components/common/OfflineFallback";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useMotoGPCalendar, useMotoGPStandings, useMotoGPConstructorStandings } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
@@ -26,6 +28,15 @@ export default function MotoGPPage() {
   const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useMotoGPCalendar(seasons.motogp);
   const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useMotoGPStandings(seasons.motogp);
   const { data: constructors, isLoading: csLoading, error: csError, refetch: csRefetch } = useMotoGPConstructorStandings(seasons.motogp);
+  const { isOnline } = useOnlineStatus();
+
+  if (!isOnline && calError && !calendar && stError && !standings && csError && !constructors) {
+    return (
+      <div className="container py-8 sm:py-12">
+        <OfflineFallback onRetry={() => { calRefetch(); stRefetch(); csRefetch(); }} />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 sm:py-12">
