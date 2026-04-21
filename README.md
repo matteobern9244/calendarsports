@@ -669,6 +669,29 @@ deve fare fallback a `index.html` per tutte le route applicative.
 Questo e' coerente anche con la documentazione Lovable sui deploy esterni dei
 progetti exportati.
 
+## Performance immagini
+
+Tutti gli asset binari in `public/` sono stati ricompressi (JPEG q85 progressive,
+PNG palette + zlib max). **Nessuna immagine viene mai sostituita o ridisegnata**:
+stessi pixel, stesse dimensioni, stesso aspetto visivo. Verifica QA: scarto
+medio RGB <3 su 128×128 sample (impercettibile a occhio).
+
+- `index.html` include `preconnect` per `flagcdn.com`, `i.ytimg.com`,
+  `image.tmdb.org` e l'host Supabase, e `preload` del logo header con
+  `fetchpriority=high` (LCP).
+- Tutti i tag `<img>` espongono `loading`, `decoding="async"` e `width`/`height`
+  espliciti per evitare CLS. LCP critici (logo header, foto Sinner) usano
+  `loading="eager"` + `fetchpriority="high"`.
+- Le thumbnail YouTube degli highlights sono richieste come `mqdefault.jpg`
+  (320×180) con `srcSet` 2x → `hqdefault.jpg` per display retina.
+- I poster TMDB sono richiesti come `w342` (sufficiente per card e dialog,
+  anche su retina). `normalizeItem` in `streaming-releases` normalizza
+  eventuali `w500`/`w780`/`original` su `w342` come difesa contro regressioni.
+
+Per ricomprimere nuovi asset aggiunti al repo, usare lo stesso criterio:
+JPEG quality 85 progressive con strip metadata, PNG con palette adattiva +
+`compress_level=9`, e verificare che le dimensioni in pixel restino invariate.
+
 ## Stato attuale e limiti noti
 
 - `README.md` originario generato da Lovable era incompleto.
