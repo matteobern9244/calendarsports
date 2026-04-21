@@ -18,6 +18,10 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Juventus – rimossa nota "Dati reali da Sky Sport Italia"** dal sottotitolo
+  della pagina `/juventus`: il `subtitle` del `SectionHeader` non viene più
+  mostrato. Fonte dati invariata lato edge function `sports-football`
+  (Sky Sport Italia + Lega Serie A). Versione applicativa invariata `2.1.0`.
 - **Streaming – rimossa nota informativa fonte palinsesto TV** nel tab
   `/streaming?tab=tv`: il paragrafo che indicava
   `staseraintv.com` come fonte di scraping non viene più mostrato in UI.
