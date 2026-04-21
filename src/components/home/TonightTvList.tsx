@@ -44,6 +44,15 @@ interface TvHighlight {
   durationMin: number;
   hourRome: number;
   minuteRome: number;
+  /**
+   * Minuti totali dalla mezzanotte Europe/Rome dell'orario di fine
+   * programma. Per programmi che attraversano la mezzanotte (es. start
+   * 23:30, end 01:15) viene normalizzato aggiungendo 24*60 in modo che
+   * `endMinutesFromMidnight > startMinutes` sia sempre vero. Cosi' il
+   * test di overlap con la finestra di prima serata e' un semplice
+   * confronto numerico, senza casi speciali per il wrap.
+   */
+  endMinutesFromMidnight: number;
   title: string;
   genre?: string;
 }
@@ -102,6 +111,17 @@ export default function TonightTvList() {
           const [hStr, mStr] = hhmm.split(":");
           const endMs = p.end ? new Date(p.end).getTime() : d.getTime() + 30 * 60 * 1000;
           const durationMin = Math.max(0, Math.round((endMs - d.getTime()) / 60000));
+          const endHHMM = timeFmt.format(new Date(endMs));
+          const [endHStr, endMStr] = endHHMM.split(":");
+          const startMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
+          let endMinutesFromMidnight = parseInt(endHStr, 10) * 60 + parseInt(endMStr, 10);
+          // Normalizza il wrap dopo mezzanotte: se la fine cade lo stesso
+          // giorno o prima dell'inizio (es. start 23:30, end 01:15)
+          // aggiungiamo 24h in modo che il confronto con la finestra di
+          // prima serata resti monotono.
+          if (endMinutesFromMidnight <= startMinutes) {
+            endMinutesFromMidnight += 24 * 60;
+          }
           rows.push({
             family: fam,
             channel: ch.name,
@@ -111,6 +131,7 @@ export default function TonightTvList() {
             durationMin,
             hourRome: parseInt(hStr, 10),
             minuteRome: parseInt(mStr, 10),
+            endMinutesFromMidnight,
             title: p.title,
             genre: p.genre,
           });
@@ -131,42 +152,70 @@ export default function TonightTvList() {
   }, []);
 
   const tonightHighlights = useMemo(() => {
-    // Prima serata italiana: 21:00 - 22:59 Europe/Rome. I kickoff anticipati
-    // (20:30/20:45) restano esclusi: per quelli c'e' la sezione Streaming.
-    const inPrimeWindow = (h: TvHighlight) => {
-      const minutes = h.hourRome * 60 + h.minuteRome;
+    // Prima serata italiana: finestra [21:00, 23:00) Europe/Rome.
+    // Algoritmo intelligente: un programma e' rilevante se il suo
+    // intervallo [start, end) si interseca con la finestra di prima
+    // serata. Cosi' un kickoff anticipato lungo (es. Coppa Italia
+    // 20:40 -> 22:50) resta visibile perche' attraversa la fascia,
+    // mentre programmi che iniziano alle 23:00 o dopo, o che
+    // finiscono entro le 21:00, vengono esclusi.
+    const overlapsPrimeWindow = (h: TvHighlight) => {
+      const startMin = h.hourRome * 60 + h.minuteRome;
       return (
-        minutes >= PRIME_TIME_START_MIN &&
-        minutes < PRIME_TIME_END_EXCLUSIVE_MIN
+        startMin < PRIME_TIME_END_EXCLUSIVE_MIN &&
+        h.endMinutesFromMidnight > PRIME_TIME_START_MIN
       );
+    };
+    // Minuti di sovrapposizione effettiva con la fascia di prima serata.
+    // Usato come criterio principale per scegliere il "main program" di
+    // ciascun canale: vince chi copre piu' minuti della fascia.
+    const overlapMinutes = (h: TvHighlight) => {
+      const startMin = h.hourRome * 60 + h.minuteRome;
+      const overlapStart = Math.max(startMin, PRIME_TIME_START_MIN);
+      const overlapEnd = Math.min(h.endMinutesFromMidnight, PRIME_TIME_END_EXCLUSIVE_MIN);
+      return Math.max(0, overlapEnd - overlapStart);
     };
     // Soglia 40 min: con la finestra piu' larga servono criteri piu' stretti
     // per il "vero" programma di prima serata. Calcio 100+, fiction 90+,
     // film 100+, news show 40+. Tg regionali (~30 min) esclusi.
     const MIN_DURATION = 40;
-    const isMainProgram = (h: TvHighlight) => h.durationMin >= MIN_DURATION;
 
     const pool = familyFilter === "all"
       ? allHighlights
       : allHighlights.filter((r) => r.family === familyFilter);
 
-    // Per ogni canale: preferisci il primo programma "vero" (>=20 min) in
-    // prima serata. Fallback al primo qualsiasi se nessun main program.
+    // Per ogni canale: scegli il programma che massimizza l'overlap con
+    // la fascia di prima serata. Tie-break: durata totale (preferisce il
+    // "main", scartando TG/promo brevi anche a parita' di overlap),
+    // poi startMs piu' basso per stabilita'.
     const byChannel = new Map<string, TvHighlight>();
     for (const h of pool) {
-      if (!inPrimeWindow(h)) continue;
+      if (!overlapsPrimeWindow(h)) continue;
       const key = `${h.family}|${h.channel}`;
       const existing = byChannel.get(key);
       if (!existing) {
         byChannel.set(key, h);
         continue;
       }
-      const hMain = isMainProgram(h);
-      const existingMain = isMainProgram(existing);
-      if (hMain && !existingMain) byChannel.set(key, h);
-      else if (hMain === existingMain && h.startMs < existing.startMs) {
-        byChannel.set(key, h);
+      const hOverlap = overlapMinutes(h);
+      const existingOverlap = overlapMinutes(existing);
+      if (hOverlap !== existingOverlap) {
+        if (hOverlap > existingOverlap) byChannel.set(key, h);
+        continue;
       }
+      // Stesso overlap: preferisci la durata maggiore (vero "main"
+      // program), con MIN_DURATION come soglia minima preferenziale.
+      const hIsMain = h.durationMin >= MIN_DURATION;
+      const existingIsMain = existing.durationMin >= MIN_DURATION;
+      if (hIsMain !== existingIsMain) {
+        if (hIsMain) byChannel.set(key, h);
+        continue;
+      }
+      if (h.durationMin !== existing.durationMin) {
+        if (h.durationMin > existing.durationMin) byChannel.set(key, h);
+        continue;
+      }
+      if (h.startMs < existing.startMs) byChannel.set(key, h);
     }
 
     return Array.from(byChannel.values())
@@ -214,7 +263,7 @@ export default function TonightTvList() {
                 <span className="text-gold-gradient">Stasera in TV</span>
               </h2>
               <p className="text-xs text-muted-foreground mt-1">
-                Prima serata (dalle 21:00) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
+                Prima serata (21:00 - 23:00) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
               </p>
             </div>
           </div>
