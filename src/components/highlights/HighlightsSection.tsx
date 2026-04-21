@@ -4,7 +4,7 @@ import { useHighlights } from "@/hooks/useSportsData";
 import type { HighlightSport } from "@/lib/api/sportsApi";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
-import EmptyState from "@/components/common/EmptyState";
+import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import HighlightCard, { type HighlightItem } from "./HighlightCard";
 
 interface HighlightsSectionProps {
@@ -13,6 +13,12 @@ interface HighlightsSectionProps {
   accentVar?: string;
   limit?: number;
 }
+
+const SPORT_LABELS: Record<HighlightSport, string> = {
+  juventus: "Juventus",
+  f1: "Formula 1",
+  motogp: "MotoGP",
+};
 
 export default function HighlightsSection({
   sport,
@@ -31,6 +37,7 @@ export default function HighlightsSection({
     motogp: "https://www.youtube.com/playlist?list=PLMgcIchslSqgqxtkUg4iiqc1UL8u8uFey",
   };
   const playlistUrl = PLAYLIST_URLS[sport];
+  const sportLabel = SPORT_LABELS[sport];
 
   return (
     <section aria-label="Highlights video">
@@ -59,7 +66,13 @@ export default function HighlightsSection({
         />
       )}
       {!isLoading && !error && items.length === 0 && (
-        <EmptyState message="Nessun highlight disponibile al momento." />
+        <UnavailableExternalSource
+          title={`Highlights ${sportLabel}`}
+          description={`I migliori momenti di ${sportLabel} non sono ancora disponibili nella nostra raccolta. Apri la playlist ufficiale YouTube qui sotto per guardare subito le clip più recenti, le sintesi delle gare e i momenti salienti della stagione.`}
+          externalLink={playlistUrl}
+          externalLabel="Guarda playlist su YouTube"
+          ctaHint="Tocca qui per i video più recenti"
+        />
       )}
 
       {items.length > 0 && (
