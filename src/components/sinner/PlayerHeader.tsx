@@ -93,6 +93,8 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
               src={props.photoUrl}
               alt={`${props.name} — foto`}
               loading="eager"
+              decoding="async"
+              fetchPriority="high"
               width={128}
               height={160}
               onError={() => setImgError(true)}

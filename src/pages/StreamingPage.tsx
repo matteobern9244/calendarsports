@@ -453,6 +453,9 @@ export default function StreamingPage() {
                           src={item.poster}
                           alt={item.title}
                           loading="lazy"
+                          decoding="async"
+                          width={342}
+                          height={513}
                           className="w-full aspect-[2/3] object-cover"
                         />
                       ) : (

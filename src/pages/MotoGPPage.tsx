@@ -151,6 +151,9 @@ export default function MotoGPPage() {
                               alt={`Bandiera ${s.nationality.toUpperCase()}`}
                               className="h-3.5 w-5 object-cover rounded-sm flex-shrink-0 border border-border/40"
                               loading="lazy"
+                              decoding="async"
+                              width={20}
+                              height={14}
                               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                             />
                           )}

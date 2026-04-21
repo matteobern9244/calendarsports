@@ -57,7 +57,9 @@ function parseFeed(xml: string, limit: number): Highlight[] {
       publishedAt: published,
       source,
       url: `https://www.youtube.com/watch?v=${videoId}`,
-      thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      // mqdefault (320x180) ~12KB vs hqdefault (480x360) ~30KB.
+      // Il client serve hqdefault via srcSet 2x per display retina.
+      thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
     });
   }
   return out;
