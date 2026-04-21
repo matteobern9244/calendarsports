@@ -12,6 +12,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { User } from "lucide-react";
 
+const MOTOGP_CONSTRUCTOR_COLORS: Record<string, { border: string; bg: string }> = {
+  ducati:  { border: '#CC0000', bg: 'rgba(204, 0, 0, 0.08)' },
+  aprilia: { border: '#000000', bg: 'rgba(0, 0, 0, 0.06)' },
+  ktm:     { border: '#FF6600', bg: 'rgba(255, 102, 0, 0.10)' },
+  yamaha:  { border: '#003DA5', bg: 'rgba(0, 61, 165, 0.08)' },
+  honda:   { border: '#E40521', bg: 'rgba(228, 5, 33, 0.08)' },
+};
+
 export default function MotoGPPage() {
   const { seasons, setSeason } = useSeasonPreferences();
   const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useMotoGPCalendar(seasons.motogp);
