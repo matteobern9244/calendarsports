@@ -109,28 +109,34 @@ async function tmdbCredits(
 // Verifica che il titolo sia effettivamente disponibile in abbonamento (flatrate)
 // sul provider richiesto in regione IT al momento della query. TMDB Discover
 // puo' restituire match basati su finestre storiche: questa chiamata conferma
-// la disponibilita' corrente. Ritorna true se IT.flatrate include providerId.
-async function tmdbItemAvailableIT(
+// la disponibilita' corrente. Ritorna anche il deep link JustWatch (results.IT.link)
+// se presente, da usare come destinazione "Vai a {provider}" sul titolo specifico.
+async function tmdbItemProviderInfoIT(
   kind: "movie" | "tv",
   id: number,
   providerId: number,
   apiKey: string,
-): Promise<boolean> {
+): Promise<{ available: boolean; deepLink: string | null }> {
   try {
     const url = new URL(`${TMDB_BASE}/${kind}/${id}/watch/providers`);
     url.searchParams.set("api_key", apiKey);
     const res = await fetch(url.toString());
-    if (!res.ok) return false;
+    if (!res.ok) return { available: false, deepLink: null };
     const json = await res.json();
-    const flatrate = json?.results?.IT?.flatrate;
-    if (!Array.isArray(flatrate)) return false;
-    return flatrate.some((p: any) => p?.provider_id === providerId);
+    const itResults = json?.results?.IT;
+    const flatrate = itResults?.flatrate;
+    if (!Array.isArray(flatrate)) return { available: false, deepLink: null };
+    const available = flatrate.some((p: any) => p?.provider_id === providerId);
+    const deepLink = available && typeof itResults?.link === "string" && itResults.link.length > 0
+      ? itResults.link
+      : null;
+    return { available, deepLink };
   } catch (_err) {
-    return false;
+    return { available: false, deepLink: null };
   }
 }
 
-function normalizeItem(raw: any, kind: "movie" | "tv") {
+function normalizeItem(raw: any, kind: "movie" | "tv", deepLink: string | null = null) {
   const title = kind === "movie" ? raw.title : raw.name;
   const releaseDate = kind === "movie" ? raw.release_date : raw.first_air_date;
   return {
@@ -141,6 +147,7 @@ function normalizeItem(raw: any, kind: "movie" | "tv") {
     poster: raw.poster_path ? `${TMDB_IMG}${raw.poster_path}` : null,
     overview: raw.overview ?? "",
     voteAverage: typeof raw.vote_average === "number" ? raw.vote_average : null,
+    deepLink,
   };
 }
 
