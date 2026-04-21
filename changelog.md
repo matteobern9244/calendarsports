@@ -16,6 +16,32 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > policy o policy Lovable. La versione applicativa esposta dal footer e da
 > `src/lib/version.ts` resta `2.1.0`.
 
+### Fixed
+
+- **Stasera in TV: Canale 5 mancante in Home + titolo "Ev-Sp" non
+  arricchito**. Due fix paralleli, backend e frontend.
+  - `supabase/functions/streaming-tv/index.ts`: `extractRichTitles` ora
+    ritorna `RichTitle[] = { title, hh?, mm? }[]` catturando anche l'orario
+    quando un `HH:MM` precede entro 400 char il rich title nel blocco
+    "scheda". `enrichTitle(rawUpper, rich, hh?, mm?)` aggiunge due fallback
+    quando il match-by-prefix fallisce: (1) match per orario esatto
+    `HH:MM`; (2) match per placeholder generico (`EV-SP` → genere
+    Sport/Calcio/Tennis/..., `EV-CN`/`EV-FILM` → Film, `EV-TV` → Fiction)
+    selezionando l'unico rich title compatibile col genere atteso. Risolve
+    il caso reale di Canale 5 con `EV-SP` 20:40 + scheda "Calcio - Coppa
+    Italia - Inter Vs Como (Sport)" non collegati da timestamp prossimo.
+    Zero modifiche alla lista canali (`Canale 5` e tutti gli altri
+    preservati), zero cambi al payload `Program`/risposta JSON.
+  - `src/components/home/TonightTvList.tsx`: `inPrimeWindow` esteso da
+    `21:00 - 22:30` a `20:30 - 23:00` Europe/Rome per non escludere kickoff
+    sportivi (Coppa Italia 20:40, Champions/Serie A 20:45) e prime serate
+    anticipate. `MIN_DURATION` alzata da 20 a 40 minuti per filtrare
+    tg/promo/filler entrati con la finestra più larga (calcio 100+, fiction
+    90+, film 100+, news show 40+, tg regionali ~30 esclusi). Sottotitolo
+    scheda aggiornato a "Prima serata (dalle 20:30)". Filtro home
+    Mediaset (`canale-5` + `italia-1`) invariato. Versione applicativa
+    invariata a `2.1.0`.
+
 ### Added
 
 - **Accessibilità Stasera in TV**. In
