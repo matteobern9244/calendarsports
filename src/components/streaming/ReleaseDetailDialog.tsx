@@ -47,6 +47,7 @@ export default function ReleaseDetailDialog({
     ? `https://www.themoviedb.org/${item.type}/${item.tmdbId}`
     : "#";
   const providerHomepage = PROVIDER_HOMEPAGES[provider];
+  const targetUrl = item?.deepLink ?? providerHomepage;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -161,7 +162,7 @@ export default function ReleaseDetailDialog({
                 <div className="flex flex-col sm:flex-row gap-2 pt-2">
                   <Button asChild size="sm" className="gap-2">
                     <a
-                      href={providerHomepage}
+                      href={targetUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
