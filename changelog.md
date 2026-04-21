@@ -18,6 +18,8 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- Pagina **Preferenze** (`/preferenze`) per visualizzare e modificare in un unico posto le stagioni salvate di Sinner, Juventus, Formula 1 e MotoGP. Ogni card mostra la stagione corrente in grande con `text-gold-gradient`, un `SeasonSelector` riutilizzato, conferma visiva immediata tramite chip "Salvato" (token semantico `--success` aggiunto a `index.css` + `tailwind.config.ts`, leggibile in light e dark) e toast Sonner. Pulsante "Ripristina valori predefiniti" che resetta tutte le stagioni a `max(currentYear, 2026)`. Sync cross-componente live tramite `CustomEvent("cse-seasons-changed")` ascoltato da `useSeasonPreferences`, così le pagine sportive già montate riflettono il cambio senza reload. Voce di navigazione **Preferenze** aggiunta in `Header.tsx` con icona `Settings` di `lucide-react`. Chiave `localStorage` invariata (`cse-seasons`), versione invariata `2.1.0`.
+
 - Badge "Orari in ora italiana · CET/CEST" nelle pagine eventi (Home, Formula 1, MotoGP, Juventus, Sinner, Streaming). La sigla DST è calcolata runtime via `Intl.DateTimeFormat` con `timeZone: "Europe/Rome"`, quindi resta sempre coerente al passaggio CET ↔ CEST. Tooltip esplicativo accessibile via mouse e tastiera.
 - **Performance – transizioni globali tema scoped al toggle**: rimossa la
   regola permanente `*, *::before, *::after { transition: ... }` da
