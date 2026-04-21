@@ -117,7 +117,7 @@ export default function SinnerPage() {
           {!schLoading && !schError && (!schedule || schedule.length === 0) && (
             <UnavailableExternalSource
               title={`Calendario tornei ${season}`}
-              description="Il calendario dei tornei di Jannik Sinner per questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale ATP qui sotto per consultare il programma completo del circuito, le sedi di gioco e le date aggiornate."
+              description="Il calendario dei tornei di Jannik Sinner per questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale ATP qui sotto per consultare il programma completo del circuito, le sedi di gioco e le giornate aggiornate."
               externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/player-activity"
               externalLabel="Apri calendario su ATP Tour"
             />
