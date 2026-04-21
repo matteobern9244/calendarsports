@@ -5,9 +5,10 @@ consultare eventi imminenti, calendari e classifiche di Jannik Sinner,
 Juventus, Formula 1 e MotoGP, oltre a palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `2.1.0` (release di rebrand da "Calendar
-Sports" a "Calendar Events"). Il footer dell'app mostra la versione
-corrente leggendola da `src/lib/version.ts`.
+Versione repository corrente: `2.2.0` (consolidamento UI/UX sopra la
+baseline di rebrand `2.1.0`). Il footer dell'app mostra la versione
+corrente leggendola da `src/lib/version.ts` nel formato `Calendar Events
+· v2.2.0` (con `v` minuscola).
 
 ## Origine del progetto
 
@@ -30,9 +31,27 @@ incoraggino push automatici o superficiali su `main`.
 
 ## Release baseline
 
-La baseline documentata del repository e' la release `2.1.0` (release di
-rebrand). Le release storiche `2.0.0`, `2.0.1`, `2.0.2` restano archiviate
-nel `changelog.md`.
+La baseline documentata del repository e' la release `2.2.0`, costruita
+sopra la release di rebrand `2.1.0`. Le release storiche `2.0.0`, `2.0.1`,
+`2.0.2` restano archiviate nel `changelog.md`.
+
+La release `2.2.0` introduce solo miglioramenti UI/UX e helper di
+presentazione: niente cambi di stack, fonti dati, schema payload edge
+function, branch policy o policy Lovable. In particolare:
+
+- timezone `Europe/Rome` ora applicato in modo uniforme a tutte le pagine
+  sport (Sinner, Juventus, F1, MotoGP) tramite l'helper centralizzato
+  `toRomeDate` di `src/lib/dateUtils.ts`;
+- card "Stasera in TV" nella Home mostra anche l'orario di fine
+  programma quando l'edge function `streaming-tv` espone `endTime`
+  esplicito;
+- sezione "Risultati" di Jannik Sinner paginata a esattamente 4 card per
+  pagina, con stato `Caricamento risultati…` durante il cambio pagina e
+  prefetch React Query della pagina `N+1` per uno scorrimento istantaneo;
+- pagina Juventus con loading gate full-page che attende calendario,
+  classifica e — quando necessario — il fetch della pagina contenente la
+  prossima partita prima di renderizzare il contenuto, eliminando lo
+  sfarfallio iniziale.
 
 Questa release rappresenta il punto in cui sono stati allineati:
 
