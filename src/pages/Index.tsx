@@ -189,9 +189,9 @@ export default function HomePage() {
                       variant="outline"
                       className={
                         name.toLowerCase().includes('dazn')
-                          ? 'bg-[#1a1a2e] text-white border-[#1a1a2e]/60 text-[10px]'
+                          ? 'bg-[#f5f5f5] text-[#1a1a2e] border-[#1a1a2e]/30 dark:bg-[#1a1a2e] dark:text-white dark:border-[#1a1a2e]/60 text-[10px]'
                           : name.toLowerCase().includes('sky')
-                            ? 'bg-sky-900/80 text-sky-100 border-sky-700/60 text-[10px]'
+                            ? 'bg-sky-600/15 text-sky-700 border-sky-600/40 dark:bg-sky-900/80 dark:text-sky-100 dark:border-sky-700/60 text-[10px]'
                             : 'text-[10px]'
                       }
                     >

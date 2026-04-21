@@ -6,32 +6,32 @@
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
+    --background: 220 30% 96%;
     --foreground: 220 25% 10%;
 
-    --card: 0 0% 100%;
+    --card: 220 25% 99%;
     --card-foreground: 220 25% 10%;
 
-    --popover: 0 0% 100%;
+    --popover: 220 25% 99%;
     --popover-foreground: 220 25% 10%;
 
     --primary: 43 96% 56%;
     --primary-foreground: 220 30% 10%;
 
-    --secondary: 220 60% 20%;
+    --secondary: 220 60% 25%;
     --secondary-foreground: 43 96% 56%;
 
-    --muted: 220 15% 92%;
+    --muted: 220 20% 90%;
     --muted-foreground: 220 10% 45%;
 
-    --accent: 220 60% 30%;
+    --accent: 220 55% 35%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 88%;
-    --input: 220 15% 88%;
+    --border: 220 25% 84%;
+    --input: 220 25% 84%;
     --ring: 43 96% 56%;
 
     --radius: 0.75rem;
@@ -57,10 +57,10 @@
     --background: 220 30% 6%;
     --foreground: 220 10% 92%;
 
-    --card: 220 30% 10%;
+    --card: 220 35% 10%;
     --card-foreground: 220 10% 92%;
 
-    --popover: 220 30% 10%;
+    --popover: 220 35% 10%;
     --popover-foreground: 220 10% 92%;
 
     --primary: 43 96% 56%;
@@ -111,6 +111,34 @@
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading;
+  }
+
+  html {
+    color-scheme: light dark;
+  }
+  html.dark { color-scheme: dark; }
+  html:not(.dark) { color-scheme: light; }
+
+  /* Transizione fluida del cambio tema, solo su proprietà di colore */
+  *, *::before, *::after {
+    transition:
+      background-color 280ms ease,
+      border-color 280ms ease,
+      color 200ms ease,
+      fill 280ms ease,
+      stroke 280ms ease,
+      box-shadow 280ms ease;
+  }
+
+  .theme-no-transition,
+  .theme-no-transition *,
+  .theme-no-transition *::before,
+  .theme-no-transition *::after {
+    transition: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; }
   }
 }
 
