@@ -76,6 +76,10 @@ async function tmdbDiscover(
   url.searchParams.set("language", "it-IT");
   url.searchParams.set("watch_region", "IT");
   url.searchParams.set("with_watch_providers", String(providerId));
+  // Filtra solo titoli inclusi nell'abbonamento del provider in IT
+  // (esclude buy/rent/ads). TMDB Discover senza questo parametro restituisce
+  // anche titoli disponibili solo in noleggio/acquisto sullo stesso provider.
+  url.searchParams.set("with_watch_monetization_types", "flatrate");
   url.searchParams.set(`${dateKey}.gte`, dateFrom);
   url.searchParams.set(`${dateKey}.lte`, dateTo);
   url.searchParams.set("sort_by", "popularity.desc");
