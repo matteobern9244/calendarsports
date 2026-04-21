@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
@@ -11,14 +13,44 @@ import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useS
 import { formatDateIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// Numero di risultati per pagina lato UI. Allineato al default del
+// backend (`supabase/functions/sports-tennis`, action `results`):
+// se cambia qui va aggiornato anche li' per evitare richieste a vuoto.
+const RESULTS_PAGE_SIZE = 12;
 
 export default function SinnerPage() {
   const season = getCurrentSinnerSeason();
+  const [resultsPage, setResultsPage] = useState(1);
   const { data: playerInfo } = useSinnerInfo();
-  const { data: results, isLoading: resLoading, error: resError, refetch: resRefetch } = useSinnerResults(season);
+  const { data: results, isLoading: resLoading, error: resError, refetch: resRefetch } = useSinnerResults(
+    season,
+    resultsPage,
+    RESULTS_PAGE_SIZE,
+  );
   const { data: schedule, isLoading: schLoading, error: schError, refetch: schRefetch } = useSinnerSchedule(season);
   const { isOnline } = useOnlineStatus();
+
+  // Reset paginazione quando cambia la stagione: pagine alte di una
+  // stagione precedente non hanno senso per la nuova.
+  useEffect(() => {
+    setResultsPage(1);
+  }, [season]);
+
+  // Compatibilita' di forma: il backend ora restituisce
+  // `{ items, pagination }`, ma per sicurezza accettiamo anche il
+  // vecchio shape `MatchRow[]` (es. cache stale o fallback).
+  const resultItems: any[] = Array.isArray(results)
+    ? results
+    : (results?.items ?? []);
+  const resultsPagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  } | null = !Array.isArray(results) && results?.pagination ? results.pagination : null;
 
   if (!isOnline && resError && !results && schError && !schedule && !playerInfo) {
     return (
