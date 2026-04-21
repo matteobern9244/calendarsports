@@ -366,6 +366,46 @@ export default function TonightTvList() {
 
         {tonightHighlights.length > 0 ? (
           <>
+            {incompleteFamilies.length > 0 && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="rounded-md border border-[hsl(var(--gold))]/40 bg-[hsl(var(--gold))]/10 px-3 py-2.5 text-xs text-foreground/85 space-y-2"
+              >
+                <div className="flex items-start gap-2">
+                  <Info
+                    className="h-4 w-4 shrink-0 mt-0.5 text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))]"
+                    aria-hidden="true"
+                    focusable="false"
+                  />
+                  <p className="leading-snug">
+                    Per alcuni canali la fonte non fornisce l'orario di fine: durata e
+                    sovrapposizione con la prima serata sono stime. Verifica il palinsesto
+                    reale sulla Guida TV ufficiale.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pl-6">
+                  {incompleteFamilies.map((fam) => {
+                    const meta = FAMILY_EPG_URLS[fam];
+                    const famLabel = familyLabelMap[fam];
+                    return (
+                      <a
+                        key={fam}
+                        href={meta.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${meta.label} (${famLabel}). Si apre in una nuova scheda del browser.`}
+                        className="inline-flex items-center gap-1 rounded-full border border-[hsl(var(--gold))]/40 bg-card/60 px-2.5 py-1 text-[11px] font-heading uppercase tracking-wider text-foreground transition-colors hover:bg-[hsl(var(--gold))]/15 hover:border-[hsl(var(--gold))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        <ExternalLink className="h-3 w-3" aria-hidden="true" focusable="false" />
+                        <span>{meta.label}</span>
+                        <span className="sr-only"> (si apre in una nuova scheda)</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <ul
               role="table"
               aria-label="Programmi in prima serata stasera"
