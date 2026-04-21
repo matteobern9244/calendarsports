@@ -27,6 +27,7 @@ import { Link } from "react-router-dom";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import TeamLogo from "@/components/common/TeamLogo";
 import { Sparkles } from "lucide-react";
+import HighlightsSection from "@/components/highlights/HighlightsSection";
 
 const PAGE_SIZE = 12;
 
@@ -214,6 +215,7 @@ export default function JuventusPage() {
         <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">Calendario</TabsTrigger>
           <TabsTrigger value="classifica" className="font-heading text-xs tracking-wider uppercase">Classifica</TabsTrigger>
+          <TabsTrigger value="highlights" className="font-heading text-xs tracking-wider uppercase">Highlights</TabsTrigger>
         </TabsList>
 
         <TabsContent value="classifica">

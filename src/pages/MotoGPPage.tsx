@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import TeamLogo from "@/components/common/TeamLogo";
+import HighlightsSection from "@/components/highlights/HighlightsSection";
 
 const MOTOGP_CONSTRUCTOR_COLORS: Record<string, { border: string; bg: string }> = {
   ducati:  { border: 'hsl(var(--brand-ducati))',  bg: 'hsl(var(--brand-ducati) / 0.08)' },
@@ -47,6 +48,7 @@ export default function MotoGPPage() {
           <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">Calendario</TabsTrigger>
           <TabsTrigger value="piloti" className="font-heading text-xs tracking-wider uppercase">Classifica Piloti</TabsTrigger>
           <TabsTrigger value="costruttori" className="font-heading text-xs tracking-wider uppercase">Classifica Costruttori</TabsTrigger>
+          <TabsTrigger value="highlights" className="font-heading text-xs tracking-wider uppercase">Highlights</TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendario">

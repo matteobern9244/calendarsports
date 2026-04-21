@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { User } from "lucide-react";
 import { f1NationalityToIso } from "@/lib/f1Utils";
 import TeamLogo from "@/components/common/TeamLogo";
+import HighlightsSection from "@/components/highlights/HighlightsSection";
 
 export default function Formula1Page() {
   const season = getCurrentF1Season();
@@ -42,6 +43,7 @@ export default function Formula1Page() {
           <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">Calendario</TabsTrigger>
           <TabsTrigger value="piloti" className="font-heading text-xs tracking-wider uppercase">Classifica Piloti</TabsTrigger>
           <TabsTrigger value="costruttori" className="font-heading text-xs tracking-wider uppercase">Costruttori</TabsTrigger>
+          <TabsTrigger value="highlights" className="font-heading text-xs tracking-wider uppercase">Highlights</TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendario">
