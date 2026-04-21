@@ -1,7 +1,10 @@
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from '../_shared/security.ts';
 
 // =====================================================================
-// SOURCE: Wikipedia (en.wikipedia.org) - public HTML scraping
+// SOURCES:
+//   - player-info  -> it.wikipedia.org/wiki/Jannik_Sinner   (profilo, ranking, palmarès Slam)
+//   - schedule/results/next-event -> en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season
+//     (la pagina IT della stagione 2026 non esiste in modo stabile)
 // CACHE:  30 minutes server-side to respect fair use
 // LIMITS: latency 24-48h editor lag; scraper fragile to layout changes
 // =====================================================================
@@ -60,6 +63,99 @@ function parseInfobox(html: string): Record<string, string> {
   return out;
 }
 
+/**
+ * Parser per il template "sinottico" di Wikipedia Italia.
+ * Estrae coppie <th>label</th><td>value</td> dalla tabella infobox principale,
+ * mantenendo SOLO la prima occorrenza per ogni label (per Sinner: Singolare
+ * appare prima del Doppio, quindi i valori "Vittorie/sconfitte", "Titoli vinti",
+ * "Miglior ranking", "Ranking attuale" sono quelli del singolare).
+ */
+function parseSinottico(html: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  // Limito lo scraping alla prima tabella class="infobox sinottico" trovata.
+  const tableMatch = html.match(/<table[^>]*class="[^"]*\bsinottico\b[^"]*"[\s\S]*?<\/table>/);
+  const scope = tableMatch ? tableMatch[0] : html;
+  const re = /<tr[^>]*>\s*<th[^>]*>([\s\S]{1,300}?)<\/th>\s*<td[^>]*>([\s\S]{0,800}?)<\/td>\s*<\/tr>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(scope)) !== null) {
+    const k = stripTags(m[1]).toLowerCase();
+    if (!k || k.length > 60) continue;
+    if (!out[k]) out[k] = stripTags(m[2]);
+  }
+  return out;
+}
+
+/**
+ * Parser palmarès Slam dall'infobox IT. Cerca le righe della sezione
+ * "Risultati nei tornei del Grande Slam" + "Altri tornei" (Tour Finals).
+ * Output: { australianOpen, rolandGarros, wimbledon, usOpen, tourFinals }
+ * Ogni voce: { best: 'V'|'F'|'SF'|'QF'|... | null, years: number[], raw: string }
+ */
+interface SlamResult { best: string | null; years: number[]; raw: string }
+function parseSlamResults(html: string): {
+  australianOpen: SlamResult | null;
+  rolandGarros: SlamResult | null;
+  wimbledon: SlamResult | null;
+  usOpen: SlamResult | null;
+  tourFinals: SlamResult | null;
+} {
+  const tableMatch = html.match(/<table[^>]*class="[^"]*\bsinottico\b[^"]*"[\s\S]*?<\/table>/);
+  const scope = tableMatch ? tableMatch[0] : html;
+
+  function findRow(label: string): SlamResult | null {
+    // Cerca <td>...label...</td><td>RAW</td>
+    const re = new RegExp(
+      `<td[^>]*>[^<]*(?:<[^>]+>[^<]*)*?\\b${label}\\b[\\s\\S]{0,400}?<\\/td>\\s*<td[^>]*>([\\s\\S]{0,400}?)<\\/td>`,
+      'i',
+    );
+    const m = scope.match(re);
+    if (!m) return null;
+    const raw = stripTags(m[1]);
+    if (!raw) return null;
+    // Extract best result token at start: V, F, SF, QF, 4T, 3T, 2T, 1T, RR
+    const bestMatch = raw.match(/^\s*([A-Z0-9]{1,3})\b/);
+    const best = bestMatch ? bestMatch[1] : null;
+    const years = [...raw.matchAll(/\b(20\d{2})\b/g)].map((y) => parseInt(y[1]));
+    return { best, years, raw };
+  }
+
+  return {
+    australianOpen: findRow('Australian Open'),
+    rolandGarros: findRow('Roland Garros'),
+    wimbledon: findRow('Wimbledon'),
+    usOpen: findRow('US Open'),
+    tourFinals: findRow('Tour Finals'),
+  };
+}
+
+/**
+ * Estrae la data "Statistiche aggiornate al 12 aprile 2026" dal piede infobox IT.
+ * Restituisce ISO YYYY-MM-DD oppure null.
+ */
+function parseStatsUpdatedAt(html: string): string | null {
+  const m = html.match(/Statistiche\s+aggiornate\s+al[\s\S]{0,40}?(\d{1,2})\s+([a-zA-Zàèéìòù]+)\s+(\d{4})/i);
+  if (!m) return null;
+  const monthsIt: Record<string, string> = {
+    gennaio: '01', febbraio: '02', marzo: '03', aprile: '04', maggio: '05', giugno: '06',
+    luglio: '07', agosto: '08', settembre: '09', ottobre: '10', novembre: '11', dicembre: '12',
+  };
+  const mm = monthsIt[m[2].toLowerCase()];
+  if (!mm) return null;
+  return `${m[3]}-${mm}-${m[1].padStart(2, '0')}`;
+}
+
+function parseItalianDateInline(s: string): string | null {
+  const m = s.match(/(\d{1,2})\s+([a-zA-Zàèéìòù]+)\s+(\d{4})/);
+  if (!m) return null;
+  const monthsIt: Record<string, string> = {
+    gennaio: '01', febbraio: '02', marzo: '03', aprile: '04', maggio: '05', giugno: '06',
+    luglio: '07', agosto: '08', settembre: '09', ottobre: '10', novembre: '11', dicembre: '12',
+  };
+  const mm = monthsIt[m[2].toLowerCase()];
+  if (!mm) return null;
+  return `${m[3]}-${mm}-${m[1].padStart(2, '0')}`;
+}
+
 function parseDateText(s: string): string | null {
   // "16 August 2001" or "13 April 2026"
   const m = s.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
@@ -74,53 +170,106 @@ function parseDateText(s: string): string | null {
 }
 
 // ----- Player info -----------------------------------------------------
-const PHOTO_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Jannik_Sinner_2025_US_Open.jpg/500px-Jannik_Sinner_2025_US_Open.jpg';
+// Foto principale dall'infobox IT (US Open 2025, cropped)
+const PHOTO_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Jannik_Sinner_US_Open_2025_%28cropped%29.jpg/500px-Jannik_Sinner_US_Open_2025_%28cropped%29.jpg';
 
 async function getPlayerInfo() {
   const cached = getCached<unknown>('player-info');
   if (cached) return cached;
 
-  const html = await fetchWiki('https://en.wikipedia.org/wiki/Jannik_Sinner');
+  // Profilo da Wikipedia ITALIA (etichette in italiano, contiene Peso e palmarès Slam)
+  const html = await fetchWiki('https://it.wikipedia.org/wiki/Jannik_Sinner');
+  // Stagione 2026 resta su Wikipedia EN: la voce IT non esiste in modo stabile
   const seasonHtml = await fetchWiki('https://en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season');
 
-  const ib = html ? parseInfobox(html) : {};
+  const ib = html ? parseSinottico(html) : {};
 
-  const currentRanking = ib['current ranking'] || '';
-  const rankNumMatch = currentRanking.match(/No\.\s*(\d+)/);
-  const rankDateMatch = currentRanking.match(/\((\d{1,2}\s+[A-Za-z]+\s+\d{4})\)/);
+  // --- Ranking attuale (singolare) ---
+  // Esempio raw IT: "1º"
+  const currentRanking = ib['ranking attuale'] || '';
+  const rankNumMatch = currentRanking.match(/(\d+)\s*[ºo°]/);
 
-  const highest = ib['highest ranking'] || '';
-  const highestNumMatch = highest.match(/No\.\s*(\d+)/);
-  const highestDateMatch = highest.match(/\((\d{1,2}\s+[A-Za-z]+\s+\d{4})\)/);
+  // --- Miglior ranking (singolare) ---
+  // Esempio raw IT: "1º (10 giugno 2024)"
+  const highest = ib['miglior ranking'] || '';
+  const highestNumMatch = highest.match(/(\d+)\s*[ºo°]/);
+  const highestDateIso = parseItalianDateInline(highest);
 
-  const careerRecord = ib['career record'] || '';
-  const careerTitles = ib['career titles'] || '';
-  const prizeMoney = ib['prize money'] || '';
-  const height = ib['height'] || '';
-  const plays = ib['plays'] || '';
-  const coach = ib['coach'] || '';
-  const turnedPro = ib['turned pro'] || '';
-
-  // Born: "( 2001-08-16 ) 16 August 2001 (age 24) Innichen , Italy"
-  const born = ib['born'] || '';
-  const birthDate = (born.match(/\d{4}-\d{2}-\d{2}/) || [null])[0]
-    || parseDateText(born);
-  // Birthplace: text after "(age N)" up to end (may have trailing ".")
-  let birthPlace = '';
-  const birthPlaceMatch = born.match(/age\s*\d+\)\s*(.+?)\s*$/);
-  if (birthPlaceMatch) birthPlace = birthPlaceMatch[1].trim();
-  // Fallback: parse the original infobox cell looking for birthplace div
-  if (!birthPlace && html) {
-    const bpRe = /class="birthplace"[^>]*>([\s\S]*?)<\/div>/;
-    const bpm = html.match(bpRe);
-    if (bpm) birthPlace = stripTags(bpm[1]);
+  // --- Vittorie/sconfitte (singolare) e titoli vinti ---
+  // Le righe stanno dentro una tabella annidata "Singolare": il parser
+  // generico le coglie solo se la <tr> ha le colonne dirette. Fallback
+  // dedicato che cerca la PRIMA occorrenza dopo l'header "Singolare".
+  let careerRecord = ib['vittorie/sconfitte'] || '';
+  let careerTitlesRaw = ib['titoli vinti'] || '';
+  if ((!careerRecord || !careerTitlesRaw) && html) {
+    const singlesIdx = html.search(/>Singolare</);
+    const doublesIdx = html.search(/>Doppio</);
+    if (singlesIdx >= 0) {
+      const slice = html.substring(singlesIdx, doublesIdx > singlesIdx ? doublesIdx : singlesIdx + 4000);
+      if (!careerRecord) {
+        const m = slice.match(/Vittorie\/sconfitte\s*<\/th>\s*<td[^>]*>([\s\S]{0,200}?)<\/td>/);
+        if (m) careerRecord = stripTags(m[1]);
+      }
+      if (!careerTitlesRaw) {
+        const m = slice.match(/Titoli vinti\s*<\/th>\s*<td[^>]*>([\s\S]{0,200}?)<\/td>/);
+        if (m) careerTitlesRaw = stripTags(m[1]);
+      }
+    }
   }
+  const careerTitlesNum = parseInt(careerTitlesRaw);
+
+  // --- Misure ---
+  const heightRaw = ib['altezza'] || '';
+  // Normalizzo "191 cm" anche se ci sono spazi/markup residui
+  const heightNum = heightRaw.match(/(\d{2,3})/);
+  const height = heightNum ? `${heightNum[1]} cm` : heightRaw;
+
+  const weightRaw = ib['peso'] || '';
+  const weightNum = weightRaw.match(/(\d{2,3})/);
+  const weight = weightNum ? `${weightNum[1]} kg` : weightRaw;
+
+  // --- Coach: l'infobox IT NON ha questo campo. L'estrazione regex dal
+  // testo è risultata inaffidabile (es. confonde nomi di familiari con il
+  // coach). Lasciato a null: la UI nasconde semplicemente la riga.
+  const coach: string | null = null;
+
+  // --- Mano di gioco: idem, non in infobox IT - tentativo regex ---
+  let plays: string | null = null;
+  if (html) {
+    const playsMatch = html.match(/(destrimane|mancino)/i);
+    if (playsMatch) {
+      plays = playsMatch[1].toLowerCase() === 'mancino' ? 'Sinistra' : 'Destra';
+    }
+  }
+
+  // --- Nascita: dal primo paragrafo ("San Candido, 16 agosto 2001") ---
+  let birthPlace = 'San Candido';
+  let birthDate: string | null = '2001-08-16';
+  if (html) {
+    const bioMatch = html.match(/<b[^>]*>Jannik Sinner<\/b>[\s\S]{0,200}?\(([^)]+)\)/);
+    if (bioMatch) {
+      const inside = stripTags(bioMatch[1]);
+      // "San Candido, 16 agosto 2001"
+      const parts = inside.split(',').map((s) => s.trim());
+      if (parts.length >= 2) {
+        birthPlace = parts[0] || birthPlace;
+        const iso = parseItalianDateInline(parts.slice(1).join(' '));
+        if (iso) birthDate = iso;
+      }
+    }
+  }
+
+  // --- Palmarès Slam ---
+  const slamResults = html ? parseSlamResults(html) : null;
+
+  // --- Statistiche aggiornate al ... ---
+  const statsUpdatedAt = html ? parseStatsUpdatedAt(html) : null;
 
   // 2026 season stats - real Wikipedia labels are "Season record" and "Calendar titles"
   let seasonRecord: string | null = null;
   let seasonTitles: number | null = null;
   if (seasonHtml) {
-    const sib = parseInfobox(seasonHtml);
+    const sib = parseInfobox(seasonHtml); // EN season page conserva schema infobox-label
     // First "Season record" entry is Singles (appears before Doubles)
     if (sib['season record']) seasonRecord = sib['season record'];
     if (sib['calendar titles']) {
@@ -132,24 +281,27 @@ async function getPlayerInfo() {
   const data = {
     name: 'Jannik Sinner',
     ranking: rankNumMatch ? parseInt(rankNumMatch[1]) : null,
-    rankingDate: rankDateMatch ? parseDateText(rankDateMatch[1]) : null,
+    rankingDate: statsUpdatedAt, // su IT il ranking attuale non ha data inline; uso statsUpdatedAt
     careerHigh: highestNumMatch ? parseInt(highestNumMatch[1]) : null,
-    careerHighDate: highestDateMatch ? parseDateText(highestDateMatch[1]) : null,
+    careerHighDate: highestDateIso,
     nationality: 'Italia',
     country: 'IT',
     birthDate,
     birthPlace,
     height,
+    weight,
     plays,
     coach,
-    turnedPro: turnedPro ? parseInt(turnedPro) || turnedPro : null,
+    turnedPro: null,
     careerRecord,
-    careerTitles: careerTitles ? parseInt(careerTitles) || careerTitles : null,
-    prizeMoney,
+    careerTitles: !isNaN(careerTitlesNum) ? careerTitlesNum : null,
+    prizeMoney: null, // non presente nell'infobox IT
     seasonRecord,
     seasonTitles,
+    slamResults,
+    statsUpdatedAt,
     photoUrl: PHOTO_URL,
-    source: 'Wikipedia (en.wikipedia.org)',
+    source: 'Wikipedia Italia (it.wikipedia.org)',
   };
 
   setCached('player-info', data);
@@ -416,7 +568,7 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data, source: 'Wikipedia (en.wikipedia.org)' }), {
+    return new Response(JSON.stringify({ success: true, data, source: 'Wikipedia (IT profilo + EN stagione 2026)' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

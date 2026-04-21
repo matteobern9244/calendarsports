@@ -252,17 +252,27 @@ Rischi:
 
 Fonti correnti:
 
-- **scraping Wikipedia** in `sports-tennis` da tre URL pubblici:
-  `Jannik_Sinner` (ranking corrente, infobox carriera, foto Wikimedia
-  Commons), `2026_Jannik_Sinner_tennis_season` (record stagione, titoli,
-  match round-per-round con opponent rank e score), e calendario tornei
-  derivato dalla stessa pagina con fallback su lista upcoming curata.
+- **scraping Wikipedia su due lingue** in `sports-tennis`:
+  - `it.wikipedia.org/wiki/Jannik_Sinner` per il **profilo**: ranking
+    corrente, miglior ranking, vittorie/sconfitte e titoli di carriera
+    (singolare), altezza, peso, palmarès Grande Slam (AO, Roland Garros,
+    Wimbledon, US Open, Tour Finals), foto principale Wikimedia Commons
+    e data "Statistiche aggiornate al ...".
+  - `en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season` per la
+    **stagione 2026**: record stagione, titoli calendar, calendario tornei
+    e match round-per-round con opponent rank, score ed esito.
 - cache server-side 30 minuti per rispetto fair use Wikipedia.
 - ATPTour.com è stato valutato e scartato: è una SPA che richiede browser
   rendering, quindi non scrapabile da Edge Function `fetch()`.
 
 Rischi:
 
+- doppia fonte (IT profilo + EN stagione) = doppia superficie di rottura;
+- la voce stagione 2026 IT non esiste in modo stabile, quindi il
+  calendario/match restano in inglese;
+- coach e mano di gioco non sono nell'infobox IT: estratti da regex sul
+  testo, in caso di fallimento il campo sparisce dalla UI invece di
+  rompere;
 - latenza editoriale Wikipedia (24-48h dopo i match);
 - fragilità del parser regex se Wikipedia cambia struttura tabelle;
 - stagioni precedenti al 2026 non popolate (richiedono URL aggiuntivi);
