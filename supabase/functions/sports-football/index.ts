@@ -177,6 +177,31 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
   }
 }
 
+function slugify(input: string): string {
+  return String(input || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function buildMatchId(match: any, competitionName: string): string {
+  // Priorita' 1: slug derivato dall'URL Sky (univoco, leggibile, stabile).
+  if (match?.link) {
+    const m = String(match.link).match(/partite\/(\d{4})\/([^/]+)\/([^/]+)/i);
+    if (m) {
+      return `${m[1]}-${m[2]}-${m[3]}`.toLowerCase();
+    }
+  }
+  // Priorita' 2: composizione deterministica competition+data+squadre.
+  const home = slugify(match?.home?.name || '');
+  const away = slugify(match?.away?.name || '');
+  const dateKey = romeDateKeyOf(match?.date) ?? 'unknown';
+  const comp = slugify(competitionName);
+  return `${comp}-${dateKey}-${home}-vs-${away}`;
+}
+
 function extractJuventusMatches(model: any, competitionId: string, broadcasterMap: Record<string, string>): any[] {
   const rounds = model.competitionMatchList || [];
   const matches: any[] = [];
@@ -206,6 +231,7 @@ function extractJuventusMatches(model: any, competitionId: string, broadcasterMa
         }
 
         matches.push({
+          id: buildMatchId(match, competitionName),
           matchday: roundNum,
           homeTeam: homeName,
           awayTeam: awayName,

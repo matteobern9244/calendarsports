@@ -16,6 +16,21 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > policy o policy Lovable. La versione applicativa esposta dal footer e da
 > `src/lib/version.ts` resta `2.1.0`.
 
+### Fixed
+
+- **Dettaglio partita Juventus mostrava sempre la stessa partita
+  (Juventus–Parma).** Causa: il payload di `sports-football?action=calendar`
+  non includeva un campo `id` per match, quindi il link generato in
+  `JuventusPage` era `/juventus/partite/undefined` per tutte le card e
+  `findMatch` in `JuventusMatchPage` matchava sempre il primo elemento del
+  calendario. Soluzione: aggiunto slug deterministico `id` per ogni partita
+  in `extractJuventusMatches` (`supabase/functions/sports-football/index.ts`)
+  derivato dall'URL Sky quando disponibile (es.
+  `2025-giornata-1-juventus-parma`) o composto da
+  `competizione-data-home-vs-away` come fallback. `JuventusPage` linka via
+  `encodeURIComponent(m.id)` e `JuventusMatchPage` decodifica il parametro e
+  ignora gli item senza `id`.
+
 ### Added
 
 - **Sezione "Highlights"** nelle pagine Juventus, Formula 1 e MotoGP, alimentata
