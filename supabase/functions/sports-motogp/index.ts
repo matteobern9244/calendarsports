@@ -198,7 +198,7 @@ async function fetchSkyStandings(): Promise<{
           const teamRaw = c3.replace(/<[^>]+>/g, '').trim();
           const pts = parseInt(c4.replace(/<[^>]+>/g, '').trim());
           if (!isNaN(pos) && nameRaw) {
-            pilots.push({ position: pos, name: nameRaw, team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw) });
+            pilots.push({ position: pos, name: expandRiderName(nameRaw), team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw) });
           }
         }
       }
