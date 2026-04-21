@@ -139,8 +139,19 @@ export default function TonightTvList() {
           const d = new Date(p.start);
           const hhmm = timeFmt.format(d);
           const [hStr, mStr] = hhmm.split(":");
-          const endMs = p.end ? new Date(p.end).getTime() : d.getTime() + 30 * 60 * 1000;
-          const durationMin = Math.max(0, Math.round((endMs - d.getTime()) / 60000));
+          const hasExplicitEnd = Boolean(p.end);
+          // Quando la fonte non fornisce l'orario di fine assumiamo una
+          // durata "open-ended" pari alla finestra di prima serata: il
+          // programma e' candidato per la visualizzazione purche' parta
+          // prima delle 23:00 (vedi overlapsPrimeWindow piu' in basso).
+          // La durata mostrata in cella resta pero' 0 cosi' l'utente non
+          // legge una durata inventata.
+          const endMs = hasExplicitEnd
+            ? new Date(p.end).getTime()
+            : d.getTime() + 24 * 60 * 60 * 1000; // sentinel "fine ignota"
+          const durationMin = hasExplicitEnd
+            ? Math.max(0, Math.round((endMs - d.getTime()) / 60000))
+            : 0;
           const endHHMM = timeFmt.format(new Date(endMs));
           const [endHStr, endMStr] = endHHMM.split(":");
           const startMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
@@ -162,6 +173,7 @@ export default function TonightTvList() {
             hourRome: parseInt(hStr, 10),
             minuteRome: parseInt(mStr, 10),
             endMinutesFromMidnight,
+            hasExplicitEnd,
             title: p.title,
             genre: p.genre,
           });
