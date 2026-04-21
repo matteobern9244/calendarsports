@@ -99,7 +99,16 @@ export function prioritizeNextUpcoming<T>(
 export function formatTimeIT(timeStr?: string | null, dateStr?: string): string {
   if (!timeStr) return "";
   try {
-    const fullDate = dateStr ? `${dateStr}T${timeStr}` : `2026-01-01T${timeStr}`;
+    const rawTime = timeStr.trim();
+    // Policy "naive = UTC": se la stringa orario non contiene gia' un
+    // offset (`Z` oppure `±HH:MM`), forziamo l'interpretazione come UTC
+    // aggiungendo `Z`. Evita drift DST quando il provider invia
+    // `HH:mm:ss` puro o quando manca `dateStr`.
+    const hasOffset = /(Z|[+-]\d{2}:?\d{2})$/i.test(rawTime);
+    const normalizedTime = hasOffset ? rawTime : `${rawTime}Z`;
+    const fullDate = dateStr
+      ? `${dateStr}T${normalizedTime}`
+      : `2026-01-01T${normalizedTime}`;
     const date = new Date(fullDate);
     return date.toLocaleTimeString("it-IT", {
       hour: "2-digit",
