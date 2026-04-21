@@ -11,6 +11,11 @@ applyTo: "src/**/*.ts,src/**/*.tsx,tailwind.config.ts,vite.config.ts"
   nella forma ufficiale. Sigle tecniche (ATP, WTA, GP, PL1, TMDB, RAI, Pos,
   Pts, ecc.) non sono "inglese". Niente stringhe inglesi in placeholder,
   `aria-label`, `sr-only`, toast, error message o titoli pagina.
+- Il workflow CI esegue `npm run check:italian` (vedi
+  `scripts/check-italian-ui.mjs`) e fallisce se introduci nuove stringhe
+  utente in inglese fuori allowlist. Per casi legittimi (nuovo brand)
+  aggiorna l'allowlist nello stesso PR e dichiara il motivo nel
+  changelog.
 - Mantieni `BrowserRouter`, React Query e il data flow attuale salvo
   richiesta esplicita o motivazione tecnica forte.
 - Non cambiare naming di route, struttura delle pagine sportive o UI generale
