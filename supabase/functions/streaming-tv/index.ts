@@ -284,9 +284,52 @@ export function enrichTitle(
     }
   }
   // Fallback (NUOVO): se nessun prefisso ha matchato e abbiamo l'orario della
-  // riga grezza, cerca un rich title con stesso HH:MM esatto. Risolve il caso
-  // di sigle generiche ("EV-SP", "EV-CN") che non condividono token col
-  // titolo reale ma sono al medesimo orario.
+  // Fallback per placeholder generici (EV-SP/EV-CN/EV-FILM/EV-TV): scoring
+  // deterministico che combina vincolo di genere atteso e distanza temporale
+  // dal raw. Evita associazioni spurie quando lo stesso canale ha piu' eventi
+  // sequenziali col placeholder identico (es. partita 20:40 + highlights 23:00,
+  // entrambi "(Sport)"): vince quello col genere giusto piu' vicino in tempo.
+  // NOTA: per estendere a nuovi placeholder o nuovi generi, aggiornare
+  // PLACEHOLDER_TO_GENRE qui sotto.
+  const PLACEHOLDER_TO_GENRE: Record<string, string[]> = {
+    "EV-SP": ["Sport", "Calcio", "Tennis", "Motori", "Basket", "Pallavolo", "Pallacanestro", "Rugby", "Volley", "Nuoto", "Ciclismo"],
+    "EV-CN": ["Film", "Cinema"],
+    "EV-FILM": ["Film", "Cinema"],
+    "EV-TV": ["Fiction", "Serie Tv", "Telefilm", "Miniserie"],
+  };
+  const placeholder = rawUpper.toUpperCase().replace(/\s+/g, "").trim();
+  const wanted = PLACEHOLDER_TO_GENRE[placeholder];
+  if (!best && wanted) {
+    let bestScore = -Infinity;
+    let phBest = "";
+    for (const cand of rich) {
+      const mm = cand.title.match(/\(([^()]{2,40})\)\s*$/);
+      if (!mm) continue;
+      const genreCanon = mm[1].trim()
+        .toLowerCase()
+        .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+      if (!wanted.includes(genreCanon)) continue;
+      // Score: bonus orario esatto (+1000), penalita' distanza minuti (clamp
+      // 720 = 12h per evitare overflow su gap notte/mattina), tiebreaker
+      // lengthBonus capped a +1.0 (molto < di 1 minuto di distanza).
+      let score = 0;
+      if (rawHh !== undefined && rawMm !== undefined && cand.hh !== undefined && cand.mm !== undefined) {
+        const distance = Math.min(720, Math.abs(cand.hh * 60 + cand.mm - rawHh * 60 - rawMm));
+        if (distance === 0) score += 1000;
+        score -= distance;
+      }
+      score += Math.min(cand.title.length, 100) * 0.01;
+      if (score > bestScore) {
+        bestScore = score;
+        phBest = cand.title;
+      }
+    }
+    if (phBest) best = phBest;
+  }
+  // Safety net: se nessun candidato del genere atteso e' stato trovato (o il
+  // raw non e' un placeholder noto), prova match per orario esatto puro
+  // (comportamento pre-scoring preservato per non-placeholder e per casi
+  // limite tipo "Atletica" non in PLACEHOLDER_TO_GENRE).
   if (!best && rawHh !== undefined && rawMm !== undefined) {
     let timeBest = "";
     for (const cand of rich) {
@@ -294,33 +337,6 @@ export function enrichTitle(
       if (cand.title.length > timeBest.length) timeBest = cand.title;
     }
     if (timeBest) best = timeBest;
-  }
-  // Fallback aggiuntivo (NUOVO): placeholder generici tipo "EV-SP" / "EV-CN"
-  // / "EV-FILM" non condividono token col titolo reale e spesso il rich title
-  // nella scheda non ha un HH:MM nelle vicinanze. Mappa la sigla al genere
-  // atteso e prendi l'unico rich title compatibile.
-  if (!best) {
-    const placeholder = rawUpper.toUpperCase().replace(/\s+/g, "").trim();
-    const PLACEHOLDER_TO_GENRE: Record<string, string[]> = {
-      "EV-SP": ["Sport", "Calcio", "Tennis", "Motori", "Basket", "Pallavolo", "Pallacanestro", "Rugby", "Volley", "Nuoto", "Ciclismo"],
-      "EV-CN": ["Film", "Cinema"],
-      "EV-FILM": ["Film", "Cinema"],
-      "EV-TV": ["Fiction", "Serie Tv", "Telefilm", "Miniserie"],
-    };
-    const wanted = PLACEHOLDER_TO_GENRE[placeholder];
-    if (wanted) {
-      let phBest = "";
-      for (const cand of rich) {
-        const mm = cand.title.match(/\(([^()]{2,40})\)\s*$/);
-        if (!mm) continue;
-        const genreCanon = mm[1].trim()
-          .toLowerCase()
-          .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
-        if (!wanted.includes(genreCanon)) continue;
-        if (cand.title.length > phBest.length) phBest = cand.title;
-      }
-      if (phBest) best = phBest;
-    }
   }
   const source = best || rawUpper
     .toLowerCase()
