@@ -2,17 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SinnerPage from "./SinnerPage";
 
-const mockSetSeason = vi.fn();
 const mockUseSinnerInfo = vi.fn();
 const mockUseSinnerResults = vi.fn();
 const mockUseSinnerSchedule = vi.fn();
-
-vi.mock("@/hooks/useSeasonPreferences", () => ({
-  useSeasonPreferences: () => ({
-    seasons: { sinner: 2026, juventus: 2026, f1: 2026, motogp: 2026 },
-    setSeason: mockSetSeason,
-  }),
-}));
 
 vi.mock("@/hooks/useSportsData", () => ({
   useSinnerInfo: () => mockUseSinnerInfo(),
@@ -22,7 +14,6 @@ vi.mock("@/hooks/useSportsData", () => ({
 
 describe("SinnerPage", () => {
   beforeEach(() => {
-    mockSetSeason.mockReset();
     mockUseSinnerInfo.mockReturnValue({
       data: {
         name: "Jannik Sinner",
@@ -51,7 +42,7 @@ describe("SinnerPage", () => {
 
     render(<SinnerPage />);
 
-    expect(screen.getByText("Caricamento risultati da ATP Tour...")).toBeInTheDocument();
+    expect(screen.getByText("Caricamento risultati...")).toBeInTheDocument();
   });
 
   it("renders the error state for results", () => {

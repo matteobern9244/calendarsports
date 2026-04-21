@@ -22,7 +22,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 
 const PAGE_SIZE = 12;
