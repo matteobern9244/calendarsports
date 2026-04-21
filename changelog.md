@@ -52,6 +52,13 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Fixed
 
+- **Streaming – default famiglia TV su RAI**: atterrando su `/streaming`
+  senza query string, il tab "TV stasera" ora seleziona di default la
+  famiglia **RAI** invece di Sky Sport (fonte palinsesto piu' coperta in
+  prima serata). Il fallback `initialFamily` in `src/pages/StreamingPage.tsx`
+  passa da `"sky-sport"` a `"rai"`. La logica di sync URL state e l'ordine
+  delle famiglie restano invariati: `?family=sky-sport` (o altra famiglia
+  valida) continua a prevalere.
 - **"Nuove uscite" sempre vuote**: la sezione `/streaming?tab=releases`
   mostrava `EmptyState` anche per provider attivi (Netflix, Prime, HBO Max)
   perche' i range UI di default ("Oggi", "Prossimi 3 giorni", "Prossimi 7

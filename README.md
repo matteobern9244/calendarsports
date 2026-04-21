@@ -61,7 +61,9 @@ L'app espone sei viste principali:
   fascia di **prima serata (dalle 21:00 in poi)** e paginazione interna
   alla scheda (8 canali per pagina).
 - `Streaming` (`/streaming`): tab TV stasera (palinsesto reale per famiglia)
-  + tab Nuove uscite (TMDB con range date e filtro Film/Serie). Le "Nuove
+  + tab Nuove uscite (TMDB con range date e filtro Film/Serie). All'atterraggio
+  sulla pagina la famiglia TV selezionata di default e' **RAI** (override via
+  `?family=...`). Le "Nuove
   uscite" si basano su TMDB Discover filtrato per `primary_release_date`
   (film) / `first_air_date` (serie) e `with_watch_providers` regione `IT`:
   e' la **data di prima pubblicazione mondiale**, non la data di ingresso
