@@ -18,6 +18,19 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Refactor – colori hardcoded estratti in CSS variables semantici**:
+  introdotti nuovi token `--brand-dazn`, `--brand-dazn-contrast`,
+  `--brand-sky`, `--brand-ducati`, `--brand-aprilia`, `--brand-ktm`,
+  `--brand-yamaha`, `--brand-honda` in `:root` e `.dark` con tweak di
+  leggibilità per il tema scuro. `MOTOGP_CONSTRUCTOR_COLORS`,
+  badge DAZN/Sky in `Index.tsx` e `JuventusPage.tsx` ora referenziano
+  i nuovi token (`hsl(var(--brand-*))`) invece di literal HEX/rgba.
+  `COMPETITION_COLORS` Juve rimappato sulla palette oro/blu (Serie A
+  oro, Champions accent, Coppa Italia secondary navy) per seguire
+  automaticamente il cambio tema. Identità visiva invariata, brand
+  colors centralizzati in un unico punto. Nessun cambio funzionale,
+  versione invariata `2.1.0`.
+
 - **Tema chiaro/scuro – transizioni fluide e palette oro/blu rifinita**:
   aggiunto script inline anti-FOUC in `index.html` che applica la classe
   tema da `localStorage` prima del render React (no flash al boot).
