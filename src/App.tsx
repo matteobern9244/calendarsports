@@ -11,6 +11,7 @@ import SinnerPage from "./pages/SinnerPage";
 import JuventusPage from "./pages/JuventusPage";
 import Formula1Page from "./pages/Formula1Page";
 import MotoGPPage from "./pages/MotoGPPage";
+import PreferencesPage from "./pages/PreferencesPage";
 import NotFound from "./pages/NotFound";
 
 const disableQueryRetries = import.meta.env.VITE_DISABLE_QUERY_RETRIES === "true";
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/juventus" element={<JuventusPage />} />
               <Route path="/formula1" element={<Formula1Page />} />
               <Route path="/motogp" element={<MotoGPPage />} />
+              <Route path="/preferenze" element={<PreferencesPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
