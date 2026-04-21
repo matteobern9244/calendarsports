@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getNowMinute,
+  getNowSecond,
+  subscribeCountdown,
+} from "@/lib/countdownClock";
 
 interface EventCountdownProps {
   /** ISO date string of the event start */
@@ -17,7 +22,10 @@ interface Parts {
 }
 
 function getParts(target: number): Parts {
-  const now = Date.now();
+  return getPartsAt(target, Date.now());
+}
+
+function getPartsAt(target: number, now: number): Parts {
   const diff = Math.max(0, target - now);
   const totalSec = Math.floor(diff / 1000);
   return {
@@ -32,16 +40,34 @@ function getParts(target: number): Parts {
 const pad = (n: number) => n.toString().padStart(2, "0");
 
 export default function EventCountdown({ startDate, className }: EventCountdownProps) {
-  const target = new Date(startDate).getTime();
-  const valid = !Number.isNaN(target);
-  const [parts, setParts] = useState<Parts>(() => (valid ? getParts(target) : getParts(Date.now())));
+  const target = useMemo(() => new Date(startDate).getTime(), [startDate]);
+  const valid = Number.isFinite(target);
 
-  useEffect(() => {
-    if (!valid) return;
-    setParts(getParts(target));
-    const id = window.setInterval(() => setParts(getParts(target)), 1000);
-    return () => window.clearInterval(id);
-  }, [target, valid]);
+  // Decisione di risoluzione: serve "second" solo nell'ultima ora prima
+  // dell'evento, dove i secondi vengono effettivamente mostrati. Per
+  // determinarla usiamo lo snapshot "minute" (stabile) cosi' la
+  // sottoscrizione cambia solo ai cambi minuto, non ad ogni secondo.
+  const minuteSnapshot = useSyncExternalStore(
+    (cb) => subscribeCountdown(cb, "minute"),
+    getNowMinute,
+    getNowMinute,
+  );
+  const needsSeconds = useMemo(() => {
+    if (!valid) return false;
+    const diff = target - minuteSnapshot;
+    return diff > 0 && diff <= 3600 * 1000;
+  }, [target, valid, minuteSnapshot]);
+
+  const secondSnapshot = useSyncExternalStore(
+    (cb) => subscribeCountdown(cb, needsSeconds ? "second" : "minute"),
+    needsSeconds ? getNowSecond : getNowMinute,
+    needsSeconds ? getNowSecond : getNowMinute,
+  );
+
+  const parts = useMemo(
+    () => (valid ? getPartsAt(target, secondSnapshot) : getPartsAt(0, secondSnapshot)),
+    [target, valid, secondSnapshot],
+  );
 
   if (!valid) return null;
 
