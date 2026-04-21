@@ -18,6 +18,11 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Formula 1 – rimossa nota "Dati reali da Jolpica/Ergast API"** dal
+  sottotitolo della pagina `/formula1`: il `subtitle` del `SectionHeader`
+  non viene più mostrato. Fonte dati invariata lato edge function
+  `sports-f1` (Jolpica + OpenF1 + fallback statici). Versione applicativa
+  invariata `2.1.0`.
 - **Juventus – rimossa nota "Dati reali da Sky Sport Italia"** dal sottotitolo
   della pagina `/juventus`: il `subtitle` del `SectionHeader` non viene più
   mostrato. Fonte dati invariata lato edge function `sports-football`
