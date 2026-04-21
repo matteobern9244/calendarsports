@@ -65,7 +65,7 @@ export function useSinnerInfo() {
   return useQuery({
     queryKey: ["sinner", "info"],
     queryFn: () => tennisApi.getPlayerInfo(),
-    staleTime: 60 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
   });
 }
 
