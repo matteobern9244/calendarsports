@@ -51,6 +51,19 @@ export default function SinnerPage() {
     setResultsPage(1);
   }, [season]);
 
+  // Compatibilita' di forma: il backend ora restituisce
+  // `{ items, pagination }`, ma per sicurezza accettiamo anche il
+  // vecchio shape `MatchRow[]` (es. cache stale o fallback).
+  const resultItems: any[] = Array.isArray(results)
+    ? results
+    : (results?.items ?? []);
+  const resultsPagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  } | null = !Array.isArray(results) && results?.pagination ? results.pagination : null;
+
   // Prefetch della pagina successiva: appena i dati della pagina
   // corrente arrivano e sappiamo quante pagine totali esistono,
   // chiediamo silenziosamente a React Query di scaricare anche la
@@ -70,19 +83,6 @@ export default function SinnerPage() {
       staleTime: 5 * 60 * 1000,
     });
   }, [queryClient, season, resultsPage, totalResultPages]);
-
-  // Compatibilita' di forma: il backend ora restituisce
-  // `{ items, pagination }`, ma per sicurezza accettiamo anche il
-  // vecchio shape `MatchRow[]` (es. cache stale o fallback).
-  const resultItems: any[] = Array.isArray(results)
-    ? results
-    : (results?.items ?? []);
-  const resultsPagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  } | null = !Array.isArray(results) && results?.pagination ? results.pagination : null;
 
   if (!isOnline && resError && !results && schError && !schedule && !playerInfo) {
     return (
