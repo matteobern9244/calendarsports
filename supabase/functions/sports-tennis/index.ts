@@ -36,8 +36,15 @@ async function fetchWiki(url: string): Promise<string | null> {
 
 // ----- Helpers ---------------------------------------------------------
 function stripTags(s: string): string {
-  return s.replace(/<[^>]+>/g, ' ').replace(/&#160;/g, ' ').replace(/&nbsp;/g, ' ')
+  return s
+    // remove inline <style> blocks (Wikipedia template styles)
+    .replace(/<style[\s\S]*?<\/style>/g, ' ')
+    // remove citation markers like [1], [12]
+    .replace(/\[\s*\d+\s*\]/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&#160;/g, ' ').replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&#91;\s*\d+\s*&#93;/g, ' ')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
 }
 
@@ -98,20 +105,27 @@ async function getPlayerInfo() {
   const born = ib['born'] || '';
   const birthDate = (born.match(/\d{4}-\d{2}-\d{2}/) || [null])[0]
     || parseDateText(born);
-  const birthPlaceMatch = born.match(/age\s*\d+\)\s*(.+)$/);
-  const birthPlace = birthPlaceMatch ? birthPlaceMatch[1].trim() : '';
+  // Birthplace: text after "(age N)" up to end (may have trailing ".")
+  let birthPlace = '';
+  const birthPlaceMatch = born.match(/age\s*\d+\)\s*(.+?)\s*$/);
+  if (birthPlaceMatch) birthPlace = birthPlaceMatch[1].trim();
+  // Fallback: parse the original infobox cell looking for birthplace div
+  if (!birthPlace && html) {
+    const bpRe = /class="birthplace"[^>]*>([\s\S]*?)<\/div>/;
+    const bpm = html.match(bpRe);
+    if (bpm) birthPlace = stripTags(bpm[1]);
+  }
 
-  // 2026 season stats
+  // 2026 season stats - real Wikipedia labels are "Season record" and "Calendar titles"
   let seasonRecord: string | null = null;
   let seasonTitles: number | null = null;
   if (seasonHtml) {
     const sib = parseInfobox(seasonHtml);
-    // labels in season page typically "singles win-loss", "singles titles"
-    for (const k of Object.keys(sib)) {
-      if (k.includes('singles win') || k === 'singles record') seasonRecord = sib[k];
-      if (k.includes('singles titles')) {
-        const n = parseInt(sib[k]); if (!isNaN(n)) seasonTitles = n;
-      }
+    // First "Season record" entry is Singles (appears before Doubles)
+    if (sib['season record']) seasonRecord = sib['season record'];
+    if (sib['calendar titles']) {
+      const n = parseInt(sib['calendar titles']);
+      if (!isNaN(n)) seasonTitles = n;
     }
   }
 
