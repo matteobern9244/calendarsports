@@ -58,7 +58,7 @@ export default function Formula1Page() {
           {!calLoading && !calError && (!calendar || calendar.length === 0) && (
             <UnavailableExternalSource
               title={`Calendario F1 ${season}`}
-              description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale Formula 1 qui sotto per consultare tutte le giornate dei GP, gli orari delle sessioni (prove libere, qualifiche e gara) e i circuiti del Mondiale."
+              description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale Formula 1 qui sotto per consultare tutte le tappe del Mondiale, gli orari delle sessioni (prove libere, qualifiche e gara) e i circuiti su cui si correrà."
               externalLink="https://www.formula1.com/en/racing/2025"
               externalLabel="Vedi calendario su Formula1.com"
               ctaHint="Tocca qui per orari e circuiti del Mondiale"
@@ -174,7 +174,7 @@ export default function Formula1Page() {
           {!drvLoading && !drvError && (!drivers || drivers.length === 0) && (
             <UnavailableExternalSource
               title={`Classifica Piloti ${season}`}
-              description="La classifica piloti del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Formula 1 qui sotto per consultare la graduatoria aggiornata in tempo reale, con punti, vittorie e podi di ogni pilota."
+              description="La classifica piloti del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Formula 1 qui sotto per consultare la graduatoria aggiornata gara dopo gara, con punti, vittorie e podi di ogni pilota."
               externalLink="https://www.formula1.com/en/results/2025/drivers"
               externalLabel="Vedi classifica piloti su Formula1.com"
               ctaHint="Tocca qui per punti, vittorie e podi"
