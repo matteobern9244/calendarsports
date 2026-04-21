@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
             const openF1Drivers = await openF1Res.json();
             for (const d of openF1Drivers) {
               if (d.last_name && d.headshot_url) {
-                headshotMap[d.last_name.toLowerCase()] = d.headshot_url;
+                headshotMap[normalizeKey(d.last_name)] = d.headshot_url;
               }
             }
           }
@@ -130,9 +130,12 @@ Deno.serve(async (req) => {
 
         data = standings.map((s: any) => {
           const familyName = s.Driver?.familyName || '';
-          const familyNameLower = familyName.toLowerCase();
-          // Try OpenF1 first, then fallback map
-          const photoUrl = headshotMap[familyNameLower] || F1_DRIVER_PHOTOS[familyNameLower] || null;
+          const key = normalizeKey(familyName);
+          // Mappa statica prioritaria su OpenF1: per i piloti listati in
+          // F1_DRIVER_PHOTOS sappiamo che il CDN F1 restituisce un placeholder
+          // vuoto (HTTP 200) o che servono accenti normalizzati. Per gli altri
+          // usiamo headshot OpenF1.
+          const photoUrl = F1_DRIVER_PHOTOS[key] || headshotMap[key] || null;
           return {
             position: parseInt(s.position),
             points: parseFloat(s.points),
