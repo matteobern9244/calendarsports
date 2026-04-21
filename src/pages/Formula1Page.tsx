@@ -2,7 +2,7 @@ import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
-import EmptyState from "@/components/common/EmptyState";
+import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getCurrentF1Season } from "@/lib/currentSeason";
@@ -49,7 +49,14 @@ export default function Formula1Page() {
         <TabsContent value="calendario">
           {calLoading && <LoadingState message="Caricamento calendario F1..." />}
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
-          {!calLoading && !calError && (!calendar || calendar.length === 0) && <EmptyState message="Nessun GP in calendario per questa stagione" />}
+          {!calLoading && !calError && (!calendar || calendar.length === 0) && (
+            <UnavailableExternalSource
+              title={`Calendario F1 ${season}`}
+              description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale Formula 1 qui sotto per consultare tutte le date dei GP, gli orari delle sessioni (prove libere, qualifiche e gara) e i circuiti del Mondiale."
+              externalLink="https://www.formula1.com/en/racing/2025"
+              externalLabel="Apri calendario su Formula1.com"
+            />
+          )}
           {calendar && calendar.length > 0 && (() => {
             const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(calendar, (race: any) => race.date);
             return (
