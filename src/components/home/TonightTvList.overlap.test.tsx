@@ -112,6 +112,12 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
     // L'orario reale di inizio (20:30) deve essere mostrato anche se
     // anteriore alla fascia, perche' il programma e' ancora in onda.
     expect(screen.getAllByLabelText(/^Inizio alle 20:30(?:, fine alle \d{2}:\d{2})?$/).length).toBeGreaterThan(0);
+    // L'orario di fine (23:15) deve essere comunicato sia visivamente
+    // sia nell'aria-label, cosi' l'utente capisce perche' il programma
+    // copre la prima serata pur essendo iniziato prima delle 21:00.
+    expect(
+      screen.getAllByLabelText("Inizio alle 20:30, fine alle 23:15").length,
+    ).toBeGreaterThan(0);
   });
 
   it("mostra un programma 22:55 -> 23:50 Rome (inizia in fascia, finisce dopo le 23)", () => {
