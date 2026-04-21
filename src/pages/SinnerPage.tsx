@@ -6,12 +6,14 @@ import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import TimezoneBadge from "@/components/common/TimezoneBadge";
 import OfflineFallback from "@/components/common/OfflineFallback";
+import PlayerHeader from "@/components/sinner/PlayerHeader";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useSportsData";
 import { formatDateIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 export default function SinnerPage() {
   const { seasons, setSeason } = useSeasonPreferences();
@@ -35,19 +37,23 @@ export default function SinnerPage() {
         <TimezoneBadge />
       </div>
 
-      {/* Player info card */}
+      {/* Player header with photo, ranking, season stats */}
       {playerInfo && (
-        <div className="mb-6 flex items-center gap-4 rounded-xl border border-border bg-card p-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full gold-gradient text-xl font-heading font-bold text-primary-foreground">
-            {playerInfo.ranking || '1'}
-          </div>
-          <div>
-            <h2 className="font-heading text-xl font-bold">{playerInfo.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              🇮🇹 {playerInfo.nationality} · {playerInfo.height} · {playerInfo.weight} · {playerInfo.birthPlace}
-            </p>
-          </div>
-        </div>
+        <PlayerHeader
+          name={playerInfo.name}
+          ranking={typeof playerInfo.ranking === "number" ? playerInfo.ranking : null}
+          rankingDate={playerInfo.rankingDate}
+          careerHigh={playerInfo.careerHigh}
+          nationality={playerInfo.nationality}
+          height={playerInfo.height}
+          birthPlace={playerInfo.birthPlace}
+          plays={playerInfo.plays}
+          coach={playerInfo.coach}
+          seasonRecord={playerInfo.seasonRecord}
+          seasonTitles={playerInfo.seasonTitles}
+          photoUrl={playerInfo.photoUrl}
+          source={playerInfo.source}
+        />
       )}
 
       <div className="mb-6">
@@ -74,13 +80,29 @@ export default function SinnerPage() {
                 <EventCard
                   key={i}
                   sport={r.tournament || 'ATP'}
-                  title={r.opponent ? `vs. ${r.opponent}` : r.tournament}
+                  title={r.opponent ? `vs. ${r.opponent}${r.opponentRank ? ` (#${r.opponentRank})` : ""}` : r.tournament}
+                  subtitle={r.round ? `${r.round}${r.surface ? ` · ${r.surface}` : ""}` : r.surface}
                   date={r.date ? formatDateIT(r.date) : '—'}
                   startDate={r.date}
                   status={r.date ? getEventStatus(r.date) : 'completato'}
                   highlight={i === highlightIndex}
                 >
-                  {r.score && <p className="text-sm font-heading font-bold text-primary">{r.score}</p>}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {r.result && (
+                      <span
+                        className={cn(
+                          "inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md px-2 text-xs font-heading font-bold",
+                          r.result === "V"
+                            ? "bg-success/15 text-success border border-success/30"
+                            : "bg-destructive/15 text-destructive border border-destructive/30",
+                        )}
+                        aria-label={r.result === "V" ? "Vittoria" : "Sconfitta"}
+                      >
+                        {r.result}
+                      </span>
+                    )}
+                    {r.score && <p className="text-sm font-heading font-bold text-foreground">{r.score}</p>}
+                  </div>
                 </EventCard>
               ))}
             </motion.div>
@@ -98,7 +120,25 @@ export default function SinnerPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {schedule.map((t: any, i: number) => (
                 <div key={i} className="rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-all">
-                  <p className="font-semibold text-sm">{t.name}</p>
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="font-heading font-semibold text-sm leading-tight">{t.name}</p>
+                    {t.tier && (
+                      <span className="shrink-0 text-[10px] font-heading uppercase tracking-wider text-muted-foreground border border-border rounded px-1.5 py-0.5">
+                        {t.tier}
+                      </span>
+                    )}
+                  </div>
+                  {t.location && <p className="text-xs text-muted-foreground">{t.location}</p>}
+                  <div className="mt-2 flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      {t.date ? formatDateIT(t.date) : "—"}
+                      {t.dateEnd ? ` → ${formatDateIT(t.dateEnd)}` : ""}
+                    </span>
+                    {t.surface && <span className="text-muted-foreground">{t.surface}</span>}
+                  </div>
+                  {t.result && (
+                    <p className="mt-2 text-xs font-heading font-bold text-primary">Risultato: {t.result}</p>
+                  )}
                 </div>
               ))}
             </div>
