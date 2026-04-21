@@ -186,8 +186,11 @@ describe("enrichTitle", () => {
       { title: "Tg5 - Notte (News)", hh: 20, mm: 40 },
     ];
     const result = enrichTitle("EV-SP", rich, 20, 40);
-    expect(result.title).toBe("Tg5 - Notte");
-    // Genere News non e' nella whitelist del modulo live, quindi qui resta undefined.
+    // News non e' nella whitelist locale ridotta del test, quindi il titolo
+    // resta con il suffisso "(News)" e genre undefined. Cio' che conta e' che
+    // il safety net abbia comunque selezionato il rich title per orario
+    // esatto invece di cadere sul raw cosmetizzato "Ev-Sp".
+    expect(result.title).toBe("Tg5 - Notte (News)");
     expect(result.genre).toBeUndefined();
   });
 });
