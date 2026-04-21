@@ -1,175 +1,82 @@
 
 
-## "Sincronizza" davvero completo: tutti i dati, tutte le pagine
+## Countdown chips: tick globale ottimizzato senza flicker
 
-### Obiettivo
-Il bottone **Sincronizza** in Home deve precaricare **tutto** ciò che le pagine dell'app possono mostrare, in modo che dopo lo sync la navigazione tra Home, Streaming, Sinner, Juventus, F1 e MotoGP (incluse le tab Highlights) non richieda nessuna nuova fetch.
+### Problema attuale
 
-### Stato attuale (cosa già fa `useSyncAll`)
-- F1: calendar, driver-standings, constructor-standings, next-race ✅
-- Juventus: standings, calendar (solo pagina 1), next-match ✅
-- Sinner: player-info, next-event, schedule, results ✅
-- MotoGP: calendar, next-event, standings, constructor-standings ✅
-- Streaming TV: solo `invalidateQueries` (non prefetcha le 5 famiglie) ⚠️
-- Streaming Releases: 4 provider con range fisso `today → +14gg` ⚠️
-- **Highlights YouTube (Juventus, F1, MotoGP): MANCANTI** ❌
-- **Juventus calendar: solo pagina 1, le altre pagine non vengono prefetchate** ⚠️
+`EventCountdown` (usato in Home, Juventus, JuventusMatchPage) crea **un `setInterval` da 1s per ogni istanza**. Con 12 card visibili contemporaneamente (calendario Juventus, Prossimi Eventi) si hanno 12 timer non sincronizzati che aggiornano lo stato a frequenze leggermente sfalsate → micro-flicker dei chip, render React duplicati ogni secondo, lavoro inutile quando il chip mostra solo "g/h/m" (cambia al massimo ogni minuto).
 
-### Cosa aggiungere/sistemare
+`ReleaseCountdownBadge` invece **non si aggiorna mai** dopo il mount: se il browser resta aperto a cavallo della mezzanotte di Roma il chip resta su "Tra 2 giorni" anche quando dovrebbe diventare "Domani".
 
-#### 1. Highlights YouTube (3 sport) — NUOVO
-Aggiungere un task di prefetch dedicato che chiama `highlights-youtube` per ognuno dei 3 sport con il limit di default usato dalle pagine (`12`):
+### Soluzione: clock store globale + tick adattivo
 
+Introdurre un **tick store condiviso** (zero dipendenze, plain module) che emette un singolo timer a livello app e notifica tutti i subscriber. I componenti countdown si abbonano via `useSyncExternalStore`, quindi React batcha automaticamente e ogni chip riceve lo stesso istante di riferimento → niente più sfasamenti visivi.
+
+Il timer adatta la frequenza alla "risoluzione necessaria":
+- Se almeno un subscriber chiede risoluzione "secondi" → tick a 1000ms.
+- Se tutti chiedono solo "minuti" → tick a 30000ms (30s, sufficiente per UI al minuto).
+- Si ferma del tutto quando `document.visibilityState === "hidden"` (e ri-tick + ricalcolo immediato al ritorno in foreground).
+
+### File nuovo
+
+**`src/lib/countdownClock.ts`**
+
+API minima:
 ```ts
-// queryKey allineate a useHighlights(sport, 12)
-["highlights", "juventus", 12]
-["highlights", "f1", 12]
-["highlights", "motogp", 12]
+type Resolution = "second" | "minute";
+export function subscribeCountdown(cb: () => void, res: Resolution): () => void;
+export function getNow(): number; // snapshot stabile dell'ultimo tick
 ```
 
-Le edge function `highlights-youtube` accettano `?sport=...&limit=12` e ritornano l'envelope `{ success, data, meta }`. Useremo `callEdgeFunctionWithMeta` (già importato) e `setQueryData` come per gli altri sport, così entrano anche nel meccanismo di warning fallback.
+Implementazione:
+- Set di subscriber con risoluzione per ognuno.
+- Un solo `setInterval` ricreato quando cambia la risoluzione richiesta più alta.
+- Listener `visibilitychange`: pausa quando hidden, refresh + tick immediato + reschedule quando visible.
+- Cleanup totale quando l'ultimo subscriber si disiscrive.
+- `getNow()` ritorna un timestamp aggiornato solo ai tick → tutti i componenti vedono lo stesso istante nello stesso commit React (no sfasamenti).
 
-#### 2. Juventus calendar — TUTTE le pagine
-Oggi viene prefetchata solo `page=1, pageSize=12`. Le pagine 2, 3, … restano "fredde". Soluzione:
+### File modificati
 
-- Prefetchare **prima** la pagina 1 per leggere `totalPages` dal payload paginato.
-- Fare prefetch **in parallelo** di tutte le altre pagine (`page=2..totalPages`) con la stessa `pageSize=12` e le query key allineate a `useJuventusCalendar(season, page, 12)`.
+**`src/components/common/EventCountdown.tsx`**
+- Rimuovere `useState` + `useEffect` con `setInterval` interno.
+- Sottoscriversi al clock con `useSyncExternalStore(subscribeCountdown, getNow)`.
+- Risoluzione: `"second"` solo quando `parts.days === 0 && parts.hours === 0` (ultima ora prima dell'evento, dove i secondi servono); altrimenti `"minute"`.
+- Memoizzare `target = useMemo(() => new Date(startDate).getTime(), [startDate])`.
+- Chiusura con `if (!Number.isFinite(target)) return null;` early.
+- Output identico (stessi class, stessi token gold, stesso layout) → **zero regressione visiva**.
 
-Cap di sicurezza: massimo 10 pagine (oltre 120 partite è impossibile per una sola squadra/stagione).
+**`src/components/streaming/ReleaseCountdownBadge.tsx`**
+- Sottoscriversi al clock con risoluzione `"minute"` (basta un refresh ogni 30s per cogliere il cambio di giorno a Roma).
+- `daysUntilRome` chiamato dentro il render, ricalcolato ad ogni tick → corregge il bug del cambio giorno a mezzanotte senza altri costi.
 
-#### 3. Streaming TV — prefetch reale per tutte le famiglie
-Oggi solo `invalidateQueries({ queryKey: ["streaming-tv"] })`. Sostituire con prefetch esplicito per ognuna delle 5 famiglie di `STREAMING_FAMILIES` (rai, mediaset, sky-sport, sky-cinema, discovery), usando la stessa query key di `useTvByFamily`:
+### Cosa NON cambia
 
-```ts
-queryKey: ["streaming-tv", family]
-queryFn: () => streamingApi.getTvByFamily(family)
-```
+- Markup, classi Tailwind, token semantici, varianti `today/soon/future/past`, `aria-label`, dimensioni icone → identici.
+- `EventCard`, `JuventusPage`, `JuventusMatchPage`, `StreamingPage`, `ReleaseDetailDialog` → **nessuna modifica**, l'API dei due componenti countdown resta identica.
+- `SparkleLoop` (altro `setInterval` non countdown) → non toccato.
+- Logica `isLive` (finestra ±3h), logica `isPast`, logica `daysUntilRome` → invariate.
 
-#### 4. Streaming Releases — coprire anche il range usato in pagina
-Oggi: `today → +14gg`. La pagina `StreamingPage` usa di default `range="30d"` → `today → +30gg` (e supporta anche range diversi). Soluzione minima e sufficiente per "non rifetcha al primo accesso": prefetch su **due** range che coprono i default di Home e di StreamingPage:
+### Anti-flicker / anti-regressione
 
-- `today → today+14` (già presente, lasciato)
-- `today → today+30` (NUOVO, allineato al default `range=30d` della pagina)
-
-Per i 4 provider × 2 range → 8 prefetch totali, tutti in parallelo. Non si toccano gli altri range filtrabili dall'utente (sarebbe spreco di chiamate TMDB).
-
-### Modifiche al file
-
-**Solo `src/hooks/useSyncAll.ts`** (nessun altro file impattato; query key e `staleTime` restano coerenti con gli hook esistenti, così le pagine leggono la cache senza rifetcha).
-
-Struttura aggiornata della funzione `sync`:
-
-```ts
-// === Step 1: pulizia cache stagioni obsolete === (invariato)
-
-// === Step 2: prefetch sport per stagione corrente === (invariato)
-
-// === Step 2bis: Highlights YouTube === (NUOVO)
-setSyncStep("Aggiornamento highlights YouTube...");
-await Promise.all(
-  (["juventus", "f1", "motogp"] as const).map(async (sport) => {
-    try {
-      const { data, meta } = await callEdgeFunctionWithMeta(
-        "highlights-youtube",
-        { sport, limit: "12" },
-      );
-      queryClient.setQueryData(["highlights", sport, 12], data);
-      if (requiresWarning(meta)) {
-        // mappa il warning sullo sport corrispondente
-        const mapped: SportKey = sport === "juventus" ? "juventus" : sport;
-        fallbackBySport[mapped].add(meta?.dataSource ?? "unknown");
-      }
-    } catch (err) {
-      console.warn(`Sync highlights ${sport} failed:`, err);
-    }
-  }),
-);
-setSyncProgress(70);
-
-// === Step 3: Juventus calendar — tutte le pagine === (NUOVO)
-setSyncStep("Aggiornamento calendario Juventus completo...");
-const firstPage = queryClient.getQueryData<{ totalPages?: number }>(
-  ["juventus", "calendar", seasonJ, 1, 12],
-);
-const totalPages = Math.min(10, firstPage?.totalPages ?? 1);
-if (totalPages > 1) {
-  await Promise.all(
-    Array.from({ length: totalPages - 1 }, (_, i) => i + 2).map(async (p) => {
-      try {
-        const { data } = await callEdgeFunctionWithMeta("sports-football", {
-          action: "calendar",
-          season: String(seasonJ),
-          page: String(p),
-          pageSize: "12",
-        });
-        queryClient.setQueryData(["juventus", "calendar", seasonJ, p, 12], data);
-      } catch (err) {
-        console.warn(`Sync juventus calendar page ${p} failed:`, err);
-      }
-    }),
-  );
-}
-setSyncProgress(78);
-
-// === Step 4: Streaming TV — prefetch reale 5 famiglie === (RISCRITTO)
-setSyncStep("Aggiornamento palinsesti TV...");
-await Promise.all(
-  STREAMING_FAMILIES.map((f) =>
-    queryClient.prefetchQuery({
-      queryKey: ["streaming-tv", f.id],
-      queryFn: () => streamingApi.getTvByFamily(f.id),
-      staleTime: 0,
-    }),
-  ),
-);
-setSyncProgress(88);
-
-// === Step 5: Streaming Releases — 14gg + 30gg === (ESTESO)
-setSyncStep("Aggiornamento nuove uscite streaming...");
-const today = todayRomeISO();
-const ranges = [addDaysISO(today, 14), addDaysISO(today, 30)];
-await Promise.all(
-  STREAMING_PROVIDERS.flatMap((p) =>
-    ranges.map((dateTo) =>
-      queryClient.prefetchQuery({
-        queryKey: ["streaming-releases", p.id, today, dateTo],
-        queryFn: () => streamingApi.getReleasesByProvider(p.id, today, dateTo),
-        staleTime: 0,
-      }),
-    ),
-  ),
-);
-setSyncProgress(100);
-```
-
-Aggiunto import:
-```ts
-import { STREAMING_FAMILIES, STREAMING_PROVIDERS } from "@/hooks/useStreamingData";
-```
-(`STREAMING_PROVIDERS` già importato; aggiungere `STREAMING_FAMILIES`.)
-
-### Cosa NON viene toccato (anti-regressione)
-- `useSportsData.ts`, `useStreamingData.ts`, pagine: **nessuna modifica**. Le query key restano identiche, quindi la cache prefetchata viene letta direttamente dai componenti.
-- Filtri streaming non-default (es. range `7d`, `60d`, ecc.) restano on-demand: non è ragionevole prefetcharli tutti (consumerebbe quote TMDB inutilmente).
-- `JuventusMatchPage` continua a funzionare con la sua ricerca multi-pagina, ma ora trova subito i match nelle pagine già in cache.
-- `EventCard`, `OfflineFallback`, header, timezone Roma, lingua italiana: invariati.
-
-### Progress map aggiornato
-- 0 → 8: pulizia cache
-- 8 → 60: 4 sport (F1, Juve base, Sinner, MotoGP)
-- 60 → 70: Highlights YouTube
-- 70 → 78: Juventus calendar pagine extra
-- 78 → 88: TV palinsesti 5 famiglie
-- 88 → 100: Releases 4 provider × 2 range
+- Tutti i chip nello stesso commit usano lo stesso `now` → zero sfasamento visivo tra card adiacenti.
+- `useSyncExternalStore` evita re-render se il valore restituito da `getNow` è uguale al precedente (riferimento numerico stabile tra i tick → no commit inutile dei chip in modalità "minute" durante i 1000ms tra tick "seconds" richiesti da altri).
+  - Nota implementativa: per garantire l'invarianza referenziale ai subscriber "minute" durante un tick "second", lo store esporrà due snapshot separati (`getNowSecond`, `getNowMinute`) aggiornati indipendentemente. Il subscriber "minute" riceve un nuovo numero solo ai tick al minuto → il suo componente non si re-renderizza ogni secondo.
+- `tabular-nums` già presente → niente layout shift sui numeri che cambiano.
+- Tab in background: timer fermo → niente burst CPU al ritorno; al `visible` viene calcolato subito un nuovo snapshot e notificati tutti.
+- 12 card → 1 timer + 12 callback leggere invece di 12 timer + 12 setState.
 
 ### Verifica post-modifica
-- `npm run lint` + `npm run build` + `npm run test` (nessun test su `useSyncAll` da aggiornare oltre a quelli già presenti).
-- Smoke manuale: cliccare **Sincronizza** in Home, poi navigare in Streaming (tab TV su tutte e 5 le famiglie + tab Nuove uscite), Sinner, Juventus (pagine 1, 2, …), F1 → tab Highlights, MotoGP → tab Highlights. Nessuno dei `useQuery` dovrebbe entrare in `isLoading` (lettura immediata da cache).
-- Toast finale: success se tutto live, warning con elenco sport in fallback (logica esistente, già coerente).
+
+- `npm run lint`, `npm run build`, `npm run test`.
+- Smoke manuale: Home → osservare i chip "Prossimo evento" che scorrono in sincronia perfetta tra card adiacenti, niente flicker, niente jitter dei numeri.
+- Juventus calendario (12 chip simultanei) → CPU stabile, animazioni Framer Motion fluide.
+- Streaming → lasciare aperta la pagina su un titolo "Domani" alla mezzanotte di Roma: il chip deve passare a "Oggi" senza reload.
+- Cambio tab → nessuna fiammata di setState al ritorno.
 
 ### Note tecniche
-- Tutte le chiavi e `staleTime` restano allineati 1:1 agli hook consumer → nessuna duplicazione di rete.
-- Cap di 10 pagine sul calendario Juventus evita loop runaway in caso di payload mal formato.
-- Prefetch streaming usa `prefetchQuery` (rispetta deduplica React Query) anziché `setQueryData`, perché `streamingApi.getTvByFamily` è chiamata diretta JSON e non usa `callEdgeFunctionWithMeta` (TV/Releases non sono nel sistema warning fallback per scelta).
-- Nessun colore hardcoded, nessuna nuova dipendenza, nessun cambio routing/Lovable/sync GitHub.
+
+- Nessuna nuova dipendenza npm.
+- `useSyncExternalStore` è API stabile React 18 (già usata implicitamente da React Query, supportata dallo stack).
+- Nessun colore hardcoded, nessun cambio routing/payload/Lovable sync.
+- Compatibile con SSR-less (Vite SPA) — il check `typeof document !== "undefined"` viene aggiunto comunque per robustezza.
 
