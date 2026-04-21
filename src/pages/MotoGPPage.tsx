@@ -2,7 +2,7 @@ import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
-import EmptyState from "@/components/common/EmptyState";
+import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getCurrentMotoGPSeason } from "@/lib/currentSeason";
@@ -55,7 +55,12 @@ export default function MotoGPPage() {
           {calLoading && <LoadingState message="Caricamento calendario MotoGP..." />}
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
           {!calLoading && !calError && (!calendar || calendar.length === 0) && (
-            <EmptyState message="Nessun evento in calendario per questa stagione" />
+            <UnavailableExternalSource
+              title={`Calendario MotoGP ${season}`}
+              description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale MotoGP qui sotto per consultare tutte le date dei GP, gli orari delle sessioni (libere, qualifiche, Sprint e gara) e i circuiti del Mondiale."
+              externalLink="https://www.motogp.com/it/calendar"
+              externalLabel="Apri calendario su MotoGP.com"
+            />
           )}
           {calendar && calendar.length > 0 && (() => {
             const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
