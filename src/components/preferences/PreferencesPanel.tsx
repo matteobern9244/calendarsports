@@ -1,4 +1,4 @@
-import { Sun, Moon, Palette } from "lucide-react";
+import { Sun, Moon, Palette, Zap, BatteryLow, Timer } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -11,11 +11,13 @@ import { cn } from "@/lib/utils";
 import { usePreferencesPanel } from "@/contexts/PreferencesPanelContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
+import { useCountdownMode } from "@/hooks/useCountdownMode";
 
 export default function PreferencesPanel() {
   const { open, setOpen } = usePreferencesPanel();
   const isMobile = useIsMobile();
   const { theme, setTheme } = useTheme();
+  const { mode: countdownMode, setMode: setCountdownMode } = useCountdownMode();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -42,7 +44,7 @@ export default function PreferencesPanel() {
             <span className="text-gold-gradient">Preferenze</span>
           </SheetTitle>
           <SheetDescription>
-            Personalizza il tema dell'interfaccia.
+            Personalizza tema e comportamento dei countdown.
           </SheetDescription>
         </SheetHeader>
 
