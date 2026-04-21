@@ -15,6 +15,7 @@ import {
 } from "@/hooks/useStreamingData";
 import type { StreamingProviderId } from "@/lib/api/sportsApi";
 import { formatDateIT } from "@/lib/dateUtils";
+import ReleaseCountdownBadge from "@/components/streaming/ReleaseCountdownBadge";
 
 const PROVIDER_HOMEPAGES: Record<StreamingProviderId, string> = {
   netflix: "https://www.netflix.com",
@@ -58,9 +59,12 @@ export default function ReleaseDetailDialog({
                   {item.type === "movie" ? "Film" : "Serie"}
                 </Badge>
                 {item.releaseDate && (
-                  <Badge variant="secondary" className="text-[10px]">
-                    {formatDateIT(item.releaseDate)}
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {formatDateIT(item.releaseDate)}
+                    </Badge>
+                    <ReleaseCountdownBadge releaseDate={item.releaseDate} />
+                  </>
                 )}
                 {item.voteAverage !== null && item.voteAverage > 0 && (
                   <Badge variant="outline" className="text-[10px] font-mono">
