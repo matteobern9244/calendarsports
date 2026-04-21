@@ -241,3 +241,41 @@ export function formatDurationSpoken(min: number): string {
   const minPart = m === 1 ? "1 minuto" : `${m} minuti`;
   return `${oraPart} e ${minPart}`;
 }
+
+/**
+ * Formato relativo italiano per date recenti, pensato per metadati UI
+ * tipo "pubblicato 2 giorni fa". Si appoggia a `toRomeDate` per la
+ * normalizzazione "naive = UTC". Ritorna stringa vuota per input non
+ * validi.
+ *
+ * Esempi:
+ * - oggi -> "oggi"
+ * - 1 giorno fa -> "ieri"
+ * - 3 giorni fa -> "3 giorni fa"
+ * - 14 giorni fa -> "2 settimane fa"
+ * - 60 giorni fa -> "2 mesi fa"
+ */
+export function formatRelativeIT(input: string | Date | null | undefined): string {
+  const date = toRomeDate(input);
+  if (!date) return "";
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return "ora";
+  if (diffMin < 60) return diffMin === 1 ? "1 minuto fa" : `${diffMin} minuti fa`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return diffH === 1 ? "1 ora fa" : `${diffH} ore fa`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD === 0) return "oggi";
+  if (diffD === 1) return "ieri";
+  if (diffD < 7) return `${diffD} giorni fa`;
+  if (diffD < 30) {
+    const w = Math.floor(diffD / 7);
+    return w === 1 ? "1 settimana fa" : `${w} settimane fa`;
+  }
+  if (diffD < 365) {
+    const mo = Math.floor(diffD / 30);
+    return mo === 1 ? "1 mese fa" : `${mo} mesi fa`;
+  }
+  const y = Math.floor(diffD / 365);
+  return y === 1 ? "1 anno fa" : `${y} anni fa`;
+}

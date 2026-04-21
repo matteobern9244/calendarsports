@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { f1Api, footballApi, tennisApi, motogpApi } from "@/lib/api/sportsApi";
+import { f1Api, footballApi, tennisApi, motogpApi, highlightsApi, type HighlightSport } from "@/lib/api/sportsApi";
 
 // === F1 Hooks ===
 export function useF1Calendar(season: number) {
@@ -123,5 +123,14 @@ export function useMotoGPConstructorStandings(season: number) {
     queryKey: ["motogp", "constructor-standings", season],
     queryFn: () => motogpApi.getConstructorStandings(season),
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+// === Highlights Hook (YouTube RSS) ===
+export function useHighlights(sport: HighlightSport, limit = 12) {
+  return useQuery({
+    queryKey: ["highlights", sport, limit],
+    queryFn: () => highlightsApi.list(sport, limit),
+    staleTime: 10 * 60 * 1000,
   });
 }

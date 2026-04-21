@@ -260,6 +260,37 @@ Pagina dettaglio partita (`/juventus/partite/:matchId`):
   CTA "Apri su Sky Sport". Nessun dato finto o mock, in linea con la
   policy `no hardcoded`.
 
+### Highlights video (Juventus, F1, MotoGP)
+
+Le tab "Highlights" su `/juventus`, `/formula1` e `/motogp` sono alimentate
+dai **feed RSS pubblici** delle 3 playlist YouTube ufficiali, esposti
+dall'edge function `supabase/functions/highlights-youtube`:
+
+- Juventus → `PLamQuNkRTV0eQ-UiYDCuz_WUHOlri1BY3` (canale ufficiale Juventus).
+- Formula 1 → `PLZbcTUGG8ELs188DCvpKMVFsnia-uB3j8` (Sky Sport F1).
+- MotoGP → `PLMgcIchslSqgqxtkUg4iiqc1UL8u8uFey` (Sky Sport MotoGP).
+
+Per ogni video vengono estratti dati **reali** dal feed: `videoId`, `title`,
+`publishedAt` (ISO 8601), `source` (nome canale dal `<author>`) e thumbnail
+deterministica `https://i.ytimg.com/vi/{videoId}/hqdefault.jpg`. Il client
+li consuma via hook `useHighlights(sport, limit)` con `staleTime` 10 minuti;
+l'edge function aggiunge `Cache-Control: public, max-age=600`.
+
+Vantaggi:
+
+- nessuna API key richiesta (RSS pubblico);
+- nessun dato hardcoded: titoli, date e link cambiano solo se cambia la
+  playlist YouTube ufficiale.
+
+Rischi:
+
+- se una delle 3 playlist viene cancellata o resa privata, il feed ritorna
+  vuoto e la sezione mostra uno stato vuoto onesto (nessun crash);
+- breaking change sulla struttura RSS YouTube comporterebbe parsing vuoto
+  con stesso fallback;
+- limiti di rate side-YouTube su traffico molto alto sono mitigati dalla
+  cache HTTP 10 minuti lato edge.
+
 ### Jannik Sinner
 
 Fonti correnti:
