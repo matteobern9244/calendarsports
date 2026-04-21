@@ -38,6 +38,15 @@ const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const CREDITS_TTL_MS = 24 * 60 * 60 * 1000;
 
+// Quando la finestra richiesta non produce risultati, ampliamo automaticamente
+// la ricerca di N giorni indietro e M giorni in avanti, mantenendo provider e
+// regione invariati. TMDB indicizza i titoli streaming per primary_release_date
+// (film) / first_air_date (serie), non per data di ingresso sulla piattaforma:
+// finestre strette (1-7 giorni) restituiscono spesso 0 risultati anche se il
+// catalogo del provider e' attivo.
+const WIDEN_BACK_DAYS = 14;
+const WIDEN_FWD_DAYS = 30;
+
 function todayRomeISO(): string {
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Rome",
