@@ -204,6 +204,12 @@ export default function HomePage() {
               startDate={ev.rawDate}
               status={undefined}
               highlight={idx === 0}
+              onRetry={() => {
+                f1Refetch();
+                juveRefetch();
+                sinnerRefetch();
+                motogpRefetch();
+              }}
             >
               {ev.broadcaster && (
                 <div className="flex flex-wrap gap-1.5">
