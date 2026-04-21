@@ -231,7 +231,11 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
                   return (
                     <li
                       key={key}
-                      title={`${full}: ${r.raw}`}
+                      title={
+                        r.years.length > 0
+                          ? `${full}: ${label} (${r.years.join(", ")})`
+                          : `${full}: ${label}`
+                      }
                       aria-label={`${full}: ${label}${
                         r.years.length ? `, anni ${r.years.join(", ")}` : ""
                       }`}
