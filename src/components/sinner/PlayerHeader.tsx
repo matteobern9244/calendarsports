@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Ruler, Weight, Hand, MapPin, UserRound, Info } from "lucide-react";
 
 export interface SlamResultProp {
   best: string | null;
@@ -67,27 +68,31 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
 
   return (
     <section
-      className="mb-6 rounded-2xl border border-border bg-card p-4 sm:p-6"
+      className="mb-6 overflow-hidden rounded-2xl border border-border border-t-2 border-t-primary/60 bg-gradient-to-br from-card via-card to-secondary/10 p-5 shadow-sm sm:p-7"
       aria-label="Profilo giocatore"
     >
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-        {/* Photo top-left */}
-        <div className="shrink-0">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+        {/* Photo top-left with gold glow */}
+        <div className="relative shrink-0 self-center sm:self-start">
+          <div
+            aria-hidden
+            className="absolute -inset-1 rounded-2xl gold-gradient opacity-30 blur-md"
+          />
           {props.photoUrl && !imgError ? (
             <img
               src={props.photoUrl}
               alt={`${props.name} — foto`}
               loading="eager"
-              width={96}
-              height={96}
+              width={128}
+              height={160}
               onError={() => setImgError(true)}
-              className="h-24 w-24 rounded-2xl object-cover ring-2 ring-primary/40 shadow-md"
+              className="relative h-36 w-28 rounded-2xl object-cover object-top ring-2 ring-primary/60 ring-offset-2 ring-offset-card shadow-lg sm:h-40 sm:w-32"
             />
           ) : (
             <div
               className={cn(
-                "flex h-24 w-24 items-center justify-center rounded-2xl",
-                "gold-gradient font-heading text-3xl font-bold text-primary-foreground ring-2 ring-primary/40",
+                "relative flex h-36 w-28 items-center justify-center rounded-2xl sm:h-40 sm:w-32",
+                "gold-gradient font-heading text-4xl font-bold text-primary-foreground ring-2 ring-primary/60 ring-offset-2 ring-offset-card shadow-lg",
               )}
               aria-hidden
             >
@@ -107,29 +112,32 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
             )}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-2">
-            <div>
-              <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading">
-                Ranking ATP Singolare
+          {/* KPI cards */}
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-border/60 bg-muted/40 px-4 py-3">
+              <p className="font-heading text-[10px] uppercase tracking-widest text-primary/80">
+                Ranking ATP
               </p>
-              <p className="font-heading text-4xl sm:text-5xl font-bold text-primary leading-none">
+              <p className="font-heading text-4xl sm:text-5xl font-bold leading-none text-gold-gradient">
                 {rankingLabel}
               </p>
               {rankingDate && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  aggiornato al {rankingDate}
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  agg. {rankingDate}
                 </p>
               )}
             </div>
 
             {props.seasonRecord && (
-              <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading">
+              <div className="rounded-xl border border-border/60 bg-muted/40 px-4 py-3">
+                <p className="font-heading text-[10px] uppercase tracking-widest text-primary/80">
                   Stagione 2026
                 </p>
-                <p className="font-heading text-xl font-bold">{props.seasonRecord}</p>
+                <p className="font-heading text-3xl font-bold leading-none text-foreground">
+                  {props.seasonRecord}
+                </p>
                 {props.seasonTitles != null && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
                     {props.seasonTitles} {props.seasonTitles === 1 ? "titolo" : "titoli"}
                   </p>
                 )}
@@ -137,36 +145,65 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
             )}
 
             {props.careerHigh != null && (
-              <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading">
+              <div className="rounded-xl border border-border/60 bg-muted/40 px-4 py-3">
+                <p className="font-heading text-[10px] uppercase tracking-widest text-primary/80">
                   Miglior ranking
                 </p>
-                <p className="font-heading text-xl font-bold">#{props.careerHigh}</p>
+                <p className="font-heading text-3xl font-bold leading-none text-foreground">
+                  #{props.careerHigh}
+                </p>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">in carriera</p>
               </div>
             )}
           </div>
 
-          <dl className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
-            {props.height && (
-              <div className="flex gap-2"><dt className="text-muted-foreground">Altezza</dt><dd className="font-medium">{props.height}</dd></div>
-            )}
-            {props.weight && (
-              <div className="flex gap-2"><dt className="text-muted-foreground">Peso</dt><dd className="font-medium">{props.weight}</dd></div>
-            )}
-            {props.plays && (
-              <div className="flex gap-2"><dt className="text-muted-foreground">Mano</dt><dd className="font-medium">{props.plays}</dd></div>
-            )}
-            {props.birthPlace && (
-              <div className="flex gap-2"><dt className="text-muted-foreground">Nato a</dt><dd className="font-medium">{props.birthPlace}</dd></div>
-            )}
-            {props.coach && (
-              <div className="flex gap-2"><dt className="text-muted-foreground">Coach</dt><dd className="font-medium">{props.coach}</dd></div>
-            )}
-          </dl>
+          {/* Bio chips */}
+          {(props.height || props.weight || props.plays || props.birthPlace || props.coach) && (
+            <ul
+              className="mt-4 flex flex-wrap gap-2"
+              aria-label="Informazioni personali"
+            >
+              {props.height && (
+                <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
+                  <Ruler className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="text-muted-foreground">Altezza</span>
+                  <span className="font-semibold text-foreground">{props.height}</span>
+                </li>
+              )}
+              {props.weight && (
+                <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
+                  <Weight className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="text-muted-foreground">Peso</span>
+                  <span className="font-semibold text-foreground">{props.weight}</span>
+                </li>
+              )}
+              {props.plays && (
+                <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
+                  <Hand className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="text-muted-foreground">Mano</span>
+                  <span className="font-semibold text-foreground">{props.plays}</span>
+                </li>
+              )}
+              {props.birthPlace && (
+                <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
+                  <MapPin className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="text-muted-foreground">Nato a</span>
+                  <span className="font-semibold text-foreground">{props.birthPlace}</span>
+                </li>
+              )}
+              {props.coach && (
+                <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
+                  <UserRound className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="text-muted-foreground">Coach</span>
+                  <span className="font-semibold text-foreground">{props.coach}</span>
+                </li>
+              )}
+            </ul>
+          )}
 
           {visibleSlams.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-2">
+            <div className="mt-5 border-t border-border/50 pt-4">
+              <p className="mb-2.5 font-heading text-[10px] uppercase tracking-widest text-primary/80">
                 Grande Slam
               </p>
               <ul className="flex flex-wrap gap-2" aria-label="Risultati Grande Slam">
@@ -178,16 +215,20 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
                       key={key}
                       title={`${full}: ${r.raw}`}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-heading",
+                        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-heading shadow-sm",
                         isWin
-                          ? "border-primary/40 bg-primary/10 text-primary"
-                          : "border-border bg-muted text-foreground",
+                          ? "gold-gradient text-primary-foreground border border-primary/40"
+                          : "border border-border bg-secondary/30 text-foreground",
                       )}
                     >
                       <span className="font-bold">{short}</span>
-                      <span className="opacity-80">{r.best}</span>
+                      <span className={cn("text-xs", isWin ? "opacity-90" : "opacity-80")}>
+                        {r.best}
+                      </span>
                       {r.years.length > 0 && (
-                        <span className="opacity-70">·{shortYears(r.years)}</span>
+                        <span className={cn("text-xs", isWin ? "opacity-80" : "opacity-70")}>
+                          ·{shortYears(r.years)}
+                        </span>
                       )}
                     </li>
                   );
@@ -197,10 +238,13 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
           )}
 
           {(props.source || statsUpdated) && (
-            <p className="mt-3 text-[11px] text-muted-foreground">
-              {props.source ? `Fonte: ${props.source}` : null}
-              {props.source && statsUpdated ? " · " : ""}
-              {statsUpdated ? `Statistiche aggiornate al ${statsUpdated}` : null}
+            <p className="mt-5 flex items-center gap-1.5 border-t border-border/30 pt-3 text-xs text-muted-foreground">
+              <Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>
+                {props.source ? `Fonte: ${props.source}` : null}
+                {props.source && statsUpdated ? " · " : ""}
+                {statsUpdated ? `Statistiche aggiornate al ${statsUpdated}` : null}
+              </span>
             </p>
           )}
         </div>
