@@ -6,6 +6,8 @@ import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import TimezoneBadge from "@/components/common/TimezoneBadge";
+import OfflineFallback from "@/components/common/OfflineFallback";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
 import { formatDateIT } from "@/lib/dateUtils";
@@ -64,6 +66,7 @@ export default function JuventusPage() {
     page,
     PAGE_SIZE,
   );
+  const { isOnline } = useOnlineStatus();
 
   // Reset to page 1 and clear interaction flag when season changes
   useEffect(() => {
@@ -89,6 +92,14 @@ export default function JuventusPage() {
     setUserInteracted(true);
     setPage(p);
   };
+
+  if (!isOnline && stError && !standings && calError && !calendarData) {
+    return (
+      <div className="container py-8 sm:py-12">
+        <OfflineFallback onRetry={() => { stRefetch(); calRefetch(); }} />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 sm:py-12">

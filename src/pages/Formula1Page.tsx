@@ -5,6 +5,8 @@ import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import TimezoneBadge from "@/components/common/TimezoneBadge";
+import OfflineFallback from "@/components/common/OfflineFallback";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useF1Calendar, useF1DriverStandings, useF1ConstructorStandings } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
@@ -19,6 +21,16 @@ export default function Formula1Page() {
   const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useF1Calendar(seasons.f1);
   const { data: drivers, isLoading: drvLoading, error: drvError, refetch: drvRefetch } = useF1DriverStandings(seasons.f1);
   const { data: constructors, isLoading: conLoading, error: conError } = useF1ConstructorStandings(seasons.f1);
+  const { isOnline } = useOnlineStatus();
+
+  // Fallback offline: nessuna sezione ha dati in cache e siamo offline
+  if (!isOnline && calError && !calendar && drvError && !drivers && conError && !constructors) {
+    return (
+      <div className="container py-8 sm:py-12">
+        <OfflineFallback onRetry={() => { calRefetch(); drvRefetch(); }} />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 sm:py-12">
