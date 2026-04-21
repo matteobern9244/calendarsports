@@ -1,64 +1,91 @@
 
 
-## Audit lingua UI: stato attuale e rafforzamento del guard
+## Estensione guard CI: titoli modali/dialog sempre in italiano
 
-### Risultato dell'audit
+### Stato attuale
 
-**0 stringhe inglesi residue da tradurre.** Eseguito sweep completo su:
+Lo script `scripts/check-italian-ui.mjs` già copre:
+- `document.title = "..."` (kind `document-title`)
+- testo JSX dentro `<DialogTitle>...</DialogTitle>` perché viene catturato dal pattern generico `>([^<>{}]+)<`
 
-- `npm run check:italian` (script CI già attivo) → 0 violazioni
-- `index.html` → italiano (solo nomi propri + `STREAMING` nel title)
-- `public/manifest.webmanifest` → italiano (`lang: "it"`)
-- Tutti i `toast.success/error` (Layout, useSyncAll, PreferencesPage) → italiano
-- Tutti gli `aria-label` (18 occorrenze in 12 file) → italiano
-- Tutti i `placeholder`/`title`/`alt` statici (12 occorrenze) → italiano
-- Tutti i `sr-only` fuori da `src/components/ui/*` → italiano (1 occorrenza in `ReleaseDetailDialog`)
-- Titoli pagina dinamici (`document.title` in `PreferencesPage`) → italiano
-- Multi-line JSX text con frasi inglesi tipiche → 0 risultati
+Gap rilevati:
+1. **Title dinamici via template/concatenazione**: `document.title = \`Preferenze · ${app}\`` non viene catturato (regex accetta solo `"..."`).
+2. **Prop `title=` su componenti dialog/modali**: già coperto in attributi generici (`title="..."`), ma nessuna verifica mirata che identifichi *quel* contesto come "titolo modale" → un fail risulta come generico `attr:title`.
+3. **`AlertDialogTitle`, `SheetTitle`, `DrawerTitle`**: come `DialogTitle`, il testo figlio è già coperto, ma se passato come stringa via prop (raro) sfuggirebbe.
+4. **Nessun pattern per `useEffect(() => { document.title = ... })`** con backtick template literal.
 
-Le uniche occorrenze "inglesi" trovate sono **falsi positivi attesi**: identificatori TypeScript (`Error`, `Update`), nomi di componenti importati (`Settings` come icona Lucide), commenti `//`, label nav `HOME` (allowlistata), brand `STREAMING` (eccezione autorizzata), `Calendar Events` (nome app).
+### Modifiche allo script `scripts/check-italian-ui.mjs`
 
-### Rafforzamento del guard CI esistente
+**A. Pattern `document.title` esteso a template literals**
 
-Lo script `scripts/check-italian-ui.mjs` ha alcuni gap noti che voglio chiudere ora che siamo a baseline pulita, per evitare regressioni future:
+Aggiungere secondo pattern:
+```js
+const docTitleTemplatePattern = /\bdocument\.title\s*=\s*`([^`${]+)`/g;
+```
+Cattura solo la parte statica del template (frammenti di testo prima di interpolazioni `${...}`). Le porzioni interpolate vanno comunque controllate sull'interpolato originario altrove. Kind: `document-title`.
 
-1. **Attributi mancanti**: aggiungere `aria-roledescription`, `aria-valuetext`, `aria-description` (già presente ma non `aria-describedby` con string literal), `name` quando string literal su input.
-2. **Toast/sonner**: aggiungere pattern dedicato `toast(.success|.error|.info|.warning)?\(\s*"([^"]+)"` per analizzare anche il primo argomento dei toast.
-3. **`document.title = "..."`**: aggiungere pattern per controllare i titoli pagina assegnati programmaticamente.
-4. **`description` come prop di componenti** (es. `<SectionHeader subtitle="...">`, `description="..."`): già coperto come JSX text figlio, ma non come stringa attributo. Aggiungere `subtitle` e `description` alla regex degli attributi.
-5. **Allowlist chiarita**: aggiungere commento esplicito sul perché `Home`, `Open` (Australian Open / US Open), `Sport` sono allowlistati nonostante siano parole inglesi (uso accettato in italiano corrente o parte di nomi propri).
-6. **Falsi positivi residui**: la regex JSX text scarta già identificatori; aggiungere scarto esplicito per stringhe contenenti solo `:` (es. `value="all"`, range labels) → già coperto da filtro `[;=()...]`.
-7. **Documentazione del comando**: aggiungere a `README.md` una nota su come usare i marker `// @lingua-ignore` e `@lingua-ignore-file` quando un'eccezione è legittima ma non vuoi gonfiare la allowlist globale.
+**B. Pattern dedicato per titoli di dialog/modali**
+
+Aggiungere estrattore mirato per i tag titolo dei componenti modali (Radix/shadcn):
+```js
+const dialogTitleTagPattern =
+  /<(DialogTitle|AlertDialogTitle|SheetTitle|DrawerTitle|SidebarTitle)\b[^>]*>([^<>{}]+)</g;
+```
+Estrai gruppo 2 come `value`, kind `dialog-title:<TagName>` (es. `dialog-title:DialogTitle`). Permette messaggi d'errore espliciti: "il titolo del modale contiene parole EN".
+
+**C. Prop `title=` su componenti dialog**
+
+Aggiungere pattern che cattura `title="..."` quando appare su tag che iniziano con maiuscola e contengono "Dialog"/"Modal"/"Sheet"/"Drawer" nel nome:
+```js
+const dialogTitlePropPattern =
+  /<(\w*(?:Dialog|Modal|Sheet|Drawer)\w*)\b[^>]*\btitle\s*=\s*"([^"]+)"/g;
+```
+Kind: `dialog-title-prop:<TagName>`.
+
+**D. Messaggio d'errore migliorato**
+
+Quando `kind` inizia con `document-title` o `dialog-title`, aggiungere prefisso esplicito nel report:
+```
+✗ src/pages/Foo.tsx:42 — TITOLO PAGINA contiene parole EN [Settings]: "Settings"
+✗ src/components/Bar.tsx:18 — TITOLO MODALE (DialogTitle) contiene parole EN [Close]: "Close window"
+```
+
+**E. Allowlist invariata**
+
+Nessuna modifica all'allowlist o al `FORBIDDEN_WORDS`.
 
 ### File modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `scripts/check-italian-ui.mjs` | EDIT | Aggiungo pattern toast/sonner, `document.title`, attributi `subtitle`/`description`/`aria-roledescription`/`aria-valuetext`. Commento esplicativo sulle voci ambigue dell'allowlist (`Home`, `Sport`, `Open`). |
-| `README.md` | EDIT | Sezione "Controllo lingua UI italiana": documento i marker `// @lingua-ignore` e `// @lingua-ignore-file` con esempio. |
-| `changelog.md` | EDIT | `### Changed`: "Audit lingua UI completo: 0 stringhe inglesi residue. Rafforzato `check-italian-ui.mjs` con copertura toast/sonner, `document.title`, attributi `subtitle`/`description`/`aria-roledescription`/`aria-valuetext`. Nessuna regressione UI." |
+| `scripts/check-italian-ui.mjs` | EDIT | Aggiunta pattern `document.title` con backtick template, estrattore mirato per `<DialogTitle>`/`<AlertDialogTitle>`/`<SheetTitle>`/`<DrawerTitle>`/`<SidebarTitle>` (kind `dialog-title:<Tag>`), pattern `title=` su tag che matchano `*Dialog*`/`*Modal*`/`*Sheet*`/`*Drawer*` (kind `dialog-title-prop:<Tag>`). Messaggio d'errore con prefisso esplicito "TITOLO PAGINA" / "TITOLO MODALE" per i kind dedicati. |
+| `README.md` | EDIT | Sezione "Controllo lingua UI italiana": aggiunto elenco esplicito delle nuove superfici coperte (titoli pagina via template literal, titoli modali Radix/shadcn, prop `title` su componenti modali). |
+| `changelog.md` | EDIT | `### Added`: "Estensione guard CI titoli: `check-italian-ui.mjs` ora cattura `document.title` con template literal, contenuto di `DialogTitle`/`AlertDialogTitle`/`SheetTitle`/`DrawerTitle`/`SidebarTitle` e prop `title` su componenti modali. Errori riportati con prefisso esplicito `TITOLO PAGINA` / `TITOLO MODALE`." |
 
-### Comportamento atteso post-modifica
+### Validazione (4 test negativi obbligatori)
 
-- `npm run check:italian` continua a passare con exit 0 sul codice attuale.
-- Test negativo: introdurre `toast.success("Saved!")` → lo script fallisce con riga e file corretti.
-- Test negativo 2: introdurre `document.title = "Preferences"` → lo script fallisce.
-- Test negativo 3: introdurre `<SectionHeader subtitle="Loading..." />` → lo script fallisce.
+1. **`document.title` plain string EN** → `document.title = "Settings"` deve fallire con kind `document-title` e prefisso "TITOLO PAGINA".
+2. **`document.title` template literal EN** → `document.title = \`Settings · ${app}\`` deve fallire (parte statica "Settings ·").
+3. **`<DialogTitle>` con testo EN** → `<DialogTitle>Close window</DialogTitle>` deve fallire con kind `dialog-title:DialogTitle` e prefisso "TITOLO MODALE".
+4. **Prop `title="..."` su componente modale** → `<ConfirmDialog title="Delete item">` deve fallire con kind `dialog-title-prop:ConfirmDialog`.
+
+Tutti e 4 i test devono fallire con la versione aggiornata e passare con rollback.
+
+Baseline post-modifica: `npm run check:italian` → exit 0 sul codice attuale (non sono presenti regressioni, l'audit precedente è confermato pulito).
 
 ### Cosa NON cambia
 
-- Nessuna modifica al codice UI (l'audit conferma che è già 100% italiano).
+- Nessuna modifica al codice UI.
 - Nessuna nuova dipendenza.
-- Allowlist parole rimane invariata (solo commenti esplicativi).
-- Workflow CI invariati (lo step `Italian UI guard` esiste già in entrambi).
+- Allowlist e `FORBIDDEN_WORDS` invariati.
+- Workflow CI invariati: lo step `Italian UI guard` esegue già `npm run check:italian`, le nuove regole entrano automaticamente in vigore.
 - Versione applicativa invariata `2.1.0`.
 
 ### Checklist post-edit
 
-1. `npm run check:italian` → exit 0.
-2. Test negativo toast: `toast.success("Saved!")` temporaneo → script fallisce con kind `toast-message` e riga corretta, poi rollback.
-3. Test negativo title: `document.title = "Preferences"` temporaneo → script fallisce, poi rollback.
-4. `npm run lint` invariato.
-5. `changelog.md` aggiornato.
-6. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
+1. `npm run check:italian` → exit 0 sul codice attuale.
+2. Quattro test negativi sopra → tutti falliscono come previsto, poi rollback.
+3. `npm run lint` invariato.
+4. `changelog.md` e `README.md` aggiornati.
+5. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
