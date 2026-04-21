@@ -573,7 +573,9 @@ export default function TonightTvList() {
                           annunciata in una sola frase coerente. */}
                       {(() => {
                         const g = row.genre || inferGenre(row.family, row.channel, row.title);
-                        const durSpoken = formatDurationSpoken(row.durationMin);
+                        const durSpoken = row.hasExplicitEnd
+                          ? formatDurationSpoken(row.durationMin)
+                          : "";
                         const ariaParts = [
                           `${familyLabelMap[row.family]} ${row.channel}`,
                           `alle ${row.time}`,
@@ -581,6 +583,7 @@ export default function TonightTvList() {
                         ];
                         ariaParts.push(`genere ${g}`);
                         if (durSpoken) ariaParts.push(`durata ${durSpoken}`);
+                        else if (!row.hasExplicitEnd) ariaParts.push("durata non disponibile dalla fonte");
                         return (
                           <article
                             aria-label={ariaParts.join(", ")}
@@ -597,9 +600,17 @@ export default function TonightTvList() {
                           >
                             {row.channel}
                           </Badge>
-                          {formatDuration(row.durationMin) && (
+                          {row.hasExplicitEnd && formatDuration(row.durationMin) && (
                             <span className="text-[11px] text-foreground/75 whitespace-nowrap font-mono leading-none ml-auto">
                               {formatDuration(row.durationMin)}
+                            </span>
+                          )}
+                          {!row.hasExplicitEnd && (
+                            <span
+                              className="text-[11px] text-foreground/60 whitespace-nowrap font-mono leading-none ml-auto"
+                              title="Orario di fine non disponibile dalla fonte"
+                            >
+                              —
                             </span>
                           )}
                         </div>
