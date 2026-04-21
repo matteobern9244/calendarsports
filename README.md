@@ -248,6 +248,18 @@ Rischi:
 - dipendenza da competition ID e season ID esterni;
 - eventuali cambi strutturali sui siti Sky o Lega possono rompere la feature.
 
+Pagina dettaglio partita (`/juventus/partite/:matchId`):
+
+- mostra solo dati realmente disponibili dal payload Sky/Lega del calendario
+  (data e ora in `Europe/Rome`, competizione, broadcaster, score finale,
+  link Sky alla pagina partita);
+- formazioni, modulo tattico e cronologia eventi (gol, ammonizioni,
+  sostituzioni) **non sono esposti** dalle API pubbliche gratuite (Sky,
+  Lega Serie A, TheSportsDB free): i tab corrispondenti dichiarano
+  esplicitamente l'indisponibilità e rimandano alla pagina Sky reale via
+  CTA "Apri su Sky Sport". Nessun dato finto o mock, in linea con la
+  policy `no hardcoded`.
+
 ### Jannik Sinner
 
 Fonti correnti:

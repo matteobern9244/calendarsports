@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import StreamingPage from "./pages/StreamingPage";
 import SinnerPage from "./pages/SinnerPage";
 import JuventusPage from "./pages/JuventusPage";
+import JuventusMatchPage from "./pages/JuventusMatchPage";
 import Formula1Page from "./pages/Formula1Page";
 import MotoGPPage from "./pages/MotoGPPage";
 import PreferencesPage from "./pages/PreferencesPage";
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/streaming" element={<StreamingPage />} />
               <Route path="/sinner" element={<SinnerPage />} />
               <Route path="/juventus" element={<JuventusPage />} />
+              <Route path="/juventus/partite/:matchId" element={<JuventusMatchPage />} />
               <Route path="/formula1" element={<Formula1Page />} />
               <Route path="/motogp" element={<MotoGPPage />} />
               <Route path="/preferenze" element={<PreferencesPage />} />

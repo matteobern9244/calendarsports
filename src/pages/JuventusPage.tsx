@@ -23,6 +23,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import TeamLogo from "@/components/common/TeamLogo";
 import { Sparkles } from "lucide-react";
@@ -141,11 +142,16 @@ export default function JuventusPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
             className={cn(
-              "relative mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--gold))]/40 px-5 py-5 sm:px-6 sm:py-6",
+              "relative mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--gold))]/40",
               "bg-gradient-to-br from-[hsl(var(--gold))]/15 via-card to-[hsl(var(--navy))]/20",
               "shadow-[0_18px_44px_-22px_hsl(var(--gold)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]"
             )}
           >
+            <Link
+              to={`/juventus/partite/${nextMatch.id}`}
+              aria-label={`Apri dettaglio ${isJuveHome ? 'Juventus vs ' + opponent : opponent + ' vs Juventus'}`}
+              className="block px-5 py-5 sm:px-6 sm:py-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
+            >
             <span
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--gold))] to-transparent opacity-80"
@@ -199,6 +205,7 @@ export default function JuventusPage() {
                 {nextMatch.date && <EventCountdown startDate={nextMatch.date} />}
               </div>
             </div>
+            </Link>
           </motion.div>
         );
       })()}
@@ -339,7 +346,7 @@ export default function JuventusPage() {
                     variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
                     whileHover={{ y: -3 }}
                     className={cn(
-                      "group relative rounded-2xl border bg-card px-4 py-3.5 flex items-center gap-3",
+                      "group relative rounded-2xl border bg-card",
                       "transition-[box-shadow,border-color,transform] duration-300 ease-out",
                       "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
                       "hover:shadow-[0_16px_36px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
@@ -348,6 +355,11 @@ export default function JuventusPage() {
                         : "border-[hsl(var(--gold))]/20 hover:border-[hsl(var(--gold))]/55"
                     )}
                   >
+                    <Link
+                      to={`/juventus/partite/${m.id}`}
+                      aria-label={`Apri dettaglio ${m.homeTeam} vs ${m.awayTeam}`}
+                      className="flex items-center gap-3 px-4 py-3.5 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
@@ -411,6 +423,7 @@ export default function JuventusPage() {
                         <EventCountdown startDate={m.date} />
                       )}
                     </div>
+                    </Link>
                   </motion.div>
                 );
               })}
