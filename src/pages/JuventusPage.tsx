@@ -149,7 +149,7 @@ export default function JuventusPage() {
             )}
           >
             <Link
-              to={`/juventus/partite/${nextMatch.id}`}
+              to={`/juventus/partite/${encodeURIComponent(nextMatch.id ?? '')}`}
               aria-label={`Apri dettaglio ${isJuveHome ? 'Juventus vs ' + opponent : opponent + ' vs Juventus'}`}
               className="block px-5 py-5 sm:px-6 sm:py-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
             >
@@ -344,7 +344,7 @@ export default function JuventusPage() {
 
                 return (
                   <motion.div
-                    key={i}
+                    key={m.id ?? `${m.competition}-${m.date}-${m.homeTeam}-${m.awayTeam}`}
                     variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
                     whileHover={{ y: -3 }}
                     className={cn(
@@ -358,7 +358,7 @@ export default function JuventusPage() {
                     )}
                   >
                     <Link
-                      to={`/juventus/partite/${m.id}`}
+                      to={`/juventus/partite/${encodeURIComponent(m.id ?? '')}`}
                       aria-label={`Apri dettaglio ${m.homeTeam} vs ${m.awayTeam}`}
                       className="flex items-center gap-3 px-4 py-3.5 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >

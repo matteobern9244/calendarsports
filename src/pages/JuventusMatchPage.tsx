@@ -40,11 +40,25 @@ const COMPETITION_COLORS: Record<string, string> = {
 
 function findMatch(calendar: PaginatedCalendar | undefined, matchId: string) {
   if (!calendar) return null;
-  return calendar.items.find((m: any) => String(m?.id) === matchId) ?? null;
+  return (
+    calendar.items.find((m: any) => {
+      if (m?.id == null) return false;
+      const id = String(m.id);
+      if (id === '' || id === 'undefined' || id === 'null') return false;
+      return id === matchId;
+    }) ?? null
+  );
 }
 
 export default function JuventusMatchPage() {
   const { matchId = "" } = useParams<{ matchId: string }>();
+  const decodedMatchId = useMemo(() => {
+    try {
+      return decodeURIComponent(matchId);
+    } catch {
+      return matchId;
+    }
+  }, [matchId]);
   const season = getCurrentJuventusSeason();
 
   // First page: discover total/totalPages and try to find the match here
@@ -67,11 +81,11 @@ export default function JuventusMatchPage() {
     setFoundMatch(null);
     setExhausted(false);
     setSearchPage(1);
-  }, [matchId, season]);
+  }, [decodedMatchId, season]);
 
   useEffect(() => {
     if (foundMatch || !searchData) return;
-    const m = findMatch(searchData, matchId);
+    const m = findMatch(searchData, decodedMatchId);
     if (m) {
       setFoundMatch(m);
       return;
@@ -81,7 +95,7 @@ export default function JuventusMatchPage() {
       return;
     }
     setSearchPage((p) => p + 1);
-  }, [searchData, matchId, foundMatch, searchPage]);
+  }, [searchData, decodedMatchId, foundMatch, searchPage]);
 
   const isLoading =
     !foundMatch && !exhausted && (firstPageQuery.isLoading || searchQuery.isLoading);
