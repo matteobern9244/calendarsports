@@ -59,7 +59,8 @@ export default function MotoGPPage() {
               title={`Calendario MotoGP ${season}`}
               description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale MotoGP qui sotto per consultare tutte le giornate dei GP, gli orari delle sessioni (libere, qualifiche, Sprint e gara) e i circuiti del Mondiale."
               externalLink="https://www.motogp.com/it/calendar"
-              externalLabel="Apri calendario su MotoGP.com"
+              externalLabel="Vedi calendario su MotoGP.com"
+              ctaHint="Tocca qui per orari Sprint e gara"
             />
           )}
           {calendar && calendar.length > 0 && (() => {
@@ -122,7 +123,8 @@ export default function MotoGPPage() {
               title={`Classifica Piloti ${season}`}
               description="La classifica piloti del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale MotoGP qui sotto per consultare la graduatoria aggiornata, con punti, vittorie e prestazioni di ogni pilota della classe regina."
               externalLink="https://www.motogp.com/it/world-standing/motogp"
-              externalLabel="Apri classifica su MotoGP.com"
+              externalLabel="Vedi classifica piloti su MotoGP.com"
+              ctaHint="Tocca qui per punti e vittorie"
             />
           )}
           {standings && standings.length > 0 && (
@@ -205,7 +207,8 @@ export default function MotoGPPage() {
               title={`Classifica Costruttori ${season}`}
               description="La classifica costruttori del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale MotoGP qui sotto per consultare la graduatoria delle case motociclistiche, con punti totali e vittorie."
               externalLink="https://www.motogp.com/it/world-standing/motogp/constructor"
-              externalLabel="Apri classifica su MotoGP.com"
+              externalLabel="Vedi classifica costruttori su MotoGP.com"
+              ctaHint="Tocca qui per la graduatoria delle case"
             />
           )}
           {constructors && constructors.length > 0 && (
