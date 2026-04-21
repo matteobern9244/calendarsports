@@ -1,82 +1,72 @@
 
 
-## Countdown chips: tick globale ottimizzato senza flicker
+## Fix countdown fermo + ottimizzazione EventCountdown
 
-### Problema attuale
+### Bug identificato
 
-`EventCountdown` (usato in Home, Juventus, JuventusMatchPage) crea **un `setInterval` da 1s per ogni istanza**. Con 12 card visibili contemporaneamente (calendario Juventus, Prossimi Eventi) si hanno 12 timer non sincronizzati che aggiornano lo stato a frequenze leggermente sfalsate → micro-flicker dei chip, render React duplicati ogni secondo, lavoro inutile quando il chip mostra solo "g/h/m" (cambia al massimo ogni minuto).
+In `EventCountdown` la soglia `needsSeconds` scatta solo nell'ultima **ora** prima dell'evento (`diff <= 3600 * 1000`). Ma il rendering mostra i secondi (`!showDays`) per **tutte le ultime 24 ore** (quando `days === 0`). Risultato: tra T-24h e T-1h il chip mostra il valore "secondi" ma è abbonato a risoluzione `minute` → i secondi restano congelati sull'ultimo valore catturato al cambio minuto. Visivamente sembra che il countdown si sia fermato.
 
-`ReleaseCountdownBadge` invece **non si aggiorna mai** dopo il mount: se il browser resta aperto a cavallo della mezzanotte di Roma il chip resta su "Tra 2 giorni" anche quando dovrebbe diventare "Domani".
+Esempio concreto in Home oggi: l'evento "Prossimi Eventi" più imminente è entro 24h e mostra `g/h/m/s` con `s` bloccato.
 
-### Soluzione: clock store globale + tick adattivo
+### Soluzione
 
-Introdurre un **tick store condiviso** (zero dipendenze, plain module) che emette un singolo timer a livello app e notifica tutti i subscriber. I componenti countdown si abbonano via `useSyncExternalStore`, quindi React batcha automaticamente e ogni chip riceve lo stesso istante di riferimento → niente più sfasamenti visivi.
+Allineare `needsSeconds` alla **stessa condizione** che governa la visualizzazione dei secondi nel JSX:
 
-Il timer adatta la frequenza alla "risoluzione necessaria":
-- Se almeno un subscriber chiede risoluzione "secondi" → tick a 1000ms.
-- Se tutti chiedono solo "minuti" → tick a 30000ms (30s, sufficiente per UI al minuto).
-- Si ferma del tutto quando `document.visibilityState === "hidden"` (e ri-tick + ricalcolo immediato al ritorno in foreground).
-
-### File nuovo
-
-**`src/lib/countdownClock.ts`**
-
-API minima:
 ```ts
-type Resolution = "second" | "minute";
-export function subscribeCountdown(cb: () => void, res: Resolution): () => void;
-export function getNow(): number; // snapshot stabile dell'ultimo tick
+// PRIMA (bug): seconds-tick solo nell'ultima ora
+return diff > 0 && diff <= 3600 * 1000;
+
+// DOPO (fix): seconds-tick ogni volta che mostriamo davvero i secondi,
+// cioe' quando days === 0 (ultime 24h prima dell'evento)
+const minuteParts = getPartsAt(target, minuteSnapshot);
+return minuteParts.totalMs > 0 && minuteParts.days === 0;
 ```
 
-Implementazione:
-- Set di subscriber con risoluzione per ognuno.
-- Un solo `setInterval` ricreato quando cambia la risoluzione richiesta più alta.
-- Listener `visibilitychange`: pausa quando hidden, refresh + tick immediato + reschedule quando visible.
-- Cleanup totale quando l'ultimo subscriber si disiscrive.
-- `getNow()` ritorna un timestamp aggiornato solo ai tick → tutti i componenti vedono lo stesso istante nello stesso commit React (no sfasamenti).
+Cosi' `needsSeconds` cambia stato solo ai cambi minuto (snapshot stabile) e diventa `true` non appena entriamo nelle ultime 24h, esattamente quando il JSX mostra il segmento `s`.
+
+### Ottimizzazione aggiuntiva (richiesta utente)
+
+Quando `needsSeconds === false`, sia `parts` che la decisione di rendering dipendono solo da `minuteSnapshot`. Per evitare che il `useMemo` di `parts` si ricalcoli quando il `secondSnapshot` "tickka" (in realtà in modalità minute non lo fa, ma per rendere esplicita la garanzia):
+
+```ts
+const activeSnapshot = needsSeconds ? secondSnapshot : minuteSnapshot;
+const parts = useMemo(
+  () => getPartsAt(target, activeSnapshot),
+  [target, activeSnapshot],
+);
+```
+
+Inoltre rimuovo `secondSnapshot` quando non serve, sottoscrivendo il secondo `useSyncExternalStore` solo se `needsSeconds`. Ma `useSyncExternalStore` deve essere chiamato in modo incondizionato (regola degli hook) → mantengo la chiamata, ma la sottoscrizione sceglie la giusta risoluzione (già fatto), e `parts` ignora il `secondSnapshot` quando in modalità minute → zero ricalcoli inutili.
+
+### Cleanup minore
+
+- Rimuovere la funzione helper `getParts(target)` non utilizzata (linea 24-26).
+- Lasciare `getPartsAt` invariata (è la sola usata).
+
+### Anti-regressione
+
+- **Comportamento UI invariato** in tutti gli stati: pre-24h (g/h/m), pre-1h (g=0, h/m/s), live (chip rosso "Inizio imminente"), past (null).
+- **Performance**: i chip in modalità "g/h/m" (la stragrande maggioranza) restano a risoluzione minute → tick globale 30s.
+- **Ad almeno un chip nelle ultime 24h** il tick globale passa a 1s (necessario perché quel chip mostra `s`). Tutti gli altri chip "minute" non si ri-renderizzano grazie agli snapshot separati `nowMinute` / `nowSecond` già implementati in `countdownClock.ts`.
+- `ReleaseCountdownBadge`: nessuna modifica, già corretto a risoluzione minute.
+- `countdownClock.ts`: nessuna modifica, l'API è già adeguata.
 
 ### File modificati
 
-**`src/components/common/EventCountdown.tsx`**
-- Rimuovere `useState` + `useEffect` con `setInterval` interno.
-- Sottoscriversi al clock con `useSyncExternalStore(subscribeCountdown, getNow)`.
-- Risoluzione: `"second"` solo quando `parts.days === 0 && parts.hours === 0` (ultima ora prima dell'evento, dove i secondi servono); altrimenti `"minute"`.
-- Memoizzare `target = useMemo(() => new Date(startDate).getTime(), [startDate])`.
-- Chiusura con `if (!Number.isFinite(target)) return null;` early.
-- Output identico (stessi class, stessi token gold, stesso layout) → **zero regressione visiva**.
+Solo `src/components/common/EventCountdown.tsx`:
+1. Fix soglia `needsSeconds` (1h → 24h, allineata a `days === 0`).
+2. Memo di `parts` su `activeSnapshot` (snapshot effettivo in uso) per esplicitare zero-ricalcoli inutili.
+3. Rimozione `getParts` morto.
 
-**`src/components/streaming/ReleaseCountdownBadge.tsx`**
-- Sottoscriversi al clock con risoluzione `"minute"` (basta un refresh ogni 30s per cogliere il cambio di giorno a Roma).
-- `daysUntilRome` chiamato dentro il render, ricalcolato ad ogni tick → corregge il bug del cambio giorno a mezzanotte senza altri costi.
-
-### Cosa NON cambia
-
-- Markup, classi Tailwind, token semantici, varianti `today/soon/future/past`, `aria-label`, dimensioni icone → identici.
-- `EventCard`, `JuventusPage`, `JuventusMatchPage`, `StreamingPage`, `ReleaseDetailDialog` → **nessuna modifica**, l'API dei due componenti countdown resta identica.
-- `SparkleLoop` (altro `setInterval` non countdown) → non toccato.
-- Logica `isLive` (finestra ±3h), logica `isPast`, logica `daysUntilRome` → invariate.
-
-### Anti-flicker / anti-regressione
-
-- Tutti i chip nello stesso commit usano lo stesso `now` → zero sfasamento visivo tra card adiacenti.
-- `useSyncExternalStore` evita re-render se il valore restituito da `getNow` è uguale al precedente (riferimento numerico stabile tra i tick → no commit inutile dei chip in modalità "minute" durante i 1000ms tra tick "seconds" richiesti da altri).
-  - Nota implementativa: per garantire l'invarianza referenziale ai subscriber "minute" durante un tick "second", lo store esporrà due snapshot separati (`getNowSecond`, `getNowMinute`) aggiornati indipendentemente. Il subscriber "minute" riceve un nuovo numero solo ai tick al minuto → il suo componente non si re-renderizza ogni secondo.
-- `tabular-nums` già presente → niente layout shift sui numeri che cambiano.
-- Tab in background: timer fermo → niente burst CPU al ritorno; al `visible` viene calcolato subito un nuovo snapshot e notificati tutti.
-- 12 card → 1 timer + 12 callback leggere invece di 12 timer + 12 setState.
-
-### Verifica post-modifica
+### Verifica
 
 - `npm run lint`, `npm run build`, `npm run test`.
-- Smoke manuale: Home → osservare i chip "Prossimo evento" che scorrono in sincronia perfetta tra card adiacenti, niente flicker, niente jitter dei numeri.
-- Juventus calendario (12 chip simultanei) → CPU stabile, animazioni Framer Motion fluide.
-- Streaming → lasciare aperta la pagina su un titolo "Domani" alla mezzanotte di Roma: il chip deve passare a "Oggi" senza reload.
-- Cambio tab → nessuna fiammata di setState al ritorno.
+- Smoke manuale Home: il chip dell'evento più imminente (entro 24h) deve mostrare i secondi che scorrono fluidi 1s alla volta. Gli altri chip (>24h) restano a g/h/m senza re-render.
+- DevTools React Profiler: in modalità minute, zero commit dei chip durante i tick intra-minuto causati da un altro chip in modalità seconds.
 
 ### Note tecniche
 
-- Nessuna nuova dipendenza npm.
-- `useSyncExternalStore` è API stabile React 18 (già usata implicitamente da React Query, supportata dallo stack).
-- Nessun colore hardcoded, nessun cambio routing/payload/Lovable sync.
-- Compatibile con SSR-less (Vite SPA) — il check `typeof document !== "undefined"` viene aggiunto comunque per robustezza.
+- Nessun colore hardcoded, nessun cambio API/payload/routing/Lovable sync.
+- Il `JuventusMatchPage` (singolo chip) e il calendario Juventus (12 chip simultanei) beneficiano automaticamente: solo i chip nelle ultime 24h pagano il costo del tick a 1s.
+- Compatibile con la regola "tutti i countdown funzionanti": il fix garantisce che ogni segmento visibile (`g`, `h`, `m`, `s`) sia aggiornato alla frequenza corretta.
 
