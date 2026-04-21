@@ -1,125 +1,76 @@
 
 
-## Preferenze: ingresso/uscita user friendly
+## Stagione corrente automatica per ogni sport
 
-### Problema
+### Obiettivo
 
-Cliccando l'icona ingranaggio in header si apre la rotta `/preferenze` come pagina piena. Una volta dentro non c'è un modo evidente di "chiudere" e tornare indietro: l'utente deve cliccare di nuovo l'ingranaggio (che sembra solo "vai a preferenze") o usare il back del browser. Non è chiaro che il pulsante in header funzioni anche da toggle, e su mobile l'esperienza è ancora più disorientante.
+Eliminare le preferenze stagione: ogni sport mostra sempre la sua **stagione attualmente in corso**, calcolata dinamicamente in base alla data odierna. Niente più selettori, niente più persistenza, niente più sezione "Stagioni predefinite" nel pannello Preferenze.
 
-### Soluzione
+### Logica "stagione in corso" per sport
 
-Trasformare le Preferenze da **rotta dedicata** a **pannello laterale (Sheet)** che si apre sopra la pagina corrente. Questo risolve tutti i problemi di chiusura in modo nativo:
+Tutto centralizzato in un nuovo helper `src/lib/currentSeason.ts`:
 
-1. Tasto `X` in alto a destra del pannello.
-2. Click fuori dal pannello (sull'overlay scuro).
-3. Tasto `Esc` da tastiera.
-4. Click di nuovo sull'icona ingranaggio in header → toggle.
+| Sport | Tipo calendario | Regola |
+|---|---|---|
+| **Sinner (tennis)** | Anno solare | Sempre `new Date().getFullYear()`. |
+| **F1** | Anno solare | Sempre `new Date().getFullYear()`. |
+| **MotoGP** | Anno solare | Sempre `new Date().getFullYear()`. |
+| **Juventus (calcio)** | Stagione a cavallo | Se mese ≥ luglio (mese 6, 0-indexed) → stagione `anno/anno+1` → API key = `anno`. Altrimenti (gennaio-giugno) → stagione `anno-1/anno` → API key = `anno-1`. Esempio: aprile 2026 → `2025` (= Serie A 2025/26); agosto 2026 → `2026` (= 2026/27). |
 
-L'utente resta visivamente sulla pagina su cui stava lavorando (Home, Sinner, F1...) e vede le preferenze "scivolare" da destra. Nessuna navigazione, nessuno stato perso.
+API esposte:
 
-### Layout pannello
-
-Su desktop (≥768px) il pannello entra da destra, larghezza ~480-560px, full height, scroll interno.
-
-Su mobile (<768px) il pannello entra dal basso (`Sheet side="bottom"`), altezza ~85vh, drag handle, scroll interno. Più naturale del laterale stretto su schermo piccolo.
-
-```text
-┌──────────────── overlay scuro ────────────────┐
-│                                ┌────────────┐ │
-│                                │ Preferenze │ │
-│                                │         X  │ │
-│                                ├────────────┤ │
-│                                │ ASPETTO    │ │
-│                                │ [☀][🌙]    │ │
-│         (pagina sotto          │            │ │
-│          ancora visibile,      │ STAGIONI   │ │
-│          attenuata)            │ Sinner ▾   │ │
-│                                │ Juventus ▾ │ │
-│                                │ F1 ▾       │ │
-│                                │ MotoGP ▾   │ │
-│                                │            │ │
-│                                │ [Reset]    │ │
-│                                └────────────┘ │
-└────────────────────────────────────────────────┘
+```ts
+export function getCurrentSinnerSeason(now?: Date): number;
+export function getCurrentJuventusSeason(now?: Date): number;
+export function getCurrentF1Season(now?: Date): number;
+export function getCurrentMotoGPSeason(now?: Date): number;
 ```
 
-Header del pannello: titolo "Preferenze" + sottotitolo breve + pulsante `X` (Sheet già include il close button nativo in alto a destra).
-
-Footer sticky del pannello: bottone `Ripristina valori predefiniti` + nota "Le preferenze sono salvate sul tuo dispositivo." Sempre visibile durante lo scroll, così l'utente sa anche da lì che può chiudere e che le modifiche sono persistite localmente.
-
-### Contenuto (invariato a livello funzionale)
-
-Stesse 4 sezioni stagioni (Sinner, Juventus, F1, MotoGP) + sezione Aspetto (tema chiaro/scuro). Adatti per il formato pannello:
-
-- **Aspetto**: segmented control `Chiaro` / `Scuro` (uguale ad oggi).
-- **Stagioni**: invece di una griglia 2/4 colonne, layout verticale a lista compatta. Ogni sport è una riga: icona + nome + anno corrente grande in oro + selettore stagione inline. Più adatto alla larghezza ridotta del pannello, evita scroll orizzontale.
-
-Esempio riga stagione:
-
-```text
-🎾  Jannik Sinner          2026   [ 2024 | 2025 | 2026 ]
-🛡️  Juventus               2025   [ 2023 | 2024 | 2025 ]
-🏎️  Formula 1              2026   [ 2024 | 2025 | 2026 ]
-🏍️  MotoGP                 2026   [ 2024 | 2025 | 2026 ]
-```
-
-Toast "Salvato" e badge `Salvato` inline restano come oggi.
-
-### Header: l'ingranaggio diventa toggle
-
-L'icona `Settings` in `Header.tsx` non fa più `Link to="/preferenze"`, ma apre/chiude il pannello via stato globale (vedi sotto). Quando il pannello è aperto:
-- icona dorata piena (stessa estetica "active" di prima);
-- `aria-expanded="true"`, `aria-controls="preferences-panel"`;
-- click la chiude.
-
-### Stato globale del pannello
-
-Per permettere all'header e a chiunque di aprire/chiudere il pannello da qualsiasi pagina, introdurre un piccolo `PreferencesContext` con `{ open, setOpen, toggle }`, montato in `Layout.tsx` insieme al `Sheet` che renderizza `<PreferencesPanel />`. L'header consuma il context per il pulsante toggle.
-
-### Rotta `/preferenze`: cosa succede
-
-Per non rompere link esistenti / bookmark, mantenere il path `/preferenze` ma trasformarlo in un piccolo redirect "smart": al mount apre il pannello e fa `navigate("/", { replace: true })` (o l'ultima rotta valida se disponibile via `location.state.from`). Così:
-
-- chi arriva da link diretto `/preferenze` vede comunque il pannello aperto sopra la home;
-- la URL non resta "incollata" su `/preferenze`, evitando ambiguità "sono in una pagina ma non posso uscire".
+L'argomento opzionale `now` serve solo per i test (default = `new Date()`).
 
 ### File modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `src/contexts/PreferencesPanelContext.tsx` | NEW | Context + provider con `open`, `setOpen(boolean)`, `toggle()`. Esporta hook `usePreferencesPanel()`. |
-| `src/components/preferences/PreferencesPanel.tsx` | NEW | Componente pannello: usa `Sheet` (`@/components/ui/sheet`) con `side="right"` su desktop e `side="bottom"` su mobile (via `useIsMobile`). Contiene header (titolo + sottotitolo), sezione Aspetto (tema), sezione Stagioni (lista verticale con `SeasonSelector`), footer sticky con `Ripristina`. Riusa `useTheme`, `useSeasonPreferences`, toast, `BrandIcons`. Gestisce chiusura via `onOpenChange`. |
-| `src/components/layout/Layout.tsx` | EDIT | Wrappare l'app con `PreferencesPanelProvider`. Montare `<PreferencesPanel />` una sola volta accanto a `<Outlet />` così è disponibile su ogni pagina. |
-| `src/components/layout/Header.tsx` | EDIT | Sostituire `Button asChild` `Link to="/preferenze"` con `Button onClick={toggle}` che usa `usePreferencesPanel()`. Stato attivo (oro pieno) quando `open === true`. Aggiungere `aria-expanded`, `aria-controls`, `aria-label="Preferenze"`. |
-| `src/pages/PreferencesPage.tsx` | EDIT | Sostituire il contenuto con un piccolo componente che, al mount, chiama `setOpen(true)` dal context e poi `navigate("/", { replace: true })`. Mantiene la compatibilità del path senza renderizzare UI duplicata. |
-| `src/App.tsx` | unchanged | La rotta `/preferenze` resta mappata a `PreferencesPage` (ora redirect). Nessun cambio router necessario. |
-| `changelog.md` | EDIT | `### Changed`: "Preferenze ora si aprono come pannello laterale (destra su desktop, in basso su mobile) sopra la pagina corrente. Chiusura via `X`, click fuori, tasto `Esc` o nuovo click sull'ingranaggio. Il path `/preferenze` resta valido e apre automaticamente il pannello sopra la home." |
+| `src/lib/currentSeason.ts` | NEW | 4 funzioni pure documentate sopra. La regola Juventus usa cutoff luglio (consueto inizio stagione Serie A). |
+| `src/lib/currentSeason.test.ts` | NEW | Casi: aprile 2026 Juve → 2025; agosto 2026 Juve → 2026; tennis/F1/MotoGP a varie date → sempre `getFullYear()`. |
+| `src/hooks/useSeasonPreferences.ts` | DELETE | Hook non più necessario. |
+| `src/components/common/SeasonSelector.tsx` | DELETE | Componente non più usato in nessuna pagina. |
+| `src/pages/SinnerPage.tsx` | EDIT | Rimuovere `useSeasonPreferences` e `<SeasonSelector>`. Sostituire `seasons.sinner` con `getCurrentSinnerSeason()` (calcolato una volta in cima al componente). Rimuovere import `SeasonSelector`. |
+| `src/pages/JuventusPage.tsx` | EDIT | Idem con `getCurrentJuventusSeason()`. Rimuovere `setSeason`, `<SeasonSelector>`, `useEffect` di reset pagina su cambio stagione (la stagione è ora costante per render). |
+| `src/pages/Formula1Page.tsx` | EDIT | Idem con `getCurrentF1Season()`. |
+| `src/pages/MotoGPPage.tsx` | EDIT | Idem con `getCurrentMotoGPSeason()`. |
+| `src/pages/Index.tsx` | EDIT | Sostituire l'hard-coded `useJuventusCalendar(2025)` con `useJuventusCalendar(getCurrentJuventusSeason())`. Verificare che le chiamate next-event (`useSinnerNextEvent`, `useMotoGPNextEvent`, `useF1NextRace`) restino invariate (non dipendono da stagione). |
+| `src/components/preferences/PreferencesPanel.tsx` | EDIT | Rimuovere completamente la sezione "Stagioni predefinite" (intera `<section aria-labelledby="pref-seasons">`). Rimuovere import `SeasonSelector`, `BrandIcons`, `useSeasonPreferences`, stato `savedKeys`, `flagSaved`, `handleSelect`, costante `SPORTS`. Mantenere solo la sezione "Aspetto" (toggle tema). Rimuovere il bottone footer "Ripristina" (non c'è più nulla da ripristinare). Aggiornare `SheetDescription` → "Personalizza il tema dell'interfaccia." |
+| `src/pages/SinnerPage.test.tsx` | EDIT | Rimuovere `vi.mock("@/hooks/useSeasonPreferences", ...)` e relativi `mockSetSeason`. La pagina ora calcola la stagione da `currentSeason.ts`; eventualmente mockare quel modulo se necessario per stabilità del test (es. fissare l'anno). |
+| `localStorage cleanup` | RUNTIME | Aggiungere in `src/main.tsx` (o early in `App.tsx`) una rimozione one-shot di `localStorage.removeItem("cse-seasons")` per pulire le preferenze obsolete degli utenti esistenti. |
+| `changelog.md` | EDIT | `### Changed`: "Stagione automatica per ogni sport — Sinner/F1/MotoGP usano sempre l'anno solare corrente; Juventus usa la stagione Serie A in corso (cutoff luglio). Rimossi selettori stagione dalle pagine sportive e sezione 'Stagioni predefinite' dal pannello. Le preferenze stagione precedentemente salvate vengono pulite automaticamente." `### Removed`: "Hook `useSeasonPreferences`, componente `SeasonSelector`, sezione preferenze stagioni." |
 
 ### Cosa NON cambia
 
-- Funzionalità preferenze: tema chiaro/scuro, stagioni per sport, ripristino default, persistenza locale, toast.
-- Hook `useTheme`, `useSeasonPreferences`, `useIsMobile` invariati.
-- Le 6 voci sportive nella nav-pill principale invariate.
-- Posizione e stile dell'icona ingranaggio in header (cambia solo il comportamento click).
-- Backend, dati, edge functions, versione `2.1.0`, lingua italiana.
-- Nessuna nuova dipendenza (`Sheet` di shadcn già presente).
+- API edge functions (continuano a ricevere il parametro `season` come prima, solo ora calcolato dinamicamente).
+- Hook React Query (`useF1Calendar`, `useJuventusCalendar`, `useSinnerSchedule`, ecc.) e relative chiavi cache.
+- Dataset, scraping, fallback statici lato Edge Functions.
+- Pannello Preferenze come `Sheet`, toggle tema chiaro/scuro, icona ingranaggio in header.
+- Tutte le route, navigazione, layout, branding.
+- Versione app, lingua italiana, branch policy.
 
 ### Validazione
 
-1. Click su ingranaggio in header da Home: pannello entra da destra, nav resta dietro attenuata.
-2. Click su `X` / overlay / `Esc`: pannello si chiude, l'utente resta sulla home senza navigazione.
-3. Click di nuovo su ingranaggio mentre pannello aperto: si chiude (toggle).
-4. Cambio tema dentro il pannello: applicato istantaneamente alla pagina sotto, toast confermato, persistito.
-5. Cambio stagione Sinner: badge `Salvato`, toast, persistito; navigando a `/sinner` la nuova stagione è già attiva.
-6. Mobile 375px: pannello entra dal basso, altezza ~85vh, scroll interno OK, drag/close OK.
-7. Apertura diretta `https://.../preferenze`: redirect a `/` con pannello aperto.
-8. `npm run check:italian` exit 0; `npm run lint` + `npm run build` invariati.
+1. Apertura `/sinner` ad oggi (aprile 2026) → query con `season=2026`, nessun selettore visibile.
+2. Apertura `/juventus` ad aprile 2026 → query con `season=2025` (Serie A 2025/26 in corso). Spostando l'orologio simulato a settembre 2026 → `season=2026`.
+3. Apertura `/formula1` e `/motogp` → query con `season=2026`.
+4. Apertura pannello Preferenze → solo sezione "Aspetto" con toggle tema. Niente stagioni, niente "Ripristina".
+5. Home `/` → eventi Juventus calcolati con stagione corrente Serie A (non più hard-coded 2025).
+6. Utente esistente con `localStorage["cse-seasons"]` valorizzato → al primo caricamento la chiave viene rimossa, nessun effetto sulla UI.
+7. `npm run check:italian` exit 0; `npm run lint`, `npm run build`, `npm run test` invariati (test Sinner aggiornato).
+8. `grep -rn "useSeasonPreferences\|SeasonSelector" src/` → 0 occorrenze.
 
 ### Checklist post-edit
 
-1. `grep -rn "to=\"/preferenze\"" src/` → 0 occorrenze.
-2. `grep -rn "PreferencesPanel" src/` → render in `Layout.tsx`, definizione + context.
-3. Pannello accessibile da Home, Streaming, Sinner, Juventus, F1, MotoGP.
-4. `changelog.md` aggiornato.
+1. Nessuna pagina sportiva mostra più il selettore stagione.
+2. Pannello Preferenze contiene solo "Aspetto".
+3. Helper `currentSeason.ts` coperto da test base.
+4. `changelog.md` aggiornato con `Changed` + `Removed`.
 5. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
