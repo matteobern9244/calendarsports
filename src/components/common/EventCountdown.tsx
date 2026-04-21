@@ -21,10 +21,6 @@ interface Parts {
   totalMs: number;
 }
 
-function getParts(target: number): Parts {
-  return getPartsAt(target, Date.now());
-}
-
 function getPartsAt(target: number, now: number): Parts {
   const diff = Math.max(0, target - now);
   const totalSec = Math.floor(diff / 1000);
@@ -52,10 +48,16 @@ export default function EventCountdown({ startDate, className }: EventCountdownP
     getNowMinute,
     getNowMinute,
   );
+  // I secondi vengono mostrati nel JSX ogni volta che `days === 0`, cioe'
+  // nelle ultime 24h prima dell'evento. Allineiamo `needsSeconds` a quella
+  // stessa condizione: cosi' il tick a 1s scatta esattamente quando il
+  // segmento `s` e' visibile, evitando il bug del countdown "fermo" tra
+  // T-24h e T-1h. La decisione e' calcolata sul `minuteSnapshot` (stabile)
+  // quindi cambia solo ai cambi minuto, non ad ogni secondo.
   const needsSeconds = useMemo(() => {
     if (!valid) return false;
-    const diff = target - minuteSnapshot;
-    return diff > 0 && diff <= 3600 * 1000;
+    const mp = getPartsAt(target, minuteSnapshot);
+    return mp.totalMs > 0 && mp.days === 0;
   }, [target, valid, minuteSnapshot]);
 
   const secondSnapshot = useSyncExternalStore(
@@ -64,9 +66,14 @@ export default function EventCountdown({ startDate, className }: EventCountdownP
     needsSeconds ? getNowSecond : getNowMinute,
   );
 
+  // In modalita' "minute" il `secondSnapshot` resta uguale al `minuteSnapshot`
+  // (vedi countdownClock: lo store ritorna `nowMinute` quando il subscriber
+  // chiede risoluzione "minute"), quindi `activeSnapshot` cambia solo ai
+  // cambi minuto e il `useMemo` non si ricalcola intra-minuto.
+  const activeSnapshot = needsSeconds ? secondSnapshot : minuteSnapshot;
   const parts = useMemo(
-    () => (valid ? getPartsAt(target, secondSnapshot) : getPartsAt(0, secondSnapshot)),
-    [target, valid, secondSnapshot],
+    () => getPartsAt(valid ? target : 0, activeSnapshot),
+    [target, valid, activeSnapshot],
   );
 
   if (!valid) return null;
