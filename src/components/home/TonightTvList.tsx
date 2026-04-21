@@ -249,7 +249,7 @@ export default function TonightTvList() {
               aria-rowcount={tonightHighlights.length + 1}
               aria-colcount={6}
               className="
-                divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 overflow-hidden
+                divide-y-2 divide-border rounded-md border border-border/40 bg-card/40 overflow-hidden
                 sm:grid sm:divide-y-0
                 sm:[grid-template-columns:3.5rem_minmax(5rem,auto)_minmax(0,1fr)_6.5rem_4.5rem]
                 lg:[grid-template-columns:8rem_3.5rem_minmax(5rem,auto)_minmax(0,1fr)_7rem_4.5rem]
@@ -322,7 +322,7 @@ export default function TonightTvList() {
                               aria-colindex={1}
                               aria-label={showFamilyDivider ? `Famiglia ${familyLabel}` : undefined}
                               aria-hidden={showFamilyDivider ? undefined : true}
-                              className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-2 lg:border-t lg:border-border/40"
+                              className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-2 lg:border-t-2 lg:border-border"
                             >
                               {showFamilyDivider ? (
                                 <>
@@ -338,7 +338,7 @@ export default function TonightTvList() {
                               role="cell"
                               aria-colindex={2}
                               aria-label={`Inizio alle ${row.time}`}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40 font-mono font-bold text-primary text-sm leading-none"
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t-2 sm:border-border font-mono font-bold text-primary text-sm leading-none"
                             >
                               {row.time}
                             </div>
@@ -347,7 +347,7 @@ export default function TonightTvList() {
                               role="cell"
                               aria-colindex={3}
                               aria-label={`Canale ${row.channel}`}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40"
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t-2 sm:border-border"
                             >
                               <Badge
                                 variant="outline"
@@ -360,7 +360,7 @@ export default function TonightTvList() {
                             <div
                               role="cell"
                               aria-colindex={4}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40 sm:min-w-0"
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t-2 sm:border-border sm:min-w-0"
                             >
                               <span
                                 className="truncate font-medium text-sm leading-tight"
@@ -374,7 +374,7 @@ export default function TonightTvList() {
                               role="cell"
                               aria-colindex={5}
                               aria-label={`Genere ${g}`}
-                              className="hidden sm:flex sm:items-center sm:justify-end sm:px-2 sm:py-2 sm:border-t sm:border-border/40"
+                              className="hidden sm:flex sm:items-center sm:justify-end sm:px-2 sm:py-2 sm:border-t-2 sm:border-border"
                             >
                               <Badge
                                 variant="secondary"
@@ -389,7 +389,7 @@ export default function TonightTvList() {
                               aria-colindex={6}
                               aria-label={durSpoken ? `Durata ${durSpoken}` : undefined}
                               aria-hidden={durSpoken ? undefined : true}
-                              className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-2 sm:border-t sm:border-border/40 font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap"
+                              className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-2 sm:border-t-2 sm:border-border font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap"
                             >
                               {dur || ""}
                             </div>
