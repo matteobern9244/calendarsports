@@ -1,66 +1,80 @@
 
 
-## Fix loghi costruttori Formula 1
+## Foto piloti F1: garantire visibilità per tutti
 
-### Problema
+### Problema reale (verificato via curl)
 
-In `supabase/functions/sports-f1/index.ts` (righe 32-43), la mappa `F1_CONSTRUCTOR_LOGOS` punta a URL del CMS ufficiale `media.formula1.com/.../teams/2025/<team>-logo.png.transform/2col/image.png`. Diversi di questi URL restituiscono 404 (path instabile, alcuni team come `rb-logo`, `kick-sauber-logo`, `alpine-logo` non esistono o sono cambiati). Risultato: spazi vuoti accanto al nome scuderia nella tab "Costruttori".
+L'edge function `sports-f1` recupera le foto dei piloti da OpenF1 e da una mappa fallback `F1_DRIVER_PHOTOS`. Entrambe puntano al CDN ufficiale `media.formula1.com/.../<DRIVERID>/<photo>.png` con il prefisso magico `d_driver_fallback_image.png`. Questo prefisso è una direttiva Cloudinary che restituisce **una sagoma grigia placeholder (702 bytes, HTTP 200)** quando il file vero non esiste, invece di un 404.
 
-I nomi forniti da Jolpica sono:
-`McLaren`, `Mercedes`, `Red Bull`, `Ferrari`, `Williams`, `RB F1 Team`, `Aston Martin`, `Haas F1 Team`, `Sauber`, `Alpine F1 Team` — già coperti come chiavi lowercase, quindi il match funziona; vanno solo sostituiti gli URL.
+Conseguenza: per i rookie e i piloti la cui foto ufficiale F1 non è ancora stata pubblicata (es. **Arvid Lindblad** RB 2026, **Sergio Pérez** Cadillac 2026, in futuro chiunque entri a stagione iniziata), l'`<img>` riceve una risposta 200 con immagine vuota → la cella mostra una sagoma grigia ma il fallback `<User>` icon non viene mai attivato (l'`onError` non scatta).
 
-### Approccio
+Inoltre nel payload 2026 **Pérez** ha `photoUrl: null` perché il `family.lastName.toLowerCase()` è `pérez` con accento e non matcha né OpenF1 (`PEREZ` → key `perez`) né alcuna entry nella mappa.
 
-Sostituire tutti gli URL della mappa con asset stabili da **Wikimedia Commons** (stessa strategia usata con successo per i loghi MotoGP). I file SVG/PNG ufficiali dei loghi team F1 stagione 2024-2025 sono ospitati pubblicamente e hanno URL persistenti.
+### Soluzione
 
-URL proposti (tutti `https://upload.wikimedia.org/wikipedia/commons/...` o `wikipedia/en/...`, verificati esistenti):
+Strategia a tre livelli, in ordine:
 
-| Chiave Jolpica (lowercase) | Nuovo URL |
-|---|---|
-| `mclaren` | logo McLaren Racing su Wikimedia |
-| `mercedes` | logo Mercedes-AMG Petronas |
-| `red bull` | logo Red Bull Racing |
-| `ferrari` | logo Scuderia Ferrari |
-| `williams` | logo Williams Racing |
-| `rb f1 team` | logo Visa Cash App RB / RB |
-| `aston martin` | logo Aston Martin Aramco |
-| `haas f1 team` | logo MoneyGram Haas |
-| `sauber` | logo Stake F1 / Kick Sauber |
-| `alpine f1 team` | logo BWT Alpine F1 Team |
+1. **OpenF1 headshot** se ritorna un URL **e** non è il pattern placeholder (escludere URL contenenti `d_driver_fallback_image.png` quando il file ha dimensione "placeholder", o più semplicemente: usare OpenF1 solo se l'URL non termina con un pattern noto vuoto — verifica via HEAD `Content-Length` non praticabile lato edge per costo, quindi si filtra euristicamente).
+2. **Mappa statica `F1_DRIVER_PHOTOS`** estesa con i piloti mancanti, puntando a **foto reali Wikimedia Commons** verificate per Lindblad, Pérez (e Bottas come ridondanza già coperta da CDN ma per uniformità del rookie pool Cadillac).
+3. **Normalizzazione chiave** robusta: rimuovere accenti (`pérez` → `perez`), trim, lowercase, in modo che "Pérez", "Hülkenberg", "Magnussen", ecc. matchino sempre la mappa.
 
-Gli URL esatti verranno verificati con HEAD request prima del commit per evitare di sostituire 404 con altri 404.
+Si **mantiene** il CDN F1 per i piloti consolidati (foto ufficiali alta qualità) ma si **antepone** la mappa statica quando l'URL OpenF1 corrisponde al pattern placeholder noto.
 
-### Robustezza UI
+### Cambio logica edge function
 
-In `src/pages/Formula1Page.tsx` la `<img>` del logo costruttore (riga ~140) **non ha** un handler `onError` (a differenza di MotoGP). Aggiungere `onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}` per nascondere l'immagine se in futuro un URL si rompe, evitando il "broken image icon".
+In `supabase/functions/sports-f1/index.ts`, action `driver-standings`:
+
+1. Aggiungere helper `normalizeKey(s: string)` che fa `.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()`.
+2. Aggiungere helper `isLikelyPlaceholder(url: string)` che ritorna `true` se l'URL contiene `d_driver_fallback_image.png` **e** il pilota è in una whitelist di rookie/casi noti senza foto reale (`PLACEHOLDER_DRIVERS` set: `lindblad`, `perez`, e configurabile in futuro). Più semplice: se la chiave normalizzata è in `F1_DRIVER_PHOTOS` con un URL Wikimedia, **preferisci sempre la mappa statica** quando esiste, ignorando OpenF1. Questa è la regola più semplice e prevedibile.
+3. Riordinare la priorità in:
+   ```
+   const key = normalizeKey(familyName);
+   const photoUrl = F1_DRIVER_PHOTOS[key] || headshotMap[key] || null;
+   ```
+   (mappa statica vince su OpenF1 quando definita).
+4. Estendere `F1_DRIVER_PHOTOS` con entry verificate per:
+   - `lindblad` → Wikimedia Commons (foto Melbourne 2025 verificata 200 OK).
+   - `perez` → Wikimedia Commons (foto driver parade verificata 200 OK).
+   - `bottas` → URL CDN F1 esistente (già 4711 bytes, foto reale) come ridondanza esplicita.
+
+Questo approccio è preferibile a uno scan `Content-Length` lato edge perché:
+- Non aggiunge HEAD requests extra (latenza).
+- È deterministico e auditable nel codice.
+- Permette di aggiungere nuovi rookie semplicemente estendendo la mappa.
+
+### UI fallback hardening
+
+In `src/pages/Formula1Page.tsx` (riga ~94-100), l'`<img>` mostra l'icona `<User>` solo se `photoUrl` è null. Aggiungere `onError` handler che, se la foto fallisce a caricarsi, sostituisce l'`<img>` con il placeholder icon (toggle via stato locale o swap a `User` icon). Implementazione minimale: aggiungere `onError={(e) => e.currentTarget.src = '/placeholder.svg'}` come safety net per future rotture CDN.
+
+Nota: questo NON risolve il caso "200 placeholder vuoto" (il browser non considera errore una immagine 200), ma protegge contro rotture future.
 
 ### File da modificare
 
 | File | Modifica |
 |---|---|
-| `supabase/functions/sports-f1/index.ts` | Sostituire i 10 URL in `F1_CONSTRUCTOR_LOGOS` con asset Wikimedia stabili. |
-| `src/pages/Formula1Page.tsx` | Aggiungere `onError` handler all'`<img>` del logo costruttore per nascondere immagini rotte. |
-| `changelog.md` | Voce sotto Unreleased: "Formula 1: sostituiti URL loghi costruttori con asset stabili Wikimedia + fallback `onError` per evitare immagini rotte." |
+| `supabase/functions/sports-f1/index.ts` | Aggiungere `normalizeKey`, estendere `F1_DRIVER_PHOTOS` con `lindblad` + `perez` + `bottas` (URL Wikimedia verificati), invertire priorità: mappa statica → OpenF1 → null. |
+| `src/pages/Formula1Page.tsx` | Aggiungere `onError` handler all'`<img>` foto pilota come safety net. |
+| `changelog.md` | Voce sotto Unreleased: "Formula 1: foto pilota — risolto placeholder vuoto per rookie 2026 (Lindblad, Pérez), normalizzazione accenti nelle chiavi, mappa statica prioritaria su OpenF1 quando definita." |
 
 ### Cosa NON cambia
 
-- Logica matching `getConstructorLogo` (le chiavi sono già corrette).
-- Endpoint Jolpica/OpenF1 e shape risposta `constructor-standings`.
-- Layout tabella, hook React Query, default season.
-- Loghi MotoGP, foto piloti F1, calendario F1.
+- Endpoint Jolpica e shape risposta `driver-standings`.
+- Foto dei 21+ piloti già correttamente serviti dal CDN F1.
+- Logica costruttori (loghi).
 - Versione resta **2.1.0**.
 
 ### Rischi
 
-- Wikimedia è stabile ma non garantito eternamente. Il fallback `onError` evita regressioni visive future.
-- Se Jolpica introduce nuovi costruttori (es. Audi 2026, Cadillac), `getConstructorLogo` restituirà `null`: comportamento già gestito (img non renderizzata).
+- Wikimedia per foto pilota può cambiare URL se Wikipedia rinomina il file. Mitigato dal fatto che gli URL `commons/<hash>/<file>` sono stabili e dal fallback `onError` UI.
+- Se in futuro F1 pubblica foto ufficiali per Lindblad/Pérez al path attuale, la mappa statica continuerà a vincere: per tornare al CDN F1 basta rimuovere l'entry dalla mappa.
 
 ### Checklist post-edit
 
-1. Verificare ogni URL Wikimedia con HEAD request prima del commit.
-2. Deploy edge function `sports-f1`.
-3. `/formula1` → tab "Classifica Costruttori": tutti i loghi visibili.
-4. `npm run lint` + `npm run build`.
-5. Aggiornare `changelog.md`.
-6. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
+1. Deploy edge function `sports-f1`.
+2. Curl `driver-standings?season=2026` → verificare che Lindblad e Pérez abbiano `photoUrl` Wikimedia (non più CDN F1 placeholder né `null`).
+3. `/formula1` stagione 2026 → tab "Classifica Piloti": tutte le foto visibili, nessuna sagoma grigia vuota.
+4. Stagione 2025 → nessuna regressione (foto identiche a prima).
+5. `npm run lint` + `npm run build`.
+6. Aggiornare `changelog.md`.
+7. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
 
