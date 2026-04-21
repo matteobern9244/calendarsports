@@ -37,6 +37,21 @@ const EVENTS_PAYLOAD = [
   },
 ];
 
+const TEAMS_PAYLOAD = [
+  {
+    name: "Ducati Lenovo Team",
+    picture: "https://photos.motogp.com/teams/8/9/892fff2f-7402-4fbd-99fb-5fd567d8a80c/main-picture.png",
+  },
+  {
+    name: "Aprilia Racing",
+    picture: "https://photos.motogp.com/teams/1/1/11d18b37-baba-400a-80c2-f8ddf040f97e/main-picture.png",
+  },
+  {
+    name: "HRC Test Team",
+    picture: null,
+  },
+];
+
 function installMockFetch(opts: { fail?: boolean } = {}) {
   const orig = globalThis.fetch;
   globalThis.fetch = (input: Request | URL | string, init?: RequestInit) => {
@@ -52,6 +67,11 @@ function installMockFetch(opts: { fail?: boolean } = {}) {
     if (url.includes("/results/events")) {
       return Promise.resolve(
         new Response(JSON.stringify(EVENTS_PAYLOAD), { status: 200 }),
+      );
+    }
+    if (url.includes("/v1/teams")) {
+      return Promise.resolve(
+        new Response(JSON.stringify(TEAMS_PAYLOAD), { status: 200 }),
       );
     }
     // Sky Sport (classifiche) non chiamato in questi test
@@ -110,6 +130,22 @@ Deno.test("MotoGP: mock fetch ritorna 503 quando opts.fail = true", async () => 
     const res = await fetch("https://api.motogp.pulselive.com/motogp/v1/results/seasons");
     assertEquals(res.status, 503);
     await res.text();
+  } finally {
+    restore();
+  }
+});
+
+Deno.test("MotoGP: payload teams Pulselive contiene picture URL ufficiali", async () => {
+  const restore = installMockFetch();
+  try {
+    const res = await fetch(
+      "https://api.motogp.pulselive.com/motogp/v1/teams?seasonYear=2026&categoryUuid=737ab122-76e1-4081-bedb-334caaa18c70",
+    );
+    const json = await res.json();
+    assert(Array.isArray(json));
+    const ducati = json.find((t: any) => t.name === "Ducati Lenovo Team");
+    assert(ducati);
+    assert(ducati.picture && ducati.picture.includes("photos.motogp.com/teams/"));
   } finally {
     restore();
   }
