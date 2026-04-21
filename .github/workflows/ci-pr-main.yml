@@ -34,6 +34,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Italian UI guard
+        run: npm run check:italian
+
       - name: Unit tests
         run: npm run test
 

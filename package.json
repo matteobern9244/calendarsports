@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
+    "check:italian": "node scripts/check-italian-ui.mjs",
     "prepare": "husky"
   },
   "lint-staged": {
