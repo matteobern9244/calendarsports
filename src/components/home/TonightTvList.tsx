@@ -305,7 +305,8 @@ export default function TonightTvList() {
                     <li
                       role="row"
                       aria-rowindex={ariaRowIndex}
-                      className="px-2.5 py-2.5 text-sm sm:contents"
+                      tabIndex={0}
+                      className="group px-2.5 py-2.5 text-sm outline-none transition-colors hover:bg-primary/10 focus-visible:bg-primary/15 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset cursor-pointer sm:contents"
                     >
                       {/* Desktop/Tablet: celle grid (display:contents sul li) */}
                       {(() => {
@@ -322,7 +323,7 @@ export default function TonightTvList() {
                               aria-colindex={1}
                               aria-label={showFamilyDivider ? `Famiglia ${familyLabel}` : undefined}
                               aria-hidden={showFamilyDivider ? undefined : true}
-                              className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-2 lg:border-t-2 lg:border-border"
+                              className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-2 lg:border-t-2 lg:border-border transition-colors lg:group-hover:bg-primary/10 lg:group-focus-visible:bg-primary/15"
                             >
                               {showFamilyDivider ? (
                                 <>
@@ -338,7 +339,7 @@ export default function TonightTvList() {
                               role="cell"
                               aria-colindex={2}
                               aria-label={`Inizio alle ${row.time}`}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t-2 sm:border-border font-mono font-bold text-primary text-sm leading-none"
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t-2 sm:border-border font-mono font-bold text-primary text-sm leading-none transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
                               {row.time}
                             </div>
@@ -347,7 +348,7 @@ export default function TonightTvList() {
                               role="cell"
                               aria-colindex={3}
                               aria-label={`Canale ${row.channel}`}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t-2 sm:border-border"
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t-2 sm:border-border transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
                               <Badge
                                 variant="outline"
@@ -360,7 +361,7 @@ export default function TonightTvList() {
                             <div
                               role="cell"
                               aria-colindex={4}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t-2 sm:border-border sm:min-w-0"
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t-2 sm:border-border sm:min-w-0 transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
                               <span
                                 className="truncate font-medium text-sm leading-tight"
@@ -374,7 +375,7 @@ export default function TonightTvList() {
                               role="cell"
                               aria-colindex={5}
                               aria-label={`Genere ${g}`}
-                              className="hidden sm:flex sm:items-center sm:justify-end sm:px-2 sm:py-2 sm:border-t-2 sm:border-border"
+                              className="hidden sm:flex sm:items-center sm:justify-end sm:px-2 sm:py-2 sm:border-t-2 sm:border-border transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
                               <Badge
                                 variant="secondary"
@@ -389,7 +390,7 @@ export default function TonightTvList() {
                               aria-colindex={6}
                               aria-label={durSpoken ? `Durata ${durSpoken}` : undefined}
                               aria-hidden={durSpoken ? undefined : true}
-                              className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-2 sm:border-t-2 sm:border-border font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap"
+                              className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-2 sm:border-t-2 sm:border-border font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
                               {dur || ""}
                             </div>
