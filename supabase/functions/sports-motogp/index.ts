@@ -143,7 +143,7 @@ const MOTOGP_RIDER_PHOTOS_BY_SURNAME: Record<string, string> = {
   'aldeguer': 'https://resources.motogp.pulselive.com/photo-resources/2026/02/21/68e81f3f-b7fc-463b-9df2-d17c2ace42f7/YF1yv3Jm.png?height=200&width=200',
   'moreira': 'https://resources.motogp.pulselive.com/photo-resources/2026/03/04/63a4eefc-ce5c-40cc-9abd-870e7aabaa07/z6IXOQnm.png?height=200&width=200',
   'garcia': 'https://resources.motogp.pulselive.com/photo-resources/2025/11/07/3098c097-ebe6-438c-8615-673b8a8f5ff8/KVM5xr1H.png?height=200&width=200',
-  'pirro': 'https://resources.motogp.pulselive.com/photo-resources/2024/03/04/b8d4a5e3-c3c4-4bd0-b8e9-c3f5e8a3d9f2/pirro.png?height=200&width=200',
+  'pirro': 'https://upload.wikimedia.org/wikipedia/commons/7/79/Michele_Pirro_at_the_2025_Malaysian_Grand_Prix.jpg',
   'savadori': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Lorenzo_Savadori_2021.jpg/200px-Lorenzo_Savadori_2021.jpg',
   'pedrosa': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Dani_Pedrosa_2018.jpg/200px-Dani_Pedrosa_2018.jpg',
   'crutchlow': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Cal_Crutchlow_2019.jpg/200px-Cal_Crutchlow_2019.jpg',
@@ -387,7 +387,7 @@ function findRiderNationality(name: string): string | null {
 
 function getTeamConstructor(teamName: string): string | null {
   const t = teamName.toLowerCase();
-  if (t.includes('ducati') || t.includes('vr46') || t.includes('pramac')) return 'ducati';
+  if (t.includes('ducati') || t.includes('vr46') || t.includes('pramac') || t.includes('gresini')) return 'ducati';
   if (t.includes('aprilia') || t.includes('trackhouse')) return 'aprilia';
   if (t.includes('ktm') || t.includes('tech3') || t.includes('gasgas')) return 'ktm';
   if (t.includes('yamaha')) return 'yamaha';
