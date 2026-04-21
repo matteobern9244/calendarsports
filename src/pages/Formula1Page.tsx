@@ -208,6 +208,14 @@ export default function Formula1Page() {
               </Table>
             </div>
           )}
+          {!conLoading && !conError && (!constructors || constructors.length === 0) && (
+            <UnavailableExternalSource
+              title={`Classifica Costruttori ${season}`}
+              description="La classifica costruttori del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Formula 1 qui sotto per consultare la graduatoria delle scuderie, con punti totali, vittorie e prestazioni dei team."
+              externalLink="https://www.formula1.com/en/results/2025/team"
+              externalLabel="Apri classifica su Formula1.com"
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="highlights">
