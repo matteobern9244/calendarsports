@@ -284,10 +284,22 @@ Deno.serve(async (req) => {
         tmdbDiscover("movie", providerCfg.id, from, to, apiKey).catch(() => []),
         tmdbDiscover("tv", providerCfg.id, from, to, apiKey).catch(() => []),
       ]);
-      return sortItems([
-        ...movies.map((m) => normalizeItem(m, "movie")),
-        ...tv.map((t) => normalizeItem(t, "tv")),
-      ]);
+      const candidates: Array<{ kind: "movie" | "tv"; raw: any }> = [
+        ...movies.map((m) => ({ kind: "movie" as const, raw: m })),
+        ...tv.map((t) => ({ kind: "tv" as const, raw: t })),
+      ];
+      // Validazione per-item: tieni solo i titoli effettivamente in
+      // abbonamento sul provider richiesto in regione IT, secondo TMDB
+      // /watch/providers (results.IT.flatrate include providerId).
+      const checks = await Promise.all(
+        candidates.map((c) =>
+          tmdbItemAvailableIT(c.kind, c.raw.id, providerCfg.id, apiKey),
+        ),
+      );
+      const validated = candidates
+        .filter((_, i) => checks[i])
+        .map((c) => normalizeItem(c.raw, c.kind));
+      return sortItems(validated);
     };
 
     let items = await fetchWindow(dateFrom, dateTo);
