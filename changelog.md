@@ -22,6 +22,18 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   uscite per nascondere le release con `releaseDate` già passata (utile
   quando il fallback "widened" allarga la finestra). Stato persistito in URL
   via `upcoming=1`. Versione applicativa invariata `2.1.0`.
+- **Formula 1 – foto piloti completa**: risolto il caso "sagoma grigia
+  vuota" per i rookie/piloti 2026 senza foto ufficiale sul CDN F1
+  (`media.formula1.com` con direttiva Cloudinary `d_driver_fallback_image.png`
+  che restituisce HTTP 200 + immagine placeholder, impedendo l'attivazione
+  dell'`onError`). Modifiche in `supabase/functions/sports-f1/index.ts`:
+  aggiunto helper `normalizeKey` (lowercase + rimozione accenti) per matchare
+  correttamente nomi tipo "Pérez" / "Hülkenberg"; estesa mappa
+  `F1_DRIVER_PHOTOS` con URL Wikimedia Commons verificati per `lindblad`,
+  `perez`, `bottas`; invertita priorità: mappa statica vince su OpenF1
+  quando definita. Aggiunto fallback `onError` sull'`<img>` foto pilota in
+  `Formula1Page.tsx` come safety net. Richiede deploy edge function
+  `sports-f1`. Versione applicativa invariata `2.1.0`.
 - **Formula 1 – fix loghi costruttori**: sostituiti i 10 URL nella mappa
   `F1_CONSTRUCTOR_LOGOS` (`supabase/functions/sports-f1/index.ts`) con
   asset stabili da Wikimedia Commons / Wikipedia EN — gli URL precedenti
