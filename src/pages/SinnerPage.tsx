@@ -70,7 +70,8 @@ export default function SinnerPage() {
               title={`Risultati stagione ${season}`}
               description="I risultati dei match di Jannik Sinner per questa stagione non sono ancora stati pubblicati dalla nostra fonte. Apri il profilo ufficiale ATP qui sotto per consultare lo storico completo delle partite, i punteggi set per set e le statistiche aggiornate."
               externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/overview"
-              externalLabel="Apri su ATP Tour"
+              externalLabel="Vedi risultati su ATP Tour"
+              ctaHint="Tocca qui per i punteggi set per set"
             />
           )}
           {results && results.length > 0 && (() => {
@@ -119,7 +120,8 @@ export default function SinnerPage() {
               title={`Calendario tornei ${season}`}
               description="Il calendario dei tornei di Jannik Sinner per questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale ATP qui sotto per consultare il programma completo del circuito, le sedi di gioco e le giornate aggiornate."
               externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/player-activity"
-              externalLabel="Apri calendario su ATP Tour"
+              externalLabel="Vedi calendario su ATP Tour"
+              ctaHint="Tocca qui per il programma completo"
             />
           )}
           {schedule && schedule.length > 0 && (
