@@ -94,8 +94,13 @@ export const tennisApi = {
     callEdgeFunction("sports-tennis", { action: "next-event" }),
   getSchedule: (season: number) =>
     callEdgeFunction("sports-tennis", { action: "schedule", season: String(season) }),
-  getResults: (season: number) =>
-    callEdgeFunction("sports-tennis", { action: "results", season: String(season) }),
+  getResults: (season: number, page?: number, pageSize?: number) =>
+    callEdgeFunction("sports-tennis", {
+      action: "results",
+      season: String(season),
+      ...(page !== undefined ? { page: String(page) } : {}),
+      ...(pageSize !== undefined ? { pageSize: String(pageSize) } : {}),
+    }),
 };
 
 // === Streaming API (TV palinsesto + nuove uscite) ===
