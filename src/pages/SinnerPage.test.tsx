@@ -54,7 +54,7 @@ describe("SinnerPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<SinnerPage />);
+    renderWithClient(<SinnerPage />);
 
     expect(screen.getByText("Caricamento risultati...")).toBeInTheDocument();
   });
@@ -67,7 +67,7 @@ describe("SinnerPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<SinnerPage />);
+    renderWithClient(<SinnerPage />);
 
     expect(
       screen.getByText(/Risultati stagione \d{4} non disponibili/i),
@@ -97,7 +97,7 @@ describe("SinnerPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<SinnerPage />);
+    renderWithClient(<SinnerPage />);
 
     const nav = screen.getByRole("navigation", { name: /Paginazione risultati/i });
     expect(nav).toBeInTheDocument();
@@ -132,7 +132,7 @@ describe("SinnerPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<SinnerPage />);
+    renderWithClient(<SinnerPage />);
 
     expect(
       screen.queryByRole("navigation", { name: /Paginazione risultati/i }),
@@ -158,7 +158,7 @@ describe("SinnerPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<SinnerPage />);
+    renderWithClient(<SinnerPage />);
 
     expect(screen.getByText(/vs\. Daniil Medvedev/i)).toBeInTheDocument();
     expect(
