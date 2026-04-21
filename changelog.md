@@ -18,6 +18,13 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **MotoGP – nomi piloti completi e foto wildcard/sostituti**: la classifica
+  piloti `/motogp` ora espande i nomi brevi di Sky Sport (es. "Pirro M.")
+  in formato "Nome Cognome" (es. "Michele Pirro") tramite mappa
+  `MOTOGP_RIDER_FULL_NAMES` con fallback al nome originale. Aggiunte foto
+  per wildcard/sostituti (Pirro, Savadori, Pedrosa, Crutchlow, Bradl).
+  F1: formato nome già corretto (`givenName + familyName` da Jolpica),
+  nessuna modifica. Versione applicativa invariata `2.1.0`.
 - **Formula 1 – rimossa nota "Dati reali da Jolpica/Ergast API"** dal
   sottotitolo della pagina `/formula1`: il `subtitle` del `SectionHeader`
   non viene più mostrato. Fonte dati invariata lato edge function
