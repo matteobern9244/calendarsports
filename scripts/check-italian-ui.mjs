@@ -130,6 +130,9 @@ const ALLOWLIST_WORDS = new Set(
     "AM",
     "PM",
     // termini accettati nell'uso italiano corrente
+    // - "Home": usato come label nav nell'italiano corrente (es. "Torna alla Home")
+    // - "Sport": termine entrato nell'uso italiano comune
+    // - "Open": nome proprio di tornei (Australian Open, US Open, Madrid Open)
     "Home",
   ].map((w) => w.toLowerCase()),
 );
@@ -304,11 +307,34 @@ function extractCandidates(src) {
 
   // attributi UI
   const attr =
-    /\b(aria-label|aria-description|placeholder|title|alt)\s*=\s*"([^"]+)"/g;
+    /\b(aria-label|aria-description|aria-describedby|aria-roledescription|aria-valuetext|placeholder|title|alt|subtitle|description)\s*=\s*"([^"]+)"/g;
   for (const m of src.matchAll(attr)) {
     candidates.push({
       kind: `attr:${m[1]}`,
       value: m[2].trim(),
+      index: m.index,
+    });
+  }
+
+  // toast/sonner: toast("..."), toast.success("..."), toast.error("..."),
+  // toast.info("..."), toast.warning("..."), toast.message("..."),
+  // toast.loading("...")
+  const toastPattern =
+    /\btoast(?:\.(?:success|error|info|warning|message|loading))?\(\s*"([^"]+)"/g;
+  for (const m of src.matchAll(toastPattern)) {
+    candidates.push({
+      kind: "toast-message",
+      value: m[1].trim(),
+      index: m.index,
+    });
+  }
+
+  // document.title = "..."
+  const docTitlePattern = /\bdocument\.title\s*=\s*"([^"]+)"/g;
+  for (const m of src.matchAll(docTitlePattern)) {
+    candidates.push({
+      kind: "document-title",
+      value: m[1].trim(),
       index: m.index,
     });
   }

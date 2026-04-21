@@ -372,6 +372,32 @@ in inglese fuori allowlist. Le uniche eccezioni autorizzate sono i token
 `STREAMING` (sezione) e `CALENDAR EVENTS` (nome app). Il controllo gira
 anche nei workflow CI `ci-develop` e `ci-pr-main`.
 
+Superfici analizzate: testo JSX, attributi `aria-label`,
+`aria-description`, `aria-describedby`, `aria-roledescription`,
+`aria-valuetext`, `placeholder`, `title`, `alt`, prop `subtitle` e
+`description`, primo argomento dei `toast(...)`/`toast.success(...)`/
+`toast.error(...)`/`toast.info(...)`/`toast.warning(...)`/
+`toast.loading(...)` e assegnazioni `document.title = "..."`.
+
+Marker per skip mirato (usare con parsimonia, motivare in changelog):
+
+- `// @lingua-ignore` a fine riga: salta la singola riga
+  (utile per testo dinamico o stringhe che il regex non riesce a
+  parsare correttamente).
+- `// @lingua-ignore-file` o `/* @lingua-ignore-file */` in testa al
+  file: salta l'intero file (riservato a file con molte stringhe
+  legittime non in allowlist, es. dataset di nomi propri).
+
+Esempio:
+
+```tsx
+<span aria-label="Loading skeleton placeholder">…</span> // @lingua-ignore
+```
+
+Per eccezioni stabili (nuovo brand, nuova sigla tecnica) preferire
+l'aggiornamento di `ALLOWLIST_WORDS` in `scripts/check-italian-ui.mjs`,
+dichiarando il motivo nel `changelog.md`.
+
 ### Test
 
 ```bash
