@@ -1,122 +1,175 @@
 
 
-## Uniformare l'effetto hover su tutte le card dell'app
+## "Sincronizza" davvero completo: tutti i dati, tutte le pagine
 
 ### Obiettivo
-Estendere l'effetto hover premium delle card "Prossimi Eventi" della Home (`EventCard`) a **tutte** le schede/card cliccabili e visivamente equivalenti dell'applicazione, garantendo coerenza visiva su desktop e mobile.
+Il bottone **Sincronizza** in Home deve precaricare **tutto** ciò che le pagine dell'app possono mostrare, in modo che dopo lo sync la navigazione tra Home, Streaming, Sinner, Juventus, F1 e MotoGP (incluse le tab Highlights) non richieda nessuna nuova fetch.
 
-### Effetto hover di riferimento (preso da `EventCard`)
-Composto da 4 elementi:
-1. **Lift verticale**: `whileHover={{ y: -4 }}` (Framer Motion) o `hover:-translate-y-1` (CSS).
-2. **Glow oro nell'ombra**: `hover:shadow-[0_18px_40px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]`.
-3. **Bordo oro più intenso**: `hover:border-[hsl(var(--gold))]/55` (default) o `/80` (highlight).
-4. **Linea oro superiore + radial glow** già attivi su `group-hover` (li vedi solo su EventCard / JuventusPage / HighlightCard).
-5. Transizione: `transition-[box-shadow,border-color,transform] duration-300 ease-out`.
+### Stato attuale (cosa già fa `useSyncAll`)
+- F1: calendar, driver-standings, constructor-standings, next-race ✅
+- Juventus: standings, calendar (solo pagina 1), next-match ✅
+- Sinner: player-info, next-event, schedule, results ✅
+- MotoGP: calendar, next-event, standings, constructor-standings ✅
+- Streaming TV: solo `invalidateQueries` (non prefetcha le 5 famiglie) ⚠️
+- Streaming Releases: 4 provider con range fisso `today → +14gg` ⚠️
+- **Highlights YouTube (Juventus, F1, MotoGP): MANCANTI** ❌
+- **Juventus calendar: solo pagina 1, le altre pagine non vengono prefetchate** ⚠️
 
-### Inventario card da uniformare
+### Cosa aggiungere/sistemare
 
-| # | File | Componente / blocco | Stato attuale | Azione |
-|---|------|---------------------|---------------|--------|
-| 1 | `src/components/common/EventCard.tsx` | EventCard (riferimento) | Già OK | Nessuna modifica |
-| 2 | `src/pages/JuventusPage.tsx` (riga 346) | Card calendario partita | Già coerente (hover oro + lift) | Nessuna modifica |
-| 3 | `src/components/highlights/HighlightCard.tsx` | Card highlight YouTube | Già coerente | Nessuna modifica |
-| 4 | `src/pages/SinnerPage.tsx` (riga 118) | Card torneo Sinner (`<div className="rounded-xl border ...">`) | Solo `hover:border-primary/30 transition-all` — **debole** | **Allineare al pattern EventCard** |
-| 5 | `src/pages/StreamingPage.tsx` (riga 450) | Card release film/serie (`<Card>` shadcn) | Solo `group-hover:-translate-y-0.5 group-hover:shadow-lg` — **non coerente** | **Allineare al pattern EventCard** |
-| 6 | `src/components/home/TonightTvList.tsx` (riga 309) | Righe TV (`<li>`) | Solo `hover:bg-primary/10` (riga di tabella) | **Lasciare invariato** — è una riga di tabella, non una card. Il pattern card non si applica. |
-| 7 | Tabelle `Formula1Page` / `MotoGPPage` / `JuventusPage` (classifiche) | `TableRow` con `hover:bg-muted/50` (default shadcn) | Riga di tabella | **Lasciare invariato** — non sono card. |
-| 8 | `src/pages/JuventusMatchPage.tsx` `InfoRow` (riga 434) | Riquadro info statico (label/valore) | Nessun hover | **Lasciare invariato** — non interattivo, non cliccabile. |
-| 9 | `TonightTvList` Card contenitore (riga 197) | Card di sezione (non cliccabile) | Nessun hover | **Lasciare invariato** — wrapper di sezione, non un item. |
+#### 1. Highlights YouTube (3 sport) — NUOVO
+Aggiungere un task di prefetch dedicato che chiama `highlights-youtube` per ognuno dei 3 sport con il limit di default usato dalle pagine (`12`):
 
-### Modifiche concrete
-
-#### A. `src/pages/SinnerPage.tsx` — card tornei (riga 117-138)
-
-Sostituire il `<div>` corrente con un `motion.div` che applica esattamente lo stesso pattern di `EventCard`:
-
-```tsx
-import { motion } from "framer-motion"; // già importato
-
-<motion.div
-  key={i}
-  initial={{ opacity: 0, y: 12 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.35 }}
-  whileHover={{ y: -4 }}
-  className={cn(
-    "group relative rounded-2xl border bg-card p-4",
-    "transition-[box-shadow,border-color,transform] duration-300 ease-out",
-    "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
-    "hover:shadow-[0_18px_40px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
-    "border-[hsl(var(--gold))]/20 hover:border-[hsl(var(--gold))]/55",
-  )}
->
-  {/* Linea oro superiore + radial glow per coerenza con EventCard */}
-  <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300" />
-  <span aria-hidden="true" className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_top,hsl(var(--gold)/0.10),transparent_60%)]" />
-  {/* contenuto esistente invariato, avvolto in relative z-[1] dove serve */}
-</motion.div>
+```ts
+// queryKey allineate a useHighlights(sport, 12)
+["highlights", "juventus", 12]
+["highlights", "f1", 12]
+["highlights", "motogp", 12]
 ```
 
-Cambia `rounded-xl` → `rounded-2xl` per allinearsi al pattern; nessun cambio di contenuto, dimensioni o spacing interno (`p-4` resta).
+Le edge function `highlights-youtube` accettano `?sport=...&limit=12` e ritornano l'envelope `{ success, data, meta }`. Useremo `callEdgeFunctionWithMeta` (già importato) e `setQueryData` come per gli altri sport, così entrano anche nel meccanismo di warning fallback.
 
-#### B. `src/pages/StreamingPage.tsx` — card release (riga 443-489)
+#### 2. Juventus calendar — TUTTE le pagine
+Oggi viene prefetchata solo `page=1, pageSize=12`. Le pagine 2, 3, … restano "fredde". Soluzione:
 
-Sostituire la `<Card>` shadcn con il pattern coerente, mantenendo il `<button>` esterno per accessibilità:
+- Prefetchare **prima** la pagina 1 per leggere `totalPages` dal payload paginato.
+- Fare prefetch **in parallelo** di tutte le altre pagine (`page=2..totalPages`) con la stessa `pageSize=12` e le query key allineate a `useJuventusCalendar(season, page, 12)`.
 
-```tsx
-<button
-  key={`${item.type}-${item.tmdbId}`}
-  type="button"
-  onClick={() => setSelected(item)}
-  className="text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
->
-  <motion.div
-    whileHover={{ y: -4 }}
-    className={cn(
-      "relative overflow-hidden rounded-2xl border bg-card",
-      "transition-[box-shadow,border-color,transform] duration-300 ease-out",
-      "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
-      "hover:shadow-[0_18px_40px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
-      "border-[hsl(var(--gold))]/20 hover:border-[hsl(var(--gold))]/55",
-    )}
-  >
-    <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300 z-10" />
-    {/* poster + CardContent invariati: solo sostituiamo <Card>/<CardContent> con <div> equivalenti */}
-  </motion.div>
-</button>
+Cap di sicurezza: massimo 10 pagine (oltre 120 partite è impossibile per una sola squadra/stagione).
+
+#### 3. Streaming TV — prefetch reale per tutte le famiglie
+Oggi solo `invalidateQueries({ queryKey: ["streaming-tv"] })`. Sostituire con prefetch esplicito per ognuna delle 5 famiglie di `STREAMING_FAMILIES` (rai, mediaset, sky-sport, sky-cinema, discovery), usando la stessa query key di `useTvByFamily`:
+
+```ts
+queryKey: ["streaming-tv", family]
+queryFn: () => streamingApi.getTvByFamily(family)
 ```
 
-Sostituiamo `<Card>` con `<motion.div>` e `<CardContent className="p-3 space-y-1">` con `<div className="p-3 space-y-1">`. Layout, poster, badge e dimensioni grid (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4`) **invariati** → nessun rischio di regressione layout.
+#### 4. Streaming Releases — coprire anche il range usato in pagina
+Oggi: `today → +14gg`. La pagina `StreamingPage` usa di default `range="30d"` → `today → +30gg` (e supporta anche range diversi). Soluzione minima e sufficiente per "non rifetcha al primo accesso": prefetch su **due** range che coprono i default di Home e di StreamingPage:
+
+- `today → today+14` (già presente, lasciato)
+- `today → today+30` (NUOVO, allineato al default `range=30d` della pagina)
+
+Per i 4 provider × 2 range → 8 prefetch totali, tutti in parallelo. Non si toccano gli altri range filtrabili dall'utente (sarebbe spreco di chiamate TMDB).
+
+### Modifiche al file
+
+**Solo `src/hooks/useSyncAll.ts`** (nessun altro file impattato; query key e `staleTime` restano coerenti con gli hook esistenti, così le pagine leggono la cache senza rifetcha).
+
+Struttura aggiornata della funzione `sync`:
+
+```ts
+// === Step 1: pulizia cache stagioni obsolete === (invariato)
+
+// === Step 2: prefetch sport per stagione corrente === (invariato)
+
+// === Step 2bis: Highlights YouTube === (NUOVO)
+setSyncStep("Aggiornamento highlights YouTube...");
+await Promise.all(
+  (["juventus", "f1", "motogp"] as const).map(async (sport) => {
+    try {
+      const { data, meta } = await callEdgeFunctionWithMeta(
+        "highlights-youtube",
+        { sport, limit: "12" },
+      );
+      queryClient.setQueryData(["highlights", sport, 12], data);
+      if (requiresWarning(meta)) {
+        // mappa il warning sullo sport corrispondente
+        const mapped: SportKey = sport === "juventus" ? "juventus" : sport;
+        fallbackBySport[mapped].add(meta?.dataSource ?? "unknown");
+      }
+    } catch (err) {
+      console.warn(`Sync highlights ${sport} failed:`, err);
+    }
+  }),
+);
+setSyncProgress(70);
+
+// === Step 3: Juventus calendar — tutte le pagine === (NUOVO)
+setSyncStep("Aggiornamento calendario Juventus completo...");
+const firstPage = queryClient.getQueryData<{ totalPages?: number }>(
+  ["juventus", "calendar", seasonJ, 1, 12],
+);
+const totalPages = Math.min(10, firstPage?.totalPages ?? 1);
+if (totalPages > 1) {
+  await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, i) => i + 2).map(async (p) => {
+      try {
+        const { data } = await callEdgeFunctionWithMeta("sports-football", {
+          action: "calendar",
+          season: String(seasonJ),
+          page: String(p),
+          pageSize: "12",
+        });
+        queryClient.setQueryData(["juventus", "calendar", seasonJ, p, 12], data);
+      } catch (err) {
+        console.warn(`Sync juventus calendar page ${p} failed:`, err);
+      }
+    }),
+  );
+}
+setSyncProgress(78);
+
+// === Step 4: Streaming TV — prefetch reale 5 famiglie === (RISCRITTO)
+setSyncStep("Aggiornamento palinsesti TV...");
+await Promise.all(
+  STREAMING_FAMILIES.map((f) =>
+    queryClient.prefetchQuery({
+      queryKey: ["streaming-tv", f.id],
+      queryFn: () => streamingApi.getTvByFamily(f.id),
+      staleTime: 0,
+    }),
+  ),
+);
+setSyncProgress(88);
+
+// === Step 5: Streaming Releases — 14gg + 30gg === (ESTESO)
+setSyncStep("Aggiornamento nuove uscite streaming...");
+const today = todayRomeISO();
+const ranges = [addDaysISO(today, 14), addDaysISO(today, 30)];
+await Promise.all(
+  STREAMING_PROVIDERS.flatMap((p) =>
+    ranges.map((dateTo) =>
+      queryClient.prefetchQuery({
+        queryKey: ["streaming-releases", p.id, today, dateTo],
+        queryFn: () => streamingApi.getReleasesByProvider(p.id, today, dateTo),
+        staleTime: 0,
+      }),
+    ),
+  ),
+);
+setSyncProgress(100);
+```
+
+Aggiunto import:
+```ts
+import { STREAMING_FAMILIES, STREAMING_PROVIDERS } from "@/hooks/useStreamingData";
+```
+(`STREAMING_PROVIDERS` già importato; aggiungere `STREAMING_FAMILIES`.)
 
 ### Cosa NON viene toccato (anti-regressione)
+- `useSportsData.ts`, `useStreamingData.ts`, pagine: **nessuna modifica**. Le query key restano identiche, quindi la cache prefetchata viene letta direttamente dai componenti.
+- Filtri streaming non-default (es. range `7d`, `60d`, ecc.) restano on-demand: non è ragionevole prefetcharli tutti (consumerebbe quote TMDB inutilmente).
+- `JuventusMatchPage` continua a funzionare con la sua ricerca multi-pagina, ma ora trova subito i match nelle pagine già in cache.
+- `EventCard`, `OfflineFallback`, header, timezone Roma, lingua italiana: invariati.
 
-- **Tabelle classifiche** (F1, MotoGP, Serie A): mantengono `hover:bg-muted/50` di default — sono righe, non card.
-- **Righe TonightTvList**: pattern row table-like, hover sottile su sfondo già appropriato.
-- **InfoRow** in `JuventusMatchPage`: blocco informativo statico, non cliccabile.
-- **Card di sezione** (TonightTvList wrapper, ErrorBoundary, OfflineFallback): contenitori top-level, non item.
-- **Bottoni, ToggleGroup, badge, Header, Tabs**: già hanno pattern hover propri coerenti col tema oro.
-- **Altri `<Card>` shadcn** non listati: non esistono altre card cliccabili visivamente "item-like" oltre alle 5 censite.
-
-### File modificati
-
-1. `src/pages/SinnerPage.tsx` — card tornei (sezione "Tornei").
-2. `src/pages/StreamingPage.tsx` — card release film/serie (sezione "Nuove uscite").
+### Progress map aggiornato
+- 0 → 8: pulizia cache
+- 8 → 60: 4 sport (F1, Juve base, Sinner, MotoGP)
+- 60 → 70: Highlights YouTube
+- 70 → 78: Juventus calendar pagine extra
+- 78 → 88: TV palinsesti 5 famiglie
+- 88 → 100: Releases 4 provider × 2 range
 
 ### Verifica post-modifica
-
-- `npm run lint` + `npm run build` per validare.
-- Verifica visiva manuale su desktop (≥1024px) e mobile (375px) di:
-  - Home → card "Prossimi Eventi" (riferimento).
-  - Sinner → tab "Tornei" (deve avere hover identico).
-  - Streaming → tab "Nuove uscite" (deve avere hover identico).
-  - Juventus → tab "Calendario" (già OK, verifica regressione zero).
-  - F1 / MotoGP → tab "Highlights" (HighlightCard già OK).
-- Conferma che le tabelle classifiche **non** abbiano lift/glow oro (corretto: sono tabelle).
+- `npm run lint` + `npm run build` + `npm run test` (nessun test su `useSyncAll` da aggiornare oltre a quelli già presenti).
+- Smoke manuale: cliccare **Sincronizza** in Home, poi navigare in Streaming (tab TV su tutte e 5 le famiglie + tab Nuove uscite), Sinner, Juventus (pagine 1, 2, …), F1 → tab Highlights, MotoGP → tab Highlights. Nessuno dei `useQuery` dovrebbe entrare in `isLoading` (lettura immediata da cache).
+- Toast finale: success se tutto live, warning con elenco sport in fallback (logica esistente, già coerente).
 
 ### Note tecniche
-
-- Tutti gli stili usano i CSS token `--gold`, `--navy-dark` esistenti in `src/index.css` → nessun colore hardcoded.
-- `whileHover` di Framer Motion rispetta `prefers-reduced-motion` automaticamente.
-- Le linee oro top + radial glow sono già usate su EventCard, JuventusPage card e HighlightCard: coerenza totale.
-- Nessun cambio di routing, hook, payload backend o struttura dati.
+- Tutte le chiavi e `staleTime` restano allineati 1:1 agli hook consumer → nessuna duplicazione di rete.
+- Cap di 10 pagine sul calendario Juventus evita loop runaway in caso di payload mal formato.
+- Prefetch streaming usa `prefetchQuery` (rispetta deduplica React Query) anziché `setQueryData`, perché `streamingApi.getTvByFamily` è chiamata diretta JSON e non usa `callEdgeFunctionWithMeta` (TV/Releases non sono nel sistema warning fallback per scelta).
+- Nessun colore hardcoded, nessuna nuova dipendenza, nessun cambio routing/Lovable/sync GitHub.
 
