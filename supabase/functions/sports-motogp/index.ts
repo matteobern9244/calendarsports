@@ -54,7 +54,73 @@ const MOTOGP_RIDER_PHOTOS_BY_SURNAME: Record<string, string> = {
   'moreira': 'https://resources.motogp.pulselive.com/photo-resources/2026/03/04/63a4eefc-ce5c-40cc-9abd-870e7aabaa07/z6IXOQnm.png?height=200&width=200',
   'garcia': 'https://resources.motogp.pulselive.com/photo-resources/2025/11/07/3098c097-ebe6-438c-8615-673b8a8f5ff8/KVM5xr1H.png?height=200&width=200',
   'pirro': 'https://resources.motogp.pulselive.com/photo-resources/2024/03/04/b8d4a5e3-c3c4-4bd0-b8e9-c3f5e8a3d9f2/pirro.png?height=200&width=200',
+  'savadori': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Lorenzo_Savadori_2021.jpg/200px-Lorenzo_Savadori_2021.jpg',
+  'pedrosa': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Dani_Pedrosa_2018.jpg/200px-Dani_Pedrosa_2018.jpg',
+  'crutchlow': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Cal_Crutchlow_2019.jpg/200px-Cal_Crutchlow_2019.jpg',
+  'bradl': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Stefan_Bradl_2019.jpg/200px-Stefan_Bradl_2019.jpg',
 };
+
+// Full names for riders. Key format: "surname" or "surname-initial" (lowercase, normalized).
+// Used to expand Sky Sport short names ("Pirro M.") to full "Nome Cognome" ("Michele Pirro").
+const MOTOGP_RIDER_FULL_NAMES: Record<string, string> = {
+  'bagnaia': 'Francesco Bagnaia',
+  'marquez-m': 'Marc Marquez',
+  'marquez-a': 'Alex Marquez',
+  'martin': 'Jorge Martin',
+  'acosta': 'Pedro Acosta',
+  'bastianini': 'Enea Bastianini',
+  'bezzecchi': 'Marco Bezzecchi',
+  'vinales': 'Maverick Viñales',
+  'viñales': 'Maverick Viñales',
+  'quartararo': 'Fabio Quartararo',
+  'binder': 'Brad Binder',
+  'miller': 'Jack Miller',
+  'morbidelli': 'Franco Morbidelli',
+  'di giannantonio': 'Fabio Di Giannantonio',
+  'fernandez-r': 'Raul Fernandez',
+  'fernandez-a': 'Augusto Fernandez',
+  'fernandez': 'Raul Fernandez',
+  'zarco': 'Johann Zarco',
+  'marini': 'Luca Marini',
+  'mir': 'Joan Mir',
+  'rins': 'Alex Rins',
+  'ogura': 'Ai Ogura',
+  'razgatlioglu': 'Toprak Razgatlioglu',
+  'aldeguer': 'Fermin Aldeguer',
+  'moreira': 'Diogo Moreira',
+  'garcia': 'Sergio Garcia',
+  'pirro': 'Michele Pirro',
+  'savadori': 'Lorenzo Savadori',
+  'pedrosa': 'Dani Pedrosa',
+  'crutchlow': 'Cal Crutchlow',
+  'bradl': 'Stefan Bradl',
+  'oncu': 'Deniz Öncü',
+  'rossi': 'Valentino Rossi',
+};
+
+function expandRiderName(skyName: string): string {
+  const normalized = skyName.toLowerCase().trim();
+  const parts = normalized.replace(/\./g, '').trim().split(/\s+/);
+  const initial = parts.length > 1 && parts[parts.length - 1].length <= 2 ? parts[parts.length - 1] : null;
+  const surname = initial ? parts.slice(0, -1).join(' ') : normalized;
+
+  // Try surname-initial key first (handles Marquez M./A., Fernandez R./A.)
+  if (initial && MOTOGP_RIDER_FULL_NAMES[`${surname}-${initial}`]) {
+    return MOTOGP_RIDER_FULL_NAMES[`${surname}-${initial}`];
+  }
+  // Direct surname match
+  if (MOTOGP_RIDER_FULL_NAMES[surname]) return MOTOGP_RIDER_FULL_NAMES[surname];
+
+  // Accent-insensitive fallback
+  const surnameNormalized = surname.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  for (const [key, full] of Object.entries(MOTOGP_RIDER_FULL_NAMES)) {
+    const keyNormalized = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (surnameNormalized === keyNormalized) return full;
+  }
+
+  // Fallback: return original Sky name to avoid losing data
+  return skyName;
+}
 
 // MotoGP constructor/team logos
 const MOTOGP_CONSTRUCTOR_LOGOS: Record<string, string> = {
@@ -132,7 +198,7 @@ async function fetchSkyStandings(): Promise<{
           const teamRaw = c3.replace(/<[^>]+>/g, '').trim();
           const pts = parseInt(c4.replace(/<[^>]+>/g, '').trim());
           if (!isNaN(pos) && nameRaw) {
-            pilots.push({ position: pos, name: nameRaw, team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw) });
+            pilots.push({ position: pos, name: expandRiderName(nameRaw), team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw) });
           }
         }
       }
