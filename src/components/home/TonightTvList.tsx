@@ -37,6 +37,26 @@ const FAMILY_ICONS: Record<StreamingFamilyId, LucideIcon> = {
   discovery: Compass,
 };
 
+/**
+ * Pagine ufficiali della guida TV per famiglia. Usate come fonte esterna
+ * di fallback quando il palinsesto restituito dalle Edge Functions e'
+ * incompleto (programmi senza orario di fine), in modo che l'utente
+ * possa sempre verificare la programmazione reale sul sito ufficiale.
+ */
+const FAMILY_EPG_URLS: Record<StreamingFamilyId, { url: string; label: string }> = {
+  rai: { url: "https://www.rai.it/guidatv/", label: "Apri Guida TV RAI" },
+  mediaset: {
+    url: "https://www.mediasetinfinity.mediaset.it/guidatv",
+    label: "Apri Guida TV Mediaset",
+  },
+  "sky-sport": { url: "https://guidatv.sky.it/", label: "Apri Guida TV Sky" },
+  "sky-cinema": { url: "https://guidatv.sky.it/", label: "Apri Guida TV Sky" },
+  discovery: {
+    url: "https://www.discoveryplus.com/it/guida-tv",
+    label: "Apri Guida TV Discovery",
+  },
+};
+
 interface TvHighlight {
   family: StreamingFamilyId;
   channel: string;
@@ -55,6 +75,14 @@ interface TvHighlight {
    * confronto numerico, senza casi speciali per il wrap.
    */
   endMinutesFromMidnight: number;
+  /**
+   * `true` quando la fonte ha fornito un orario di fine reale per il
+   * programma. Quando `false` significa che `endMinutesFromMidnight` e
+   * `durationMin` sono solo stime: il programma viene mostrato per
+   * trasparenza ma annotato come "dati incompleti" e indirizzato alla
+   * Guida TV ufficiale.
+   */
+  hasExplicitEnd: boolean;
   title: string;
   genre?: string;
 }
