@@ -92,7 +92,12 @@ export default function Formula1Page() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {d.photoUrl ? (
-                            <img src={d.photoUrl} alt={d.driver} className="h-8 w-8 rounded-full object-cover bg-muted flex-shrink-0" />
+                            <img
+                              src={d.photoUrl}
+                              alt={d.driver}
+                              className="h-8 w-8 rounded-full object-cover bg-muted flex-shrink-0"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.svg'; }}
+                            />
                           ) : (
                             <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
                               <User className="h-4 w-4 text-muted-foreground" />
