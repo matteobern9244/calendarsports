@@ -158,6 +158,14 @@ export default function Formula1Page() {
               </Table>
             </div>
           )}
+          {!drvLoading && !drvError && (!drivers || drivers.length === 0) && (
+            <UnavailableExternalSource
+              title={`Classifica Piloti ${season}`}
+              description="La classifica piloti del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Formula 1 qui sotto per consultare la graduatoria aggiornata in tempo reale, con punti, vittorie e podi di ogni pilota."
+              externalLink="https://www.formula1.com/en/results/2025/drivers"
+              externalLabel="Apri classifica su Formula1.com"
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="costruttori">
