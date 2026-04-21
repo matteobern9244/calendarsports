@@ -449,8 +449,18 @@ function main() {
 
   console.error("scripts/check-italian-ui.mjs");
   for (const v of violations) {
+    let prefix = v.kind;
+    if (v.kind === "document-title") {
+      prefix = "TITOLO PAGINA (document.title)";
+    } else if (v.kind.startsWith("dialog-title-prop:")) {
+      const tag = v.kind.slice("dialog-title-prop:".length);
+      prefix = `TITOLO MODALE (prop title su <${tag}>)`;
+    } else if (v.kind.startsWith("dialog-title:")) {
+      const tag = v.kind.slice("dialog-title:".length);
+      prefix = `TITOLO MODALE (<${tag}>)`;
+    }
     console.error(
-      `✗ ${v.file}:${v.line} — ${v.kind} contiene parole EN [${v.offending.join(", ")}]: "${v.value}"`,
+      `✗ ${v.file}:${v.line} — ${prefix} contiene parole EN [${v.offending.join(", ")}]: "${v.value}"`,
     );
   }
   console.error(
