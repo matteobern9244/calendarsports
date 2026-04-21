@@ -119,6 +119,14 @@ export default function MotoGPPage() {
                               <User className="h-4 w-4 text-muted-foreground" />
                             </div>
                           )}
+                          {s.number != null && (
+                            <span
+                              className="font-heading font-bold text-xs text-primary bg-primary/10 rounded-full h-7 w-7 flex items-center justify-center flex-shrink-0"
+                              aria-label={`Numero di gara ${s.number}`}
+                            >
+                              #{s.number}
+                            </span>
+                          )}
                           <span className="font-semibold">{s.name}</span>
                         </div>
                       </TableCell>

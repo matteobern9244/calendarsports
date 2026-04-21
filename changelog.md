@@ -18,6 +18,14 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **MotoGP – numero di gara nella classifica piloti**: aggiunto badge tondo
+  con il numero di gara accanto alla foto del pilota nella tab "Classifica
+  Piloti" di `/motogp`. Mappa statica per la griglia 2026 in
+  `supabase/functions/sports-motogp` (campo `number: number | null` nel
+  payload `standings`, backward-compatible). I piloti senza numero mappato
+  (es. wildcard) non mostrano il badge — nessun fallback inventato.
+  Richiede deploy edge function `sports-motogp`. Versione applicativa
+  invariata `2.1.0`.
 - **Sinner – allineamento header e messaggi**: rimosso sottotitolo
   "Dati da ATP Tour" dall'header della pagina `/sinner` e normalizzati i
   messaggi di loading/empty rimuovendo i riferimenti a "ATP Tour" e allo
