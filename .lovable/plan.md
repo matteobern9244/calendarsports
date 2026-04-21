@@ -1,46 +1,38 @@
 
 
-## Fix loghi costruttori MotoGP
+## Filtro "Solo in arrivo" per Nuove uscite
 
 ### Problema
 
-In `supabase/functions/sports-motogp/index.ts`, la mappa `MOTOGP_CONSTRUCTOR_LOGOS` (righe 126-132) contiene URL **inventati** verso `resources.motogp.pulselive.com` con hash placeholder identici (`d8e3b2f5-...`, `a8e3b2f5-...`). Nessuno di questi URL esiste realmente, quindi tutti i loghi sono rotti (404 → l'`<img>` resta vuoto perché in `MotoGPPage.tsx` non c'è gestione `onError`).
+Quando l'edge function `streaming-releases` allarga la finestra (fallback "widened") può restituire titoli con `releaseDate` già passata. L'utente vuole un toggle per nasconderli e vedere solo le uscite future/oggi.
 
-### Soluzione
+### Approccio
 
-1. **Sostituire gli URL fasulli con URL reali e stabili** dei loghi ufficiali dei costruttori MotoGP, presi da Wikipedia Commons (CDN affidabile, consentito hot-linking):
-   - Ducati
-   - Aprilia
-   - KTM
-   - Yamaha
-   - Honda
+In `src/pages/StreamingPage.tsx`:
 
-2. **Aggiungere fallback `onError`** in `src/pages/MotoGPPage.tsx` sul tag `<img>` del logo costruttore: in caso di errore, nascondere l'immagine (così se in futuro un URL si rompe non resta uno spazio bianco rotto).
+1. **Nuovo stato locale** `onlyUpcoming: boolean` (default `false` per non rompere comportamento attuale).
+2. **Toggle UI**: aggiungere un `Button` (variant `outline`/`default` in base allo stato) accanto al `Select` del range, label "Solo in arrivo" con icona `CalendarClock`. Posizionato nello stesso flex row dei controlli `range`/`kindFilter`.
+3. **Filtro client-side**: dopo aver ottenuto `releases` dalla query, applicare `.filter(r => daysUntilRome(r.releaseDate) >= 0)` se `onlyUpcoming` è attivo. Riusare `daysUntilRome` da `@/lib/dateUtils` (già importato indirettamente nel componente badge, da importare qui).
+4. **Persistenza opzionale via querystring**: per coerenza con `range`/`kind` già persistiti in URL, aggiungere `upcoming=1` quando attivo. Riusare la logica `setSearchParams` esistente.
+5. **Reset paginazione** quando il toggle cambia (come già fatto per `range`/`kindFilter`).
 
 ### File da modificare
 
 | File | Modifica |
 |---|---|
-| `supabase/functions/sports-motogp/index.ts` | Sostituire i 5 URL nella mappa `MOTOGP_CONSTRUCTOR_LOGOS` con link Wikipedia Commons reali (formato `upload.wikimedia.org/.../<logo>.svg.png`). |
-| `src/pages/MotoGPPage.tsx` | Aggiungere `onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}` sull'`<img>` del logo costruttore (riga ~177). |
-| `changelog.md` | Voce sotto 2.1.0: "MotoGP: corretti URL loghi costruttori (Ducati/Aprilia/KTM/Yamaha/Honda) — gli URL precedenti erano placeholder non esistenti. Aggiunto fallback `onError` per nascondere immagini rotte." |
+| `src/pages/StreamingPage.tsx` | Aggiungere stato `onlyUpcoming`, toggle Button con icona, filtro client su `releases`, persistenza URL `upcoming=1`, reset `page` su cambio. |
+| `changelog.md` | Voce sotto Unreleased: "Streaming: aggiunto filtro 'Solo in arrivo' nel tab Nuove uscite per nascondere release con data già passata." |
 
 ### Cosa NON cambia
 
-- Logica di scraping Sky Sport, mapping `getTeamConstructor`, ordine classifica.
-- Layout tabella, colonne, foto piloti.
+- Edge function `streaming-releases` e logica fallback "widened".
+- Default range, default kind, default provider.
+- Layout generale, card release, dialog dettaglio.
 - Versione resta **2.1.0**.
-
-### Note di fragilità
-
-- Wikipedia Commons è stabile ma non garantito eternamente. Il fallback `onError` evita regressioni visive future.
-- Se Sky Sport introduce nuovi costruttori (es. BMW), `getTeamConstructor` restituirà `null` e non comparirà alcun logo (come oggi).
 
 ### Checklist post-edit
 
-1. Deploy edge function `sports-motogp`.
-2. `/motogp` → tab "Classifica Costruttori": tutti i loghi visibili.
-3. `npm run lint` + `npm run build`.
-4. Aggiornare `changelog.md`.
-5. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
+1. `/streaming` tab "Nuove uscite": toggle visibile, click attiva/disattiva filtro, paginazione si resetta, URL aggiornato.
+2. Con toggle attivo non compaiono titoli con `releaseDate < oggi` (fuso Europe/Rome).
+3. Aggiornare `changelog.md`.
 
