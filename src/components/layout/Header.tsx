@@ -1,6 +1,6 @@
 import { useRef, useState, MouseEvent as ReactMouseEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Sun, Moon } from "lucide-react";
+import { Menu, X, Sun, Moon, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
@@ -26,6 +26,7 @@ const navItems = [
   { label: "JUVENTUS", shortLabel: "JUVE", path: "/juventus", Icon: JuveBrandIcon },
   { label: "FORMULA 1", shortLabel: "F1", path: "/formula1", Icon: F1BrandIcon },
   { label: "MOTOGP", shortLabel: "MOTOGP", path: "/motogp", Icon: MotoGPBrandIcon },
+  { label: "PREFERENZE", shortLabel: "PREF", path: "/preferenze", Icon: Settings },
 ] as const;
 
 interface Burst {
