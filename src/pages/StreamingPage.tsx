@@ -415,12 +415,6 @@ export default function StreamingPage() {
 
           {releasesQuery.isSuccess && filteredItems.length > 0 && (
             <>
-              {releasesQuery.data?.widenedWindow && (
-                <p className="text-xs text-muted-foreground italic">
-                  Mostriamo una finestra estesa perche' nel range richiesto non
-                  c'erano novita' indicizzate da TMDB per {providerLabel}.
-                </p>
-              )}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
