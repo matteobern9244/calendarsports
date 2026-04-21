@@ -53,28 +53,6 @@ export default function HomePage() {
 
   const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
 
-  // Fallback offline: nessun dato in cache da nessuna fonte e siamo offline
-  if (
-    !isOnline &&
-    f1Error && !f1Data &&
-    juveError && !juveCalendar &&
-    sinnerError && !sinnerNext &&
-    motogpError && !motogpNext
-  ) {
-    return (
-      <div className="container py-8 sm:py-12">
-        <OfflineFallback
-          onRetry={() => {
-            f1Refetch();
-            juveRefetch();
-            sinnerRefetch();
-            motogpRefetch();
-          }}
-        />
-      </div>
-    );
-  }
-
   const events = useMemo(() => {
     const upcoming: UpcomingEvent[] = [];
     const now = Date.now();
@@ -139,6 +117,28 @@ export default function HomePage() {
 
     return upcoming.sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
   }, [f1Data, juveCalendar, sinnerNext, motogpNext]);
+
+  // Fallback offline: nessun dato in cache da nessuna fonte e siamo offline
+  if (
+    !isOnline &&
+    f1Error && !f1Data &&
+    juveError && !juveCalendar &&
+    sinnerError && !sinnerNext &&
+    motogpError && !motogpNext
+  ) {
+    return (
+      <div className="container py-8 sm:py-12">
+        <OfflineFallback
+          onRetry={() => {
+            f1Refetch();
+            juveRefetch();
+            sinnerRefetch();
+            motogpRefetch();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-4 sm:py-6 space-y-8">
