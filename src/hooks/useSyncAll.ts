@@ -139,7 +139,7 @@ export function useSyncAll() {
             try {
               const { data, meta } = await callEdgeFunctionWithMeta(t.fn, t.params);
               queryClient.setQueryData(t.queryKey, data);
-              if (!isLiveSource(meta)) {
+              if (requiresWarning(meta)) {
                 fallbackBySport[sp].add(meta?.dataSource ?? "unknown");
               }
             } catch (err) {
