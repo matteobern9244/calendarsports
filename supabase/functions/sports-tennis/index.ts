@@ -389,18 +389,18 @@ function parseTournamentHeader(cellHtml: string): {
 }
 
 async function getSeasonData() {
-  const cached = getCached<{ matches: MatchRow[]; tournaments: TournamentRow[] }>('season-2026');
+  const cached = getCached<{ matches: MatchRow[]; tournaments: TournamentRow[]; curatedAppended: boolean }>('season-2026');
   if (cached) return cached;
 
   const html = await fetchWiki('https://en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season');
-  if (!html) return { matches: [], tournaments: [] };
+  if (!html) return { matches: [], tournaments: [], curatedAppended: false };
 
   // Locate Singles_matches section
   const sectionStart = html.indexOf('id="Singles_matches"');
-  if (sectionStart < 0) return { matches: [], tournaments: [] };
+  if (sectionStart < 0) return { matches: [], tournaments: [], curatedAppended: false };
   const tableStart = html.indexOf('<table', sectionStart);
   const tableEnd = html.indexOf('</table>', tableStart);
-  if (tableStart < 0 || tableEnd < 0) return { matches: [], tournaments: [] };
+  if (tableStart < 0 || tableEnd < 0) return { matches: [], tournaments: [], curatedAppended: false };
   const tableHtml = html.substring(tableStart, tableEnd);
 
   // Parse rows
@@ -492,6 +492,7 @@ async function getSeasonData() {
   // Add upcoming tournaments from ATP 2026 calendar (best-effort)
   // For simplicity, append a curated upcoming list if Wikipedia season page lacks future events
   const upcomingFromSeason = tournaments.some(t => new Date(t.date) > now);
+  let curatedAppended = false;
   if (!upcomingFromSeason) {
     const upcoming: TournamentRow[] = [
       { name: 'Madrid Open', date: '2026-04-22', dateEnd: '2026-05-03', surface: 'Clay', location: 'Madrid, Spagna', tier: 'ATP 1000', status: 'programmato', result: null },
@@ -507,11 +508,12 @@ async function getSeasonData() {
       { name: 'ATP Finals', date: '2026-11-15', dateEnd: '2026-11-22', surface: 'Hard (Indoor)', location: 'Torino, Italia', tier: 'Tour Finals', status: 'programmato', result: null },
     ];
     for (const u of upcoming) tournaments.push(u);
+    curatedAppended = true;
   }
 
   tournaments.sort((a, b) => a.date.localeCompare(b.date));
 
-  const data = { matches, tournaments };
+  const data = { matches, tournaments, curatedAppended };
   setCached('season-2026', data);
   return data;
 }
