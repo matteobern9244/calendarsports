@@ -1,145 +1,131 @@
 
 
-## Sezione "Highlights" per Juventus, Formula 1 e MotoGP
+## Fix: ogni partita Juventus mostra i propri dati nel dettaglio
 
-### Fonte dati (verificata)
+### Diagnosi (verificata)
 
-YouTube espone **feed RSS pubblici** per qualsiasi playlist senza API key:
-`https://www.youtube.com/feeds/videos.xml?playlist_id={ID}`. Verificato HTTP 200 per tutte e 3 le playlist richieste, con ~15 entries ciascuna. Ogni entry contiene **dati reali**: `<title>`, `<yt:videoId>`, `<published>` (ISO 8601 con offset), `<author><name>` (canale = fonte). Le thumbnail si ottengono via URL deterministico `https://i.ytimg.com/vi/{videoId}/hqdefault.jpg` (480×360, sempre disponibile). Nessun mock, nessun hardcode di video.
+Causa unica e chiara: **il payload del calendario non contiene un campo `id`**. Verificato con curl reale su `sports-football?action=calendar`: ogni elemento ha `homeTeam`, `awayTeam`, `date`, `link`, `competition`, `matchday`, ecc. — **nessun `id`**. Conseguenza:
 
-### Architettura
+1. In `JuventusPage.tsx` il link `to={\`/juventus/partite/${m.id}\`}` produce sempre `/juventus/partite/undefined` per tutte le card.
+2. In `JuventusMatchPage.tsx` la funzione `findMatch` esegue `String(m?.id) === matchId` con `matchId = "undefined"` e `String(undefined) === "undefined"` → **true**: matcha il **primo** elemento del calendario, che è **Juventus–Parma giornata 1**.
 
-#### A. Nuova Edge Function `supabase/functions/highlights-youtube/index.ts`
+Per questo l'utente vede sempre la stessa partita.
 
-- Endpoint unico: `GET /highlights-youtube?sport=juventus|f1|motogp&limit=12`.
-- Mappa interna `sport → playlistId` con i 3 ID forniti.
-- Fetch del feed RSS, parsing con `DOMParser` di Deno (`deno-dom` standard) o regex semplici (preferito: regex su `<entry>` per evitare dipendenze, pattern già verificato sui sample).
-- Per ogni entry estrae `videoId`, `title`, `published`, `author` (canale ufficiale).
-- Output normalizzato:
-  ```json
-  {
-    "success": true,
-    "data": [
-      {
-        "videoId": "cp37e-K70Gw",
-        "title": "Juventus 2-0 Bologna | HIGHLIGHTS Serie A",
-        "publishedAt": "2026-04-19T22:10:32+00:00",
-        "source": "Juventus",
-        "url": "https://www.youtube.com/watch?v=cp37e-K70Gw",
-        "thumbnailUrl": "https://i.ytimg.com/vi/cp37e-K70Gw/hqdefault.jpg"
-      }
-    ],
-    "meta": { "dataSource": "live", "source": "youtube-rss", "sport": "juventus" }
+Il piano precedente assumeva l'esistenza di `match.id` (`"id":"2558520"`), ma questa assunzione era errata: il widget Sky espone l'id all'interno della HTML upstream, ma `extractJuventusMatches` non lo estrae nè lo restituisce.
+
+### Soluzione
+
+Introdurre uno **slug stabile e unico per partita** derivato dai dati reali già presenti nel payload (no nuovi endpoint, no nuovi scraping). Il candidato ideale è `match.link`: ogni partita Sky ha un URL univoco con squadra+squadra+giornata (es. `.../serie-a/partite/2025/giornata-1/juventus-parma/risultato-gol`). In assenza di `link`, fallback su una composizione deterministica `competition-matchday-home-away-yyyymmdd`.
+
+#### A. Backend `supabase/functions/sports-football/index.ts`
+
+In `extractJuventusMatches`, calcolare un campo `id` deterministico per ogni match e includerlo nel payload:
+
+```ts
+function buildMatchId(match: any, competitionName: string): string {
+  // Priorità 1: slug dall'URL Sky (univoco, leggibile, stabile)
+  if (match.link) {
+    const m = String(match.link).match(/partite\/(\d{4})\/([^/]+)\/([^/]+)/);
+    if (m) {
+      // es: "2025-giornata-1-juventus-parma"
+      return `${m[1]}-${m[2]}-${m[3]}`.toLowerCase();
+    }
   }
-  ```
-- CORS abilitato (riusa `_shared/security.ts` come le altre edge functions).
-- Cache HTTP 10 minuti (`Cache-Control: public, max-age=600`) per ridurre richieste a YouTube.
-- Se YouTube risponde non-2xx o feed vuoto: ritorna `success:true, data:[], meta.dataSource:"unknown"` (stato vuoto onesto, nessun fake).
-
-#### B. Client adapter `src/lib/api/sportsApi.ts`
-
-Aggiungere:
-```ts
-export type HighlightSport = "juventus" | "f1" | "motogp";
-export const highlightsApi = {
-  list: (sport: HighlightSport, limit = 12) =>
-    callEdgeFunction("highlights-youtube", { sport, limit: String(limit) }),
-};
-```
-
-#### C. Hook `src/hooks/useSportsData.ts`
-
-```ts
-export function useHighlights(sport: HighlightSport, limit = 12) {
-  return useQuery({
-    queryKey: ["highlights", sport, limit],
-    queryFn: () => highlightsApi.list(sport, limit),
-    staleTime: 10 * 60 * 1000,
-  });
+  // Priorità 2: composizione deterministica
+  const home = String(match.home?.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const away = String(match.away?.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const dateKey = romeDateKeyOf(match.date) ?? 'unknown';
+  const comp = competitionName.toLowerCase().replace(/\s+/g, '-');
+  return `${comp}-${dateKey}-${home}-vs-${away}`;
 }
 ```
 
-#### D. Componente UI condiviso `src/components/highlights/HighlightsSection.tsx`
+Aggiungere `id: buildMatchId(match, competitionName)` nell'oggetto `matches.push({...})`. Nessun altro campo cambia, nessun client esistente si rompe (tutti i call site leggono per nome, non per ordine).
 
-- Props: `sport: HighlightSport`, `accentColor?: string` (per allineare al tema della pagina: oro Juventus, rosso Ferrari per F1, brand MotoGP).
-- Header: `<SectionHeader title="Highlights" subtitle="Ultimi video dal canale ufficiale" />`.
-- Stato loading: `<LoadingState message="Caricamento highlights..." />`.
-- Stato errore: `<ErrorState message="Impossibile caricare gli highlights." onRetry={...} />`.
-- Stato vuoto: `<EmptyState message="Nessun highlight disponibile al momento." />`.
-- Layout: griglia responsive `grid gap-4 sm:grid-cols-2 lg:grid-cols-3` con animazioni Framer Motion `staggerChildren` (coerente col resto dell'app).
-- Card highlight (componente interno `HighlightCard`):
-  - Wrapper `<a href={url} target="_blank" rel="noopener noreferrer">` con focus-ring oro.
-  - Thumbnail 16:9 con overlay play button al center, hover scale-105, gradiente bottom-up per leggibilità testo.
-  - Badge "NUOVO" (gold) sui video pubblicati negli ultimi 3 giorni.
-  - Badge data formato italiano (es. "19 apr 2026") via helper `formatDateIT`.
-  - Titolo `font-heading` clamp-2 righe.
-  - Footer micro-meta: icona YouTube + nome canale (fonte) + tempo relativo ("2 giorni fa") via helper interno `formatRelativeIT`.
-  - Lazy-load thumbnail (`loading="lazy"`).
-  - Stile coerente con `EventCard`: `rounded-2xl border border-border bg-card shadow-[...]` + hover lift `whileHover={{ y: -3 }}`.
-- CTA in fondo alla sezione: link "Vedi tutti su YouTube" → URL playlist completa, target `_blank`.
-- Tutto in italiano (`check:italian` compliant).
+#### B. Frontend `src/pages/JuventusPage.tsx`
 
-#### E. Integrazione nelle 3 pagine
+Sostituire `to={\`/juventus/partite/${m.id}\`}` con `to={\`/juventus/partite/${encodeURIComponent(m.id)}\`}` (lo slug può contenere caratteri "sicuri" ma `encodeURIComponent` è policy difensiva). Stessa modifica per la card "Prossima Partita" (riga 152).
 
-**JuventusPage** (`src/pages/JuventusPage.tsx`): aggiungere un nuovo `<TabsTrigger value="highlights">Highlights</TabsTrigger>` accanto a Calendario/Classifica e relativo `<TabsContent value="highlights"><HighlightsSection sport="juventus" /></TabsContent>`.
+Rimuovere il `key={i}` indice-based dei card calendario e usare `key={m.id}` (più stabile per React reconciliation).
 
-**Formula1Page** (`src/pages/Formula1Page.tsx`): nuovo tab Highlights dopo Costruttori, `<HighlightsSection sport="f1" />`.
+#### C. Frontend `src/pages/JuventusMatchPage.tsx`
 
-**MotoGPPage** (`src/pages/MotoGPPage.tsx`): nuovo tab Highlights dopo Costruttori, `<HighlightsSection sport="motogp" />`.
+Modificare `findMatch` per:
 
-Nessuna modifica al layout principale né alla Home (la richiesta è per le 3 pagine sport).
+1. Decodificare `matchId` con `decodeURIComponent`.
+2. Confrontare `String(m?.id) === decodedId` come oggi.
+3. **Guard contro id mancante**: se `m?.id == null` o `String(m?.id) === "undefined"`, escludere dal match (no più "primo elemento vince").
+
+```ts
+function findMatch(calendar: PaginatedCalendar | undefined, matchId: string) {
+  if (!calendar) return null;
+  return calendar.items.find((m: any) => {
+    if (m?.id == null) return false;
+    return String(m.id) === matchId;
+  }) ?? null;
+}
+```
+
+Nel componente, decodificare `matchId` una volta:
+```ts
+const decodedMatchId = useMemo(() => {
+  try { return decodeURIComponent(matchId); } catch { return matchId; }
+}, [matchId]);
+```
+e passarlo a `findMatch` invece di `matchId` grezzo.
+
+#### D. Test edge function
+
+Aggiornare/estendere `supabase/functions/sports-football/index.test.ts`:
+
+- Mock di `match.link = "https://sport.sky.it/calcio/serie-a/partite/2025/giornata-1/juventus-parma/risultato-gol"` → `id === "2025-giornata-1-juventus-parma"`.
+- Mock senza `link` → `id` composto (`serie-a-2025-08-24-juventus-vs-parma`).
+- Verifica che due partite diverse generino id diversi.
+
+#### E. Documentazione
+
+- `changelog.md` → `### Fixed`: il dettaglio partita Juventus mostrava sempre la stessa partita (Juventus–Parma) perché il payload non includeva `id`. Aggiunto slug deterministico per match.
+- `AGENTS.md` (sezione `Mappa funzionale rapida` per `sports-football`) → menzionare che il payload include ora `id` slug derivato da `link` Sky.
 
 ### File modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `supabase/functions/highlights-youtube/index.ts` | NEW | Edge function: parsing RSS YouTube, normalizzazione output, CORS, rate-limit, cache 10min. |
-| `src/lib/api/sportsApi.ts` | EDIT | Nuovo `highlightsApi.list(sport, limit)`. |
-| `src/hooks/useSportsData.ts` | EDIT | Nuovo hook `useHighlights(sport, limit)`. |
-| `src/components/highlights/HighlightsSection.tsx` | NEW | Sezione completa con header, loading/error/empty, griglia animata, CTA playlist. |
-| `src/components/highlights/HighlightCard.tsx` | NEW | Card singola: thumbnail 16:9, overlay play, badge NUOVO/data, titolo, fonte, hover lift, link a YouTube. |
-| `src/lib/dateUtils.ts` | EDIT | Aggiungere helper `formatRelativeIT(dateStr)` ("oggi", "1 giorno fa", "3 giorni fa", "2 settimane fa"). Riusabile anche altrove. |
-| `src/pages/JuventusPage.tsx` | EDIT | Nuovo tab "Highlights" + render `<HighlightsSection sport="juventus" />`. |
-| `src/pages/Formula1Page.tsx` | EDIT | Nuovo tab "Highlights" + render `<HighlightsSection sport="f1" />`. |
-| `src/pages/MotoGPPage.tsx` | EDIT | Nuovo tab "Highlights" + render `<HighlightsSection sport="motogp" />`. |
-| `README.md` | EDIT | Sezione "Highlights": fonte = feed RSS pubblici YouTube delle 3 playlist ufficiali, no API key, cache 10min, possibile drift se le playlist vengono cancellate o rese private. |
-| `changelog.md` | EDIT | `### Added`: sezione Highlights su Juventus/F1/MotoGP da feed RSS YouTube ufficiali (titolo, data, fonte, link reali). |
+| `supabase/functions/sports-football/index.ts` | EDIT | Helper `buildMatchId` + campo `id` aggiunto al payload di ogni match in `extractJuventusMatches`. |
+| `supabase/functions/sports-football/index.test.ts` | EDIT | Test per `buildMatchId`: priorità `link`, fallback deterministico, unicità tra match diversi. |
+| `src/pages/JuventusPage.tsx` | EDIT | Link card "Prossima" e calendario usano `encodeURIComponent(m.id)`. `key={m.id}` invece di `key={i}`. |
+| `src/pages/JuventusMatchPage.tsx` | EDIT | `findMatch` ignora item senza `id`. `matchId` decodificato via `decodeURIComponent` prima del confronto. |
+| `changelog.md` | EDIT | `### Fixed`: detail partita Juventus mostrava sempre la prima partita. |
+| `AGENTS.md` | EDIT | Nota su `id` slug nel payload `sports-football`. |
 
 ### Cosa NON cambia
 
-- Nessuna API key richiesta (RSS pubblico).
-- Nessuna nuova dipendenza npm o Deno.
-- Branch policy invariata: `develop` → PR verso `develop`, assegnata `@matteobern9244`.
-- Layout, header, route, tema, hook esistenti.
-- Nessun dato hardcoded: titoli/date/video provengono interamente dal feed live.
-
-### Rischi e mitigazioni
-
-- **Playlist YouTube cancellata o resa privata**: feed ritorna 404/vuoto → empty state onesto, nessun crash.
-- **Rate-limit YouTube su alto traffico**: cache HTTP 10min lato edge function + `staleTime` 10min React Query. Sufficiente per traffico tipico.
-- **Cambio struttura RSS YouTube**: regex parsing è semplice e tollerante; in caso di breaking change, output diventa empty (no errore visibile all'utente, log lato edge).
-- **Thumbnail YouTube CDN**: URL `i.ytimg.com/vi/{id}/hqdefault.jpg` è documentato e stabile da anni.
+- Nessun nuovo endpoint, nessun nuovo scraping, nessuna nuova dipendenza.
+- Schema risposta backretrocompatibile (campo aggiunto, mai rimosso/rinominato).
+- UI, layout, route, hook React Query invariati.
+- Nessun impatto su `Index.tsx`, F1, MotoGP, Sinner.
+- Branch policy invariata: lavoro su `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
 ### Validazione
 
 1. `npm run lint`, `npm run build`, `npm run test`, `npm run check:italian`, `npm run check:tz-juventus`.
-2. Deploy `highlights-youtube`.
-3. `curl .../highlights-youtube?sport=juventus&limit=12` → 12 video reali con titoli leggibili.
-4. Apertura preview:
-   - `/juventus` → tab Highlights → 12 card con thumbnail, titoli reali, data italiana.
-   - `/formula1` → tab Highlights → contenuti Sky Sport F1 reali.
-   - `/motogp` → tab Highlights → contenuti motogp.com / canale ufficiale.
-   - Click su card apre il video corrispondente su YouTube in nuova tab.
-   - CTA "Vedi tutti su YouTube" apre la playlist completa.
-5. Mobile: griglia 1 colonna leggibile, thumbnail non distorte.
+2. Deploy `sports-football`.
+3. `curl .../sports-football?action=calendar&season=2025` → ogni item include `id` non-null e univoco; due partite diverse hanno id diversi.
+4. Apertura preview `/juventus`:
+   - Click su Juventus–Parma → URL `/juventus/partite/2025-giornata-1-juventus-parma`, dettaglio mostra Juventus–Parma.
+   - Click su Genoa–Juventus → URL diverso, dettaglio mostra Genoa–Juventus reale.
+   - Click su Juventus–Borussia Dortmund (CL) → dettaglio mostra Juventus–Borussia Dortmund.
+   - Click sulla card "Prossima Partita" → mostra la partita corretta (non più Juventus–Parma).
+5. URL "vecchi" tipo `/juventus/partite/undefined` → mostrano correttamente "Partita non trovata" (grazie alla guard in `findMatch`), non più la prima partita.
 
 ### Checklist post-edit
 
-1. Edge function `highlights-youtube` deployata e risponde su tutti e 3 gli sport.
-2. `useHighlights` integrato e cached 10min.
-3. `HighlightsSection` + `HighlightCard` riusati identici nelle 3 pagine.
-4. Tab "Highlights" presente in Juventus, F1, MotoGP.
-5. UI in italiano, focus-ring accessibile, link `target="_blank" rel="noopener noreferrer"`.
-6. `changelog.md` e `README.md` aggiornati con fonte reale (RSS YouTube) e nota sui rischi di drift.
-7. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
+1. Backend `sports-football` deploya e include `id` per ogni match.
+2. Slug derivato da `link` Sky quando disponibile, fallback deterministico altrimenti.
+3. `JuventusPage` linka correttamente alla pagina dettaglio per ogni partita.
+4. `JuventusMatchPage` mostra i dati della partita selezionata, non più del primo elemento.
+5. Guard contro `id` mancante: nessun "match-by-undefined" possibile.
+6. Test edge verde.
+7. `changelog.md` aggiornato con la fix.
+8. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
