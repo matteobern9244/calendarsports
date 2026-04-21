@@ -1,80 +1,61 @@
 
 
-## Foto piloti F1: garantire visibilità per tutti
+## Paginazione calendario Juventus (frontend + backend)
 
-### Problema reale (verificato via curl)
+### Stato attuale
 
-L'edge function `sports-f1` recupera le foto dei piloti da OpenF1 e da una mappa fallback `F1_DRIVER_PHOTOS`. Entrambe puntano al CDN ufficiale `media.formula1.com/.../<DRIVERID>/<photo>.png` con il prefisso magico `d_driver_fallback_image.png`. Questo prefisso è una direttiva Cloudinary che restituisce **una sagoma grigia placeholder (702 bytes, HTTP 200)** quando il file vero non esiste, invece di un 404.
+`supabase/functions/sports-football` action `calendar` scarica tre widget Sky (Serie A, UCL, Coppa Italia) + broadcaster map Lega Serie A, fa parsing HTML, filtra solo le partite Juventus, ordina per data e restituisce **l'intero array** (tipicamente 40-60 match per stagione). Il frontend in `JuventusPage.tsx` tab "Calendario" rende **tutte** le card insieme in una grid 2 colonne, con `prioritizeNextUpcoming` per evidenziare la prossima.
 
-Conseguenza: per i rookie e i piloti la cui foto ufficiale F1 non è ancora stata pubblicata (es. **Arvid Lindblad** RB 2026, **Sergio Pérez** Cadillac 2026, in futuro chiunque entri a stagione iniziata), l'`<img>` riceve una risposta 200 con immagine vuota → la cella mostra una sagoma grigia ma il fallback `<User>` icon non viene mai attivato (l'`onError` non scatta).
+Non c'è alcuna paginazione: scroll lungo, render iniziale pesante, nessun indicatore di posizione.
 
-Inoltre nel payload 2026 **Pérez** ha `photoUrl: null` perché il `family.lastName.toLowerCase()` è `pérez` con accento e non matcha né OpenF1 (`PEREZ` → key `perez`) né alcuna entry nella mappa.
+### Approccio
 
-### Soluzione
+Paginazione **ibrida**:
 
-Strategia a tre livelli, in ordine:
+- **Backend**: l'edge function continua a fare scraping completo (necessario perché Sky non espone pagination upstream e serve l'array completo per ordinare cronologicamente cross-competition), ma accetta `page` e `pageSize` opzionali e restituisce solo la slice richiesta + metadata `{ total, page, pageSize, totalPages }`.
+- **Frontend**: la pagina passa `page` + `pageSize` alla query, mostra la slice e un `Pagination` UI sotto la grid. Default `pageSize=12` (6 righe x 2 colonne), default `page` = pagina che contiene la "prossima partita" (per landing UX coerente con `prioritizeNextUpcoming`).
 
-1. **OpenF1 headshot** se ritorna un URL **e** non è il pattern placeholder (escludere URL contenenti `d_driver_fallback_image.png` quando il file ha dimensione "placeholder", o più semplicemente: usare OpenF1 solo se l'URL non termina con un pattern noto vuoto — verifica via HEAD `Content-Length` non praticabile lato edge per costo, quindi si filtra euristicamente).
-2. **Mappa statica `F1_DRIVER_PHOTOS`** estesa con i piloti mancanti, puntando a **foto reali Wikimedia Commons** verificate per Lindblad, Pérez (e Bottas come ridondanza già coperta da CDN ma per uniformità del rookie pool Cadillac).
-3. **Normalizzazione chiave** robusta: rimuovere accenti (`pérez` → `perez`), trim, lowercase, in modo che "Pérez", "Hülkenberg", "Magnussen", ecc. matchino sempre la mappa.
-
-Si **mantiene** il CDN F1 per i piloti consolidati (foto ufficiali alta qualità) ma si **antepone** la mappa statica quando l'URL OpenF1 corrisponde al pattern placeholder noto.
-
-### Cambio logica edge function
-
-In `supabase/functions/sports-f1/index.ts`, action `driver-standings`:
-
-1. Aggiungere helper `normalizeKey(s: string)` che fa `.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()`.
-2. Aggiungere helper `isLikelyPlaceholder(url: string)` che ritorna `true` se l'URL contiene `d_driver_fallback_image.png` **e** il pilota è in una whitelist di rookie/casi noti senza foto reale (`PLACEHOLDER_DRIVERS` set: `lindblad`, `perez`, e configurabile in futuro). Più semplice: se la chiave normalizzata è in `F1_DRIVER_PHOTOS` con un URL Wikimedia, **preferisci sempre la mappa statica** quando esiste, ignorando OpenF1. Questa è la regola più semplice e prevedibile.
-3. Riordinare la priorità in:
-   ```
-   const key = normalizeKey(familyName);
-   const photoUrl = F1_DRIVER_PHOTOS[key] || headshotMap[key] || null;
-   ```
-   (mappa statica vince su OpenF1 quando definita).
-4. Estendere `F1_DRIVER_PHOTOS` con entry verificate per:
-   - `lindblad` → Wikimedia Commons (foto Melbourne 2025 verificata 200 OK).
-   - `perez` → Wikimedia Commons (foto driver parade verificata 200 OK).
-   - `bottas` → URL CDN F1 esistente (già 4711 bytes, foto reale) come ridondanza esplicita.
-
-Questo approccio è preferibile a uno scan `Content-Length` lato edge perché:
-- Non aggiunge HEAD requests extra (latenza).
-- È deterministico e auditable nel codice.
-- Permette di aggiungere nuovi rookie semplicemente estendendo la mappa.
-
-### UI fallback hardening
-
-In `src/pages/Formula1Page.tsx` (riga ~94-100), l'`<img>` mostra l'icona `<User>` solo se `photoUrl` è null. Aggiungere `onError` handler che, se la foto fallisce a caricarsi, sostituisce l'`<img>` con il placeholder icon (toggle via stato locale o swap a `User` icon). Implementazione minimale: aggiungere `onError={(e) => e.currentTarget.src = '/placeholder.svg'}` come safety net per future rotture CDN.
-
-Nota: questo NON risolve il caso "200 placeholder vuoto" (il browser non considera errore una immagine 200), ma protegge contro rotture future.
+Se `page`/`pageSize` non vengono passati (retrocompatibilità con altri client), il backend restituisce l'array intero come oggi.
 
 ### File da modificare
 
 | File | Modifica |
 |---|---|
-| `supabase/functions/sports-f1/index.ts` | Aggiungere `normalizeKey`, estendere `F1_DRIVER_PHOTOS` con `lindblad` + `perez` + `bottas` (URL Wikimedia verificati), invertire priorità: mappa statica → OpenF1 → null. |
-| `src/pages/Formula1Page.tsx` | Aggiungere `onError` handler all'`<img>` foto pilota come safety net. |
-| `changelog.md` | Voce sotto Unreleased: "Formula 1: foto pilota — risolto placeholder vuoto per rookie 2026 (Lindblad, Pérez), normalizzazione accenti nelle chiavi, mappa statica prioritaria su OpenF1 quando definita." |
+| `supabase/functions/sports-football/index.ts` | Action `calendar`: leggere `page` e `pageSize` da query params, validare (`pageSize` 1-50, `page` >= 1), calcolare slice dopo l'ordinamento, restituire `{ items, total, page, pageSize, totalPages }` quando i parametri sono presenti; altrimenti payload attuale (array piatto) per non rompere altri eventuali consumer. |
+| `src/lib/api/sportsApi.ts` | `footballApi.getCalendar(season, page?, pageSize?)`: passare i parametri quando definiti. Tipare il return come union (array legacy oppure oggetto paginato). |
+| `src/hooks/useSportsData.ts` | `useJuventusCalendar(season, page, pageSize)`: includere `page`/`pageSize` nella `queryKey`, `keepPreviousData: true` per UX fluida tra cambi pagina. |
+| `src/pages/JuventusPage.tsx` | Stato locale `page` (default 1), costante `PAGE_SIZE = 12`. Calcolare `defaultPage` al primo load mappando l'indice della prossima partita (via `prioritizeNextUpcoming` su `items`). Renderizzare solo `items` ricevuti. Aggiungere componente `Pagination` (shadcn `src/components/ui/pagination.tsx` già presente) sotto la grid con prev/next + numeri pagina (con ellipsis se `totalPages > 7`). Reset pagina a 1 al cambio stagione. |
+| `changelog.md` | Voce sotto Unreleased: "Juventus: aggiunta paginazione (backend + frontend) al calendario partite, default 12 match per pagina, landing sulla pagina della prossima partita." |
+
+### Dettagli UX
+
+- **Landing page intelligente**: al primo render con `data` disponibile, calcolare `Math.floor(highlightIndex / PAGE_SIZE) + 1` e impostarlo come pagina iniziale solo se l'utente non ha ancora interagito (flag locale).
+- **Highlight "Prossima"**: continua a funzionare perché il backend ordina cronologicamente prima di paginare; basta passare anche l'indice globale della prossima partita nei metadata, oppure ricalcolarlo lato frontend usando i flag `status !== 'FullTime'` sui soli `items` della pagina corrente.
+- **Counter**: piccolo testo sopra la grid tipo "Partite 13-24 di 47".
+- **Mobile**: paginazione full-width, prev/next prominenti, numeri compressi.
 
 ### Cosa NON cambia
 
-- Endpoint Jolpica e shape risposta `driver-standings`.
-- Foto dei 21+ piloti già correttamente serviti dal CDN F1.
-- Logica costruttori (loghi).
+- Fonti Sky Sport / Lega Serie A.
+- Logica scraping, broadcaster mapping, competizioni incluse.
+- Tab "Classifica" (nessuna paginazione necessaria).
+- Tipi card, animazioni, badge competizione, broadcaster pills.
 - Versione resta **2.1.0**.
 
 ### Rischi
 
-- Wikimedia per foto pilota può cambiare URL se Wikipedia rinomina il file. Mitigato dal fatto che gli URL `commons/<hash>/<file>` sono stabili e dal fallback `onError` UI.
-- Se in futuro F1 pubblica foto ufficiali per Lindblad/Pérez al path attuale, la mappa statica continuerà a vincere: per tornare al CDN F1 basta rimuovere l'entry dalla mappa.
+- Cambio shape risposta `calendar`: mitigato mantenendo retrocompatibilità (array piatto se nessun parametro).
+- `keepPreviousData` evita flicker tra pagine ma può mostrare brevemente dati stale: accettabile.
+- Se l'utente cambia stagione mentre è a pagina 4, il reset a pagina 1 evita richieste fuori range.
 
 ### Checklist post-edit
 
-1. Deploy edge function `sports-f1`.
-2. Curl `driver-standings?season=2026` → verificare che Lindblad e Pérez abbiano `photoUrl` Wikimedia (non più CDN F1 placeholder né `null`).
-3. `/formula1` stagione 2026 → tab "Classifica Piloti": tutte le foto visibili, nessuna sagoma grigia vuota.
-4. Stagione 2025 → nessuna regressione (foto identiche a prima).
-5. `npm run lint` + `npm run build`.
-6. Aggiornare `changelog.md`.
-7. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
+1. Deploy edge function `sports-football`.
+2. Curl `calendar?season=2026&page=1&pageSize=12` → verificare struttura `{ items, total, page, pageSize, totalPages }`.
+3. Curl `calendar?season=2026` (senza pagination) → verificare array piatto legacy.
+4. `/juventus` tab "Calendario": landing su pagina con "Prossima", numeri pagina visibili, prev/next funzionanti, contatore corretto.
+5. Cambio stagione → reset a pagina 1, nessuna richiesta out-of-range.
+6. `npm run lint` + `npm run build`.
+7. Aggiornare `changelog.md`.
+8. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
 
