@@ -263,7 +263,7 @@ export default function TonightTvList() {
                 <span className="text-gold-gradient">Stasera in TV</span>
               </h2>
               <p className="text-xs text-muted-foreground mt-1">
-                Prima serata (dalle 21:00) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
+                Prima serata (21:00 - 23:00) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
               </p>
             </div>
           </div>
