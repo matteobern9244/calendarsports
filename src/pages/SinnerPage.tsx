@@ -63,7 +63,13 @@ export default function SinnerPage() {
         </TabsList>
 
         <TabsContent value="risultati">
-          {resLoading && <LoadingState message="Caricamento risultati..." />}
+          {resLoading && (
+            <LoadingState
+              message="Caricamento risultati..."
+              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/overview"
+              externalLabel="Scopri ora su ATP Tour"
+            />
+          )}
           {resError && <ErrorState message="Errore nel caricamento dei risultati" onRetry={() => resRefetch()} />}
           {!resLoading && !resError && (!results || results.length === 0) && (
             <UnavailableExternalSource
@@ -113,7 +119,13 @@ export default function SinnerPage() {
         </TabsContent>
 
         <TabsContent value="tornei">
-          {schLoading && <LoadingState message="Caricamento programma..." />}
+          {schLoading && (
+            <LoadingState
+              message="Caricamento programma..."
+              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/player-activity"
+              externalLabel="Scopri ora su ATP Tour"
+            />
+          )}
           {schError && <ErrorState message="Errore nel caricamento del programma" onRetry={() => schRefetch()} />}
           {!schLoading && !schError && (!schedule || schedule.length === 0) && (
             <UnavailableExternalSource
