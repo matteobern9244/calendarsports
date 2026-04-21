@@ -7,7 +7,13 @@ import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getCurrentMotoGPSeason } from "@/lib/currentSeason";
 import { useMotoGPCalendar, useMotoGPStandings, useMotoGPConstructorStandings } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
+import {
+  formatDateIT,
+  formatTimeIT,
+  getEventStatus,
+  prioritizeNextUpcoming,
+  toRomeDate,
+} from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -89,13 +95,24 @@ export default function MotoGPPage() {
                 const startDate = e.date || e.date_start;
                 const endDate = e.date_end;
                 const location = [e.circuit, e.location || e.venue, e.city, e.country].filter(Boolean).join(" · ");
-                const startTimestamp = startDate ? new Date(startDate).getTime() : NaN;
-                const endTimestamp = endDate ? new Date(endDate).getTime() + (24 * 60 * 60 * 1000) - 1 : startTimestamp;
+                // `toRomeDate` normalizza ISO "naive" come UTC (policy
+                // condivisa con le altre pagine sportive). I confronti
+                // sono in millisecondi assoluti quindi indipendenti dal
+                // fuso, ma evitiamo l'interpretazione locale del client
+                // sui giorni senza orario (es. `2026-04-21`).
+                const startMs = toRomeDate(startDate)?.getTime() ?? NaN;
+                const endMsRaw = toRomeDate(endDate)?.getTime();
+                // L'evento e' "in corso" fino alla fine del giorno
+                // dell'ultima sessione (weekend di gara MotoGP).
+                const endMs = endMsRaw != null
+                  ? endMsRaw + 24 * 60 * 60 * 1000 - 1
+                  : startMs;
+                const nowMs = Date.now();
 
-                const status = Number.isFinite(startTimestamp) && Number.isFinite(endTimestamp)
-                  ? Date.now() > endTimestamp
+                const status = Number.isFinite(startMs) && Number.isFinite(endMs)
+                  ? nowMs > endMs
                     ? "completato"
-                    : Date.now() >= startTimestamp
+                    : nowMs >= startMs
                       ? "in_corso"
                       : "prossimo"
                   : startDate
