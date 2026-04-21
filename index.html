@@ -6,7 +6,20 @@
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#0B1A33" />
+    <meta name="theme-color" content="#F5F7FA" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0B1A33" media="(prefers-color-scheme: dark)" />
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('cse-theme') || 'dark';
+          document.documentElement.classList.add(t);
+          document.documentElement.style.colorScheme = t;
+        } catch (e) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+        }
+      })();
+    </script>
     <title>Calendar Events — Sinner, Juventus, F1, MotoGP, Streaming</title>
     <meta name="description" content="Segui eventi sportivi (Sinner, Juventus, F1, MotoGP) e palinsesti TV / nuove uscite streaming in un'unica app">
     <meta name="author" content="Calendar Events" />
