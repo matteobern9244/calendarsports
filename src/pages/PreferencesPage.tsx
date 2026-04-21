@@ -127,9 +127,9 @@ export default function PreferencesPage() {
                         transition={{ duration: 0.2 }}
                         className={cn(
                           "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1",
-                          "border border-emerald-500/40 bg-emerald-500/10",
+                          "border border-success/40 bg-success/10",
                           "text-[10px] font-heading font-semibold uppercase tracking-wider",
-                          "text-emerald-600 dark:text-emerald-400"
+                          "text-success"
                         )}
                         role="status"
                         aria-live="polite"
