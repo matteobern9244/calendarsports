@@ -215,30 +215,57 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
           {visibleSlams.length > 0 && (
             <div className="mt-5 border-t border-border/50 pt-4">
               <p className="mb-2.5 font-heading text-[10px] uppercase tracking-widest text-primary/80">
-                Grande Slam
+                Grande Slam{" "}
+                <span className="text-muted-foreground/70 normal-case tracking-normal">
+                  · Miglior risultato
+                </span>
               </p>
-              <ul className="flex flex-wrap gap-2" aria-label="Risultati Grande Slam">
+              <ul
+                className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5"
+                aria-label="Risultati Grande Slam"
+              >
                 {visibleSlams.map(({ key, short, full }) => {
                   const r = props.slamResults![key]!;
                   const isWin = r.best === "V";
+                  const label = resultLabel(r.best ?? "");
+                  const yearsText = r.years.length > 0 ? r.years.join(" · ") : "";
                   return (
                     <li
                       key={key}
                       title={`${full}: ${r.raw}`}
+                      aria-label={`${full}: ${label}${
+                        r.years.length ? `, anni ${r.years.join(", ")}` : ""
+                      }`}
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-heading shadow-sm",
+                        "flex min-w-[7.5rem] flex-col gap-0.5 rounded-lg px-3 py-2.5 shadow-sm",
                         isWin
                           ? "gold-gradient text-primary-foreground border border-primary/40"
                           : "border border-border bg-secondary/30 text-foreground",
                       )}
                     >
-                      <span className="font-bold">{short}</span>
-                      <span className={cn("text-xs", isWin ? "opacity-90" : "opacity-80")}>
-                        {r.best}
+                      <span className="flex items-center gap-1.5 font-heading text-sm font-bold leading-none">
+                        {isWin && <Trophy className="h-3.5 w-3.5" aria-hidden />}
+                        {short}
                       </span>
-                      {r.years.length > 0 && (
-                        <span className={cn("text-xs", isWin ? "opacity-80" : "opacity-70")}>
-                          ·{shortYears(r.years)}
+                      <span className="font-heading text-sm font-semibold leading-tight">
+                        {label}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs leading-tight",
+                          isWin ? "opacity-90" : "text-muted-foreground",
+                        )}
+                      >
+                        {full}
+                      </span>
+                      {yearsText && (
+                        <span
+                          className={cn(
+                            "mt-0.5 text-[11px] leading-tight",
+                            isWin ? "opacity-80" : "text-muted-foreground/80",
+                          )}
+                        >
+                          {yearsText}
                         </span>
                       )}
                     </li>
