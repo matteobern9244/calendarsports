@@ -377,6 +377,11 @@ export default function StreamingPage() {
             </div>
           </div>
 
+          <p className="text-xs text-muted-foreground italic">
+            Solo titoli inclusi nell'abbonamento del provider in Italia
+            (fonte TMDB watch providers, regione IT, monetizzazione flatrate).
+          </p>
+
           {releasesQuery.isLoading && <LoadingState message="Caricamento uscite..." />}
           {releasesQuery.isError && (
             <ErrorState

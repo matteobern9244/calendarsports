@@ -76,6 +76,10 @@ async function tmdbDiscover(
   url.searchParams.set("language", "it-IT");
   url.searchParams.set("watch_region", "IT");
   url.searchParams.set("with_watch_providers", String(providerId));
+  // Filtra solo titoli inclusi nell'abbonamento del provider in IT
+  // (esclude buy/rent/ads). TMDB Discover senza questo parametro restituisce
+  // anche titoli disponibili solo in noleggio/acquisto sullo stesso provider.
+  url.searchParams.set("with_watch_monetization_types", "flatrate");
   url.searchParams.set(`${dateKey}.gte`, dateFrom);
   url.searchParams.set(`${dateKey}.lte`, dateTo);
   url.searchParams.set("sort_by", "popularity.desc");
@@ -100,6 +104,30 @@ async function tmdbCredits(
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`TMDB credits ${kind} ${res.status}`);
   return await res.json();
+}
+
+// Verifica che il titolo sia effettivamente disponibile in abbonamento (flatrate)
+// sul provider richiesto in regione IT al momento della query. TMDB Discover
+// puo' restituire match basati su finestre storiche: questa chiamata conferma
+// la disponibilita' corrente. Ritorna true se IT.flatrate include providerId.
+async function tmdbItemAvailableIT(
+  kind: "movie" | "tv",
+  id: number,
+  providerId: number,
+  apiKey: string,
+): Promise<boolean> {
+  try {
+    const url = new URL(`${TMDB_BASE}/${kind}/${id}/watch/providers`);
+    url.searchParams.set("api_key", apiKey);
+    const res = await fetch(url.toString());
+    if (!res.ok) return false;
+    const json = await res.json();
+    const flatrate = json?.results?.IT?.flatrate;
+    if (!Array.isArray(flatrate)) return false;
+    return flatrate.some((p: any) => p?.provider_id === providerId);
+  } catch (_err) {
+    return false;
+  }
 }
 
 function normalizeItem(raw: any, kind: "movie" | "tv") {
@@ -256,10 +284,22 @@ Deno.serve(async (req) => {
         tmdbDiscover("movie", providerCfg.id, from, to, apiKey).catch(() => []),
         tmdbDiscover("tv", providerCfg.id, from, to, apiKey).catch(() => []),
       ]);
-      return sortItems([
-        ...movies.map((m) => normalizeItem(m, "movie")),
-        ...tv.map((t) => normalizeItem(t, "tv")),
-      ]);
+      const candidates: Array<{ kind: "movie" | "tv"; raw: any }> = [
+        ...movies.map((m) => ({ kind: "movie" as const, raw: m })),
+        ...tv.map((t) => ({ kind: "tv" as const, raw: t })),
+      ];
+      // Validazione per-item: tieni solo i titoli effettivamente in
+      // abbonamento sul provider richiesto in regione IT, secondo TMDB
+      // /watch/providers (results.IT.flatrate include providerId).
+      const checks = await Promise.all(
+        candidates.map((c) =>
+          tmdbItemAvailableIT(c.kind, c.raw.id, providerCfg.id, apiKey),
+        ),
+      );
+      const validated = candidates
+        .filter((_, i) => checks[i])
+        .map((c) => normalizeItem(c.raw, c.kind));
+      return sortItems(validated);
     };
 
     let items = await fetchWindow(dateFrom, dateTo);

@@ -68,6 +68,12 @@ L'app espone sei viste principali:
   (film) / `first_air_date` (serie) e `with_watch_providers` regione `IT`:
   e' la **data di prima pubblicazione mondiale**, non la data di ingresso
   sulla piattaforma in Italia (TMDB non espone quel campo su Discover). I
+  risultati sono validati su due livelli per garantire disponibilita' reale
+  in Italia: (1) Discover viene chiamato con
+  `with_watch_monetization_types=flatrate`, escludendo titoli a
+  noleggio/acquisto/ads sullo stesso provider; (2) per ogni candidato la
+  edge function chiama `/{type}/{id}/watch/providers` e tiene solo i titoli
+  presenti in `results.IT.flatrate` con il `provider_id` richiesto. I
   range UI sono "Prossimi 7 giorni", "Prossimi 30 giorni" (default) e
   "Finestra estesa" (-30 / +60 giorni). Quando la finestra richiesta e'
   vuota, l'edge function `streaming-releases` allarga automaticamente il
