@@ -111,6 +111,17 @@ export default function TonightTvList() {
           const [hStr, mStr] = hhmm.split(":");
           const endMs = p.end ? new Date(p.end).getTime() : d.getTime() + 30 * 60 * 1000;
           const durationMin = Math.max(0, Math.round((endMs - d.getTime()) / 60000));
+          const endHHMM = timeFmt.format(new Date(endMs));
+          const [endHStr, endMStr] = endHHMM.split(":");
+          const startMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
+          let endMinutesFromMidnight = parseInt(endHStr, 10) * 60 + parseInt(endMStr, 10);
+          // Normalizza il wrap dopo mezzanotte: se la fine cade lo stesso
+          // giorno o prima dell'inizio (es. start 23:30, end 01:15)
+          // aggiungiamo 24h in modo che il confronto con la finestra di
+          // prima serata resti monotono.
+          if (endMinutesFromMidnight <= startMinutes) {
+            endMinutesFromMidnight += 24 * 60;
+          }
           rows.push({
             family: fam,
             channel: ch.name,
@@ -120,6 +131,7 @@ export default function TonightTvList() {
             durationMin,
             hourRome: parseInt(hStr, 10),
             minuteRome: parseInt(mStr, 10),
+            endMinutesFromMidnight,
             title: p.title,
             genre: p.genre,
           });
