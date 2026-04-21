@@ -28,33 +28,61 @@ export default function UnavailableExternalSource({
   ctaHint,
 }: UnavailableExternalSourceProps) {
   const hint = ctaHint ?? `Tocca il pulsante qui sotto per ${externalLabel.toLowerCase()}`;
+  // id stabile derivato dal titolo per associare titolo/descrizione al container
+  const baseId = `unavailable-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+  const titleId = `${baseId}-title`;
+  const descId = `${baseId}-desc`;
+  // aria-label completo del link: chiarisce destinazione, contesto e che si apre in nuova scheda.
+  const linkAriaLabel = externalLink
+    ? `${externalLabel}. ${hint}. Si apre in una nuova scheda del browser.`
+    : undefined;
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 gap-4 rounded-2xl border border-dashed border-border bg-muted/30 text-center">
-      <Info className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-      <div className="space-y-1.5 max-w-md">
-        <h3 className="font-heading text-sm font-bold uppercase tracking-wider text-foreground">
+    <section
+      role="status"
+      aria-live="polite"
+      aria-labelledby={titleId}
+      aria-describedby={descId}
+      className="flex flex-col items-center justify-center py-12 px-4 gap-4 rounded-2xl border border-dashed border-border bg-muted/30 text-center"
+    >
+      <Info className="h-8 w-8 text-muted-foreground" aria-hidden="true" focusable="false" />
+      <div className="space-y-2 max-w-prose">
+        <h3
+          id={titleId}
+          className="font-heading text-base sm:text-lg font-bold uppercase tracking-wider text-foreground"
+        >
           {title}
         </h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p id={descId} className="text-[0.95rem] leading-relaxed text-foreground/80">
+          {description}
+        </p>
       </div>
       {externalLink && (
-        <div className="flex flex-col items-center gap-2 mt-1">
-          <p className="text-xs font-heading uppercase tracking-wider text-[hsl(var(--gold))]/90">
+        <div className="flex flex-col items-center gap-2.5 mt-1">
+          <p
+            aria-hidden="true"
+            className="text-sm font-medium text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))]"
+          >
             {hint}
           </p>
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="border-[hsl(var(--gold))]/40 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 transition-colors"
+            className="border-[hsl(var(--gold))]/40 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
           >
-            <a href={externalLink} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              {externalLabel}
+            <a
+              href={externalLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={linkAriaLabel}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" aria-hidden="true" focusable="false" />
+              <span>{externalLabel}</span>
+              <span className="sr-only"> (si apre in una nuova scheda)</span>
             </a>
           </Button>
         </div>
       )}
-    </div>
+    </section>
   );
 }
