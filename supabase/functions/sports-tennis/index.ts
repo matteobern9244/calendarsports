@@ -530,14 +530,30 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
     const seasonParam = url.searchParams.get('season');
+    const pageParam = url.searchParams.get('page');
+    const pageSizeParam = url.searchParams.get('pageSize');
 
     if (seasonParam !== null && !/^\d{4}$/.test(seasonParam)) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid season parameter' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    if (pageParam !== null && !/^\d+$/.test(pageParam)) {
+      return new Response(JSON.stringify({ success: false, error: 'Parametro page non valido' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (pageSizeParam !== null && !/^\d+$/.test(pageSizeParam)) {
+      return new Response(JSON.stringify({ success: false, error: 'Parametro pageSize non valido' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const season = seasonParam ? parseInt(seasonParam) : 2026;
+    // Paginazione (usata solo da action=results, ignorata altrove).
+    // Default: 12 risultati per pagina, max 50 per evitare payload abusivi.
+    const page = Math.max(1, pageParam ? parseInt(pageParam) : 1);
+    const pageSize = Math.min(50, Math.max(1, pageSizeParam ? parseInt(pageSizeParam) : 12));
     let data: unknown;
     let dataSource: 'wikipedia' | 'wikipedia+curated' | 'static-fallback' = 'wikipedia';
 
