@@ -129,6 +129,83 @@ export default function JuventusPage() {
         <SectionHeader title="Juventus" />
       </div>
 
+      {nextMatch && (() => {
+        const isJuveHome = nextMatch.homeTeam?.toLowerCase().includes('juventus');
+        const opponent = isJuveHome ? nextMatch.awayTeam : nextMatch.homeTeam;
+        const opponentLogo = isJuveHome ? nextMatch.awayLogo : nextMatch.homeLogo;
+        const dateStr = nextMatch.date ? formatDateIT(nextMatch.date) : '—';
+        const timeStr = nextMatch.date
+          ? new Date(nextMatch.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' })
+          : '';
+        const compColor = COMPETITION_COLORS[nextMatch.competition] || '';
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className={cn(
+              "relative mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--gold))]/40 px-5 py-5 sm:px-6 sm:py-6",
+              "bg-gradient-to-br from-[hsl(var(--gold))]/15 via-card to-[hsl(var(--navy))]/20",
+              "shadow-[0_18px_44px_-22px_hsl(var(--gold)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]"
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--gold))] to-transparent opacity-80"
+            />
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="h-4 w-4 text-[hsl(var(--gold))]" aria-hidden="true" />
+              <span className="font-heading text-[10px] tracking-[0.2em] uppercase text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-bold">
+                Prossima Partita
+              </span>
+              <Badge
+                variant="outline"
+                className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0 h-4 border", compColor)}
+              >
+                {nextMatch.competition}
+              </Badge>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <TeamLogo src={opponentLogo} name={opponent} size={48} shape="circle" />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground font-heading uppercase tracking-wider">
+                    {isJuveHome ? 'Juventus vs' : `${opponent} @`}
+                  </p>
+                  <p className="text-xl sm:text-2xl font-heading font-bold text-foreground truncate">
+                    {isJuveHome ? opponent : 'Juventus'}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {dateStr}{timeStr ? ` · ${timeStr}` : ''}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-start sm:items-end gap-2">
+                {nextMatch.broadcaster && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {nextMatch.broadcaster.split(' | ').map((b: string) => {
+                      const { className } = getBroadcasterStyle(b);
+                      return (
+                        <span
+                          key={b}
+                          className={cn(
+                            "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
+                            className
+                          )}
+                        >
+                          {b.trim()}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                {nextMatch.date && <EventCountdown startDate={nextMatch.date} />}
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
+
       <Tabs defaultValue="calendario" className="w-full">
         <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">Calendario</TabsTrigger>
@@ -158,11 +235,40 @@ export default function JuventusPage() {
                   {standings.map((s: any) => {
                     const isJuve = s.team?.toLowerCase().includes('juventus');
                     return (
-                      <TableRow key={s.position} className={isJuve ? "bg-primary/5" : ""}>
-                        <TableCell className="font-heading font-bold">{s.position}</TableCell>
-                        <TableCell className={isJuve ? "text-primary font-heading font-bold" : "font-semibold"}>
+                      <TableRow
+                        key={s.position}
+                        className={cn(
+                          isJuve &&
+                            "relative bg-gradient-to-r from-[hsl(var(--gold))]/20 via-[hsl(var(--gold))]/8 to-transparent border-l-4 border-[hsl(var(--gold))] hover:bg-gradient-to-r hover:from-[hsl(var(--gold))]/25 hover:via-[hsl(var(--gold))]/10 hover:to-transparent"
+                        )}
+                      >
+                        <TableCell
+                          className={cn(
+                            "font-heading font-bold",
+                            isJuve && "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] text-base"
+                          )}
+                        >
+                          {s.position}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            isJuve
+                              ? "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-heading font-bold text-base"
+                              : "font-semibold"
+                          )}
+                        >
                           <div className="flex items-center gap-2">
-                            {s.logoUrl && <img src={s.logoUrl} alt={s.team} className="h-5 w-5 object-contain" />}
+                            <TeamLogo
+                              src={s.logoUrl}
+                              name={s.team}
+                              size={isJuve ? 28 : 20}
+                              shape="circle"
+                              className={
+                                isJuve
+                                  ? "ring-2 ring-[hsl(var(--gold))]/60 ring-offset-1 ring-offset-background"
+                                  : undefined
+                              }
+                            />
                             {s.team}
                           </div>
                         </TableCell>
@@ -171,7 +277,14 @@ export default function JuventusPage() {
                         <TableCell className="text-center">{s.draws}</TableCell>
                         <TableCell className="text-center">{s.losses}</TableCell>
                         <TableCell className="text-center hidden sm:table-cell">{s.goalDiff > 0 ? `+${s.goalDiff}` : s.goalDiff}</TableCell>
-                        <TableCell className="text-center font-bold">{s.points}</TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-center font-bold",
+                            isJuve && "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-heading text-base"
+                          )}
+                        >
+                          {s.points}
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -258,7 +371,7 @@ export default function JuventusPage() {
                       </span>
                     </div>
                     <div className="relative z-[1] flex items-center gap-2 flex-1 min-w-0">
-                      {opponentLogo && <img src={opponentLogo} alt={opponent} className="h-6 w-6 object-contain flex-shrink-0" />}
+                      <TeamLogo src={opponentLogo} name={opponent} size={24} shape="circle" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold truncate text-foreground">
                           {isJuveHome ? 'vs' : '@'} {opponent}
