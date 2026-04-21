@@ -580,10 +580,25 @@ Deno.serve(async (req) => {
         break;
       }
       case 'results': {
-        if (season !== 2026) { data = []; break; }
+        if (season !== 2026) {
+          data = { items: [], pagination: { page: 1, pageSize, total: 0, totalPages: 1 } };
+          break;
+        }
         const sd = await getSeasonData();
         const { matches } = sd;
-        data = matches;
+        // Ordine decrescente per data (match piu' recenti per primi):
+        // string compare su ISO YYYY-MM-DD e' affidabile per la
+        // cronologia stagionale.
+        const sorted = [...matches].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        const total = sorted.length;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const safePage = Math.min(page, totalPages);
+        const start = (safePage - 1) * pageSize;
+        const items = sorted.slice(start, start + pageSize);
+        data = {
+          items,
+          pagination: { page: safePage, pageSize, total, totalPages },
+        };
         break;
       }
       default:
