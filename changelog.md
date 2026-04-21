@@ -18,6 +18,12 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **MotoGP – fix loghi costruttori**: corretti gli URL nella mappa
+  `MOTOGP_CONSTRUCTOR_LOGOS` (Ducati, Aprilia, KTM, Yamaha, Honda) — gli URL
+  precedenti su `resources.motogp.pulselive.com` erano placeholder non
+  esistenti (404). Ora puntano a Wikipedia Commons. Aggiunto fallback
+  `onError` su `<img>` in `MotoGPPage.tsx` per nascondere immagini rotte.
+  Versione applicativa invariata `2.1.0`.
 - **MotoGP – nomi piloti completi e foto wildcard/sostituti**: la classifica
   piloti `/motogp` ora espande i nomi brevi di Sky Sport (es. "Pirro M.")
   in formato "Nome Cognome" (es. "Michele Pirro") tramite mappa

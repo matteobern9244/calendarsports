@@ -124,11 +124,11 @@ function expandRiderName(skyName: string): string {
 
 // MotoGP constructor/team logos
 const MOTOGP_CONSTRUCTOR_LOGOS: Record<string, string> = {
-  'ducati': 'https://resources.motogp.pulselive.com/photo-resources/2023/01/01/d8e3b2f5-c4c4-4bd0-b8e9-c3f5e8a3d9f2/ducati.png?height=40&width=80',
-  'aprilia': 'https://resources.motogp.pulselive.com/photo-resources/2023/01/01/a8e3b2f5-c4c4-4bd0-b8e9-c3f5e8a3d9f2/aprilia.png?height=40&width=80',
-  'ktm': 'https://resources.motogp.pulselive.com/photo-resources/2023/01/01/k8e3b2f5-c4c4-4bd0-b8e9-c3f5e8a3d9f2/ktm.png?height=40&width=80',
-  'yamaha': 'https://resources.motogp.pulselive.com/photo-resources/2023/01/01/y8e3b2f5-c4c4-4bd0-b8e9-c3f5e8a3d9f2/yamaha.png?height=40&width=80',
-  'honda': 'https://resources.motogp.pulselive.com/photo-resources/2023/01/01/h8e3b2f5-c4c4-4bd0-b8e9-c3f5e8a3d9f2/honda.png?height=40&width=80',
+  'ducati': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Ducati_red_logo.svg/320px-Ducati_red_logo.svg.png',
+  'aprilia': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Aprilia-logo.svg/320px-Aprilia-logo.svg.png',
+  'ktm': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/KTM-Logo.svg/320px-KTM-Logo.svg.png',
+  'yamaha': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Yamaha_Motor_Logo_%28new%29.svg/320px-Yamaha_Motor_Logo_%28new%29.svg.png',
+  'honda': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Honda.svg/320px-Honda.svg.png',
 };
 
 function findRiderPhoto(name: string): string | null {

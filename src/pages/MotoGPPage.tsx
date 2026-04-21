@@ -155,7 +155,12 @@ export default function MotoGPPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {c.logoUrl && (
-                            <img src={c.logoUrl} alt={c.team} className="h-6 w-10 object-contain flex-shrink-0" />
+                            <img
+                              src={c.logoUrl}
+                              alt={c.team}
+                              className="h-6 w-10 object-contain flex-shrink-0"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            />
                           )}
                           <span className="font-semibold">{c.team}</span>
                         </div>
