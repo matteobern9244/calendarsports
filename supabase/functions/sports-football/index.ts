@@ -25,6 +25,30 @@ type SkyWidgetResponse = {
   seasonUsed: string;
 };
 
+const ROME_DATE_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Rome',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * Restituisce la data della partita nel fuso `Europe/Rome` come
+ * `YYYY-MM-DD`. Se l'input è una stringa ISO senza offset, viene
+ * trattato come UTC (tutti i provider football pubblicano in UTC).
+ * Ritorna `null` per input invalidi.
+ */
+function romeDateKeyOf(input: string | null | undefined): string | null {
+  if (!input) return null;
+  let normalized = input;
+  if (typeof input === 'string' && /T\d{2}:\d{2}/.test(input) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(input)) {
+    normalized = `${input}Z`;
+  }
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return null;
+  return ROME_DATE_FMT.format(d);
+}
+
 function unescapeHtml(text: string): string {
   return text
     .replace(/&quot;/g, '"')

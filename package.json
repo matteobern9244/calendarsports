@@ -14,6 +14,7 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "check:italian": "node scripts/check-italian-ui.mjs",
+    "check:tz-juventus": "node scripts/check-rome-tz.mjs",
     "prepare": "husky"
   },
   "lint-staged": {
