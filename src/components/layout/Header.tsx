@@ -166,13 +166,21 @@ export default function Header() {
         {/* Theme toggle + mobile menu */}
         <div className="flex items-center gap-2 shrink-0">
           <Button
+            asChild
             variant="ghost"
             size="icon"
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Tema chiaro" : "Tema scuro"}
-            className="rounded-full border border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10 transition-colors"
+            aria-label="Preferenze"
+            aria-current={preferencesActive ? "page" : undefined}
+            className={cn(
+              "rounded-full border transition-colors",
+              preferencesActive
+                ? "border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))] shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
+                : "border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10"
+            )}
           >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            <Link to="/preferenze">
+              <Settings className="h-4 w-4" />
+            </Link>
           </Button>
           <Button
             variant="ghost"
