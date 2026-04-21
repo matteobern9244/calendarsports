@@ -125,7 +125,6 @@ const ALLOWLIST_WORDS = new Set(
     "Serie",
     "Coppa",
     "Italia",
-    "Best",
     "Of",
     // Formati tempo brevi accettati
     "AM",
