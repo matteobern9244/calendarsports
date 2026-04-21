@@ -206,6 +206,7 @@ function extractJuventusMatches(model: any, competitionId: string, broadcasterMa
         }
 
         matches.push({
+          id: buildMatchId(match, competitionName),
           matchday: roundNum,
           homeTeam: homeName,
           awayTeam: awayName,
