@@ -423,6 +423,7 @@ export default function JuventusPage() {
                         <EventCountdown startDate={m.date} />
                       )}
                     </div>
+                    </Link>
                   </motion.div>
                 );
               })}
