@@ -1,6 +1,8 @@
+import { useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 import { daysUntilRome } from "@/lib/dateUtils";
 import { Sparkles, Clock, CalendarClock, Check } from "lucide-react";
+import { getNowMinute, subscribeCountdown } from "@/lib/countdownClock";
 
 interface ReleaseCountdownBadgeProps {
   releaseDate: string;
@@ -19,6 +21,14 @@ export default function ReleaseCountdownBadge({
   releaseDate,
   className,
 }: ReleaseCountdownBadgeProps) {
+  // Sottoscrizione al clock globale a risoluzione "minute": basta un
+  // refresh ogni 30s per cogliere il cambio di giorno a Roma. Lo snapshot
+  // restituito cambia solo ai cambi minuto reali → nessun re-render extra.
+  useSyncExternalStore(
+    (cb) => subscribeCountdown(cb, "minute"),
+    getNowMinute,
+    getNowMinute,
+  );
   const diff = daysUntilRome(releaseDate);
   if (diff === null) return null;
 
