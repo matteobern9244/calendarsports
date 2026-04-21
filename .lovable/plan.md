@@ -1,110 +1,71 @@
 
 
-## Restyling premium del player header Sinner
+## Guard CI: blocco regressioni lingua UI
 
-### Problemi rilevati nella schermata attuale
+### Obiettivo
 
-1. **Foto tagliata in alto**: `object-cover` su contenitore quadrato 96×96 centra l'immagine landscape `Jannik_Sinner_US_Open_2025_(cropped).jpg` sul torso/braccia, tagliando la testa. Va usato `object-position: top` (o `object-top`) e l'aumento del contenitore.
-2. **Gerarchia visiva piatta**: ranking #1 oro grande è ok, ma "Stagione 2026 24-2" e "Best ranking #1" hanno la stessa size del nome → si confondono.
-3. **Densità bassa**: tre blocchi statistici allineati a `items-end` con grandi spazi vuoti a destra (vedi screenshot: tutto si addensa a sinistra, vuoto a destra).
-4. **Chip Slam poco leggibili**: micro-pillole `border + bg/10` su sfondo card simile → contrasto basso, soprattutto in tema chiaro.
-5. **`<dl>` Altezza/Peso/Nato a** orizzontali con label muted → in tema chiaro la label sparisce, leggibilità scarsa.
-6. **Footer "Fonte..."** centrato a sinistra `text-[11px]` quasi invisibile.
+Workflow CI che **fallisce** se in `src/` (escluso `src/components/ui/`, `*.test.*`, `*.d.ts`) vengono introdotte stringhe utente in inglese oltre alle eccezioni autorizzate (`STREAMING`, `CALENDAR EVENTS`).
 
-### Soluzione visiva (entrambi i temi)
+### Approccio
 
-Layout a due colonne ben definite con superficie a doppio livello:
+Script Node TypeScript-free in `scripts/check-italian-ui.mjs` che fa scansione AST-light (regex mirate su JSX text, attributi `aria-label`, `aria-description`, `placeholder`, `title`, `alt`, e contenuto di `<span className="sr-only">…</span>`). Eseguito da nuovo step `npm run check:italian` nei due workflow CI esistenti.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  ┌──────────┐   JANNIK SINNER  🇮🇹 Italia              │
-│  │          │   ┌────────────────────────────────────────┐ │
-│  │  FOTO    │   │ #1  ATP SING.  │ 24-2  STAG.  │ #1 BEST│ │
-│  │ 128×160  │   │ aggior. 12 apr │ 92.3% · 3 ti │ MIGLIOR│ │
-│  │  ratio   │   └────────────────────────────────────────┘ │
-│  │  4:5     │                                               │
-│  │ object-  │   ⬢ Altezza  ⬢ Peso  ⬢ Mano  ⬢ Nato a       │
-│  │ top      │     191 cm    77 kg   destra  San Candido    │
-│  └──────────┘                                               │
-│              GRANDE SLAM                                     │
-│              [AO V·24·25] [RG F·25] [W V·25] [US V·24] ...  │
-│  ─────────────────────────────────────────────────────────  │
-│  Fonte: Wikipedia Italia · Statistiche aggiornate al ...    │
-└─────────────────────────────────────────────────────────────┘
-```
+Niente AST parser pesante (no `@babel/parser` come nuova dep): regex mirate su pattern JSX limitati. Falsi positivi gestiti via:
+1. **Allowlist di parole** (nomi propri, sigle, brand): `STREAMING`, `CALENDAR EVENTS`, `ATP`, `WTA`, `GP`, `PL1`, `PL2`, `PL3`, `TMDB`, `RAI`, `Sky`, `Netflix`, `Prime`, `Video`, `Disney`, `HBO`, `Max`, `Mediaset`, `Discovery`, `Juventus`, `Sinner`, `Jannik`, `Formula`, `MotoGP`, `Roland`, `Garros`, `Wimbledon`, `Open`, `Australian`, `US`, `Finals`, `Pos`, `Pts`, `Qual`, `Sprint`, `DR`, `JS`, `Info` (icone).
+2. **Allowlist di file** (commento `// @lingua-ignore` su singola riga o `/* @lingua-ignore-file */` in testa).
+3. **Dizionario euristico** di parole inglesi comuni che NON devono apparire: `Loading`, `Error`, `Close`, `Open`, `Next`, `Previous`, `Submit`, `Cancel`, `Save`, `Delete`, `Edit`, `Search`, `Home`, `Back`, `More`, `Less`, `Show`, `Hide`, `Toggle`, `Select`, `Choose`, `Page`, `Not`, `Found`, `Return`, `Go`, `to`, `Click`, `here`, `Settings`, `Profile`, `Logout`, `Login`, `Sign`, `Welcome`, `Best`, `ranking` (lower), `Live`, `Upcoming`, `Today`, `Tomorrow`, `Yesterday`, `Week`, `Month`, `Year`, `Date`, `Time`, `Yes`, `No`, `OK`, `Continue`, `Confirm`. Match case-insensitive su parole intere.
 
-### Modifiche puntuali a `src/components/sinner/PlayerHeader.tsx`
+Logica: se in una stringa testuale UI compare ≥1 parola del dizionario inglese AND nessuna parola della allowlist copre l'intera stringa AND il file non è in allowlist → errore.
 
-**1. Foto risolta**
-- Container ratio **4:5** (portrait), `w-28 h-36` mobile / `w-32 h-40` desktop, `rounded-2xl overflow-hidden`.
-- `<img class="object-cover object-top">` → la testa di Sinner non viene più tagliata.
-- Ring oro doppio: `ring-2 ring-primary/60 ring-offset-2 ring-offset-card` + sottile gradiente oro decorativo dietro (`absolute -inset-1 gold-gradient opacity-30 blur-md`) come accent premium.
-- Fallback iniziali "JS" mantiene stesso ratio.
+### Cosa NON viene controllato (limiti dichiarati)
 
-**2. Sezione header**
-- Wrapper card promosso: `bg-card` + `bg-gradient-to-br from-card via-card to-secondary/10` per profondità in entrambi i temi.
-- Bordo top oro sottile: `border-t-2 border-t-primary/60` come accento brand.
-- Padding aumentato `p-5 sm:p-7`.
+- `src/components/ui/*` (shadcn rigenerabile — già tradotto manualmente, ma future rigenerazioni introdurranno EN: lo accettiamo come trade-off, lo annotiamo nel commento dello script).
+- File `.test.ts(x)` e `.spec.ts(x)`.
+- Commenti `//` e `/* */` (lo script li strippa prima del match).
+- Identificatori di codice, query keys, route paths, `value="all"`.
+- `supabase/functions/*` (lato server, non UI).
 
-**3. Statistiche chiave (3 KPI cards)**
-Sostituisco i tre blocchi flat con **3 mini-card** orizzontali:
-- Ognuna: `rounded-xl bg-muted/50 border border-border/50 px-4 py-3`.
-- Label uppercase oro `text-primary/80 text-[10px] tracking-widest`.
-- Valore principale grande, sub-valore più piccolo sotto.
-- Su desktop: `grid grid-cols-3 gap-3`. Su mobile: stack verticale.
-- Ranking #1 resta protagonista con size `text-5xl` e gradiente oro via `text-gold-gradient` (esiste già in `index.css`).
-
-**4. Bio facts (Altezza/Peso/Mano/Nato a)**
-- Sostituisco `<dl>` flat con **chip orizzontali** in una riga flex-wrap.
-- Ogni chip: `rounded-full bg-muted px-3 py-1.5` con icona Lucide (`Ruler`, `Weight`, `Hand`, `MapPin`).
-- Label inline: `<icon> Altezza · 191 cm`.
-- Funziona perfettamente sia desktop sia mobile (wrapping naturale).
-
-**5. Sezione Grande Slam**
-- Header sezione: `border-t border-border/50 pt-4 mt-5`.
-- Chip vincitori (V) → fondo gradiente oro `gold-gradient text-primary-foreground` (più impatto, riconoscibili a colpo d'occhio).
-- Chip non-vincitori → `bg-secondary/30 border border-border text-foreground`.
-- Layout: chip leggermente più grandi `px-3 py-1.5 text-sm`, gap 2.
-- Tooltip con risultato completo invariato (`title=...`).
-
-**6. Footer source**
-- Spostato in basso con `border-t border-border/30 pt-3 mt-5`.
-- `text-xs text-muted-foreground` (non più 11px), con icona `Info` opzionale.
-
-### Coerenza dual-theme
-
-- Tutti i colori usano i token semantici esistenti (`bg-card`, `bg-muted`, `text-primary`, `border-border`, `text-foreground`, `text-muted-foreground`).
-- Nessun colore hardcoded.
-- I gradienti usano le utility già definite in `index.css` (`gold-gradient`, `text-gold-gradient`).
-- Verificato che `--primary`, `--card`, `--muted`, `--border` siano definiti sia in `:root` (chiaro) sia in `.dark` (già nel CSS).
-
-### Coerenza responsive
-
-- Mobile (`< sm`): foto e info impilate verticalmente, KPI in stack, chip wrap automatico.
-- Desktop (`>= sm`): foto a sinistra fissa 128px larghezza, info a destra che riempie. KPI a 3 colonne. Chip Slam in riga.
-- Nessuna regressione su `useSinnerInfo` o `SinnerPage.tsx`: i prop del componente restano identici, solo il rendering interno cambia.
-
-### File modificati
+### File creati / modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `src/components/sinner/PlayerHeader.tsx` | EDIT | Restyling completo: foto portrait 4:5 con `object-top`, glow oro decorativo, KPI in 3 mini-card, bio in chip con icone Lucide, Slam con chip premium oro per vincitori, footer separato. Nessun cambio API prop. |
-| `changelog.md` | EDIT | Voce in `### Changed`: restyling premium player header Sinner (foto fix, KPI cards, chip bio, Slam chip oro). |
+| `scripts/check-italian-ui.mjs` | NUOVO | Script Node ESM. Glob su `src/**/*.{ts,tsx}` (escluse cartelle UI/test). Strip commenti. Estrae con regex: `>([^<{]+)<` per JSX text, `(?:aria-label\|aria-description\|placeholder\|title\|alt)="([^"]+)"`. Filtra contro allowlist e dizionario EN. Stampa lista violazioni con file:line. Exit 1 se trova match. |
+| `package.json` | EDIT | Aggiunge script `"check:italian": "node scripts/check-italian-ui.mjs"`. |
+| `.github/workflows/ci-pr-main.yml` | EDIT | Job `quality`: aggiunge step `- name: Italian UI guard` con `run: npm run check:italian` dopo `Lint`, prima di `Unit tests`. |
+| `.github/workflows/ci-develop.yml` | EDIT | Stesso step nel job `quality`. |
+| `AGENTS.md` | EDIT | Sezione "Regole di modifica" → aggiunto bullet: "Il workflow CI esegue `npm run check:italian`. Se devi introdurre intenzionalmente una stringa non italiana (es. brand non in allowlist), aggiorna l'allowlist in `scripts/check-italian-ui.mjs` nella stessa PR e dichiara il motivo nel changelog." |
+| `.github/instructions/frontend.instructions.md` | EDIT | Stessa nota sintetica. |
+| `README.md` | EDIT | Sezione "Sviluppo" → comando `npm run check:italian` documentato. |
+| `changelog.md` | EDIT | `### Added`: "Guard CI lingua italiana — script `check-italian-ui` blocca PR con nuove stringhe utente in inglese non in allowlist. Eseguito in `ci-pr-main` e `ci-develop`." |
+
+### Comportamento atteso
+
+- **PR pulita**: step verde, niente output rilevante.
+- **PR che reintroduce `Best ranking`**: step fallisce con
+  ```
+  scripts/check-italian-ui.mjs
+  ✗ src/components/sinner/PlayerHeader.tsx:42 — testo JSX contiene parole EN: "Best ranking"
+  → Traduci in italiano oppure aggiungi alla allowlist con motivo nel changelog.
+  Trovate 1 violazioni. Build fallito.
+  ```
+- **Esecuzione locale**: `npm run check:italian` riproduce stesso output.
+
+### Validazione manuale dello script
+
+Lo script viene eseguito sul codice attuale dopo creazione: deve passare con 0 violazioni (l'app è già 100% italianizzata). Se trova falsi positivi residui, aggiorno allowlist nello stesso commit prima di chiudere.
 
 ### Cosa NON cambia
 
-- API e prop di `PlayerHeader` invariate → `SinnerPage.tsx` non tocca.
-- Dati Wikipedia/edge function: invariati.
-- Token CSS, palette, fonts: invariati (uso solo quelli già esistenti).
-- Nessuna nuova dipendenza (icone già da `lucide-react` già nel progetto).
-- Versione applicativa invariata `2.1.0`.
+- Stack, dipendenze runtime, TypeScript config.
+- Workflow `enable-pr-automerge`, `disable-pr-automerge-on-copilot-review`, `guard-main-source`.
+- Branch policy GitHub <-> Lovable.
+- Edge functions, hook React Query, UI esistente.
+- Versione applicativa.
 
 ### Checklist post-edit
 
-1. `/sinner` desktop, tema scuro: foto integra (testa visibile), 3 KPI ordinate, chip Slam oro per AO/W/US/Finals.
-2. `/sinner` desktop, tema chiaro: tutto leggibile, nessun chip "fantasma".
-3. `/sinner` mobile (375px): foto in alto, info sotto, chip Slam wrap su 2 righe pulito.
-4. `npm run lint` + `npm run build`.
-5. `changelog.md` aggiornato.
-6. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
+1. `npm run check:italian` localmente → exit 0 sul codice attuale.
+2. Test negativo: cambio temporaneo `Miglior ranking` → `Best ranking`, lo script fallisce con file e riga corretti, poi rollback.
+3. `npm run lint` + `npm run build` invariati.
+4. PR su branch `develop`, assegnata `@matteobern9244`, label esistenti più adatte (es. `chore`, `ci`).
 
