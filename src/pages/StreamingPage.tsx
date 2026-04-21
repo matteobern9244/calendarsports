@@ -284,7 +284,8 @@ export default function StreamingPage() {
           {tvQuery.isLoading && <LoadingState message="Caricamento palinsesto..." />}
           {tvQuery.isError && (
             <ErrorState
-              message="Impossibile caricare il palinsesto."
+              message="Palinsesto TV non disponibile"
+              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta la guida TV ufficiale del fornitore selezionato."
               onRetry={() => tvQuery.refetch()}
             />
           )}
@@ -405,8 +406,12 @@ export default function StreamingPage() {
           {releasesQuery.isLoading && <LoadingState message="Caricamento uscite..." />}
           {releasesQuery.isError && (
             <ErrorState
-              message="Impossibile caricare le uscite."
+              message="Nuove uscite non disponibili"
+              detail="Il catalogo TMDB non risponde in questo momento. Riprova oppure consulta direttamente il sito di TMDB per scoprire le ultime uscite."
               onRetry={() => releasesQuery.refetch()}
+              externalLink="https://www.themoviedb.org/movie/upcoming"
+              externalLabel="Vedi nuove uscite su TMDB"
+              ctaHint="Tocca qui per il catalogo TMDB ufficiale"
             />
           )}
           {releasesQuery.isSuccess && !releasesQuery.data?.configured && (
