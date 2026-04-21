@@ -18,6 +18,10 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Streaming – filtro "Solo in arrivo"**: aggiunto toggle nel tab Nuove
+  uscite per nascondere le release con `releaseDate` già passata (utile
+  quando il fallback "widened" allarga la finestra). Stato persistito in URL
+  via `upcoming=1`. Versione applicativa invariata `2.1.0`.
 - **MotoGP – fix loghi costruttori**: corretti gli URL nella mappa
   `MOTOGP_CONSTRUCTOR_LOGOS` (Ducati, Aprilia, KTM, Yamaha, Honda) — gli URL
   precedenti su `resources.motogp.pulselive.com` erano placeholder non
