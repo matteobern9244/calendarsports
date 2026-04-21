@@ -18,6 +18,16 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Badge broadcaster: copertura estesa** oltre DAZN/Sky con helper unico
+  `src/lib/broadcasterStyle.ts`. Aggiunti token `--brand-now`, `--brand-amazon`,
+  `--brand-mediaset`, `--brand-rai`, `--brand-tv8`, `--brand-discovery`,
+  `--brand-eurosport` in `:root` e `.dark` (tinte schiarite per dark).
+  `Index.tsx` e `JuventusPage.tsx` ora usano `getBroadcasterStyle()` invece
+  del condizionale inline `if DAZN else Sky`. Broadcaster sconosciuti hanno
+  fallback neutro (`bg-muted text-foreground border-border`) sempre leggibile
+  in entrambi i temi. DAZN e Sky restano visivamente identici. Nessun cambio
+  funzionale, versione invariata `2.1.0`.
+
 - **Theme-color dinamico per browser chrome / PWA**: il `<meta name="theme-color">`
   neutro (senza `media`) viene ora scritto inline in `index.html` in base al tema
   salvato in `localStorage` (`cse-theme`) prima del primo paint, e aggiornato

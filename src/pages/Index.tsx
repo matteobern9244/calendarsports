@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
 import TonightTvList from "@/components/home/TonightTvList";
+import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
+import { cn } from "@/lib/utils";
 
 interface UpcomingEvent {
   sport: string;
@@ -183,21 +185,14 @@ export default function HomePage() {
             >
               {ev.broadcaster && (
                 <div className="flex flex-wrap gap-1.5">
-                  {ev.broadcaster.split('|').map((b) => b.trim()).filter(Boolean).map((name) => (
-                    <Badge
-                      key={name}
-                      variant="outline"
-                      className={
-                        name.toLowerCase().includes('dazn')
-                          ? 'bg-[hsl(var(--brand-dazn-contrast))] text-[hsl(var(--brand-dazn))] border-[hsl(var(--brand-dazn))]/30 dark:bg-[hsl(var(--brand-dazn))] dark:text-[hsl(var(--brand-dazn-contrast))] dark:border-[hsl(var(--brand-dazn))]/60 text-[10px]'
-                          : name.toLowerCase().includes('sky')
-                            ? 'bg-[hsl(var(--brand-sky))]/15 text-[hsl(var(--brand-sky))] border-[hsl(var(--brand-sky))]/40 dark:bg-[hsl(var(--brand-sky))]/30 dark:text-sky-100 dark:border-[hsl(var(--brand-sky))]/60 text-[10px]'
-                            : 'text-[10px]'
-                      }
-                    >
-                      {name}
-                    </Badge>
-                  ))}
+                  {ev.broadcaster.split('|').map((b) => b.trim()).filter(Boolean).map((name) => {
+                    const { className } = getBroadcasterStyle(name);
+                    return (
+                      <Badge key={name} variant="outline" className={cn('text-[10px]', className)}>
+                        {name}
+                      </Badge>
+                    );
+                  })}
                 </div>
               )}
             </EventCard>

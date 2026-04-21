@@ -22,6 +22,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { useEffect, useMemo, useState } from "react";
+import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 
 const PAGE_SIZE = 12;
 
@@ -237,19 +238,20 @@ export default function JuventusPage() {
                           <span className="text-[11px] text-muted-foreground whitespace-nowrap">{dateStr} · {timeStr}</span>
                           {m.broadcaster && (
                             <span className="inline-flex items-center gap-1 flex-wrap">
-                              {m.broadcaster.split(' | ').map((b: string) => (
-                                <span
-                                  key={b}
-                                  className={cn(
-                                    "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
-                                    b.trim() === 'DAZN'
-                                      ? "bg-[hsl(var(--brand-dazn))] text-[hsl(var(--brand-dazn-contrast))] dark:bg-[hsl(var(--brand-dazn-contrast))] dark:text-[hsl(var(--brand-dazn))]"
-                                      : "bg-[hsl(var(--brand-sky))]/20 text-[hsl(var(--brand-sky))] dark:bg-[hsl(var(--brand-sky))]/30 dark:text-sky-100"
-                                  )}
-                                >
-                                  {b.trim()}
-                                </span>
-                              ))}
+                              {m.broadcaster.split(' | ').map((b: string) => {
+                                const { className } = getBroadcasterStyle(b);
+                                return (
+                                  <span
+                                    key={b}
+                                    className={cn(
+                                      "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border",
+                                      className
+                                    )}
+                                  >
+                                    {b.trim()}
+                                  </span>
+                                );
+                              })}
                             </span>
                           )}
                         </div>
