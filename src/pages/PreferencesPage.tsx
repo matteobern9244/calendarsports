@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SVGProps, type ReactElement } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, RotateCcw, Settings2 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ import {
 interface SportConfig {
   key: SeasonKey;
   label: string;
-  Icon: (props: React.SVGProps<SVGSVGElement>) => JSX.Element;
+  Icon: (props: SVGProps<SVGSVGElement>) => ReactElement;
 }
 
 const SPORTS: SportConfig[] = [
