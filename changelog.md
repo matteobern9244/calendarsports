@@ -24,6 +24,22 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Changed
 
+- **Stasera in TV — layout ricostruito con CSS Grid condivisa**. In
+  `src/components/home/TonightTvList.tsx` la lista programmi su tablet/desktop
+  passa da flexbox per-riga a una griglia `<ul>` con `grid-template-columns`
+  condivise (sm: 5 colonne `3.5rem · auto · 1fr · 6.5rem · 4.5rem`; lg: 6
+  colonne con famiglia `8rem` davanti). Ogni `<li>` programma usa
+  `display: contents` per ereditare la griglia del padre, così tutte le celle
+  ora/canale/titolo/genere/durata cadono su colonne verticali perfettamente
+  allineate riga su riga, eliminando il "ballo" del chip genere e della
+  durata visibile in precedenza. Aggiunto `tabular-nums` sulla cella durata
+  per allineare le cifre. Cella genere sempre presente (anche vuota) per
+  preservare la colonna. Mobile (`<sm`) invariato: layout 2 righe stacked.
+  Label famiglia: divider colorato + label testuale ora visibili anche su
+  tablet (`lg:hidden`) sopra il primo programma di ogni famiglia, su desktop
+  (`lg:`) si trasformano in colonna laterale dedicata. `data-testid`
+  preservati (`family-divider`, `family-label-mobile`).
+
 - **Stasera in TV (desktop): chip genere e durata sempre allineati a destra**. In `src/components/home/TonightTvList.tsx` il blocco titolo+meta del layout desktop (`hidden sm:flex`) passa da `flex-wrap` a `flex items-center gap-3`: il titolo è ora wrappato in `<span class="flex-1 min-w-0 truncate" title={row.title}>`, così chip genere e durata restano `shrink-0` allineati in fondo a destra su ogni riga. Tooltip nativo (`title`) preserva il titolo completo quando troncato. Layout mobile invariato. Nessuna modifica a logica dati, filtri, paginazione o divider famiglia. Versione applicativa invariata `2.1.0`.
 
 - **Stagione automatica per ogni sport**. Eliminata l'impostazione "Stagioni predefinite" dalle Preferenze e i `SeasonSelector` da tutte le pagine sportive. Sinner, F1 e MotoGP usano sempre l'anno solare corrente; Juventus usa la stagione Serie A in corso (cutoff luglio: gennaio-giugno → anno-1, luglio-dicembre → anno corrente). Logica centralizzata nel nuovo helper `src/lib/currentSeason.ts` (`getCurrentSinnerSeason`, `getCurrentJuventusSeason`, `getCurrentF1Season`, `getCurrentMotoGPSeason`) coperto da `src/lib/currentSeason.test.ts`. `src/pages/Index.tsx` ora usa `getCurrentJuventusSeason()` al posto dell'hard-coded `2025`. Il pannello Preferenze contiene ora solo la sezione "Aspetto" (toggle tema chiaro/scuro): rimosso il footer con il bottone "Ripristina" perché non c'è più nulla da ripristinare. Le preferenze stagione precedentemente salvate in `localStorage["cse-seasons"]` vengono rimosse automaticamente al primo caricamento (`src/main.tsx`). Versione applicativa invariata `2.1.0`.
