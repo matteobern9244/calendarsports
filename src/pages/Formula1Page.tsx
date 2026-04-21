@@ -136,7 +136,12 @@ export default function Formula1Page() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {c.logoUrl && (
-                            <img src={c.logoUrl} alt={c.constructor} className="h-6 w-10 object-contain flex-shrink-0" />
+                            <img
+                              src={c.logoUrl}
+                              alt={c.constructor}
+                              className="h-6 w-10 object-contain flex-shrink-0"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            />
                           )}
                           <span className="font-semibold">{c.constructor}</span>
                         </div>

@@ -30,16 +30,18 @@ const F1_DRIVER_PHOTOS: Record<string, string> = {
 
 // F1 Constructor logos
 const F1_CONSTRUCTOR_LOGOS: Record<string, string> = {
-  'mclaren': 'https://media.formula1.com/content/dam/fom-website/teams/2025/mclaren-logo.png.transform/2col/image.png',
-  'red bull': 'https://media.formula1.com/content/dam/fom-website/teams/2025/red-bull-racing-logo.png.transform/2col/image.png',
-  'ferrari': 'https://media.formula1.com/content/dam/fom-website/teams/2025/ferrari-logo.png.transform/2col/image.png',
-  'mercedes': 'https://media.formula1.com/content/dam/fom-website/teams/2025/mercedes-logo.png.transform/2col/image.png',
-  'aston martin': 'https://media.formula1.com/content/dam/fom-website/teams/2025/aston-martin-logo.png.transform/2col/image.png',
-  'alpine f1 team': 'https://media.formula1.com/content/dam/fom-website/teams/2025/alpine-logo.png.transform/2col/image.png',
-  'williams': 'https://media.formula1.com/content/dam/fom-website/teams/2025/williams-logo.png.transform/2col/image.png',
-  'rb f1 team': 'https://media.formula1.com/content/dam/fom-website/teams/2025/rb-logo.png.transform/2col/image.png',
-  'haas f1 team': 'https://media.formula1.com/content/dam/fom-website/teams/2025/haas-logo.png.transform/2col/image.png',
-  'sauber': 'https://media.formula1.com/content/dam/fom-website/teams/2025/kick-sauber-logo.png.transform/2col/image.png',
+  // Asset stabili da Wikimedia (verificati 200 OK). I path CMS ufficiali F1
+  // erano instabili (404 ricorrenti su rb-logo, kick-sauber-logo, alpine-logo).
+  'mclaren': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Mclaren_Logo_2021.svg/320px-Mclaren_Logo_2021.svg.png',
+  'red bull': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Red_Bull_Racing_-_2021_Logo.svg/320px-Red_Bull_Racing_-_2021_Logo.svg.png',
+  'ferrari': 'https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Scuderia_Ferrari_HP_logo_24.svg/320px-Scuderia_Ferrari_HP_logo_24.svg.png',
+  'mercedes': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Mercedes_AMG_Petronas_F1_Logo.svg/320px-Mercedes_AMG_Petronas_F1_Logo.svg.png',
+  'aston martin': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Aston_Martin_F1_Team_logo_2024.jpg/320px-Aston_Martin_F1_Team_logo_2024.jpg',
+  'alpine f1 team': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/BWT_Alpine_F1_Team_Logo.png/320px-BWT_Alpine_F1_Team_Logo.png',
+  'williams': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Williams_Racing_2022_logo.svg/320px-Williams_Racing_2022_logo.svg.png',
+  'rb f1 team': 'https://upload.wikimedia.org/wikipedia/en/thumb/2/2b/VCARB_F1_logo.svg/320px-VCARB_F1_logo.svg.png',
+  'haas f1 team': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/MoneyGram_Haas_F1_Team_Logo.svg/320px-MoneyGram_Haas_F1_Team_Logo.svg.png',
+  'sauber': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Logo_of_Stake_F1_Team_Kick_Sauber.png/320px-Logo_of_Stake_F1_Team_Kick_Sauber.png',
 };
 
 function getConstructorLogo(name: string): string | null {

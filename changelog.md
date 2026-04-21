@@ -22,6 +22,16 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   uscite per nascondere le release con `releaseDate` già passata (utile
   quando il fallback "widened" allarga la finestra). Stato persistito in URL
   via `upcoming=1`. Versione applicativa invariata `2.1.0`.
+- **Formula 1 – fix loghi costruttori**: sostituiti i 10 URL nella mappa
+  `F1_CONSTRUCTOR_LOGOS` (`supabase/functions/sports-f1/index.ts`) con
+  asset stabili da Wikimedia Commons / Wikipedia EN — gli URL precedenti
+  su `media.formula1.com/.../teams/2025/<team>-logo.png.transform/2col/...`
+  restituivano 404 per diverse scuderie (RB, Kick Sauber, Alpine, ecc.),
+  causando spazi vuoti nella tab "Costruttori". Aggiunto fallback `onError`
+  sull'`<img>` del logo in `Formula1Page.tsx` per nascondere immagini rotte
+  (stessa strategia già adottata per MotoGP). Tutti i 10 URL verificati
+  200 OK prima del commit. Richiede deploy edge function `sports-f1`.
+  Versione applicativa invariata `2.1.0`.
 - **MotoGP – fix loghi costruttori**: corretti gli URL nella mappa
   `MOTOGP_CONSTRUCTOR_LOGOS` (Ducati, Aprilia, KTM, Yamaha, Honda) — gli URL
   precedenti su `resources.motogp.pulselive.com` erano placeholder non
