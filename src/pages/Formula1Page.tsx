@@ -99,7 +99,13 @@ export default function Formula1Page() {
         </TabsContent>
 
         <TabsContent value="piloti">
-          {drvLoading && <LoadingState message="Caricamento classifica piloti..." />}
+          {drvLoading && (
+            <LoadingState
+              message="Caricamento classifica piloti..."
+              externalLink="https://www.formula1.com/en/results/2025/drivers"
+              externalLabel="Scopri ora su Formula1.com"
+            />
+          )}
           {drvError && <ErrorState message="Errore nel caricamento della classifica" onRetry={() => drvRefetch()} />}
           {drivers && drivers.length > 0 && (
             <div className="rounded-xl border border-border overflow-hidden">
@@ -177,7 +183,13 @@ export default function Formula1Page() {
         </TabsContent>
 
         <TabsContent value="costruttori">
-          {conLoading && <LoadingState message="Caricamento classifica costruttori..." />}
+          {conLoading && (
+            <LoadingState
+              message="Caricamento classifica costruttori..."
+              externalLink="https://www.formula1.com/en/results/2025/team"
+              externalLabel="Scopri ora su Formula1.com"
+            />
+          )}
           {conError && <ErrorState message="Errore nel caricamento della classifica" />}
           {constructors && constructors.length > 0 && (
             <div className="rounded-xl border border-border overflow-hidden">
