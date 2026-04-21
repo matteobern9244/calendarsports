@@ -202,8 +202,8 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
           )}
 
           {visibleSlams.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading mb-2">
+            <div className="mt-5 border-t border-border/50 pt-4">
+              <p className="mb-2.5 font-heading text-[10px] uppercase tracking-widest text-primary/80">
                 Grande Slam
               </p>
               <ul className="flex flex-wrap gap-2" aria-label="Risultati Grande Slam">
@@ -215,16 +215,20 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
                       key={key}
                       title={`${full}: ${r.raw}`}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-heading",
+                        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-heading shadow-sm",
                         isWin
-                          ? "border-primary/40 bg-primary/10 text-primary"
-                          : "border-border bg-muted text-foreground",
+                          ? "gold-gradient text-primary-foreground border border-primary/40"
+                          : "border border-border bg-secondary/30 text-foreground",
                       )}
                     >
                       <span className="font-bold">{short}</span>
-                      <span className="opacity-80">{r.best}</span>
+                      <span className={cn("text-xs", isWin ? "opacity-90" : "opacity-80")}>
+                        {r.best}
+                      </span>
                       {r.years.length > 0 && (
-                        <span className="opacity-70">·{shortYears(r.years)}</span>
+                        <span className={cn("text-xs", isWin ? "opacity-80" : "opacity-70")}>
+                          ·{shortYears(r.years)}
+                        </span>
                       )}
                     </li>
                   );
@@ -234,10 +238,13 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
           )}
 
           {(props.source || statsUpdated) && (
-            <p className="mt-3 text-[11px] text-muted-foreground">
-              {props.source ? `Fonte: ${props.source}` : null}
-              {props.source && statsUpdated ? " · " : ""}
-              {statsUpdated ? `Statistiche aggiornate al ${statsUpdated}` : null}
+            <p className="mt-5 flex items-center gap-1.5 border-t border-border/30 pt-3 text-xs text-muted-foreground">
+              <Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>
+                {props.source ? `Fonte: ${props.source}` : null}
+                {props.source && statsUpdated ? " · " : ""}
+                {statsUpdated ? `Statistiche aggiornate al ${statsUpdated}` : null}
+              </span>
             </p>
           )}
         </div>
