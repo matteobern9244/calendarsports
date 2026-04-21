@@ -4,7 +4,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Compass,
+  ExternalLink,
   Film,
+  Info,
   Radio,
   Trophy,
   Tv,
@@ -35,6 +37,26 @@ const FAMILY_ICONS: Record<StreamingFamilyId, LucideIcon> = {
   discovery: Compass,
 };
 
+/**
+ * Pagine ufficiali della guida TV per famiglia. Usate come fonte esterna
+ * di fallback quando il palinsesto restituito dalle Edge Functions e'
+ * incompleto (programmi senza orario di fine), in modo che l'utente
+ * possa sempre verificare la programmazione reale sul sito ufficiale.
+ */
+const FAMILY_EPG_URLS: Record<StreamingFamilyId, { url: string; label: string }> = {
+  rai: { url: "https://www.rai.it/guidatv/", label: "Apri Guida TV RAI" },
+  mediaset: {
+    url: "https://www.mediasetinfinity.mediaset.it/guidatv",
+    label: "Apri Guida TV Mediaset",
+  },
+  "sky-sport": { url: "https://guidatv.sky.it/", label: "Apri Guida TV Sky" },
+  "sky-cinema": { url: "https://guidatv.sky.it/", label: "Apri Guida TV Sky" },
+  discovery: {
+    url: "https://www.discoveryplus.com/it/guida-tv",
+    label: "Apri Guida TV Discovery",
+  },
+};
+
 interface TvHighlight {
   family: StreamingFamilyId;
   channel: string;
@@ -53,6 +75,14 @@ interface TvHighlight {
    * confronto numerico, senza casi speciali per il wrap.
    */
   endMinutesFromMidnight: number;
+  /**
+   * `true` quando la fonte ha fornito un orario di fine reale per il
+   * programma. Quando `false` significa che `endMinutesFromMidnight` e
+   * `durationMin` sono solo stime: il programma viene mostrato per
+   * trasparenza ma annotato come "dati incompleti" e indirizzato alla
+   * Guida TV ufficiale.
+   */
+  hasExplicitEnd: boolean;
   title: string;
   genre?: string;
 }
@@ -109,8 +139,19 @@ export default function TonightTvList() {
           const d = new Date(p.start);
           const hhmm = timeFmt.format(d);
           const [hStr, mStr] = hhmm.split(":");
-          const endMs = p.end ? new Date(p.end).getTime() : d.getTime() + 30 * 60 * 1000;
-          const durationMin = Math.max(0, Math.round((endMs - d.getTime()) / 60000));
+          const hasExplicitEnd = Boolean(p.end);
+          // Quando la fonte non fornisce l'orario di fine assumiamo una
+          // durata "open-ended" pari alla finestra di prima serata: il
+          // programma e' candidato per la visualizzazione purche' parta
+          // prima delle 23:00 (vedi overlapsPrimeWindow piu' in basso).
+          // La durata mostrata in cella resta pero' 0 cosi' l'utente non
+          // legge una durata inventata.
+          const endMs = hasExplicitEnd
+            ? new Date(p.end).getTime()
+            : d.getTime() + 24 * 60 * 60 * 1000; // sentinel "fine ignota"
+          const durationMin = hasExplicitEnd
+            ? Math.max(0, Math.round((endMs - d.getTime()) / 60000))
+            : 0;
           const endHHMM = timeFmt.format(new Date(endMs));
           const [endHStr, endMStr] = endHHMM.split(":");
           const startMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
@@ -132,6 +173,7 @@ export default function TonightTvList() {
             hourRome: parseInt(hStr, 10),
             minuteRome: parseInt(mStr, 10),
             endMinutesFromMidnight,
+            hasExplicitEnd,
             title: p.title,
             genre: p.genre,
           });
@@ -159,8 +201,18 @@ export default function TonightTvList() {
     // 20:40 -> 22:50) resta visibile perche' attraversa la fascia,
     // mentre programmi che iniziano alle 23:00 o dopo, o che
     // finiscono entro le 21:00, vengono esclusi.
+    //
+    // Programmi senza orario di fine reale (`hasExplicitEnd === false`)
+    // ricevono un trattamento dedicato: vengono inclusi solo quando
+    // l'inizio cade prima delle 23:00 (la fascia li potrebbe coprire),
+    // senza richiedere il check sulla fine, perche' la durata effettiva
+    // non e' nota. Vengono comunque marcati come "dati incompleti" cosi'
+    // l'UI mostra il banner con link alla Guida TV ufficiale.
     const overlapsPrimeWindow = (h: TvHighlight) => {
       const startMin = h.hourRome * 60 + h.minuteRome;
+      if (!h.hasExplicitEnd) {
+        return startMin < PRIME_TIME_END_EXCLUSIVE_MIN;
+      }
       return (
         startMin < PRIME_TIME_END_EXCLUSIVE_MIN &&
         h.endMinutesFromMidnight > PRIME_TIME_START_MIN
@@ -250,6 +302,20 @@ export default function TonightTvList() {
     [tonightHighlights, safePage],
   );
 
+  // Famiglie attualmente in pagina che hanno almeno un programma con
+  // dati incompleti (orario di fine mancante). Per ciascuna mostriamo
+  // un avviso con link alla Guida TV ufficiale, cosi' l'utente puo'
+  // verificare la durata reale alla fonte.
+  const incompleteFamilies = useMemo(() => {
+    const seen = new Set<StreamingFamilyId>();
+    for (const h of tonightHighlights) {
+      if (!h.hasExplicitEnd) seen.add(h.family);
+    }
+    return Array.from(seen).sort(
+      (a, b) => familyOrder[a] - familyOrder[b],
+    );
+  }, [tonightHighlights, familyOrder]);
+
   return (
     <Card className="border-primary/30 bg-gradient-to-br from-card to-card/60">
       <CardContent className="p-4 sm:p-5 space-y-4">
@@ -300,6 +366,46 @@ export default function TonightTvList() {
 
         {tonightHighlights.length > 0 ? (
           <>
+            {incompleteFamilies.length > 0 && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="rounded-md border border-[hsl(var(--gold))]/40 bg-[hsl(var(--gold))]/10 px-3 py-2.5 text-xs text-foreground/85 space-y-2"
+              >
+                <div className="flex items-start gap-2">
+                  <Info
+                    className="h-4 w-4 shrink-0 mt-0.5 text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))]"
+                    aria-hidden="true"
+                    focusable="false"
+                  />
+                  <p className="leading-snug">
+                    Per alcuni canali la fonte non fornisce l'orario di fine: durata e
+                    sovrapposizione con la prima serata sono stime. Verifica il palinsesto
+                    reale sulla Guida TV ufficiale.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pl-6">
+                  {incompleteFamilies.map((fam) => {
+                    const meta = FAMILY_EPG_URLS[fam];
+                    const famLabel = familyLabelMap[fam];
+                    return (
+                      <a
+                        key={fam}
+                        href={meta.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${meta.label} (${famLabel}). Si apre in una nuova scheda del browser.`}
+                        className="inline-flex items-center gap-1 rounded-full border border-[hsl(var(--gold))]/40 bg-card/60 px-2.5 py-1 text-[11px] font-heading uppercase tracking-wider text-foreground transition-colors hover:bg-[hsl(var(--gold))]/15 hover:border-[hsl(var(--gold))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        <ExternalLink className="h-3 w-3" aria-hidden="true" focusable="false" />
+                        <span>{meta.label}</span>
+                        <span className="sr-only"> (si apre in una nuova scheda)</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <ul
               role="table"
               aria-label="Programmi in prima serata stasera"
@@ -369,8 +475,14 @@ export default function TonightTvList() {
                       {(() => {
                         const FamilyIcon = FAMILY_ICONS[row.family];
                         const g = row.genre || inferGenre(row.family, row.channel, row.title);
-                        const dur = formatDuration(row.durationMin);
-                        const durSpoken = formatDurationSpoken(row.durationMin);
+                        const dur = row.hasExplicitEnd ? formatDuration(row.durationMin) : "";
+                        const durSpoken = row.hasExplicitEnd
+                          ? formatDurationSpoken(row.durationMin)
+                          : "";
+                        const durDisplay = row.hasExplicitEnd ? dur : "—";
+                        const durAriaLabel = row.hasExplicitEnd
+                          ? (durSpoken ? `Durata ${durSpoken}` : undefined)
+                          : "Durata non disponibile dalla fonte";
                         const familyLabel = familyLabelMap[row.family];
                         return (
                           <>
@@ -445,11 +557,11 @@ export default function TonightTvList() {
                             <div
                               role="cell"
                               aria-colindex={6}
-                              aria-label={durSpoken ? `Durata ${durSpoken}` : undefined}
-                              aria-hidden={durSpoken ? undefined : true}
+                              aria-label={durAriaLabel}
                               className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-4 sm:border-t-2 sm:border-border font-mono text-xs text-foreground/75 tabular-nums whitespace-nowrap transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
+                              title={row.hasExplicitEnd ? undefined : "Orario di fine non disponibile dalla fonte"}
                             >
-                              {dur || ""}
+                              {durDisplay}
                             </div>
                           </>
                         );
@@ -461,7 +573,9 @@ export default function TonightTvList() {
                           annunciata in una sola frase coerente. */}
                       {(() => {
                         const g = row.genre || inferGenre(row.family, row.channel, row.title);
-                        const durSpoken = formatDurationSpoken(row.durationMin);
+                        const durSpoken = row.hasExplicitEnd
+                          ? formatDurationSpoken(row.durationMin)
+                          : "";
                         const ariaParts = [
                           `${familyLabelMap[row.family]} ${row.channel}`,
                           `alle ${row.time}`,
@@ -469,6 +583,7 @@ export default function TonightTvList() {
                         ];
                         ariaParts.push(`genere ${g}`);
                         if (durSpoken) ariaParts.push(`durata ${durSpoken}`);
+                        else if (!row.hasExplicitEnd) ariaParts.push("durata non disponibile dalla fonte");
                         return (
                           <article
                             aria-label={ariaParts.join(", ")}
@@ -485,9 +600,17 @@ export default function TonightTvList() {
                           >
                             {row.channel}
                           </Badge>
-                          {formatDuration(row.durationMin) && (
+                          {row.hasExplicitEnd && formatDuration(row.durationMin) && (
                             <span className="text-[11px] text-foreground/75 whitespace-nowrap font-mono leading-none ml-auto">
                               {formatDuration(row.durationMin)}
+                            </span>
+                          )}
+                          {!row.hasExplicitEnd && (
+                            <span
+                              className="text-[11px] text-foreground/60 whitespace-nowrap font-mono leading-none ml-auto"
+                              title="Orario di fine non disponibile dalla fonte"
+                            >
+                              —
                             </span>
                           )}
                         </div>
