@@ -1,100 +1,107 @@
 
 
-## Sinner: passaggio a Wikipedia italiana come fonte primaria
+## Italianizzazione totale dell'app
 
-### Verifica preliminare
+### Direttiva da memorizzare
 
-Ho fatto fetch di `https://it.wikipedia.org/wiki/Jannik_Sinner` e confermato:
+**Tutta l'interfaccia utente deve essere in lingua italiana. Le uniche eccezioni consentite sono:**
+- `STREAMING` (nome di sezione di prodotto)
+- `CALENDAR EVENTS` (nome dell'app)
 
-- L'infobox è diverso da quello inglese: etichette in **italiano** (`Altezza`, `Peso`, `Vittorie/sconfitte`, `Titoli vinti`, `Miglior ranking`, `Ranking attuale`).
-- Ranking attuale: **1º** (matcha realtà). Miglior ranking: **1º (10 giugno 2024)**.
-- Record carriera singolare: **345–88 (79.68%)**. Titoli vinti carriera: **27**.
-- Altezza: **191 cm**. Peso: **77 kg** (presente sulla IT, assente sulla EN).
-- Risultati Grande Slam con stato attuale: AO **V** (2024, 2025), RG **F** (2025), Wimbledon **V** (2025), US Open **V** (2024). Tour Finals **V** (2024, 2025).
-- Stato "Statistiche aggiornate al **12 aprile 2026**".
-- Foto principale aggiornata (US Open 2025): `https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Jannik_Sinner_US_Open_2025_(cropped).jpg/500px-Jannik_Sinner_US_Open_2025_(cropped).jpg`.
-- Luogo nascita: **San Candido**, data **16 agosto 2001** (dal primo paragrafo, non dall'infobox).
-- Coach: non in infobox IT — va estratto dal testo carriera o lasciato vuoto.
+Nomi propri (Jannik Sinner, Juventus, Formula 1, MotoGP, Sky Sport, Netflix, Prime Video, Disney+, HBO Max, Roland Garros, Wimbledon, US Open, Australian Open, ATP Finals, ecc.) restano nella loro forma ufficiale: non sono "inglese", sono nomi propri.
 
-La pagina stagione `2026_Jannik_Sinner_tennis_season` **non ha equivalente IT** stabile (esiste solo l'inglese). Quindi:
+Termini tecnici universali del dominio (sigle: `ATP`, `WTA`, `GP`, `PL1/PL2/PL3`, `TMDB`, `RAI`) restano invariati: non sono testo "inglese da tradurre".
 
-- **Player info, ranking, palmarès Slam** → da Wikipedia IT.
-- **Calendario tornei 2026 + match risultati** → continuano da Wikipedia EN (`2026_Jannik_Sinner_tennis_season`), perché non esiste fonte IT equivalente affidabile. Etichetta dichiarata.
+### Stringhe inglesi trovate da tradurre
 
-### Cosa cambia
+Scansione completa di `src/`, `index.html`, `public/`. Risultati:
 
-**1. `supabase/functions/sports-tennis/index.ts` — modifica mirata**
+| File | Stringa attuale | Sostituzione |
+|---|---|---|
+| `src/pages/NotFound.tsx` | `Oops! Page not found` | `Pagina non trovata` |
+| `src/pages/NotFound.tsx` | `Return to Home` | `Torna alla Home` |
+| `src/pages/NotFound.tsx` (log) | `404 Error: User attempted...` | `Errore 404: tentativo di accedere a una rotta inesistente` |
+| `src/components/ui/pagination.tsx` | aria `Go to previous page` + label `Previous` | `Vai alla pagina precedente` / `Precedente` |
+| `src/components/ui/pagination.tsx` | aria `Go to next page` + label `Next` | `Vai alla pagina successiva` / `Successiva` |
+| `src/components/ui/pagination.tsx` | aria `pagination` | `paginazione` |
+| `src/components/ui/pagination.tsx` | sr-only `More pages` | `Altre pagine` |
+| `src/components/ui/dialog.tsx` | sr-only `Close` | `Chiudi` |
+| `src/components/ui/sheet.tsx` | sr-only `Close` | `Chiudi` |
+| `src/components/ui/sidebar.tsx` | aria + sr-only `Toggle Sidebar` | `Apri/chiudi barra laterale` |
+| `src/components/ui/sidebar.tsx` | title `Toggle Sidebar` | `Apri/chiudi barra laterale` |
+| `src/components/ui/carousel.tsx` | sr-only `Previous slide` / `Next slide` | `Slide precedente` / `Slide successiva` |
+| `src/components/ui/breadcrumb.tsx` | aria `breadcrumb`, sr-only `More` | `breadcrumb` (termine accettato in IT tecnico) → `percorso`, `Altro` |
+| `src/components/sinner/PlayerHeader.tsx` | label `Best ranking` | `Miglior ranking` |
+| `src/components/common/EventCard.tsx` | badge `LIVE` | `IN DIRETTA` |
 
-- Action `player-info`: cambio URL da `en.wikipedia.org/wiki/Jannik_Sinner` a `it.wikipedia.org/wiki/Jannik_Sinner`. Riscrivo il parser infobox sulle etichette italiane:
-  - `altezza` → `height` (es. "191 cm")
-  - `peso` → nuovo campo `weight` (es. "77 kg")
-  - `vittorie/sconfitte` (singolare) → `careerRecord`
-  - `titoli vinti` (singolare) → `careerTitles`
-  - `miglior ranking` (singolare) → `careerHigh` + `careerHighDate`
-  - `ranking attuale` (singolare) → `ranking`
-- Aggiungo parser per la sezione "Risultati nei tornei del Grande Slam": estraggo `{ australianOpen, rolandGarros, wimbledon, usOpen }` con `{ best: 'V'|'F'|'SF'|'QF'|...|null, years: number[] }` e analoga per `tourFinals`.
-- Estraggo data nascita + luogo dal primo paragrafo (regex su "(San Candido), 16 agosto 2001").
-- Coach: tentativo regex sul testo "allenat[oa] da [Nome Cognome]"; se non trovato → `null`.
-- Foto: hardcode al nuovo URL US Open 2025 (più recente di quello attuale 2024). Mantengo fallback `JS` se 404.
-- "Statistiche aggiornate al": estraggo data → nuovo campo `statsUpdatedAt` (ISO).
-- Source string: `"Wikipedia Italia (it.wikipedia.org)"`.
-- Cache 30 min: invariata.
-- Action `schedule`, `results`, `next-event`: invariati, continuano a leggere da `en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season` (dichiarato nel commento di intestazione: due fonti, IT per profilo, EN per stagione 2026).
-
-**2. `src/components/sinner/PlayerHeader.tsx` — estensione campi**
-
-- Aggiungo prop `weight?: string` mostrato in `<dl>` accanto ad `Altezza`.
-- Aggiungo prop `slamResults?: { australianOpen, rolandGarros, wimbledon, usOpen, tourFinals }` e renderizzo una sezione compatta "Grande Slam" sotto le statistiche, con 5 chip: AO V·24·25, RG F·25, W V·25, US V·24, Finals V·24·25 (chip dorate per V, neutre per altri esiti).
-- Aggiungo prop `statsUpdatedAt?: string` → footer cambia da "Fonte dati: …" a "Fonte: Wikipedia Italia · Statistiche aggiornate al 12 aprile 2026".
-- Foto: nessuna modifica logica, solo passa il nuovo URL via payload.
-
-**3. `src/hooks/useSportsData.ts` — type update**
-
-- Estendo l'interfaccia di ritorno `useSinnerInfo` con `weight`, `slamResults`, `statsUpdatedAt`. `careerTitles`, `careerRecord`, `careerHigh` restano (ma ora con valori IT corretti, es. record 345-88 invece dei numeri parziali EN).
-- `staleTime` invariato (30 min).
-
-**4. `src/pages/SinnerPage.tsx` — pass-through**
-
-- Inoltro i nuovi campi al `PlayerHeader`. Nessuna ristrutturazione.
-
-**5. Documentazione**
-
-- `README.md` sezione "Fonti dati" → tennis: "Wikipedia Italia (profilo, ranking, palmarès Slam) + Wikipedia EN (stagione 2026 match-by-match)". Dichiarazione esplicita della doppia fonte.
-- `changelog.md` `### Changed`: profilo Sinner ora da Wikipedia Italia, foto aggiornata a US Open 2025, aggiunto peso e palmarès Slam visualizzato.
+Verificate e **già in italiano**: `Index.tsx`, `StreamingPage.tsx`, `SinnerPage.tsx`, `JuventusPage.tsx`, `Formula1Page.tsx`, `MotoGPPage.tsx`, `PreferencesPage.tsx`, `Header.tsx`, `TonightTvList.tsx`, `ReleaseDetailDialog.tsx`, `OfflineFallback.tsx`, `OfflineIndicator.tsx`, `ErrorBoundary.tsx`, `EmptyState.tsx`, `LoadingState.tsx`, `ErrorState.tsx`, `TimezoneBadge.tsx`, `EventCountdown.tsx`, `useSyncAll.ts`, `manifest.webmanifest`, `index.html` (`<html lang="it">`, meta description in italiano, title contiene solo nomi propri di sezione).
 
 ### Cosa NON cambia
 
-- Stack, routing, hook React Query: invariati.
-- Pagine F1/MotoGP/Juventus: invariate.
-- Logica match/calendario 2026: invariata (resta Wikipedia EN, non esiste IT).
-- Versione resta **2.1.0**.
+- Identificatori di codice (`type RangeId`, `value="all"`, query keys `streaming-tv`, ecc.): non sono UI, non si traducono.
+- Commenti JSDoc in inglese nei file di codice: non visibili all'utente, fuori scope.
+- Console.error / log tecnici (eccezione: `NotFound.tsx` lo traduco perché è un mock di onboarding evidente).
+- Nomi di file, route paths (`/sinner`, `/preferenze`, `/streaming`, `/formula1`, `/motogp`).
+- Alt text già in italiano e quelli che usano nomi propri/template literal (es. `Bandiera ${iso}`).
+- Sigle tecniche (PL1/PL2/PL3, Qual, Sprint, GP, Pos, G/V/N/P/DR/Pts, ATP, WTA, TMDB, RAI).
+- Brand: `STREAMING`, `CALENDAR EVENTS`, Sky Sport, Netflix, Prime Video, Disney+, HBO Max, Mediaset, Discovery, RAI, Juventus, Formula 1, MotoGP, Jannik Sinner.
 
-### Limiti dichiarati
+### Memorizzazione della direttiva
 
-- Wikipedia IT non ha pagina stagione 2026 di Sinner → il calendario e i match restano da fonte EN. Doppia fonte = doppia superficie di rottura.
-- Coach non è in infobox IT: estrazione da testo è fragile, in caso di fallimento il campo sparisce dalla UI invece di crashare.
-- Latenza editoriale Wikipedia (24-48h) e cache 30 min: invariate.
+1. **Aggiungo regola nuova nella memoria progetto** creando `mem://constraints/italian-only` con:
+
+   ```
+   ---
+   name: Italian-only UI policy
+   description: All user-facing UI must be in Italian, only "STREAMING" and "CALENDAR EVENTS" allowed in English
+   type: constraint
+   ---
+   Tutta l'interfaccia utente deve essere in italiano.
+   Eccezioni consentite: "STREAMING" (sezione), "CALENDAR EVENTS" (nome app).
+   Nomi propri (squadre, atleti, competizioni, brand) restano invariati nella loro forma ufficiale.
+   Sigle tecniche universali (ATP, WTA, GP, PL1, TMDB, RAI) non sono "inglese da tradurre".
+   Quando aggiungi nuovo testo UI, usalo già in italiano: niente stringhe inglesi nemmeno in placeholder, aria-label, sr-only, toast, error message.
+   ```
+
+2. **Aggiorno `mem://index.md` Core**: aggiungo la riga
+   `Italian-only UI: solo "STREAMING" e "CALENDAR EVENTS" in inglese; nomi propri/sigle restano invariati.`
+   (la regola "Italian-only UI" già esiste in forma generica nel Core attuale come "Italian-only UI" — la rendo esplicita ed enforce).
+
+3. **Aggiorno `AGENTS.md`** (sezione "Regole di modifica"): aggiungo punto
+   `- Tutta l'UI dell'app e' in italiano. Le uniche eccezioni autorizzate sono i token "STREAMING" (nome sezione) e "CALENDAR EVENTS" (nome app). Nomi propri di squadre, atleti, competizioni, broadcaster e provider restano nella loro forma ufficiale. Sigle tecniche (ATP, WTA, GP, TMDB, RAI, Pos, Pts, ecc.) non sono considerate "inglese". Vietato introdurre testo inglese in stringhe utente, placeholder, aria-label, sr-only, toast, error message o titoli pagina.`
+
+4. **Aggiorno `.github/instructions/frontend.instructions.md`** con lo stesso vincolo, così Copilot/Codex lo applicano in IDE.
+
+5. **`changelog.md`** sezione `### Changed` con voce "Italianizzazione totale UI: tradotti residui inglesi nei componenti shadcn (pagination, dialog, sheet, sidebar, carousel, breadcrumb), in `NotFound.tsx`, `PlayerHeader.tsx` (Best ranking → Miglior ranking) ed `EventCard.tsx` (badge LIVE → IN DIRETTA). Memorizzata la policy nei file di documentazione (`AGENTS.md`, frontend instructions, memoria progetto)."
 
 ### File modificati / creati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `supabase/functions/sports-tennis/index.ts` | EDIT | Cambio URL player-info a Wikipedia IT, parser infobox italiano, parser palmarès Slam, foto US Open 2025, campo `statsUpdatedAt` e `weight`. |
-| `src/components/sinner/PlayerHeader.tsx` | EDIT | Aggiunti `weight`, `slamResults` (chip), `statsUpdatedAt` in footer. |
-| `src/hooks/useSportsData.ts` | EDIT | Estensione tipi `useSinnerInfo`. |
-| `src/pages/SinnerPage.tsx` | EDIT | Pass-through nuovi campi al `PlayerHeader`. |
-| `README.md` | EDIT | Aggiornata sezione Fonti dati con doppia fonte tennis (IT profilo + EN stagione). |
-| `changelog.md` | EDIT | `### Changed` voce dedicata. |
+| `src/pages/NotFound.tsx` | EDIT | Traduzione testo + console.error in italiano |
+| `src/components/ui/pagination.tsx` | EDIT | Traduzione `Previous`, `Next`, aria-label, sr-only |
+| `src/components/ui/dialog.tsx` | EDIT | sr-only `Close` → `Chiudi` |
+| `src/components/ui/sheet.tsx` | EDIT | sr-only `Close` → `Chiudi` |
+| `src/components/ui/sidebar.tsx` | EDIT | `Toggle Sidebar` → `Apri/chiudi barra laterale` |
+| `src/components/ui/carousel.tsx` | EDIT | `Previous/Next slide` → `Slide precedente/successiva` |
+| `src/components/ui/breadcrumb.tsx` | EDIT | aria `breadcrumb` (lasciato, termine accettato) + sr-only `More` → `Altro` |
+| `src/components/sinner/PlayerHeader.tsx` | EDIT | `Best ranking` → `Miglior ranking` |
+| `src/components/common/EventCard.tsx` | EDIT | badge `LIVE` → `IN DIRETTA` |
+| `mem://constraints/italian-only` | NUOVO | Memoria di vincolo |
+| `mem://index.md` | EDIT | Aggiunta riga Core sull'Italian-only |
+| `AGENTS.md` | EDIT | Aggiunta regola "Lingua UI" in "Regole di modifica" |
+| `.github/instructions/frontend.instructions.md` | EDIT | Aggiunto vincolo lingua italiana |
+| `changelog.md` | EDIT | Voce dedicata in `### Changed` |
 
 ### Checklist post-edit
 
-1. `/sinner`: foto Sinner US Open 2025 in alto a sinistra, ranking **#1**, footer "Statistiche aggiornate al 12 aprile 2026 · Fonte: Wikipedia Italia".
-2. Card profilo mostra: Altezza 191 cm, Peso 77 kg, Mano destra, Nato a San Candido.
-3. Sezione palmarès: AO V (24·25), RG F (25), W V (25), US V (24), Finals V (24·25).
-4. Tab Risultati e Tornei: dati 2026 invariati (provenienza EN).
-5. DevTools Network: chiamata `sports-tennis?action=player-info` ritorna `source: "Wikipedia Italia (it.wikipedia.org)"`.
-6. Cache hit entro 30 min.
+1. `/non-esiste`: pagina 404 in italiano.
+2. `/streaming` (tab Nuove uscite con paginazione): pulsanti `Precedente` / `Successiva`.
+3. `/sinner`: card profilo mostra `Miglior ranking` (non `Best ranking`).
+4. Home, qualsiasi card con evento iniziato: badge `IN DIRETTA` (non `LIVE`).
+5. Dialog "Dettaglio uscita streaming": pulsante chiudi con sr-only `Chiudi`.
+6. `grep -ri "Previous\|Best ranking\|Page not found\|Toggle Sidebar\|>LIVE<" src/` → 0 risultati.
 7. `npm run lint` + `npm run build` + `npm run test`.
-8. Aggiornare `changelog.md` + `README.md`.
+8. `changelog.md` aggiornato.
 9. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
 
