@@ -67,6 +67,13 @@ interface TvHighlight {
   hourRome: number;
   minuteRome: number;
   /**
+   * Orario di fine programma formattato `HH:mm` in fuso Europe/Rome.
+   * Stringa vuota quando `hasExplicitEnd === false`: in quel caso non
+   * mostriamo nulla per non inventare un orario non comunicato dalla
+   * fonte.
+   */
+  endTime: string;
+  /**
    * Minuti totali dalla mezzanotte Europe/Rome dell'orario di fine
    * programma. Per programmi che attraversano la mezzanotte (es. start
    * 23:30, end 01:15) viene normalizzato aggiungendo 24*60 in modo che
