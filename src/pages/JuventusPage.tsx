@@ -3,7 +3,7 @@ import SectionHeader from "@/components/common/SectionHeader";
 import EventCountdown from "@/components/common/EventCountdown";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
-import EmptyState from "@/components/common/EmptyState";
+import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
@@ -223,7 +223,15 @@ export default function JuventusPage() {
         <TabsContent value="classifica">
           {stLoading && <LoadingState message="Caricamento classifica Serie A da Sky Sport..." />}
           {stError && <ErrorState message="Errore nel caricamento della classifica da Sky Sport" onRetry={() => stRefetch()} />}
-          {!stLoading && !stError && (!standings || standings.length === 0) && <EmptyState message="Classifica non disponibile" />}
+          {!stLoading && !stError && (!standings || standings.length === 0) && (
+            <UnavailableExternalSource
+              title={`Classifica Serie A ${season}`}
+              description="La classifica della Serie A per questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Sky Sport qui sotto per consultare la graduatoria aggiornata, con punti, vittorie, pareggi e differenza reti di tutte le squadre del campionato."
+              externalLink="https://sport.sky.it/calcio/serie-a/classifica"
+              externalLabel="Vedi classifica su Sky Sport"
+              ctaHint="Tocca qui per la graduatoria completa"
+            />
+          )}
           {standings && standings.length > 0 && (
             <div className="rounded-xl border border-border overflow-hidden">
               <Table>
@@ -308,7 +316,15 @@ export default function JuventusPage() {
         <TabsContent value="calendario">
           {calLoading && !calendar && <LoadingState message="Caricamento calendario da Sky Sport..." />}
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
-          {!calLoading && !calError && calendar && calendar.total === 0 && <EmptyState message="Calendario partite non disponibile" />}
+          {!calLoading && !calError && calendar && calendar.total === 0 && (
+            <UnavailableExternalSource
+              title={`Calendario Juventus ${season}`}
+              description="Il calendario delle partite Juventus per questa stagione non è ancora disponibile dalla nostra fonte. Apri la pagina ufficiale Sky Sport qui sotto per consultare tutti gli appuntamenti del club bianconero, con giornate, orari e competizioni (Serie A, Coppa Italia, Champions League)."
+              externalLink="https://sport.sky.it/calcio/serie-a/squadre/juventus"
+              externalLabel="Vedi calendario su Sky Sport"
+              ctaHint="Tocca qui per tutte le partite bianconere"
+            />
+          )}
           {calendar && calendar.items.length > 0 && (() => {
             const items = calendar.items;
             const pageStart = (calendar.page - 1) * calendar.pageSize;
