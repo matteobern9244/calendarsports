@@ -111,7 +111,7 @@ export default function StreamingPage() {
     : "netflix";
   const initialRange = isRange(params.get("range"))
     ? (params.get("range") as RangeId)
-    : "1d";
+    : "30d";
   const initialKind = isKind(params.get("kind"))
     ? (params.get("kind") as KindId)
     : "all";
@@ -142,7 +142,7 @@ export default function StreamingPage() {
       next.set("family", family);
     } else {
       next.set("provider", provider);
-      if (range !== "1d") next.set("range", range);
+      if (range !== "30d") next.set("range", range);
       if (kindFilter !== "all") next.set("kind", kindFilter);
     }
     if (page > 1) next.set("page", String(page));
@@ -158,8 +158,13 @@ export default function StreamingPage() {
 
   const { dateFrom, dateTo } = useMemo(() => {
     const today = todayRomeISO();
-    const days = RANGES.find((r) => r.id === range)?.days ?? 0;
-    return { dateFrom: today, dateTo: addDaysISO(today, days) };
+    const cfg = RANGES.find((r) => r.id === range);
+    const back = cfg?.daysBack ?? 0;
+    const fwd = cfg?.daysFwd ?? 30;
+    return {
+      dateFrom: addDaysISO(today, -back),
+      dateTo: addDaysISO(today, fwd),
+    };
   }, [range]);
 
   const releasesQuery = useReleasesByProvider(provider, dateFrom, dateTo);
