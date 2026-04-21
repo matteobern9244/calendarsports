@@ -166,7 +166,7 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
       ],
     });
     render(<TonightTvList />);
-    expect(screen.queryByText("Reazione a Catena")).not.toBeInTheDocument();
+    expect(screen.queryAllByText("Reazione a Catena")).toHaveLength(0);
   });
 
   it("NON mostra 18:30 -> 20:55 Rome (finisce prima delle 21:00)", () => {
@@ -183,7 +183,7 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
       ],
     });
     render(<TonightTvList />);
-    expect(screen.queryByText("Pre-Serata Lunga")).not.toBeInTheDocument();
+    expect(screen.queryAllByText("Pre-Serata Lunga")).toHaveLength(0);
   });
 
   it("NON mostra 23:00 -> 00:30 Rome (inizia esattamente alla fine della fascia, escluso half-open)", () => {
@@ -200,7 +200,7 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
       ],
     });
     render(<TonightTvList />);
-    expect(screen.queryByText("Porta a Porta")).not.toBeInTheDocument();
+    expect(screen.queryAllByText("Porta a Porta")).toHaveLength(0);
   });
 
   it("preferisce il programma con maggior overlap quando un canale ne ha piu' di uno in fascia", () => {
@@ -221,6 +221,6 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
     });
     render(<TonightTvList />);
     expect(screen.getAllByText("Coppa Italia").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Tg5 Notte")).not.toBeInTheDocument();
+    expect(screen.queryAllByText("Tg5 Notte")).toHaveLength(0);
   });
 });
