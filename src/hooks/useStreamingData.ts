@@ -52,6 +52,7 @@ export interface ReleaseItem {
   poster: string | null;
   overview: string;
   voteAverage: number | null;
+  deepLink: string | null;
 }
 
 export interface ReleasesPayload {
