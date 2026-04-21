@@ -51,6 +51,16 @@
     --sidebar-accent-foreground: 220 60% 15%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 43 96% 56%;
+
+    /* Brand di terzi — centralizzati ma fuori dalla palette oro/blu */
+    --brand-dazn: 240 27% 14%;
+    --brand-dazn-contrast: 0 0% 96%;
+    --brand-sky: 201 96% 32%;
+    --brand-ducati: 0 100% 40%;
+    --brand-aprilia: 0 0% 0%;
+    --brand-ktm: 24 100% 50%;
+    --brand-yamaha: 215 100% 32%;
+    --brand-honda: 354 95% 46%;
   }
 
   .dark {
