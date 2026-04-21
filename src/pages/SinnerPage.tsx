@@ -70,7 +70,16 @@ export default function SinnerPage() {
               externalLabel="Scopri ora su ATP Tour"
             />
           )}
-          {resError && <ErrorState message="Errore nel caricamento dei risultati" onRetry={() => resRefetch()} />}
+          {resError && (
+            <ErrorState
+              message={`Risultati stagione ${season} non disponibili`}
+              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta lo storico ufficiale dei match di Jannik Sinner sul sito ATP Tour."
+              onRetry={() => resRefetch()}
+              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/overview"
+              externalLabel="Vedi risultati su ATP Tour"
+              ctaHint="Tocca qui per i punteggi set per set ufficiali"
+            />
+          )}
           {!resLoading && !resError && (!results || results.length === 0) && (
             <UnavailableExternalSource
               title={`Risultati stagione ${season}`}
@@ -126,7 +135,16 @@ export default function SinnerPage() {
               externalLabel="Scopri ora su ATP Tour"
             />
           )}
-          {schError && <ErrorState message="Errore nel caricamento del programma" onRetry={() => schRefetch()} />}
+          {schError && (
+            <ErrorState
+              message={`Calendario tornei ${season} non disponibile`}
+              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta il programma ufficiale dei tornei di Jannik Sinner sul sito ATP Tour."
+              onRetry={() => schRefetch()}
+              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/player-activity"
+              externalLabel="Vedi calendario su ATP Tour"
+              ctaHint="Tocca qui per il programma tornei ufficiale"
+            />
+          )}
           {!schLoading && !schError && (!schedule || schedule.length === 0) && (
             <UnavailableExternalSource
               title={`Calendario tornei ${season}`}

@@ -110,13 +110,17 @@ export default function JuventusMatchPage() {
     return (
       <div className="container py-8 sm:py-12">
         <ErrorState
-          message="Impossibile caricare il dettaglio della partita."
+          message="Dettaglio partita non disponibile"
+          detail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la pagina ufficiale Juventus su Sky Sport."
           onRetry={() => {
             setFoundMatch(null);
             setExhausted(false);
             setSearchPage(1);
             firstPageQuery.refetch();
           }}
+          externalLink="https://sport.sky.it/calcio/serie-a/squadre/juventus"
+          externalLabel="Vedi calendario su Sky Sport"
+          ctaHint="Tocca qui per le info ufficiali della partita"
         />
         <div className="mt-4 text-center">
           <Button asChild variant="outline" size="sm">
@@ -133,7 +137,13 @@ export default function JuventusMatchPage() {
   if (exhausted && !foundMatch) {
     return (
       <div className="container py-8 sm:py-12">
-        <ErrorState message="Partita non trovata nel calendario." />
+        <ErrorState
+          message="Partita non trovata nel calendario"
+          detail="Questa partita non risulta più nel calendario aggiornato. Puoi tornare alla pagina Juventus oppure consultare il calendario completo su Sky Sport."
+          externalLink="https://sport.sky.it/calcio/serie-a/squadre/juventus"
+          externalLabel="Vedi calendario su Sky Sport"
+          ctaHint="Tocca qui per cercare la partita su Sky Sport"
+        />
         <div className="mt-4 text-center">
           <Button asChild variant="outline" size="sm">
             <Link to="/juventus">
