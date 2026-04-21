@@ -1,107 +1,110 @@
 
 
-## Italianizzazione totale dell'app
+## Restyling premium del player header Sinner
 
-### Direttiva da memorizzare
+### Problemi rilevati nella schermata attuale
 
-**Tutta l'interfaccia utente deve essere in lingua italiana. Le uniche eccezioni consentite sono:**
-- `STREAMING` (nome di sezione di prodotto)
-- `CALENDAR EVENTS` (nome dell'app)
+1. **Foto tagliata in alto**: `object-cover` su contenitore quadrato 96×96 centra l'immagine landscape `Jannik_Sinner_US_Open_2025_(cropped).jpg` sul torso/braccia, tagliando la testa. Va usato `object-position: top` (o `object-top`) e l'aumento del contenitore.
+2. **Gerarchia visiva piatta**: ranking #1 oro grande è ok, ma "Stagione 2026 24-2" e "Best ranking #1" hanno la stessa size del nome → si confondono.
+3. **Densità bassa**: tre blocchi statistici allineati a `items-end` con grandi spazi vuoti a destra (vedi screenshot: tutto si addensa a sinistra, vuoto a destra).
+4. **Chip Slam poco leggibili**: micro-pillole `border + bg/10` su sfondo card simile → contrasto basso, soprattutto in tema chiaro.
+5. **`<dl>` Altezza/Peso/Nato a** orizzontali con label muted → in tema chiaro la label sparisce, leggibilità scarsa.
+6. **Footer "Fonte..."** centrato a sinistra `text-[11px]` quasi invisibile.
 
-Nomi propri (Jannik Sinner, Juventus, Formula 1, MotoGP, Sky Sport, Netflix, Prime Video, Disney+, HBO Max, Roland Garros, Wimbledon, US Open, Australian Open, ATP Finals, ecc.) restano nella loro forma ufficiale: non sono "inglese", sono nomi propri.
+### Soluzione visiva (entrambi i temi)
 
-Termini tecnici universali del dominio (sigle: `ATP`, `WTA`, `GP`, `PL1/PL2/PL3`, `TMDB`, `RAI`) restano invariati: non sono testo "inglese da tradurre".
+Layout a due colonne ben definite con superficie a doppio livello:
 
-### Stringhe inglesi trovate da tradurre
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ┌──────────┐   JANNIK SINNER  🇮🇹 Italia              │
+│  │          │   ┌────────────────────────────────────────┐ │
+│  │  FOTO    │   │ #1  ATP SING.  │ 24-2  STAG.  │ #1 BEST│ │
+│  │ 128×160  │   │ aggior. 12 apr │ 92.3% · 3 ti │ MIGLIOR│ │
+│  │  ratio   │   └────────────────────────────────────────┘ │
+│  │  4:5     │                                               │
+│  │ object-  │   ⬢ Altezza  ⬢ Peso  ⬢ Mano  ⬢ Nato a       │
+│  │ top      │     191 cm    77 kg   destra  San Candido    │
+│  └──────────┘                                               │
+│              GRANDE SLAM                                     │
+│              [AO V·24·25] [RG F·25] [W V·25] [US V·24] ...  │
+│  ─────────────────────────────────────────────────────────  │
+│  Fonte: Wikipedia Italia · Statistiche aggiornate al ...    │
+└─────────────────────────────────────────────────────────────┘
+```
 
-Scansione completa di `src/`, `index.html`, `public/`. Risultati:
+### Modifiche puntuali a `src/components/sinner/PlayerHeader.tsx`
 
-| File | Stringa attuale | Sostituzione |
-|---|---|---|
-| `src/pages/NotFound.tsx` | `Oops! Page not found` | `Pagina non trovata` |
-| `src/pages/NotFound.tsx` | `Return to Home` | `Torna alla Home` |
-| `src/pages/NotFound.tsx` (log) | `404 Error: User attempted...` | `Errore 404: tentativo di accedere a una rotta inesistente` |
-| `src/components/ui/pagination.tsx` | aria `Go to previous page` + label `Previous` | `Vai alla pagina precedente` / `Precedente` |
-| `src/components/ui/pagination.tsx` | aria `Go to next page` + label `Next` | `Vai alla pagina successiva` / `Successiva` |
-| `src/components/ui/pagination.tsx` | aria `pagination` | `paginazione` |
-| `src/components/ui/pagination.tsx` | sr-only `More pages` | `Altre pagine` |
-| `src/components/ui/dialog.tsx` | sr-only `Close` | `Chiudi` |
-| `src/components/ui/sheet.tsx` | sr-only `Close` | `Chiudi` |
-| `src/components/ui/sidebar.tsx` | aria + sr-only `Toggle Sidebar` | `Apri/chiudi barra laterale` |
-| `src/components/ui/sidebar.tsx` | title `Toggle Sidebar` | `Apri/chiudi barra laterale` |
-| `src/components/ui/carousel.tsx` | sr-only `Previous slide` / `Next slide` | `Slide precedente` / `Slide successiva` |
-| `src/components/ui/breadcrumb.tsx` | aria `breadcrumb`, sr-only `More` | `breadcrumb` (termine accettato in IT tecnico) → `percorso`, `Altro` |
-| `src/components/sinner/PlayerHeader.tsx` | label `Best ranking` | `Miglior ranking` |
-| `src/components/common/EventCard.tsx` | badge `LIVE` | `IN DIRETTA` |
+**1. Foto risolta**
+- Container ratio **4:5** (portrait), `w-28 h-36` mobile / `w-32 h-40` desktop, `rounded-2xl overflow-hidden`.
+- `<img class="object-cover object-top">` → la testa di Sinner non viene più tagliata.
+- Ring oro doppio: `ring-2 ring-primary/60 ring-offset-2 ring-offset-card` + sottile gradiente oro decorativo dietro (`absolute -inset-1 gold-gradient opacity-30 blur-md`) come accent premium.
+- Fallback iniziali "JS" mantiene stesso ratio.
 
-Verificate e **già in italiano**: `Index.tsx`, `StreamingPage.tsx`, `SinnerPage.tsx`, `JuventusPage.tsx`, `Formula1Page.tsx`, `MotoGPPage.tsx`, `PreferencesPage.tsx`, `Header.tsx`, `TonightTvList.tsx`, `ReleaseDetailDialog.tsx`, `OfflineFallback.tsx`, `OfflineIndicator.tsx`, `ErrorBoundary.tsx`, `EmptyState.tsx`, `LoadingState.tsx`, `ErrorState.tsx`, `TimezoneBadge.tsx`, `EventCountdown.tsx`, `useSyncAll.ts`, `manifest.webmanifest`, `index.html` (`<html lang="it">`, meta description in italiano, title contiene solo nomi propri di sezione).
+**2. Sezione header**
+- Wrapper card promosso: `bg-card` + `bg-gradient-to-br from-card via-card to-secondary/10` per profondità in entrambi i temi.
+- Bordo top oro sottile: `border-t-2 border-t-primary/60` come accento brand.
+- Padding aumentato `p-5 sm:p-7`.
 
-### Cosa NON cambia
+**3. Statistiche chiave (3 KPI cards)**
+Sostituisco i tre blocchi flat con **3 mini-card** orizzontali:
+- Ognuna: `rounded-xl bg-muted/50 border border-border/50 px-4 py-3`.
+- Label uppercase oro `text-primary/80 text-[10px] tracking-widest`.
+- Valore principale grande, sub-valore più piccolo sotto.
+- Su desktop: `grid grid-cols-3 gap-3`. Su mobile: stack verticale.
+- Ranking #1 resta protagonista con size `text-5xl` e gradiente oro via `text-gold-gradient` (esiste già in `index.css`).
 
-- Identificatori di codice (`type RangeId`, `value="all"`, query keys `streaming-tv`, ecc.): non sono UI, non si traducono.
-- Commenti JSDoc in inglese nei file di codice: non visibili all'utente, fuori scope.
-- Console.error / log tecnici (eccezione: `NotFound.tsx` lo traduco perché è un mock di onboarding evidente).
-- Nomi di file, route paths (`/sinner`, `/preferenze`, `/streaming`, `/formula1`, `/motogp`).
-- Alt text già in italiano e quelli che usano nomi propri/template literal (es. `Bandiera ${iso}`).
-- Sigle tecniche (PL1/PL2/PL3, Qual, Sprint, GP, Pos, G/V/N/P/DR/Pts, ATP, WTA, TMDB, RAI).
-- Brand: `STREAMING`, `CALENDAR EVENTS`, Sky Sport, Netflix, Prime Video, Disney+, HBO Max, Mediaset, Discovery, RAI, Juventus, Formula 1, MotoGP, Jannik Sinner.
+**4. Bio facts (Altezza/Peso/Mano/Nato a)**
+- Sostituisco `<dl>` flat con **chip orizzontali** in una riga flex-wrap.
+- Ogni chip: `rounded-full bg-muted px-3 py-1.5` con icona Lucide (`Ruler`, `Weight`, `Hand`, `MapPin`).
+- Label inline: `<icon> Altezza · 191 cm`.
+- Funziona perfettamente sia desktop sia mobile (wrapping naturale).
 
-### Memorizzazione della direttiva
+**5. Sezione Grande Slam**
+- Header sezione: `border-t border-border/50 pt-4 mt-5`.
+- Chip vincitori (V) → fondo gradiente oro `gold-gradient text-primary-foreground` (più impatto, riconoscibili a colpo d'occhio).
+- Chip non-vincitori → `bg-secondary/30 border border-border text-foreground`.
+- Layout: chip leggermente più grandi `px-3 py-1.5 text-sm`, gap 2.
+- Tooltip con risultato completo invariato (`title=...`).
 
-1. **Aggiungo regola nuova nella memoria progetto** creando `mem://constraints/italian-only` con:
+**6. Footer source**
+- Spostato in basso con `border-t border-border/30 pt-3 mt-5`.
+- `text-xs text-muted-foreground` (non più 11px), con icona `Info` opzionale.
 
-   ```
-   ---
-   name: Italian-only UI policy
-   description: All user-facing UI must be in Italian, only "STREAMING" and "CALENDAR EVENTS" allowed in English
-   type: constraint
-   ---
-   Tutta l'interfaccia utente deve essere in italiano.
-   Eccezioni consentite: "STREAMING" (sezione), "CALENDAR EVENTS" (nome app).
-   Nomi propri (squadre, atleti, competizioni, brand) restano invariati nella loro forma ufficiale.
-   Sigle tecniche universali (ATP, WTA, GP, PL1, TMDB, RAI) non sono "inglese da tradurre".
-   Quando aggiungi nuovo testo UI, usalo già in italiano: niente stringhe inglesi nemmeno in placeholder, aria-label, sr-only, toast, error message.
-   ```
+### Coerenza dual-theme
 
-2. **Aggiorno `mem://index.md` Core**: aggiungo la riga
-   `Italian-only UI: solo "STREAMING" e "CALENDAR EVENTS" in inglese; nomi propri/sigle restano invariati.`
-   (la regola "Italian-only UI" già esiste in forma generica nel Core attuale come "Italian-only UI" — la rendo esplicita ed enforce).
+- Tutti i colori usano i token semantici esistenti (`bg-card`, `bg-muted`, `text-primary`, `border-border`, `text-foreground`, `text-muted-foreground`).
+- Nessun colore hardcoded.
+- I gradienti usano le utility già definite in `index.css` (`gold-gradient`, `text-gold-gradient`).
+- Verificato che `--primary`, `--card`, `--muted`, `--border` siano definiti sia in `:root` (chiaro) sia in `.dark` (già nel CSS).
 
-3. **Aggiorno `AGENTS.md`** (sezione "Regole di modifica"): aggiungo punto
-   `- Tutta l'UI dell'app e' in italiano. Le uniche eccezioni autorizzate sono i token "STREAMING" (nome sezione) e "CALENDAR EVENTS" (nome app). Nomi propri di squadre, atleti, competizioni, broadcaster e provider restano nella loro forma ufficiale. Sigle tecniche (ATP, WTA, GP, TMDB, RAI, Pos, Pts, ecc.) non sono considerate "inglese". Vietato introdurre testo inglese in stringhe utente, placeholder, aria-label, sr-only, toast, error message o titoli pagina.`
+### Coerenza responsive
 
-4. **Aggiorno `.github/instructions/frontend.instructions.md`** con lo stesso vincolo, così Copilot/Codex lo applicano in IDE.
+- Mobile (`< sm`): foto e info impilate verticalmente, KPI in stack, chip wrap automatico.
+- Desktop (`>= sm`): foto a sinistra fissa 128px larghezza, info a destra che riempie. KPI a 3 colonne. Chip Slam in riga.
+- Nessuna regressione su `useSinnerInfo` o `SinnerPage.tsx`: i prop del componente restano identici, solo il rendering interno cambia.
 
-5. **`changelog.md`** sezione `### Changed` con voce "Italianizzazione totale UI: tradotti residui inglesi nei componenti shadcn (pagination, dialog, sheet, sidebar, carousel, breadcrumb), in `NotFound.tsx`, `PlayerHeader.tsx` (Best ranking → Miglior ranking) ed `EventCard.tsx` (badge LIVE → IN DIRETTA). Memorizzata la policy nei file di documentazione (`AGENTS.md`, frontend instructions, memoria progetto)."
-
-### File modificati / creati
+### File modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `src/pages/NotFound.tsx` | EDIT | Traduzione testo + console.error in italiano |
-| `src/components/ui/pagination.tsx` | EDIT | Traduzione `Previous`, `Next`, aria-label, sr-only |
-| `src/components/ui/dialog.tsx` | EDIT | sr-only `Close` → `Chiudi` |
-| `src/components/ui/sheet.tsx` | EDIT | sr-only `Close` → `Chiudi` |
-| `src/components/ui/sidebar.tsx` | EDIT | `Toggle Sidebar` → `Apri/chiudi barra laterale` |
-| `src/components/ui/carousel.tsx` | EDIT | `Previous/Next slide` → `Slide precedente/successiva` |
-| `src/components/ui/breadcrumb.tsx` | EDIT | aria `breadcrumb` (lasciato, termine accettato) + sr-only `More` → `Altro` |
-| `src/components/sinner/PlayerHeader.tsx` | EDIT | `Best ranking` → `Miglior ranking` |
-| `src/components/common/EventCard.tsx` | EDIT | badge `LIVE` → `IN DIRETTA` |
-| `mem://constraints/italian-only` | NUOVO | Memoria di vincolo |
-| `mem://index.md` | EDIT | Aggiunta riga Core sull'Italian-only |
-| `AGENTS.md` | EDIT | Aggiunta regola "Lingua UI" in "Regole di modifica" |
-| `.github/instructions/frontend.instructions.md` | EDIT | Aggiunto vincolo lingua italiana |
-| `changelog.md` | EDIT | Voce dedicata in `### Changed` |
+| `src/components/sinner/PlayerHeader.tsx` | EDIT | Restyling completo: foto portrait 4:5 con `object-top`, glow oro decorativo, KPI in 3 mini-card, bio in chip con icone Lucide, Slam con chip premium oro per vincitori, footer separato. Nessun cambio API prop. |
+| `changelog.md` | EDIT | Voce in `### Changed`: restyling premium player header Sinner (foto fix, KPI cards, chip bio, Slam chip oro). |
+
+### Cosa NON cambia
+
+- API e prop di `PlayerHeader` invariate → `SinnerPage.tsx` non tocca.
+- Dati Wikipedia/edge function: invariati.
+- Token CSS, palette, fonts: invariati (uso solo quelli già esistenti).
+- Nessuna nuova dipendenza (icone già da `lucide-react` già nel progetto).
+- Versione applicativa invariata `2.1.0`.
 
 ### Checklist post-edit
 
-1. `/non-esiste`: pagina 404 in italiano.
-2. `/streaming` (tab Nuove uscite con paginazione): pulsanti `Precedente` / `Successiva`.
-3. `/sinner`: card profilo mostra `Miglior ranking` (non `Best ranking`).
-4. Home, qualsiasi card con evento iniziato: badge `IN DIRETTA` (non `LIVE`).
-5. Dialog "Dettaglio uscita streaming": pulsante chiudi con sr-only `Chiudi`.
-6. `grep -ri "Previous\|Best ranking\|Page not found\|Toggle Sidebar\|>LIVE<" src/` → 0 risultati.
-7. `npm run lint` + `npm run build` + `npm run test`.
-8. `changelog.md` aggiornato.
-9. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
+1. `/sinner` desktop, tema scuro: foto integra (testa visibile), 3 KPI ordinate, chip Slam oro per AO/W/US/Finals.
+2. `/sinner` desktop, tema chiaro: tutto leggibile, nessun chip "fantasma".
+3. `/sinner` mobile (375px): foto in alto, info sotto, chip Slam wrap su 2 righe pulito.
+4. `npm run lint` + `npm run build`.
+5. `changelog.md` aggiornato.
+6. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
