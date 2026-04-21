@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
@@ -16,16 +16,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// Numero di risultati per pagina lato UI. Allineato al default del
-// backend (`supabase/functions/sports-tennis`, action `results`):
-// se cambia qui va aggiornato anche li' per evitare richieste a vuoto.
-const RESULTS_PAGE_SIZE = 12;
+// Numero di risultati per pagina lato UI. Volutamente piccolo (4) per
+// mostrare in vista solo le ultime quattro schede di match e demandare
+// tutto il resto alla paginazione, riducendo la verticalita' della
+// pagina e velocizzando la scansione visiva. Il backend (`supabase/
+// functions/sports-tennis`, action `results`) accetta `pageSize`
+// arbitrario, quindi non serve allineamento server-side.
+const RESULTS_PAGE_SIZE = 4;
 
 export default function SinnerPage() {
   const season = getCurrentSinnerSeason();
   const [resultsPage, setResultsPage] = useState(1);
   const { data: playerInfo } = useSinnerInfo();
-  const { data: results, isLoading: resLoading, error: resError, refetch: resRefetch } = useSinnerResults(
+  const {
+    data: results,
+    isLoading: resLoading,
+    isFetching: resFetching,
+    error: resError,
+    refetch: resRefetch,
+  } = useSinnerResults(
     season,
     resultsPage,
     RESULTS_PAGE_SIZE,
