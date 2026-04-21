@@ -183,6 +183,13 @@ import { supabase } from "@/integrations/supabase/client";
 ## Regole di modifica
 
 - Preservare UI, nomenclatura e struttura delle route salvo richiesta contraria.
+- **Lingua UI: italiano obbligatorio.** Tutta l'UI dell'app e' in italiano.
+  Le uniche eccezioni autorizzate sono i token `STREAMING` (nome sezione) e
+  `CALENDAR EVENTS` (nome app). Nomi propri di squadre, atleti, competizioni,
+  broadcaster e provider restano nella loro forma ufficiale. Sigle tecniche
+  (ATP, WTA, GP, TMDB, RAI, Pos, Pts, ecc.) non sono considerate "inglese".
+  Vietato introdurre testo inglese in stringhe utente, placeholder,
+  `aria-label`, `sr-only`, toast, error message o titoli pagina.
 - Non migrare lo stack verso framework diversi.
 - Non sostituire `BrowserRouter`, React Query o integrazione Supabase senza
   motivo forte e spiegato.
