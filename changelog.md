@@ -18,6 +18,12 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Streaming – rimossa nota informativa fonte palinsesto TV** nel tab
+  `/streaming?tab=tv`: il paragrafo che indicava
+  `staseraintv.com` come fonte di scraping non viene più mostrato in UI.
+  Logica di scraping invariata lato edge function `streaming-tv`
+  (resta `staseraintv.com` con fallback `superguidatv.it`).
+  Versione applicativa invariata `2.1.0`.
 - **Streaming – rimosso messaggio informativo "finestra estesa"** nel tab
   `/streaming?tab=releases`: l'avviso che compariva quando l'edge function
   `streaming-releases` attivava il fallback `widenedWindow` non viene più
