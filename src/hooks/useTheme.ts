@@ -16,6 +16,18 @@ export function useTheme() {
     root.classList.add(theme);
     root.style.colorScheme = theme;
     localStorage.setItem("cse-theme", theme);
+
+    // Sync dynamic theme-color meta for browser chrome / PWA
+    const color = theme === "dark" ? "#0B1A33" : "#F5F7FA";
+    let meta = document.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]:not([media])'
+    );
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      document.head.appendChild(meta);
+    }
+    meta.content = color;
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
