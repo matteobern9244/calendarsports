@@ -145,7 +145,12 @@ Leggere inoltre, se l'intervento tocca documentazione o setup:
   variabili Vite non vengono iniettate nel bundle.
 - `src/hooks/useSportsData.ts`: query React Query usate dalle pagine.
 - `supabase/functions/sports-f1`: Jolpica/OpenF1 + fallback statici.
-- `supabase/functions/sports-football`: Sky Sport + Lega Serie A.
+- `supabase/functions/sports-football`: Sky Sport + Lega Serie A. Il payload
+  del calendario include un campo `id` slug deterministico per ogni partita,
+  derivato dall'URL Sky quando disponibile (es.
+  `2025-giornata-1-juventus-parma`) o composto da
+  `competizione-data-home-vs-away` come fallback. Necessario per il routing
+  della pagina dettaglio `/juventus/partite/:matchId`.
 - `supabase/functions/sports-tennis`: dataset statico Sinner 2026.
 - `supabase/functions/sports-motogp`: API ufficiale motogp.com (Pulselive)
   per calendario e next-event, Sky Sport per le classifiche, mapping statici
