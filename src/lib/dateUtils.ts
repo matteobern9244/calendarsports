@@ -122,8 +122,13 @@ export function formatTimeIT(timeStr?: string | null, dateStr?: string): string 
 
 /** Format full datetime to Italian locale */
 export function formatDateTimeIT(dateStr: string): string {
+  // Usa `toRomeDate` per garantire che le stringhe ISO senza offset
+  // (`naive`) vengano trattate come UTC e poi formattate sempre in
+  // fuso `Europe/Rome`. Coerente con `formatJuventusDateTime` e
+  // `formatTimeIT`.
+  const date = toRomeDate(dateStr);
+  if (!date) return dateStr;
   try {
-    const date = new Date(dateStr);
     const day = date.toLocaleDateString("it-IT", { day: "2-digit", timeZone: "Europe/Rome" });
     const month = date.toLocaleDateString("it-IT", { month: "2-digit", timeZone: "Europe/Rome" });
     const year = date.toLocaleDateString("it-IT", { year: "numeric", timeZone: "Europe/Rome" });
@@ -136,8 +141,9 @@ export function formatDateTimeIT(dateStr: string): string {
 
 /** Determine event status based on date */
 export function getEventStatus(dateStr: string): "prossimo" | "in_corso" | "completato" {
+  const eventDate = toRomeDate(dateStr);
+  if (!eventDate) return "prossimo";
   const now = new Date();
-  const eventDate = new Date(dateStr);
   const diffMs = eventDate.getTime() - now.getTime();
   const diffHours = diffMs / (1000 * 60 * 60);
   
