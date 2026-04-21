@@ -1,69 +1,133 @@
 
 
-## Verifica anti-flicker tema all'avvio e al cambio
+## Limitare transizioni globali al solo istante del cambio tema
 
-### Stato attuale (verificato nel codice)
+### Stato attuale (verificato)
 
-Lo stack anti-FOUC è già completo. Riepilogo dei meccanismi presenti:
+In `src/index.css` righe 161-176 c'è una transizione globale **permanente** su 6 proprietà di colore applicata a `*, *::before, *::after`:
 
-**1. `index.html` — script inline blocking, eseguito prima del paint**
-- Legge `localStorage.getItem('cse-theme')` (default `'dark'`).
-- Aggiunge la classe `light`/`dark` su `<html>` **prima** che React monti.
-- Imposta `style.colorScheme` per evitare flash di scrollbar/inputs nativi.
-- Aggiorna il `<meta name="theme-color">` neutro (`#0B1A33` dark / `#F5F7FA` light) prima del paint → barra mobile corretta da subito.
-- Try/catch con fallback a `dark` se `localStorage` è bloccato.
+```css
+*, *::before, *::after {
+  transition:
+    background-color 280ms ease,
+    border-color 280ms ease,
+    color 200ms ease,
+    fill 280ms ease,
+    stroke 280ms ease,
+    box-shadow 280ms ease;
+}
+```
 
-**2. `src/index.css` — transizioni controllate**
-- Transizione globale solo su proprietà di colore (`background-color`, `border-color`, `color`, `fill`, `stroke`, `box-shadow`) con durata 200-280ms ease.
-- Classe escape `.theme-no-transition` per disattivare le transizioni in casi mirati.
-- Rispetto di `prefers-reduced-motion: reduce` → `transition: none !important`.
+Esiste una classe escape `.theme-no-transition` ma **nessuno la usa** (zero match in `src/`, zero match in `useTheme.ts`).
 
-**3. `src/hooks/useTheme.ts` — sync runtime**
-- Inizializza state da `localStorage` (stesso valore dello script in `index.html`, quindi nessun mismatch React/DOM).
-- `useEffect` aggiorna classe, `colorScheme`, `localStorage` e `<meta theme-color>` in modo sincrono al toggle.
+### Problema
 
-### Cosa fare in questa verifica
+La transizione globale è attiva **sempre**, non solo durante il cambio tema:
 
-Test manuale guidato in **6 scenari** sul preview, in entrambi i temi e a due viewport (desktop 1366x768, mobile 390x844). Per ogni scenario verifico:
+- ogni `hover` su un `EventCard` o pill broadcaster anima `background-color`/`border-color` su 280ms anche quando dovrebbe essere immediato;
+- componenti pesanti come `StreamingPage` (palinsesto con dozzine di `Accordion` e righe canale), `Formula1Page`/`MotoGPPage` (tabelle classifica piloti+costruttori), `JuventusPage` (calendario Serie A) hanno **centinaia di nodi** che pagano il costo di stylre recalc su ogni interazione;
+- `box-shadow 280ms` su `*` è particolarmente costoso (forza repaint su elementi figli);
+- componenti che hanno **già** la loro `transition-colors`/`transition-all` (Header navigation, SeasonSelector, Button, ecc.) ricevono **due transizioni in conflitto**: la regola `*` perde per specificità ma la composizione resta da risolvere ad ogni interazione.
 
-- nessun flash di colore di sfondo opposto al primo paint;
-- nessun flash di testo;
-- transizione fluida (no scatto) al toggle;
-- `<meta theme-color>` corretto subito dopo l'hard reload (verificato via DOM extract);
-- nessun errore in console.
+I componenti che servono davvero animati al cambio tema sono pochi: lo sfondo (`body`), bordi globali (regola `* { @apply border-border }`), e gli elementi che usano token `--background`, `--foreground`, `--muted`, ecc. Tutti questi cambiano valore HSL quando `<html>` passa da `.dark` a `:root`.
 
-**Scenari**
+### Soluzione
 
-| # | Viewport | `cse-theme` in storage | Azione |
-|---|---|---|---|
-| 1 | Desktop 1366x768 | `dark` | Hard reload `/`, osserva primo frame |
-| 2 | Desktop 1366x768 | `light` | Hard reload `/`, osserva primo frame |
-| 3 | Desktop 1366x768 | `dark` | Reload + click toggle sole, transizione fluida |
-| 4 | Desktop 1366x768 | `light` | Reload + click toggle luna, transizione fluida |
-| 5 | Mobile 390x844 | `dark` | Hard reload `/streaming`, primo frame + meta theme-color |
-| 6 | Mobile 390x844 | `light` | Hard reload `/sinner`, primo frame + meta theme-color |
+**Inversione della logica**: niente transizione permanente, transizione **solo nell'istante del toggle tema**.
 
-Per ogni scenario:
-1. `navigate_to_sandbox` con viewport richiesto e `path` mirato.
-2. `act` per impostare `localStorage.setItem('cse-theme', '<valore>')` se serve cambiare baseline, poi reload.
-3. `screenshot` immediatamente dopo il caricamento.
-4. `extract` del valore corrente di `<meta name="theme-color">:not([media])` dal DOM.
-5. Per gli scenari 3-4: `act` sul toggle e screenshot prima/durante/dopo.
-6. `read_console_logs` finale per intercettare warning/errori.
+1. **`src/index.css`**: rimuovere il blocco `*, *::before, *::after { transition: ... }` permanente. Sostituirlo con una regola attiva **solo** quando `<html>` ha la classe `theme-transitioning`:
 
-### Cosa NON faccio
+```css
+/* Transizione applicata SOLO durante il toggle tema (~300ms),
+   gestita dall'hook useTheme. Evita costi di transizione su tutte
+   le interazioni (hover, focus, mount) di componenti pesanti. */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition:
+    background-color 280ms ease,
+    border-color 280ms ease,
+    color 200ms ease,
+    fill 280ms ease,
+    stroke 280ms ease,
+    box-shadow 280ms ease;
+}
 
-- Nessuna modifica al codice (fase di sola verifica). Se emerge un bug verrà segnalato e proposto un fix in un piano separato.
-- Non testo le PWA installate (fuori dallo scope del browser headless).
-- Non tocco `prefers-color-scheme` di sistema: l'app usa `cse-theme` come fonte di verità, già verificato nel codice.
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transitioning,
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
+    transition: none !important;
+  }
+}
+```
 
-### Output finale
+La classe `.theme-no-transition` esistente diventa obsoleta — la rimuovo.
 
-Tabella riepilogativa con esito per ciascuno dei 6 scenari (PASS / FAIL + dettaglio), screenshot allegati per i casi anomali, e — se tutto pulito — conferma esplicita che non c'è flicker né su avvio né su toggle, su entrambi i viewport e in entrambi i temi.
+2. **`src/hooks/useTheme.ts`**: nell'`useEffect` che applica il tema, **prima** di cambiare classe `light`/`dark`:
+   - aggiungi `theme-transitioning` su `<html>`;
+   - imposta un `setTimeout` a 320ms (28 0ms transizione + 40ms buffer) per rimuoverla.
 
-### Note operative
+Patch concettuale:
 
-- Il browser è uno strumento costoso e usato qui solo perché la verifica richiede ispezione visiva del primo paint, non riproducibile via lettura codice.
-- L'ordine degli scenari è ottimizzato per minimizzare `navigate_to_sandbox` (riuso sessione con `set_viewport_size` tra desktop e mobile).
-- Nessuna scrittura su DB, nessuna azione distruttiva.
+```ts
+useEffect(() => {
+  const root = document.documentElement;
+
+  // Attiva transizioni globali solo per la durata del toggle.
+  // Skip al primo mount (evita transizione su valori iniziali = noop visivo
+  // ma costo reale su pagine pesanti).
+  if (!isFirstMount.current) {
+    root.classList.add("theme-transitioning");
+    window.setTimeout(() => {
+      root.classList.remove("theme-transitioning");
+    }, 320);
+  }
+  isFirstMount.current = false;
+
+  root.classList.remove("light", "dark");
+  root.classList.add(theme);
+  root.style.colorScheme = theme;
+  localStorage.setItem("cse-theme", theme);
+
+  // ...resto invariato (theme-color meta)
+}, [theme]);
+```
+
+`isFirstMount` è un `useRef(true)` per evitare di attivare la transizione al primo render (tema già coerente con DOM grazie allo script anti-FOUC in `index.html`).
+
+### File modificati
+
+| File | Modifica |
+|---|---|
+| `src/index.css` | Rimuove la transizione globale `*` permanente. Sostituita con regola `html.theme-transitioning *` attiva solo durante il toggle. Rimossa la classe orfana `.theme-no-transition`. Mantenuto il rispetto di `prefers-reduced-motion`. |
+| `src/hooks/useTheme.ts` | Aggiunge/rimuove la classe `theme-transitioning` su `<html>` per 320ms al cambio tema, esclusivo del primo mount. |
+| `changelog.md` | Voce sotto Unreleased: "Performance: transizioni globali tema applicate solo durante il toggle (320ms), non più su ogni interazione hover/focus dei componenti pesanti." |
+
+### Cosa NON cambia
+
+- Cambio tema visivamente identico a prima (transizione 280ms ease su colore + sfondo + bordi).
+- Componenti con `transition-colors`/`transition-all` locali (Header, Button, SeasonSelector, ecc.) continuano ad animarsi al hover come prima — **anzi meglio**, senza regola `*` in conflitto.
+- Anti-FOUC, theme-color meta, palette, brand tokens: invariati.
+- Versione resta **2.1.0**.
+
+### Benefici attesi
+
+- **Hover su `StreamingPage`/`Formula1Page`/`MotoGPPage`/`JuventusPage`**: niente più transizione di 280ms su `box-shadow` propagata a centinaia di nodi → riduzione style recalc + paint per interazione.
+- **Mount/unmount di componenti** (es. apertura `Accordion` palinsesto, dialog `ReleaseDetailDialog`): nessuna transizione spuria sui figli.
+- **`prefers-reduced-motion`**: comportamento invariato (nessuna transizione).
+- **Cambio tema**: identico, percepito come prima.
+
+### Checklist post-edit
+
+1. Toggle sole/luna: transizione fluida 280ms come oggi, in light → dark e viceversa.
+2. Hover su EventCard, badge, righe palinsesto: cambio colore istantaneo come da classi locali, nessuna animazione spuria di sfondo/ombra.
+3. Apertura Accordion in `/streaming`: nessun "wave" di transizione sui canali.
+4. `prefers-reduced-motion: reduce` in DevTools: cambio tema istantaneo, nessuna transizione.
+5. Grep `theme-no-transition` → 0 occorrenze.
+6. `npm run lint` + `npm run build`.
+7. Aggiornare `changelog.md`.
+8. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
 
