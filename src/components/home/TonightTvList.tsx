@@ -297,8 +297,11 @@ export default function TonightTvList() {
                         >
                           {row.channel}
                         </Badge>
-                        <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="font-medium text-sm leading-tight break-words">
+                        <div className="min-w-0 flex-1 flex items-center gap-3">
+                          <span
+                            className="flex-1 min-w-0 truncate font-medium text-sm leading-tight"
+                            title={row.title}
+                          >
                             {row.title}
                           </span>
                           {(() => {
@@ -313,7 +316,7 @@ export default function TonightTvList() {
                             ) : null;
                           })()}
                           {formatDuration(row.durationMin) && (
-                            <span className="text-xs text-muted-foreground whitespace-nowrap font-mono leading-none">
+                            <span className="shrink-0 whitespace-nowrap font-mono leading-none text-xs text-muted-foreground">
                               {formatDuration(row.durationMin)}
                             </span>
                           )}
