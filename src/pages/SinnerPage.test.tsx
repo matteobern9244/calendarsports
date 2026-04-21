@@ -1,5 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import SinnerPage from "./SinnerPage";
 
 const mockUseSinnerInfo = vi.fn();
@@ -11,6 +13,18 @@ vi.mock("@/hooks/useSportsData", () => ({
   useSinnerResults: () => mockUseSinnerResults(),
   useSinnerSchedule: () => mockUseSinnerSchedule(),
 }));
+
+// Wrapper minimo per fornire il QueryClient richiesto dal prefetch
+// della pagina successiva (`useQueryClient` interno alla pagina). Un
+// nuovo client per render evita cross-talk fra test.
+function renderWithClient(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+  );
+}
 
 describe("SinnerPage", () => {
   beforeEach(() => {
@@ -40,7 +54,7 @@ describe("SinnerPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<SinnerPage />);
+    renderWithClient(<SinnerPage />);
 
     expect(screen.getByText("Caricamento risultati...")).toBeInTheDocument();
   });
@@ -53,7 +67,7 @@ describe("SinnerPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<SinnerPage />);
+    renderWithClient(<SinnerPage />);
 
     expect(
       screen.getByText(/Risultati stagione \d{4} non disponibili/i),
@@ -83,7 +97,7 @@ describe("SinnerPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<SinnerPage />);
+    renderWithClient(<SinnerPage />);
 
     const nav = screen.getByRole("navigation", { name: /Paginazione risultati/i });
     expect(nav).toBeInTheDocument();
@@ -118,7 +132,7 @@ describe("SinnerPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<SinnerPage />);
+    renderWithClient(<SinnerPage />);
 
     expect(
       screen.queryByRole("navigation", { name: /Paginazione risultati/i }),
@@ -144,7 +158,7 @@ describe("SinnerPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<SinnerPage />);
+    renderWithClient(<SinnerPage />);
 
     expect(screen.getByText(/vs\. Daniil Medvedev/i)).toBeInTheDocument();
     expect(

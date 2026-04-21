@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
@@ -10,6 +11,7 @@ import PlayerHeader from "@/components/sinner/PlayerHeader";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getCurrentSinnerSeason } from "@/lib/currentSeason";
 import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useSportsData";
+import { tennisApi } from "@/lib/api/sportsApi";
 import { formatDateIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,6 +29,7 @@ const RESULTS_PAGE_SIZE = 4;
 export default function SinnerPage() {
   const season = getCurrentSinnerSeason();
   const [resultsPage, setResultsPage] = useState(1);
+  const queryClient = useQueryClient();
   const { data: playerInfo } = useSinnerInfo();
   const {
     data: results,
@@ -60,6 +63,26 @@ export default function SinnerPage() {
     total: number;
     totalPages: number;
   } | null = !Array.isArray(results) && results?.pagination ? results.pagination : null;
+
+  // Prefetch della pagina successiva: appena i dati della pagina
+  // corrente arrivano e sappiamo quante pagine totali esistono,
+  // chiediamo silenziosamente a React Query di scaricare anche la
+  // pagina N+1. Quando l'utente clicca "Successiva" i dati sono gia'
+  // in cache e la transizione e' istantanea (niente overlay di
+  // caricamento, niente sfarfallio). Il prefetch e' deduplicato dal
+  // queryClient: chiamarlo piu' volte sulla stessa chiave non genera
+  // richieste extra.
+  const totalResultPages = resultsPagination?.totalPages ?? 0;
+  useEffect(() => {
+    if (!totalResultPages) return;
+    const nextPage = resultsPage + 1;
+    if (nextPage > totalResultPages) return;
+    queryClient.prefetchQuery({
+      queryKey: ["sinner", "results", season, nextPage, RESULTS_PAGE_SIZE],
+      queryFn: () => tennisApi.getResults(season, nextPage, RESULTS_PAGE_SIZE),
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [queryClient, season, resultsPage, totalResultPages]);
 
   if (!isOnline && resError && !results && schError && !schedule && !playerInfo) {
     return (
