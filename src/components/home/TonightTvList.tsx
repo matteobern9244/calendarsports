@@ -523,10 +523,22 @@ export default function TonightTvList() {
                             <div
                               role="cell"
                               aria-colindex={2}
-                              aria-label={`Inizio alle ${row.time}`}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-4 sm:border-t-2 sm:border-border font-mono font-bold text-primary text-sm leading-none transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
+                              aria-label={
+                                row.endTime
+                                  ? `Inizio alle ${row.time}, fine alle ${row.endTime}`
+                                  : `Inizio alle ${row.time}`
+                              }
+                              className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center sm:px-2 sm:py-4 sm:border-t-2 sm:border-border font-mono font-bold text-primary text-sm leading-none transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
-                              {row.time}
+                              <span>{row.time}</span>
+                              {row.endTime && (
+                                <span
+                                  aria-hidden="true"
+                                  className="mt-1 text-[10px] font-mono font-normal text-foreground/60 leading-none"
+                                >
+                                  fino {row.endTime}
+                                </span>
+                              )}
                             </div>
                             {/* Cella canale */}
                             <div
