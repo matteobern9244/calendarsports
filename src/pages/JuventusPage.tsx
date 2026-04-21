@@ -222,7 +222,16 @@ export default function JuventusPage() {
 
         <TabsContent value="classifica">
           {stLoading && <LoadingState message="Caricamento classifica Serie A da Sky Sport..." />}
-          {stError && <ErrorState message="Errore nel caricamento della classifica da Sky Sport" onRetry={() => stRefetch()} />}
+          {stError && (
+            <ErrorState
+              message={`Classifica Serie A ${season} non disponibile`}
+              detail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la classifica ufficiale aggiornata su Sky Sport."
+              onRetry={() => stRefetch()}
+              externalLink="https://sport.sky.it/calcio/serie-a/classifica"
+              externalLabel="Vedi classifica su Sky Sport"
+              ctaHint="Tocca qui per la graduatoria ufficiale ora"
+            />
+          )}
           {!stLoading && !stError && (!standings || standings.length === 0) && (
             <UnavailableExternalSource
               title={`Classifica Serie A ${season}`}
@@ -315,7 +324,16 @@ export default function JuventusPage() {
 
         <TabsContent value="calendario">
           {calLoading && !calendar && <LoadingState message="Caricamento calendario da Sky Sport..." />}
-          {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
+          {calError && (
+            <ErrorState
+              message={`Calendario Juventus ${season} non disponibile`}
+              detail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la pagina ufficiale Juventus su Sky Sport per consultare tutti gli appuntamenti."
+              onRetry={() => calRefetch()}
+              externalLink="https://sport.sky.it/calcio/serie-a/squadre/juventus"
+              externalLabel="Vedi calendario su Sky Sport"
+              ctaHint="Tocca qui per tutte le partite bianconere"
+            />
+          )}
           {!calLoading && !calError && calendar && calendar.total === 0 && (
             <UnavailableExternalSource
               title={`Calendario Juventus ${season}`}
