@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Sparkles, Tv2, RefreshCw } from "lucide-react";
+import { Sparkles, Tv2, RefreshCw, CalendarClock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -45,7 +45,7 @@ import type {
   StreamingProviderId,
 } from "@/lib/api/sportsApi";
 import { cn } from "@/lib/utils";
-import { todayRomeISO, addDaysISO } from "@/lib/dateUtils";
+import { todayRomeISO, addDaysISO, daysUntilRome } from "@/lib/dateUtils";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
 
@@ -117,12 +117,14 @@ export default function StreamingPage() {
     ? (params.get("kind") as KindId)
     : "all";
   const initialPage = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
+  const initialOnlyUpcoming = params.get("upcoming") === "1";
 
   const [family, setFamily] = useState<StreamingFamilyId>(initialFamily);
   const [provider, setProvider] = useState<StreamingProviderId>(initialProvider);
   const [range, setRange] = useState<RangeId>(initialRange);
   const [kindFilter, setKindFilter] = useState<KindId>(initialKind);
   const [page, setPage] = useState<number>(initialPage);
+  const [onlyUpcoming, setOnlyUpcoming] = useState<boolean>(initialOnlyUpcoming);
   const [selected, setSelected] = useState<ReleaseItem | null>(null);
   const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
   const lastSyncLabel = useMemo(() => {
@@ -145,15 +147,16 @@ export default function StreamingPage() {
       next.set("provider", provider);
       if (range !== "30d") next.set("range", range);
       if (kindFilter !== "all") next.set("kind", kindFilter);
+      if (onlyUpcoming) next.set("upcoming", "1");
     }
     if (page > 1) next.set("page", String(page));
     setParams(next, { replace: true });
-  }, [tab, family, provider, range, kindFilter, page, setParams]);
+  }, [tab, family, provider, range, kindFilter, onlyUpcoming, page, setParams]);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [family, provider, range, kindFilter, tab]);
+  }, [family, provider, range, kindFilter, onlyUpcoming, tab]);
 
   const tvQuery = useTvByFamily(family);
 
