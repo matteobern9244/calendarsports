@@ -13,7 +13,6 @@ import { useSyncAll } from "@/hooks/useSyncAll";
 import TonightTvList from "@/components/home/TonightTvList";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { cn } from "@/lib/utils";
-import TimezoneBadge from "@/components/common/TimezoneBadge";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
@@ -144,7 +143,6 @@ export default function HomePage() {
     <div className="container py-4 sm:py-6 space-y-8">
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center justify-end gap-3">
-          <TimezoneBadge />
           {syncing && syncStep ? (
             <span
               className="text-xs font-heading uppercase tracking-wider text-muted-foreground animate-pulse"
