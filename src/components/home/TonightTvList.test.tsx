@@ -110,9 +110,11 @@ describe("TonightTvList accessibilità", () => {
     expect(duraMatches.length).toBeGreaterThan(0);
   });
 
-  it("annuncia la cella ora con etichetta parlata 'Inizio alle HH:MM'", () => {
+  it("annuncia la cella ora con etichetta parlata 'Inizio alle HH:MM[, fine alle HH:MM]'", () => {
     render(<TonightTvList />);
-    const oraCells = screen.getAllByLabelText(/^Inizio alle \d{2}:\d{2}$/);
+    const oraCells = screen.getAllByLabelText(
+      /^Inizio alle \d{2}:\d{2}(?:, fine alle \d{2}:\d{2})?$/,
+    );
     expect(oraCells.length).toBeGreaterThan(0);
   });
 
