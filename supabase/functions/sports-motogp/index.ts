@@ -196,6 +196,36 @@ function findRiderPhoto(name: string): string | null {
   return null;
 }
 
+function findRiderNumber(name: string): number | null {
+  const normalized = name.toLowerCase().trim();
+  const parts = normalized.replace(/\./g, '').trim().split(/\s+/);
+  const initial = parts.length > 1 && parts[parts.length - 1].length <= 2 ? parts[parts.length - 1] : null;
+  const surname = initial ? parts.slice(0, -1).join(' ') : normalized;
+
+  // Special handling for Marquez brothers
+  if (surname === 'marquez' && initial) {
+    if (initial === 'm') return MOTOGP_RIDER_NUMBERS_BY_SURNAME['marc marquez'] ?? null;
+    if (initial === 'a') return MOTOGP_RIDER_NUMBERS_BY_SURNAME['alex marquez'] ?? null;
+  }
+
+  // Try surname-initial key (handles Fernandez R./A.)
+  if (initial && MOTOGP_RIDER_NUMBERS_BY_SURNAME[`${surname}-${initial}`] != null) {
+    return MOTOGP_RIDER_NUMBERS_BY_SURNAME[`${surname}-${initial}`];
+  }
+
+  // Direct surname match
+  if (MOTOGP_RIDER_NUMBERS_BY_SURNAME[surname] != null) return MOTOGP_RIDER_NUMBERS_BY_SURNAME[surname];
+
+  // Accent-insensitive fallback
+  const surnameNormalized = surname.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  for (const [key, num] of Object.entries(MOTOGP_RIDER_NUMBERS_BY_SURNAME)) {
+    const keyNormalized = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (surnameNormalized === keyNormalized) return num;
+  }
+
+  return null;
+}
+
 function getTeamConstructor(teamName: string): string | null {
   const t = teamName.toLowerCase();
   if (t.includes('ducati') || t.includes('vr46') || t.includes('pramac')) return 'ducati';
