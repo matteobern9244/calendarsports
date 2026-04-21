@@ -59,7 +59,16 @@ export default function MotoGPPage() {
               externalLabel="Scopri ora su MotoGP.com"
             />
           )}
-          {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
+          {calError && (
+            <ErrorState
+              message={`Calendario MotoGP ${season} non disponibile`}
+              detail="La nostra fonte dati non sta rispondendo correttamente. Puoi riprovare oppure consultare il calendario ufficiale MotoGP mentre risolviamo il problema."
+              onRetry={() => calRefetch()}
+              externalLink="https://www.motogp.com/it/calendar"
+              externalLabel="Vedi calendario su MotoGP.com"
+              ctaHint="Tocca qui per consultare il calendario ufficiale ora"
+            />
+          )}
           {!calLoading && !calError && (!calendar || calendar.length === 0) && (
             <UnavailableExternalSource
               title={`Calendario MotoGP ${season}`}
@@ -129,7 +138,16 @@ export default function MotoGPPage() {
               externalLabel="Scopri ora su MotoGP.com"
             />
           )}
-          {stError && <ErrorState message="Errore nel caricamento della classifica" onRetry={() => stRefetch()} />}
+          {stError && (
+            <ErrorState
+              message={`Classifica piloti MotoGP ${season} non disponibile`}
+              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta la classifica piloti ufficiale aggiornata gara dopo gara su MotoGP.com."
+              onRetry={() => stRefetch()}
+              externalLink="https://www.motogp.com/it/world-standing/motogp"
+              externalLabel="Vedi classifica piloti su MotoGP.com"
+              ctaHint="Tocca qui per la classifica piloti ufficiale"
+            />
+          )}
           {!stLoading && !stError && (!standings || standings.length === 0) && (
             <UnavailableExternalSource
               title={`Classifica Piloti ${season}`}
@@ -219,7 +237,16 @@ export default function MotoGPPage() {
               externalLabel="Scopri ora su MotoGP.com"
             />
           )}
-          {csError && <ErrorState message="Errore nel caricamento della classifica" onRetry={() => csRefetch()} />}
+          {csError && (
+            <ErrorState
+              message={`Classifica costruttori MotoGP ${season} non disponibile`}
+              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta la classifica costruttori ufficiale su MotoGP.com."
+              onRetry={() => csRefetch()}
+              externalLink="https://www.motogp.com/it/world-standing/motogp/constructor"
+              externalLabel="Vedi classifica costruttori su MotoGP.com"
+              ctaHint="Tocca qui per la classifica costruttori ufficiale"
+            />
+          )}
           {!csLoading && !csError && (!constructors || constructors.length === 0) && (
             <UnavailableExternalSource
               title={`Classifica Costruttori ${season}`}
