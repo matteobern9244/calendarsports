@@ -103,9 +103,11 @@ describe("TonightTvList accessibilità", () => {
     // Header invisibile + almeno una riga programma
     expect(rows.length).toBeGreaterThanOrEqual(2);
 
-    // Cerca la cella durata parlata in italiano (1 ora e 55 minuti)
-    const duraCell = screen.getByLabelText(/Durata 1 ora e 55 minuti/i);
-    expect(duraCell).toBeInTheDocument();
+    // Cerca la cella durata parlata in italiano (1 ora e 55 minuti).
+    // Il testo compare anche dentro l'aria-label aggregato dell'<article>
+    // mobile, quindi usiamo getAllByLabelText.
+    const duraMatches = screen.getAllByLabelText(/Durata 1 ora e 55 minuti/i);
+    expect(duraMatches.length).toBeGreaterThan(0);
   });
 
   it("annuncia la cella ora con etichetta parlata 'Inizio alle HH:MM'", () => {
