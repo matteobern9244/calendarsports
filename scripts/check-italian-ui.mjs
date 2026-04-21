@@ -130,6 +130,9 @@ const ALLOWLIST_WORDS = new Set(
     "AM",
     "PM",
     // termini accettati nell'uso italiano corrente
+    // - "Home": usato come label nav nell'italiano corrente (es. "Torna alla Home")
+    // - "Sport": termine entrato nell'uso italiano comune
+    // - "Open": nome proprio di tornei (Australian Open, US Open, Madrid Open)
     "Home",
   ].map((w) => w.toLowerCase()),
 );
