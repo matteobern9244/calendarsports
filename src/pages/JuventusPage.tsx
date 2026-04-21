@@ -1,14 +1,13 @@
 import { cn } from "@/lib/utils";
 import SectionHeader from "@/components/common/SectionHeader";
 import SeasonSelector from "@/components/common/SeasonSelector";
-import EventCard from "@/components/common/EventCard";
 import EventCountdown from "@/components/common/EventCountdown";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
-import { formatDateIT, prioritizeNextUpcoming } from "@/lib/dateUtils";
+import { formatDateIT } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

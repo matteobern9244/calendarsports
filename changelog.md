@@ -18,6 +18,18 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Juventus – paginazione calendario (backend + frontend)**: l'action
+  `calendar` di `supabase/functions/sports-football` ora accetta `page` e
+  `pageSize` opzionali e, quando presenti, restituisce
+  `{ items, total, page, pageSize, totalPages, nextUpcomingIndex }` invece
+  dell'array piatto (retrocompatibilità preservata: senza parametri il
+  payload resta un array). Frontend in `JuventusPage.tsx` mostra 12 partite
+  per pagina con componente `Pagination` (shadcn) e atterra automaticamente
+  sulla pagina che contiene la "Prossima" partita al primo caricamento;
+  reset a pagina 1 al cambio stagione. `useJuventusCalendar` aggiornato per
+  includere `page`/`pageSize` nella `queryKey` con `placeholderData` per UX
+  fluida tra cambi pagina. Richiede deploy edge function `sports-football`.
+  Versione applicativa invariata `2.1.0`.
 - **Streaming – filtro "Solo in arrivo"**: aggiunto toggle nel tab Nuove
   uscite per nascondere le release con `releaseDate` già passata (utile
   quando il fallback "widened" allarga la finestra). Stato persistito in URL
