@@ -67,6 +67,13 @@ interface TvHighlight {
   hourRome: number;
   minuteRome: number;
   /**
+   * Orario di fine programma formattato `HH:mm` in fuso Europe/Rome.
+   * Stringa vuota quando `hasExplicitEnd === false`: in quel caso non
+   * mostriamo nulla per non inventare un orario non comunicato dalla
+   * fonte.
+   */
+  endTime: string;
+  /**
    * Minuti totali dalla mezzanotte Europe/Rome dell'orario di fine
    * programma. Per programmi che attraversano la mezzanotte (es. start
    * 23:30, end 01:15) viene normalizzato aggiungendo 24*60 in modo che
@@ -180,6 +187,7 @@ export default function TonightTvList() {
             durationMin,
             hourRome: parseInt(hStr, 10),
             minuteRome: parseInt(mStr, 10),
+            endTime: hasExplicitEnd ? endHHMM : "",
             endMinutesFromMidnight,
             hasExplicitEnd,
             title: p.title,
@@ -515,10 +523,22 @@ export default function TonightTvList() {
                             <div
                               role="cell"
                               aria-colindex={2}
-                              aria-label={`Inizio alle ${row.time}`}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-4 sm:border-t-2 sm:border-border font-mono font-bold text-primary text-sm leading-none transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
+                              aria-label={
+                                row.endTime
+                                  ? `Inizio alle ${row.time}, fine alle ${row.endTime}`
+                                  : `Inizio alle ${row.time}`
+                              }
+                              className="hidden sm:flex sm:flex-col sm:items-start sm:justify-center sm:px-2 sm:py-4 sm:border-t-2 sm:border-border font-mono font-bold text-primary text-sm leading-none transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
-                              {row.time}
+                              <span>{row.time}</span>
+                              {row.endTime && (
+                                <span
+                                  aria-hidden="true"
+                                  className="mt-1 text-[10px] font-mono font-normal text-foreground/60 leading-none"
+                                >
+                                  fino {row.endTime}
+                                </span>
+                              )}
                             </div>
                             {/* Cella canale */}
                             <div
@@ -586,7 +606,9 @@ export default function TonightTvList() {
                           : "";
                         const ariaParts = [
                           `${familyLabelMap[row.family]} ${row.channel}`,
-                          `alle ${row.time}`,
+                          row.endTime
+                            ? `dalle ${row.time} alle ${row.endTime}`
+                            : `alle ${row.time}`,
                           row.title,
                         ];
                         ariaParts.push(`genere ${g}`);
@@ -601,6 +623,11 @@ export default function TonightTvList() {
                         <div className="flex items-center gap-2 flex-wrap" aria-hidden="true">
                           <span className="font-mono font-bold text-primary text-sm leading-none shrink-0">
                             {row.time}
+                            {row.endTime && (
+                              <span className="font-normal text-foreground/60 text-[11px] ml-1">
+                                –{row.endTime}
+                              </span>
+                            )}
                           </span>
                           <Badge
                             variant="outline"
