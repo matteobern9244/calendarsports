@@ -208,13 +208,10 @@ export default function MotoGPPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div
-                            className="h-10 w-14 rounded-md border-2 flex items-center justify-center flex-shrink-0 p-1"
+                            className="relative h-10 w-14 rounded-md border-2 flex items-center justify-center flex-shrink-0 p-1 bg-white dark:bg-white"
                             style={
                               c.constructor && MOTOGP_CONSTRUCTOR_COLORS[c.constructor]
-                                ? {
-                                    borderColor: MOTOGP_CONSTRUCTOR_COLORS[c.constructor].border,
-                                    backgroundColor: MOTOGP_CONSTRUCTOR_COLORS[c.constructor].bg,
-                                  }
+                                ? { borderColor: MOTOGP_CONSTRUCTOR_COLORS[c.constructor].border }
                                 : { borderColor: 'hsl(var(--border))' }
                             }
                           >
