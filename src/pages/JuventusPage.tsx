@@ -47,9 +47,9 @@ function buildPageList(current: number, total: number): (number | "ellipsis")[] 
 }
 
 const COMPETITION_COLORS: Record<string, string> = {
-  'Serie A': 'bg-emerald-600/20 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400 border-emerald-600/30',
-  'Champions League': 'bg-blue-600/20 text-blue-600 dark:bg-blue-400/20 dark:text-blue-400 border-blue-600/30',
-  'Coppa Italia': 'bg-amber-600/20 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400 border-amber-600/30',
+  'Serie A': 'bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] border-[hsl(var(--gold))]/40',
+  'Champions League': 'bg-[hsl(var(--accent))]/20 text-[hsl(var(--accent))] dark:text-[hsl(var(--accent-foreground))] border-[hsl(var(--accent))]/40',
+  'Coppa Italia': 'bg-[hsl(var(--secondary))]/15 text-[hsl(var(--secondary))] dark:text-[hsl(var(--gold))] border-[hsl(var(--secondary))]/40',
 };
 
 export default function JuventusPage() {
