@@ -189,9 +189,9 @@ export default function HomePage() {
                       variant="outline"
                       className={
                         name.toLowerCase().includes('dazn')
-                          ? 'bg-[#f5f5f5] text-[#1a1a2e] border-[#1a1a2e]/30 dark:bg-[#1a1a2e] dark:text-white dark:border-[#1a1a2e]/60 text-[10px]'
+                          ? 'bg-[hsl(var(--brand-dazn-contrast))] text-[hsl(var(--brand-dazn))] border-[hsl(var(--brand-dazn))]/30 dark:bg-[hsl(var(--brand-dazn))] dark:text-[hsl(var(--brand-dazn-contrast))] dark:border-[hsl(var(--brand-dazn))]/60 text-[10px]'
                           : name.toLowerCase().includes('sky')
-                            ? 'bg-sky-600/15 text-sky-700 border-sky-600/40 dark:bg-sky-900/80 dark:text-sky-100 dark:border-sky-700/60 text-[10px]'
+                            ? 'bg-[hsl(var(--brand-sky))]/15 text-[hsl(var(--brand-sky))] border-[hsl(var(--brand-sky))]/40 dark:bg-[hsl(var(--brand-sky))]/30 dark:text-sky-100 dark:border-[hsl(var(--brand-sky))]/60 text-[10px]'
                             : 'text-[10px]'
                       }
                     >
