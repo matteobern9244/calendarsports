@@ -1,91 +1,99 @@
 
 
-## Sinner: dati reali da Wikipedia + foto + ranking #1
+## Sinner: passaggio a Wikipedia italiana come fonte primaria
 
-### Verifica preliminare onesta (cambio di rotta rispetto alla scelta)
+### Verifica preliminare
 
-Hai scelto **scraping ATPTour.com**, ma ho verificato e **non è tecnicamente fattibile da Edge Function**:
+Ho fatto fetch di `https://it.wikipedia.org/wiki/Jannik_Sinner` e confermato:
 
-- ATPTour.com è una **Single Page Application**: il fetch HTTP server-side restituisce solo lo scheletro HTML, nessun dato (ranking, attività, profilo) è presente nel sorgente. I dati arrivano via JavaScript/XHR dopo il rendering nel browser, quindi `fetch()` da Deno/Edge Function trova HTML vuoto.
-- Per scrapare ATP servirebbe un browser headless (Puppeteer/Playwright) hostato altrove + proxy + manutenzione costante. Non è realistico nello stack attuale.
+- L'infobox è diverso da quello inglese: etichette in **italiano** (`Altezza`, `Peso`, `Vittorie/sconfitte`, `Titoli vinti`, `Miglior ranking`, `Ranking attuale`).
+- Ranking attuale: **1º** (matcha realtà). Miglior ranking: **1º (10 giugno 2024)**.
+- Record carriera singolare: **345–88 (79.68%)**. Titoli vinti carriera: **27**.
+- Altezza: **191 cm**. Peso: **77 kg** (presente sulla IT, assente sulla EN).
+- Risultati Grande Slam con stato attuale: AO **V** (2024, 2025), RG **F** (2025), Wimbledon **V** (2025), US Open **V** (2024). Tour Finals **V** (2024, 2025).
+- Stato "Statistiche aggiornate al **12 aprile 2026**".
+- Foto principale aggiornata (US Open 2025): `https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Jannik_Sinner_US_Open_2025_(cropped).jpg/500px-Jannik_Sinner_US_Open_2025_(cropped).jpg`.
+- Luogo nascita: **San Candido**, data **16 agosto 2001** (dal primo paragrafo, non dall'infobox).
+- Coach: non in infobox IT — va estratto dal testo carriera o lasciato vuoto.
 
-**Wikipedia invece funziona** (verificato adesso): HTML statico, tabelle parsabili, dati aggiornati al **20 aprile 2026**, ranking attuale **#1**, record 24-2, calendario completo con match round-per-round.
+La pagina stagione `2026_Jannik_Sinner_tennis_season` **non ha equivalente IT** stabile (esiste solo l'inglese). Quindi:
 
-Procedo quindi con **scraping Wikipedia** come fonte primaria, dichiarandolo esplicitamente. Se in futuro vuoi davvero ATP live serve infrastruttura dedicata che non c'è.
+- **Player info, ranking, palmarès Slam** → da Wikipedia IT.
+- **Calendario tornei 2026 + match risultati** → continuano da Wikipedia EN (`2026_Jannik_Sinner_tennis_season`), perché non esiste fonte IT equivalente affidabile. Etichetta dichiarata.
 
 ### Cosa cambia
 
-**1. `supabase/functions/sports-tennis/index.ts` — riscrittura completa**
+**1. `supabase/functions/sports-tennis/index.ts` — modifica mirata**
 
-Sostituisco i dataset hardcoded con scraper Wikipedia. Tre URL:
+- Action `player-info`: cambio URL da `en.wikipedia.org/wiki/Jannik_Sinner` a `it.wikipedia.org/wiki/Jannik_Sinner`. Riscrivo il parser infobox sulle etichette italiane:
+  - `altezza` → `height` (es. "191 cm")
+  - `peso` → nuovo campo `weight` (es. "77 kg")
+  - `vittorie/sconfitte` (singolare) → `careerRecord`
+  - `titoli vinti` (singolare) → `careerTitles`
+  - `miglior ranking` (singolare) → `careerHigh` + `careerHighDate`
+  - `ranking attuale` (singolare) → `ranking`
+- Aggiungo parser per la sezione "Risultati nei tornei del Grande Slam": estraggo `{ australianOpen, rolandGarros, wimbledon, usOpen }` con `{ best: 'V'|'F'|'SF'|'QF'|...|null, years: number[] }` e analoga per `tourFinals`.
+- Estraggo data nascita + luogo dal primo paragrafo (regex su "(San Candido), 16 agosto 2001").
+- Coach: tentativo regex sul testo "allenat[oa] da [Nome Cognome]"; se non trovato → `null`.
+- Foto: hardcode al nuovo URL US Open 2025 (più recente di quello attuale 2024). Mantengo fallback `JS` se 404.
+- "Statistiche aggiornate al": estraggo data → nuovo campo `statsUpdatedAt` (ISO).
+- Source string: `"Wikipedia Italia (it.wikipedia.org)"`.
+- Cache 30 min: invariata.
+- Action `schedule`, `results`, `next-event`: invariati, continuano a leggere da `en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season` (dichiarato nel commento di intestazione: due fonti, IT per profilo, EN per stagione 2026).
 
-- `https://en.wikipedia.org/wiki/Jannik_Sinner` → infobox: ranking attuale, height, plays, coach, prize money, born, Grand Slam results.
-- `https://en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season` → infobox stagione (record, titoli, ranking change) + tabella "All matches" (tornei + ogni match con round, opponent, score, win/loss).
-- `https://en.wikipedia.org/wiki/2026_ATP_Tour` → calendario completo prossimi tornei (per derivare il "next event" = primo torneo successivo a oggi nella schedule).
+**2. `src/components/sinner/PlayerHeader.tsx` — estensione campi**
 
-Parser pattern: regex su tabelle markdown/HTML con normalizzazione, perché Wikipedia è abbastanza stabile come HTML. Fallback graceful: se uno scrape fallisce, restituisce `null` per quel campo invece di crashare.
+- Aggiungo prop `weight?: string` mostrato in `<dl>` accanto ad `Altezza`.
+- Aggiungo prop `slamResults?: { australianOpen, rolandGarros, wimbledon, usOpen, tourFinals }` e renderizzo una sezione compatta "Grande Slam" sotto le statistiche, con 5 chip: AO V·24·25, RG F·25, W V·25, US V·24, Finals V·24·25 (chip dorate per V, neutre per altri esiti).
+- Aggiungo prop `statsUpdatedAt?: string` → footer cambia da "Fonte dati: …" a "Fonte: Wikipedia Italia · Statistiche aggiornate al 12 aprile 2026".
+- Foto: nessuna modifica logica, solo passa il nuovo URL via payload.
 
-**Cache server-side**: variabile module-scope con TTL 30 minuti per evitare di battere Wikipedia ad ogni request (fair use).
+**3. `src/hooks/useSportsData.ts` — type update**
 
-Nuove action / payload aggiornati:
+- Estendo l'interfaccia di ritorno `useSinnerInfo` con `weight`, `slamResults`, `statsUpdatedAt`. `careerTitles`, `careerRecord`, `careerHigh` restano (ma ora con valori IT corretti, es. record 345-88 invece dei numeri parziali EN).
+- `staleTime` invariato (30 min).
 
-| Action | Output |
-|---|---|
-| `player-info` | `{ name, ranking, rankingDate, careerHigh, country, birthDate, birthPlace, height, weight, plays, coach, turnedPro, prizeMoney, careerTitles, seasonRecord, seasonTitles, photoUrl, source }` |
-| `next-event` | Prossimo torneo dal calendario 2026 con `name, date, dateEnd, surface, location, tier, status` |
-| `schedule` | Calendario completo 2026 (tornei) con stato derivato |
-| `results` | Lista match 2026 dalla tabella "All matches" Wikipedia: `{ tournament, date, round, opponent, opponentRank, score, result, surface, tier }` |
+**4. `src/pages/SinnerPage.tsx` — pass-through**
 
-`source: 'Wikipedia (en.wikipedia.org)'` su tutte le risposte, sostituisce il falso "ATP Tour" attuale.
+- Inoltro i nuovi campi al `PlayerHeader`. Nessuna ristrutturazione.
 
-**2. `src/pages/SinnerPage.tsx` — foto + ranking + dettagli**
+**5. Documentazione**
 
-- Player card ridisegnata con **foto in alto a sinistra** (immagine 96×96 rounded, bordo gold, fallback iniziale "JS" se foto non carica). Foto: `https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Jannik_Sinner_2025_US_Open.jpg/500px-Jannik_Sinner_2025_US_Open.jpg` (Wikimedia Commons, licenza libera).
-- Ranking grande (#1) con etichetta "ATP Singolare" e data aggiornamento ranking ("aggiornato al 13 aprile 2026").
-- Riga statistiche stagione 2026: record W-L, titoli, prossimo Grand Slam.
-- Nel componente `EventCard` per i match: mostro round (1R/2R/QF/SF/F/W) + opponent + ranking opponent + score + esito (V/S in chip verde/rosso usando token `--success`/`--destructive`).
-
-**3. `src/pages/Index.tsx` — Home**
-
-`useSinnerNextEvent` riceve già il payload aggiornato dal nuovo edge → la card "Tennis · Sinner" mostra automaticamente il prossimo torneo reale (Madrid Open 22 aprile, in base ai dati attuali). Nessuna modifica al rendering, solo coerenza dati.
-
-**4. Componente foto — `src/components/sinner/PlayerHeader.tsx` (NUOVO, piccolo)**
-
-Estraggo la player card in un componente isolato per pulizia, con `<img>` ottimizzata, `loading="eager"`, `alt="Jannik Sinner"`, e fallback gestito con `onError`.
+- `README.md` sezione "Fonti dati" → tennis: "Wikipedia Italia (profilo, ranking, palmarès Slam) + Wikipedia EN (stagione 2026 match-by-match)". Dichiarazione esplicita della doppia fonte.
+- `changelog.md` `### Changed`: profilo Sinner ora da Wikipedia Italia, foto aggiornata a US Open 2025, aggiunto peso e palmarès Slam visualizzato.
 
 ### Cosa NON cambia
 
 - Stack, routing, hook React Query: invariati.
 - Pagine F1/MotoGP/Juventus: invariate.
-- Stagione: resta selezionabile, ma per ora i dati Wikipedia reali coprono solo 2026 (le stagioni precedenti restano vuote → EmptyState esistente).
+- Logica match/calendario 2026: invariata (resta Wikipedia EN, non esiste IT).
 - Versione resta **2.1.0**.
 
 ### Limiti dichiarati
 
-- **Latenza dati**: Wikipedia viene aggiornato dagli editor entro 24-48h dai match. Non è "real-time strict" come un'API ufficiale, ma è la fonte gratuita più affidabile e **sempre aggiornata** in pratica.
-- **Fragilità scraper**: se Wikipedia cambia struttura tabelle, lo scraper può rompersi. Mitigazione: parser difensivo + fallback `null` per campo + log errori.
-- **Cache 30 min**: per contenere il carico su Wikipedia. Significa che dopo un match, possono passare fino a 30 minuti prima che il nuovo dato compaia (sommati alla latenza editoriale Wikipedia).
-- **Stagioni < 2026**: non popolate via scraping in questo intervento. Se servono, vanno aggiunte URL aggiuntive (`2025_Jannik_Sinner_tennis_season`, ecc.) — proposta separata.
+- Wikipedia IT non ha pagina stagione 2026 di Sinner → il calendario e i match restano da fonte EN. Doppia fonte = doppia superficie di rottura.
+- Coach non è in infobox IT: estrazione da testo è fragile, in caso di fallimento il campo sparisce dalla UI invece di crashare.
+- Latenza editoriale Wikipedia (24-48h) e cache 30 min: invariate.
 
 ### File modificati / creati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `supabase/functions/sports-tennis/index.ts` | EDIT | Riscrittura completa: scraper Wikipedia per player-info, schedule, results, next-event. Cache 30 min. |
-| `src/pages/SinnerPage.tsx` | EDIT | Player header con foto, ranking #1 grande, statistiche stagione. Match card con round + opponent rank + chip esito. |
-| `src/components/sinner/PlayerHeader.tsx` | NUOVO | Componente isolato con foto + ranking + meta info. |
-| `src/hooks/useSportsData.ts` | EDIT | TypeScript types aggiornati per il nuovo shape `playerInfo` (ranking come number, photoUrl, ecc.). Stale time `useSinnerInfo` allineato a 30 min. |
-| `README.md` | EDIT | Sezione "Fonti dati" aggiornata: tennis = Wikipedia (era "dataset statico"). |
-| `changelog.md` | EDIT | `### Changed`: Sinner ora usa Wikipedia come fonte live (ranking, calendario, match) + foto Wikimedia. Dichiarazione esplicita: ATP non scrapabile da Edge Function. |
+| `supabase/functions/sports-tennis/index.ts` | EDIT | Cambio URL player-info a Wikipedia IT, parser infobox italiano, parser palmarès Slam, foto US Open 2025, campo `statsUpdatedAt` e `weight`. |
+| `src/components/sinner/PlayerHeader.tsx` | EDIT | Aggiunti `weight`, `slamResults` (chip), `statsUpdatedAt` in footer. |
+| `src/hooks/useSportsData.ts` | EDIT | Estensione tipi `useSinnerInfo`. |
+| `src/pages/SinnerPage.tsx` | EDIT | Pass-through nuovi campi al `PlayerHeader`. |
+| `README.md` | EDIT | Aggiornata sezione Fonti dati con doppia fonte tennis (IT profilo + EN stagione). |
+| `changelog.md` | EDIT | `### Changed` voce dedicata. |
 
 ### Checklist post-edit
 
-1. `/sinner`: foto Sinner visibile in alto a sinistra, ranking **#1**, "aggiornato al 13 aprile 2026".
-2. Tab Risultati: match reali Australian Open → Monte-Carlo (almeno 30 match), con round, opponent, score, esito.
-3. Tab Tornei: calendario 2026 da Madrid in poi, stato corretto (programmato/in corso/completato).
-4. Home: card "Tennis · Sinner" mostra il prossimo torneo reale dalla schedule.
-5. DevTools Network: chiamata a `sports-tennis` ritorna `source: "Wikipedia"`, payload con dati aggiornati.
-6. Ricarica entro 30 min → cache hit (no nuova fetch a Wikipedia).
+1. `/sinner`: foto Sinner US Open 2025 in alto a sinistra, ranking **#1**, footer "Statistiche aggiornate al 12 aprile 2026 · Fonte: Wikipedia Italia".
+2. Card profilo mostra: Altezza 191 cm, Peso 77 kg, Mano destra, Nato a San Candido.
+3. Sezione palmarès: AO V (24·25), RG F (25), W V (25), US V (24), Finals V (24·25).
+4. Tab Risultati e Tornei: dati 2026 invariati (provenienza EN).
+5. DevTools Network: chiamata `sports-tennis?action=player-info` ritorna `source: "Wikipedia Italia (it.wikipedia.org)"`.
+6. Cache hit entro 30 min.
 7. `npm run lint` + `npm run build` + `npm run test`.
 8. Aggiornare `changelog.md` + `README.md`.
 9. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
