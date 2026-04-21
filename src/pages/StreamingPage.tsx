@@ -32,6 +32,7 @@ import LoadingState from "@/components/common/LoadingState";
 import EmptyState from "@/components/common/EmptyState";
 import ErrorState from "@/components/common/ErrorState";
 import TimezoneBadge from "@/components/common/TimezoneBadge";
+import OfflineFallback from "@/components/common/OfflineFallback";
 import ReleaseDetailDialog from "@/components/streaming/ReleaseDetailDialog";
 import ReleaseCountdownBadge from "@/components/streaming/ReleaseCountdownBadge";
 import {
@@ -49,6 +50,7 @@ import { cn } from "@/lib/utils";
 import { todayRomeISO, addDaysISO, daysUntilRome } from "@/lib/dateUtils";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 const CHANNELS_PER_PAGE = 6;
 const RELEASES_PER_PAGE = 8;
