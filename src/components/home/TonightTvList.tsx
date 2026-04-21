@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import LoadingState from "@/components/common/LoadingState";
 import {
   STREAMING_FAMILIES,
   type TvFamilyPayload,
@@ -332,6 +333,24 @@ export default function TonightTvList() {
     );
   }, [tonightHighlights, familyOrder]);
 
+  // Stato di caricamento allineato al pattern delle pagine risultati
+  // (Sinner / Juventus): finche' nessuna delle 5 famiglie TV ha
+  // restituito un payload utile e almeno una query e' ancora pending,
+  // mostriamo uno stato di caricamento esplicito invece dello stato
+  // vuoto "Palinsesto non disponibile". Senza questo gate, l'utente
+  // vedeva lo stato vuoto per qualche centinaio di ms prima del primo
+  // render reale, generando un micro-lampeggio.
+  //
+  // `isFetching` (in background, refetch su staleTime) e' tracciato
+  // separatamente per gestire il caso in cui la card e' gia' popolata
+  // ma sta arrivando un aggiornamento: in quel caso non sostituiamo
+  // mai il contenuto con lo spinner, ma riserviamo uno spazio minimo
+  // costante via `min-h` cosi' una variazione del numero di righe non
+  // produce salti di layout.
+  const isInitialTvLoading =
+    tonightHighlights.length === 0 &&
+    tvQueries.some((q) => q.isPending);
+
   return (
     <Card className="border-primary/30 bg-gradient-to-br from-card to-card/60">
       <CardContent className="p-4 sm:p-5 space-y-4">
@@ -380,7 +399,16 @@ export default function TonightTvList() {
           ))}
         </ToggleGroup>
 
-        {tonightHighlights.length > 0 ? (
+        {isInitialTvLoading ? (
+          <div
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            className="min-h-[18rem] flex items-center justify-center"
+          >
+            <LoadingState message="Caricamento palinsesto in corso..." />
+          </div>
+        ) : tonightHighlights.length > 0 ? (
           <>
             {incompleteFamilies.length > 0 && (
               <div
