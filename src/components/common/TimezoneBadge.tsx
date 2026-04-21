@@ -44,7 +44,7 @@ export default function TimezoneBadge({ className }: TimezoneBadgeProps) {
             aria-label={`Tutti gli orari sono in ora italiana locale (${tz})`}
           >
             <Clock className="h-3 w-3" aria-hidden="true" />
-            Orari in ora italiana · {tz}
+            Orari in ora italiana
           </span>
         </TooltipTrigger>
         <TooltipContent side="bottom">
