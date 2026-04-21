@@ -1,11 +1,7 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  getNowMinute,
-  getNowSecond,
-  subscribeCountdown,
-} from "@/lib/countdownClock";
+import { getNowSecond, subscribeCountdown } from "@/lib/countdownClock";
 
 interface EventCountdownProps {
   /** ISO date string of the event start */
