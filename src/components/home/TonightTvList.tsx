@@ -606,7 +606,9 @@ export default function TonightTvList() {
                           : "";
                         const ariaParts = [
                           `${familyLabelMap[row.family]} ${row.channel}`,
-                          `alle ${row.time}`,
+                          row.endTime
+                            ? `dalle ${row.time} alle ${row.endTime}`
+                            : `alle ${row.time}`,
                           row.title,
                         ];
                         ariaParts.push(`genere ${g}`);
@@ -621,6 +623,11 @@ export default function TonightTvList() {
                         <div className="flex items-center gap-2 flex-wrap" aria-hidden="true">
                           <span className="font-mono font-bold text-primary text-sm leading-none shrink-0">
                             {row.time}
+                            {row.endTime && (
+                              <span className="font-normal text-foreground/60 text-[11px] ml-1">
+                                –{row.endTime}
+                              </span>
+                            )}
                           </span>
                           <Badge
                             variant="outline"
