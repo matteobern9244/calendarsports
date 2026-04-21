@@ -18,6 +18,14 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **MotoGP – calendario 2026 allineato a motogp.com**: corretto nome del
+  round 4 (Jerez, 24–26 aprile) da `GP d'Andalusia` a `GP di Spagna`,
+  allineandolo al calendario ufficiale 2026 pubblicato su `motogp.com`.
+  Nessun altro cambio: 21 round su 22 erano già corretti per date,
+  località, circuiti e country code. Dataset resta hardcoded in
+  `supabase/functions/sports-motogp` come previsto da `AGENTS.md`.
+  Richiede deploy edge function `sports-motogp`. Nessun impatto su
+  frontend, hook o shape payload. Versione applicativa invariata `2.1.0`.
 - **Streaming – deep link al titolo sulla piattaforma**: il bottone
   "Vai a {provider}" nel dialog dettaglio uscita ora porta direttamente
   alla pagina del singolo titolo (deep link JustWatch/TMDB via campo
