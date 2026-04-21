@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
-import SectionHeader from "@/components/common/SectionHeader";
 import EventCountdown from "@/components/common/EventCountdown";
 import LoadingState from "@/components/common/LoadingState";
+import LandingSpinner from "@/components/common/LandingSpinner";
+import SectionHeader from "@/components/common/SectionHeader";
 import ErrorState from "@/components/common/ErrorState";
 import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import OfflineFallback from "@/components/common/OfflineFallback";
@@ -189,12 +190,7 @@ export default function JuventusPage() {
     (calLoading || stLoading || isAwaitingNextMatch);
   if (isInitialLoading) {
     return (
-      <div className="container py-8 sm:py-12">
-        <div className="mb-2">
-          <SectionHeader title="Juventus" />
-        </div>
-        <LoadingState message="Caricamento dati Juventus..." />
-      </div>
+      <LandingSpinner title="Juventus" message="Caricamento dati Juventus..." />
     );
   }
 
