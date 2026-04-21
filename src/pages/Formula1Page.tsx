@@ -20,7 +20,7 @@ export default function Formula1Page() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="Formula 1" subtitle="Calendario, classifiche e highlights — Dati reali da Jolpica/Ergast API" />
+      <SectionHeader title="Formula 1" />
 
       <div className="mb-6">
         <SeasonSelector currentSeason={seasons.f1} onSelect={(y) => setSeason("f1", y)} />
