@@ -52,7 +52,7 @@ export default function Formula1Page() {
           {!calLoading && !calError && (!calendar || calendar.length === 0) && (
             <UnavailableExternalSource
               title={`Calendario F1 ${season}`}
-              description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale Formula 1 qui sotto per consultare tutte le date dei GP, gli orari delle sessioni (prove libere, qualifiche e gara) e i circuiti del Mondiale."
+              description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale Formula 1 qui sotto per consultare tutte le giornate dei GP, gli orari delle sessioni (prove libere, qualifiche e gara) e i circuiti del Mondiale."
               externalLink="https://www.formula1.com/en/racing/2025"
               externalLabel="Apri calendario su Formula1.com"
             />
