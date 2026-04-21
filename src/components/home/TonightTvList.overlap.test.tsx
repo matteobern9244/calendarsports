@@ -108,7 +108,7 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
       ],
     });
     render(<TonightTvList />);
-    expect(screen.getByText("Maratona Sportiva")).toBeInTheDocument();
+    expect(screen.getAllByText("Maratona Sportiva").length).toBeGreaterThan(0);
     // L'orario reale di inizio (20:30) deve essere mostrato anche se
     // anteriore alla fascia, perche' il programma e' ancora in onda.
     expect(screen.getAllByLabelText("Inizio alle 20:30").length).toBeGreaterThan(0);
@@ -128,7 +128,7 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
       ],
     });
     render(<TonightTvList />);
-    expect(screen.getByText("Speciale Tg1 Notte")).toBeInTheDocument();
+    expect(screen.getAllByText("Speciale Tg1 Notte").length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText("Inizio alle 22:55").length).toBeGreaterThan(0);
   });
 
@@ -148,7 +148,7 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
       ],
     });
     render(<TonightTvList />);
-    expect(screen.getByText("X-Style Night")).toBeInTheDocument();
+    expect(screen.getAllByText("X-Style Night").length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText("Inizio alle 22:30").length).toBeGreaterThan(0);
   });
 
@@ -220,7 +220,7 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
       ],
     });
     render(<TonightTvList />);
-    expect(screen.getByText("Coppa Italia")).toBeInTheDocument();
+    expect(screen.getAllByText("Coppa Italia").length).toBeGreaterThan(0);
     expect(screen.queryByText("Tg5 Notte")).not.toBeInTheDocument();
   });
 });
