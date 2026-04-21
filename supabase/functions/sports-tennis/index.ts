@@ -195,12 +195,27 @@ async function getPlayerInfo() {
   const highestNumMatch = highest.match(/(\d+)\s*[ºo°]/);
   const highestDateIso = parseItalianDateInline(highest);
 
-  // --- Vittorie/sconfitte (singolare) ---
-  // Esempio raw IT: "345–88 (79.68%)"
-  const careerRecord = ib['vittorie/sconfitte'] || '';
-
-  // --- Titoli vinti (singolare) ---
-  const careerTitlesRaw = ib['titoli vinti'] || '';
+  // --- Vittorie/sconfitte (singolare) e titoli vinti ---
+  // Le righe stanno dentro una tabella annidata "Singolare": il parser
+  // generico le coglie solo se la <tr> ha le colonne dirette. Fallback
+  // dedicato che cerca la PRIMA occorrenza dopo l'header "Singolare".
+  let careerRecord = ib['vittorie/sconfitte'] || '';
+  let careerTitlesRaw = ib['titoli vinti'] || '';
+  if ((!careerRecord || !careerTitlesRaw) && html) {
+    const singlesIdx = html.search(/>Singolare</);
+    const doublesIdx = html.search(/>Doppio</);
+    if (singlesIdx >= 0) {
+      const slice = html.substring(singlesIdx, doublesIdx > singlesIdx ? doublesIdx : singlesIdx + 4000);
+      if (!careerRecord) {
+        const m = slice.match(/Vittorie\/sconfitte\s*<\/th>\s*<td[^>]*>([\s\S]{0,200}?)<\/td>/);
+        if (m) careerRecord = stripTags(m[1]);
+      }
+      if (!careerTitlesRaw) {
+        const m = slice.match(/Titoli vinti\s*<\/th>\s*<td[^>]*>([\s\S]{0,200}?)<\/td>/);
+        if (m) careerTitlesRaw = stripTags(m[1]);
+      }
+    }
+  }
   const careerTitlesNum = parseInt(careerTitlesRaw);
 
   // --- Misure ---
@@ -213,13 +228,10 @@ async function getPlayerInfo() {
   const weightNum = weightRaw.match(/(\d{2,3})/);
   const weight = weightNum ? `${weightNum[1]} kg` : weightRaw;
 
-  // --- Coach: NON presente nell'infobox IT, tentativo regex sul testo ---
-  let coach: string | null = null;
-  if (html) {
-    // Pattern tipici: "allenato da Nome Cognome", "è allenato da Nome Cognome"
-    const coachMatch = html.match(/allenat[oi]\s+da\s+(?:<[^>]+>)*([A-ZÀ-Ý][\w'À-ÿ-]+(?:\s+[A-ZÀ-Ý][\w'À-ÿ-]+){1,3})/);
-    if (coachMatch) coach = stripTags(coachMatch[1]);
-  }
+  // --- Coach: l'infobox IT NON ha questo campo. L'estrazione regex dal
+  // testo è risultata inaffidabile (es. confonde nomi di familiari con il
+  // coach). Lasciato a null: la UI nasconde semplicemente la riga.
+  const coach: string | null = null;
 
   // --- Mano di gioco: idem, non in infobox IT - tentativo regex ---
   let plays: string | null = null;
