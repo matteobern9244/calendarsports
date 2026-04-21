@@ -18,6 +18,12 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Streaming – rimosso messaggio informativo "finestra estesa"** nel tab
+  `/streaming?tab=releases`: l'avviso che compariva quando l'edge function
+  `streaming-releases` attivava il fallback `widenedWindow` non viene più
+  mostrato in UI. La logica backend resta invariata (il fallback widened
+  rimane attivo per evitare griglie vuote, ma silenziosamente). Versione
+  applicativa invariata `2.1.0`.
 - **Streaming – badge "giorni mancanti" su ciascuna nuova uscita**
   (`src/components/streaming/ReleaseCountdownBadge.tsx`): accanto al titolo
   di ogni card del tab `/streaming?tab=releases` viene mostrato un badge
