@@ -284,11 +284,21 @@ function lineOf(src, index) {
 function extractCandidates(src) {
   const candidates = [];
 
-  // JSX text: >TESTO<
-  const jsxText = /(?<=>)([^<>{}\n][^<>{}]*?)(?=<)/g;
+  // JSX text: estrae testo tra > e < scartando frammenti che sembrano
+  // codice TypeScript (generics, espressioni, ecc.). Euristica:
+  //  - deve contenere almeno una lettera
+  //  - non deve contenere caratteri tipici del codice: ; = ( ) [ ] { }
+  //    | & ` $ < > " ' \
+  //  - non deve essere un identificatore tipo "MyType<X" residuo
+  const jsxText = />([^<>{}\n]+)</g;
   for (const m of src.matchAll(jsxText)) {
     const value = m[1].trim();
     if (!value) continue;
+    if (!/[A-Za-zÀ-ÿ]/.test(value)) continue;
+    if (/[;=()\[\]{}|&`$"'\\]/.test(value)) continue;
+    // scarta frammenti che iniziano con minuscola+lettere senza spazi e
+    // sembrano identificatori (es. "currentYear", "props")
+    if (!/\s/.test(value) && /^[a-z][A-Za-z0-9_]*$/.test(value)) continue;
     candidates.push({ kind: "jsx-text", value, index: m.index });
   }
 
