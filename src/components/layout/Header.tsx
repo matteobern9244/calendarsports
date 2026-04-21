@@ -13,6 +13,7 @@ import {
   MotoGPBrandIcon,
 } from "./BrandIcons";
 import { SparkleLoop } from "./SparkleLoop";
+import { usePreferencesPanel } from "@/contexts/PreferencesPanelContext";
 
 // Header non riceve piu' props: tema e preferenze sono in /preferenze.
 
@@ -37,7 +38,7 @@ export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const burstSeq = useRef(0);
-  const preferencesActive = location.pathname === "/preferenze";
+  const { open: prefsOpen, toggle: togglePrefs } = usePreferencesPanel();
 
   const triggerBurst = (path: string, e: ReactMouseEvent<HTMLAnchorElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -166,21 +167,20 @@ export default function Header() {
         {/* Theme toggle + mobile menu */}
         <div className="flex items-center gap-2 shrink-0">
           <Button
-            asChild
             variant="ghost"
             size="icon"
             aria-label="Preferenze"
-            aria-current={preferencesActive ? "page" : undefined}
+            aria-expanded={prefsOpen}
+            aria-controls="preferences-panel"
+            onClick={togglePrefs}
             className={cn(
               "rounded-full border transition-colors",
-              preferencesActive
+              prefsOpen
                 ? "border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))] shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
                 : "border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10"
             )}
           >
-            <Link to="/preferenze">
-              <Settings className="h-4 w-4" />
-            </Link>
+            <Settings className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
