@@ -70,6 +70,7 @@ export default function TeamLogo({
       alt={alt ?? name}
       style={dimensions}
       loading="lazy"
+      decoding="async"
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
       className={cn("object-contain flex-shrink-0 bg-background/40", shapeClass, className)}

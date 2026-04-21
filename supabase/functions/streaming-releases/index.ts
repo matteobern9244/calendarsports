@@ -139,12 +139,19 @@ async function tmdbItemProviderInfoIT(
 function normalizeItem(raw: any, kind: "movie" | "tv", deepLink: string | null = null) {
   const title = kind === "movie" ? raw.title : raw.name;
   const releaseDate = kind === "movie" ? raw.release_date : raw.first_air_date;
+  // Difesa: TMDB_IMG punta gia' a w342, ma se in futuro la base venisse cambiata
+  // o arrivasse un percorso piu' grande (w500/original), normalizziamo a w342
+  // che e' sufficiente per le card (~150-200px) e il dialog (~180px), anche su retina.
+  const rawPoster = raw.poster_path ? `${TMDB_IMG}${raw.poster_path}` : null;
+  const poster = rawPoster
+    ? rawPoster.replace(/\/t\/p\/(?:w500|w780|original)\//, "/t/p/w342/")
+    : null;
   return {
     tmdbId: raw.id,
     type: kind,
     title,
     releaseDate,
-    poster: raw.poster_path ? `${TMDB_IMG}${raw.poster_path}` : null,
+    poster,
     overview: raw.overview ?? "",
     voteAverage: typeof raw.vote_average === "number" ? raw.vote_average : null,
     deepLink,

@@ -87,6 +87,10 @@ export default function ReleaseDetailDialog({
                   <img
                     src={item.poster}
                     alt={item.title}
+                    loading="lazy"
+                    decoding="async"
+                    width={342}
+                    height={513}
                     className="w-full rounded-md aspect-[2/3] object-cover border border-border/60"
                   />
                 ) : (
@@ -140,6 +144,9 @@ export default function ReleaseDetailDialog({
                               src={c.profile}
                               alt={c.name}
                               loading="lazy"
+                              decoding="async"
+                              width={36}
+                              height={36}
                               className="h-9 w-9 rounded-full object-cover shrink-0"
                             />
                           ) : (

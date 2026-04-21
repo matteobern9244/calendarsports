@@ -57,8 +57,12 @@ export default function HighlightCard({ item, accentVar = "gold" }: HighlightCar
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
         <img
           src={item.thumbnailUrl}
+          srcSet={`${item.thumbnailUrl} 1x, ${item.thumbnailUrl.replace("mqdefault.jpg", "hqdefault.jpg")} 2x`}
           alt={item.title}
           loading="lazy"
+          decoding="async"
+          width={320}
+          height={180}
           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
           onError={(e) => {
             (e.currentTarget as HTMLImageElement).src = "/placeholder.svg";
