@@ -131,12 +131,14 @@ export default function TonightTvList() {
   }, []);
 
   const tonightHighlights = useMemo(() => {
-    // Finestra estesa 20:30-23:00 Europe/Rome per non escludere kickoff
-    // sportivi (Coppa Italia 20:40, Champions/Serie A 20:45) e prime serate
-    // anticipate. La soglia MIN_DURATION elimina poi tg/promo/filler.
+    // Prima serata italiana: 21:00 - 22:59 Europe/Rome. I kickoff anticipati
+    // (20:30/20:45) restano esclusi: per quelli c'e' la sezione Streaming.
     const inPrimeWindow = (h: TvHighlight) => {
       const minutes = h.hourRome * 60 + h.minuteRome;
-      return minutes >= 20 * 60 + 30 && minutes <= 23 * 60;
+      return (
+        minutes >= PRIME_TIME_START_MIN &&
+        minutes < PRIME_TIME_END_EXCLUSIVE_MIN
+      );
     };
     // Soglia 40 min: con la finestra piu' larga servono criteri piu' stretti
     // per il "vero" programma di prima serata. Calcio 100+, fiction 90+,
