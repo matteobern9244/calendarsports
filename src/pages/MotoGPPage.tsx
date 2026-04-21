@@ -20,7 +20,7 @@ export default function MotoGPPage() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="MotoGP" subtitle="Calendario, classifiche e highlights — Dati da Sky Sport" />
+      <SectionHeader title="MotoGP" />
 
       <div className="mb-6">
         <SeasonSelector currentSeason={seasons.motogp} onSelect={(y) => setSeason("motogp", y)} />

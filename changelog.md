@@ -23,6 +23,10 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   non viene più mostrato. Fonte dati invariata lato edge function
   `sports-f1` (Jolpica + OpenF1 + fallback statici). Versione applicativa
   invariata `2.1.0`.
+- **MotoGP – rimossa nota "Dati da Sky Sport"** dal sottotitolo della pagina
+  `/motogp`: il `subtitle` del `SectionHeader` non viene più mostrato. Fonte
+  dati invariata lato edge function `sports-motogp` (Sky Sport + calendario
+  statico 2026 + mapping). Versione applicativa invariata `2.1.0`.
 - **Juventus – rimossa nota "Dati reali da Sky Sport Italia"** dal sottotitolo
   della pagina `/juventus`: il `subtitle` del `SectionHeader` non viene più
   mostrato. Fonte dati invariata lato edge function `sports-football`
