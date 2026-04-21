@@ -18,6 +18,14 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Streaming – deep link al titolo sulla piattaforma**: il bottone
+  "Vai a {provider}" nel dialog dettaglio uscita ora porta direttamente
+  alla pagina del singolo titolo (deep link JustWatch/TMDB via campo
+  `results.IT.link` di `/watch/providers`), con fallback automatico alla
+  homepage del provider se il link non è disponibile. Edge function
+  `streaming-releases`: `tmdbItemAvailableIT` rinominata in
+  `tmdbItemProviderInfoIT` e ora ritorna `{ available, deepLink }`;
+  `normalizeItem` propaga `deepLink` nel payload di ogni item.
 - **Juventus – paginazione calendario (backend + frontend)**: l'action
   `calendar` di `supabase/functions/sports-football` ora accetta `page` e
   `pageSize` opzionali e, quando presenti, restituisce
