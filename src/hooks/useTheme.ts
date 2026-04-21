@@ -19,13 +19,12 @@ export function useTheme() {
     // Skip al primo mount: il tema è già coerente con il DOM grazie
     // allo script anti-FOUC in index.html, e una transizione qui
     // costerebbe style recalc su tutti i nodi senza beneficio visivo.
+    let timeoutId: number | undefined;
     if (!isFirstMount.current) {
       root.classList.add("theme-transitioning");
-      const timeout = window.setTimeout(() => {
+      timeoutId = window.setTimeout(() => {
         root.classList.remove("theme-transitioning");
       }, 320);
-      // cleanup al prossimo cambio tema rapido
-      var cleanup = () => window.clearTimeout(timeout);
     }
     isFirstMount.current = false;
 
@@ -47,7 +46,7 @@ export function useTheme() {
     meta.content = color;
 
     return () => {
-      if (typeof cleanup === "function") cleanup();
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
   }, [theme]);
 
