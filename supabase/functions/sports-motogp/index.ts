@@ -289,14 +289,85 @@ function expandRiderName(skyName: string): string {
   return skyName;
 }
 
-// MotoGP constructor/team logos
+// MotoGP constructor/team logos.
+// Asset locali serviti da `public/constructors-motogp/` per evitare il
+// rate-limit costante di Wikimedia (HTTP 429) che faceva sparire i loghi
+// dalla classifica costruttori. URL relativi: il frontend li risolve come
+// asset statici dal proprio host.
 const MOTOGP_CONSTRUCTOR_LOGOS: Record<string, string> = {
-  'ducati': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Ducati_red_logo.svg/320px-Ducati_red_logo.svg.png',
-  'aprilia': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Aprilia-logo.svg/320px-Aprilia-logo.svg.png',
-  'ktm': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/KTM-Logo.svg/320px-KTM-Logo.svg.png',
-  'yamaha': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Yamaha_Motor_Logo_%28new%29.svg/320px-Yamaha_Motor_Logo_%28new%29.svg.png',
-  'honda': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Honda.svg/320px-Honda.svg.png',
+  'ducati': '/constructors-motogp/ducati.png',
+  'aprilia': '/constructors-motogp/aprilia.png',
+  'ktm': '/constructors-motogp/ktm.png',
+  'yamaha': '/constructors-motogp/yamaha.png',
+  'honda': '/constructors-motogp/honda.png',
 };
+
+// Cache team Pulselive (TTL 24h). Mappa nome team normalizzato -> URL foto
+// ufficiale del team (campo `picture` dell'API Pulselive).
+const MOTOGP_TEAMS_TTL_MS = 24 * 60 * 60 * 1000;
+const MOTOGP_CATEGORY_UUID = '737ab122-76e1-4081-bedb-334caaa18c70';
+let _teamsCache: { at: number; year: number; map: Record<string, string> } | null = null;
+
+function normalizeTeamKey(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+async function fetchMotoGPTeamPictures(year: number): Promise<Record<string, string>> {
+  const now = Date.now();
+  if (_teamsCache && _teamsCache.year === year && now - _teamsCache.at < MOTOGP_TEAMS_TTL_MS) {
+    return _teamsCache.map;
+  }
+  try {
+    const res = await fetch(
+      `https://api.motogp.pulselive.com/motogp/v1/teams?seasonYear=${year}&categoryUuid=${MOTOGP_CATEGORY_UUID}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CalendarSports/1.0)' } },
+    );
+    if (!res.ok) {
+      console.warn(`MotoGP teams API returned ${res.status}`);
+      return _teamsCache?.year === year ? _teamsCache.map : {};
+    }
+    const teams = await res.json() as Array<Record<string, unknown>>;
+    const map: Record<string, string> = {};
+    for (const t of teams) {
+      const name = String(t.name ?? '').trim();
+      const picture = t.picture ? String(t.picture) : null;
+      if (name && picture) {
+        map[normalizeTeamKey(name)] = picture;
+      }
+    }
+    _teamsCache = { at: now, year, map };
+    return map;
+  } catch (e) {
+    console.warn('MotoGP teams fetch failed:', e);
+    return _teamsCache?.year === year ? _teamsCache.map : {};
+  }
+}
+
+function findTeamLogo(teamName: string, teamMap: Record<string, string>): string | null {
+  if (!teamName) return null;
+  const key = normalizeTeamKey(teamName);
+  if (teamMap[key]) return teamMap[key];
+  // Fuzzy fallback: scarta token comuni (sponsor, parole generiche) e
+  // calcola overlap di token significativi >=4 char tra il nome Sky e
+  // ciascun nome Pulselive. Sceglie il match con piu' token in comune.
+  const STOP = new Set(['team', 'racing', 'motogp', 'red', 'bull', 'monster', 'energy', 'castrol', 'pertamina', 'enduro', 'prima', 'pramac', 'lcr', 'lenovo', 'trackhouse', 'tech3', 'gresini', 'factory']);
+  const skyTokens = key.split(' ').filter((t) => t.length >= 4 && !STOP.has(t));
+  if (skyTokens.length === 0) return null;
+  let best: { url: string; score: number } | null = null;
+  for (const [pulseKey, url] of Object.entries(teamMap)) {
+    const pulseTokens = new Set(pulseKey.split(' ').filter((t) => t.length >= 4));
+    let score = 0;
+    for (const t of skyTokens) if (pulseTokens.has(t)) score++;
+    if (score > 0 && (!best || score > best.score)) best = { url, score };
+  }
+  return best ? best.url : null;
+  return null;
+}
 
 function findRiderPhoto(name: string): string | null {
   const normalized = name.toLowerCase().trim();
@@ -395,8 +466,8 @@ function getTeamConstructor(teamName: string): string | null {
   return null;
 }
 
-async function fetchSkyStandings(): Promise<{
-  pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null; nationality: string | null }>;
+async function fetchSkyStandings(teamMap: Record<string, string> = {}): Promise<{
+  pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null; nationality: string | null; teamLogoUrl: string | null }>;
   teams: Array<{ position: number; team: string; points: number; logoUrl: string | null; constructor: string | null }>;
 }> {
   const res = await fetch(SKY_SPORT_MOTOGP_URL, {
@@ -405,7 +476,7 @@ async function fetchSkyStandings(): Promise<{
   if (!res.ok) throw new Error(`Sky Sport returned ${res.status}`);
   const html = await res.text();
 
-  const pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null; nationality: string | null }> = [];
+  const pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null; nationality: string | null; teamLogoUrl: string | null }> = [];
   const teams: Array<{ position: number; team: string; points: number; logoUrl: string | null; constructor: string | null }> = [];
 
   // Parse pilot standings table
@@ -425,7 +496,16 @@ async function fetchSkyStandings(): Promise<{
           const teamRaw = c3.replace(/<[^>]+>/g, '').trim();
           const pts = parseInt(c4.replace(/<[^>]+>/g, '').trim());
           if (!isNaN(pos) && nameRaw) {
-            pilots.push({ position: pos, name: expandRiderName(nameRaw), team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw), number: findRiderNumber(nameRaw), nationality: findRiderNationality(nameRaw) });
+            pilots.push({
+              position: pos,
+              name: expandRiderName(nameRaw),
+              team: teamRaw,
+              points: pts || 0,
+              photoUrl: findRiderPhoto(nameRaw),
+              number: findRiderNumber(nameRaw),
+              nationality: findRiderNationality(nameRaw),
+              teamLogoUrl: findTeamLogo(teamRaw, teamMap),
+            });
           }
         }
       }
@@ -505,7 +585,8 @@ Deno.serve(async (req) => {
 
       case 'standings': {
         try {
-          const { pilots } = await fetchSkyStandings();
+          const teamMap = await fetchMotoGPTeamPictures(seasonYear);
+          const { pilots } = await fetchSkyStandings(teamMap);
           data = pilots;
           dataSource = pilots.length > 0 ? 'live' : 'static-fallback';
         } catch (e) {

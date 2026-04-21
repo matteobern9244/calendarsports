@@ -40,20 +40,28 @@ function normalizeKey(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
-// F1 Constructor logos
+// F1 Constructor logos.
+// Fonte primaria: CDN ufficiale Formula 1 (`media.formula1.com`), stabile e
+// hot-link friendly (HTTP 200, caching CDN). E' la stessa fonte da cui anche
+// portali italiani come Corriere recuperano i loghi via include server-side.
+// Per i nuovi team 2026 senza ancora slug ufficiale FOM (Audi, Cadillac)
+// usiamo asset locali serviti da `public/constructors-f1/` per evitare
+// dipendenze da Wikimedia (rate-limit 429 frequente).
 const F1_CONSTRUCTOR_LOGOS: Record<string, string> = {
-  // Asset stabili da Wikimedia (verificati 200 OK). I path CMS ufficiali F1
-  // erano instabili (404 ricorrenti su rb-logo, kick-sauber-logo, alpine-logo).
-  'mclaren': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Mclaren_Logo_2021.svg/320px-Mclaren_Logo_2021.svg.png',
-  'red bull': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Red_Bull_Racing_-_2021_Logo.svg/320px-Red_Bull_Racing_-_2021_Logo.svg.png',
-  'ferrari': 'https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Scuderia_Ferrari_HP_logo_24.svg/320px-Scuderia_Ferrari_HP_logo_24.svg.png',
-  'mercedes': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Mercedes_AMG_Petronas_F1_Logo.svg/320px-Mercedes_AMG_Petronas_F1_Logo.svg.png',
-  'aston martin': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Aston_Martin_F1_Team_logo_2024.jpg/320px-Aston_Martin_F1_Team_logo_2024.jpg',
-  'alpine f1 team': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/BWT_Alpine_F1_Team_Logo.png/320px-BWT_Alpine_F1_Team_Logo.png',
-  'williams': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Williams_Racing_2022_logo.svg/320px-Williams_Racing_2022_logo.svg.png',
-  'rb f1 team': 'https://upload.wikimedia.org/wikipedia/en/thumb/2/2b/VCARB_F1_logo.svg/320px-VCARB_F1_logo.svg.png',
-  'haas f1 team': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/MoneyGram_Haas_F1_Team_Logo.svg/320px-MoneyGram_Haas_F1_Team_Logo.svg.png',
-  'sauber': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Logo_of_Stake_F1_Team_Kick_Sauber.png/320px-Logo_of_Stake_F1_Team_Kick_Sauber.png',
+  'mclaren': 'https://media.formula1.com/content/dam/fom-website/teams/2025/mclaren-logo.png',
+  'ferrari': 'https://media.formula1.com/content/dam/fom-website/teams/2025/ferrari-logo.png',
+  'mercedes': 'https://media.formula1.com/content/dam/fom-website/teams/2025/mercedes-logo.png',
+  'red bull': 'https://media.formula1.com/content/dam/fom-website/teams/2025/red-bull-racing-logo.png',
+  'aston martin': 'https://media.formula1.com/content/dam/fom-website/teams/2025/aston-martin-logo.png',
+  'alpine f1 team': 'https://media.formula1.com/content/dam/fom-website/teams/2025/alpine-logo.png',
+  'williams': 'https://media.formula1.com/content/dam/fom-website/teams/2025/williams-logo.png',
+  'rb f1 team': 'https://media.formula1.com/content/dam/fom-website/teams/2025/racing-bulls-logo.png',
+  'haas f1 team': 'https://media.formula1.com/content/dam/fom-website/teams/2025/haas-logo.png',
+  'sauber': 'https://media.formula1.com/content/dam/fom-website/teams/2025/kick-sauber-logo.png',
+  // Nuovi team 2026: slug FOM non ancora pubblicati. Asset locali stabili.
+  'audi': '/constructors-f1/audi.png',
+  'cadillac f1 team': '/constructors-f1/cadillac.png',
+  'cadillac': '/constructors-f1/cadillac.png',
 };
 
 function getConstructorLogo(name: string): string | null {

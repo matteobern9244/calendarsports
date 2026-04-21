@@ -18,6 +18,25 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Changed
 
+- **Loghi costruttori F1 e MotoGP da fonti ufficiali stabili**.
+  F1: `F1_CONSTRUCTOR_LOGOS` (`supabase/functions/sports-f1/index.ts`)
+  ora punta al CDN ufficiale `media.formula1.com/.../teams/2025/{slug}-logo.png`
+  per i 10 team consolidati (stessa fonte usata anche da portali tipo
+  Corriere via include server-side), eliminando la dipendenza da Wikimedia
+  che restituiva HTTP 429 ricorrenti. Aggiunte le chiavi `audi` e
+  `cadillac f1 team` per la lineup 2026 (slug FOM non ancora pubblicati),
+  servite da asset locali in `public/constructors-f1/`.
+  MotoGP: `MOTOGP_CONSTRUCTOR_LOGOS` (`supabase/functions/sports-motogp/index.ts`)
+  ora usa asset locali in `public/constructors-motogp/` per i 5 maker
+  (Ducati, Aprilia, KTM, Yamaha, Honda), eliminando i 429 Wikimedia che
+  rendevano i loghi invisibili in entrambi i temi.
+- **MotoGP — logo team ufficiale Pulselive accanto a ogni pilota**.
+  Nuova `fetchMotoGPTeamPictures(year)` con cache 24h che chiama
+  `api.motogp.pulselive.com/motogp/v1/teams` e popola il nuovo campo
+  `teamLogoUrl` per ogni pilota della classifica (`standings`). La pagina
+  `MotoGPPage.tsx` mostra il logo ufficiale del team accanto al nome team
+  in tabella, con fallback iniziali via `<TeamLogo>` se l'API è offline.
+
 - **Loghi e foto — fallback iniziali robusto su tutta l'app**.
   Nuovo componente `src/components/common/TeamLogo.tsx`: quando un'immagine
   remota fallisce (Wikimedia rate-limit, hot-link block, 404) mostra un
