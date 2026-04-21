@@ -22,7 +22,7 @@ import {
   type TvFamilyPayload,
 } from "@/hooks/useStreamingData";
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
-import { formatDuration, formatDurationSpoken } from "@/lib/dateUtils";
+import { formatDuration, formatDurationSpoken, toRomeDate } from "@/lib/dateUtils";
 import { inferGenre } from "@/lib/genreUtils";
 
 // Pittogrammi per famiglia: scelti per evocare l'identita' del broadcaster
