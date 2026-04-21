@@ -112,29 +112,32 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
             )}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-2">
-            <div>
-              <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading">
-                Ranking ATP Singolare
+          {/* KPI cards */}
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-border/60 bg-muted/40 px-4 py-3">
+              <p className="font-heading text-[10px] uppercase tracking-widest text-primary/80">
+                Ranking ATP
               </p>
-              <p className="font-heading text-4xl sm:text-5xl font-bold text-primary leading-none">
+              <p className="font-heading text-4xl sm:text-5xl font-bold leading-none text-gold-gradient">
                 {rankingLabel}
               </p>
               {rankingDate && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  aggiornato al {rankingDate}
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  agg. {rankingDate}
                 </p>
               )}
             </div>
 
             {props.seasonRecord && (
-              <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading">
+              <div className="rounded-xl border border-border/60 bg-muted/40 px-4 py-3">
+                <p className="font-heading text-[10px] uppercase tracking-widest text-primary/80">
                   Stagione 2026
                 </p>
-                <p className="font-heading text-xl font-bold">{props.seasonRecord}</p>
+                <p className="font-heading text-3xl font-bold leading-none text-foreground">
+                  {props.seasonRecord}
+                </p>
                 {props.seasonTitles != null && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
                     {props.seasonTitles} {props.seasonTitles === 1 ? "titolo" : "titoli"}
                   </p>
                 )}
@@ -142,32 +145,61 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
             )}
 
             {props.careerHigh != null && (
-              <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading">
+              <div className="rounded-xl border border-border/60 bg-muted/40 px-4 py-3">
+                <p className="font-heading text-[10px] uppercase tracking-widest text-primary/80">
                   Miglior ranking
                 </p>
-                <p className="font-heading text-xl font-bold">#{props.careerHigh}</p>
+                <p className="font-heading text-3xl font-bold leading-none text-foreground">
+                  #{props.careerHigh}
+                </p>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">in carriera</p>
               </div>
             )}
           </div>
 
-          <dl className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
-            {props.height && (
-              <div className="flex gap-2"><dt className="text-muted-foreground">Altezza</dt><dd className="font-medium">{props.height}</dd></div>
-            )}
-            {props.weight && (
-              <div className="flex gap-2"><dt className="text-muted-foreground">Peso</dt><dd className="font-medium">{props.weight}</dd></div>
-            )}
-            {props.plays && (
-              <div className="flex gap-2"><dt className="text-muted-foreground">Mano</dt><dd className="font-medium">{props.plays}</dd></div>
-            )}
-            {props.birthPlace && (
-              <div className="flex gap-2"><dt className="text-muted-foreground">Nato a</dt><dd className="font-medium">{props.birthPlace}</dd></div>
-            )}
-            {props.coach && (
-              <div className="flex gap-2"><dt className="text-muted-foreground">Coach</dt><dd className="font-medium">{props.coach}</dd></div>
-            )}
-          </dl>
+          {/* Bio chips */}
+          {(props.height || props.weight || props.plays || props.birthPlace || props.coach) && (
+            <ul
+              className="mt-4 flex flex-wrap gap-2"
+              aria-label="Informazioni personali"
+            >
+              {props.height && (
+                <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
+                  <Ruler className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="text-muted-foreground">Altezza</span>
+                  <span className="font-semibold text-foreground">{props.height}</span>
+                </li>
+              )}
+              {props.weight && (
+                <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
+                  <Weight className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="text-muted-foreground">Peso</span>
+                  <span className="font-semibold text-foreground">{props.weight}</span>
+                </li>
+              )}
+              {props.plays && (
+                <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
+                  <Hand className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="text-muted-foreground">Mano</span>
+                  <span className="font-semibold text-foreground">{props.plays}</span>
+                </li>
+              )}
+              {props.birthPlace && (
+                <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
+                  <MapPin className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="text-muted-foreground">Nato a</span>
+                  <span className="font-semibold text-foreground">{props.birthPlace}</span>
+                </li>
+              )}
+              {props.coach && (
+                <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
+                  <UserRound className="h-3.5 w-3.5 text-primary" aria-hidden />
+                  <span className="text-muted-foreground">Coach</span>
+                  <span className="font-semibold text-foreground">{props.coach}</span>
+                </li>
+              )}
+            </ul>
+          )}
 
           {visibleSlams.length > 0 && (
             <div className="mt-4">
