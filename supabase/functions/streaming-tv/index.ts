@@ -207,23 +207,37 @@ function buildRomeIso(date: string, hh: number, mm: number): string {
 // (es. "Racconto di una notte - Stagione 1 Episodio 4 (Fiction)") compare
 // invece nei blocchi "scheda" della stessa pagina, in case-mista.
 // Estraiamo entrambi e arricchiamo per match di prefisso uppercase.
-function extractRichTitles(html: string): string[] {
-  const rich: string[] = [];
+export type RichTitle = { title: string; hh?: number; mm?: number };
+
+export function extractRichTitles(html: string): RichTitle[] {
+  const rich: RichTitle[] = [];
   const seen = new Set<string>();
-  const push = (raw: string) => {
+  const push = (raw: string, hh?: number, mm?: number) => {
     const t = decodeEntities(raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
     if (!t || t.length < 5) return;
     if (!/[A-Za-zÀ-ÿ]/.test(t)) return;
-    if (seen.has(t)) return;
-    seen.add(t);
-    rich.push(t);
+    const key = `${t}|${hh ?? ""}:${mm ?? ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    rich.push({ title: t, hh, mm });
   };
 
-  // Pattern 1: testo che contiene un genere fra parentesi a fine stringa,
-  // tipico delle "schede" descrittive di staseraintv.
-  // Esempio: "Racconto di una notte - Stagione 1 Episodio 4 (Fiction)".
-  const re1 = /([A-Za-zÀ-ÿ0-9][^<>\r\n]{4,250}\([A-Za-zÀ-ÿ' ]{3,40}\))/g;
+  // Pattern 1a (NUOVO): blocco "scheda" con orario HH:MM seguito (entro 400
+  // char, anche con tag/newline) dal titolo ricco "... (Genere)".
+  // Cattura l'orario di inizio per match-by-time quando il prefisso fallisce
+  // (es. raw "EV-SP" 20:40 ↔ rich "Calcio - Coppa Italia ... (Sport)").
+  const reTimed = /(\d{1,2}):(\d{2})[\s\S]{0,400}?([A-Za-zÀ-ÿ0-9][^<>\r\n]{4,250}\([A-Za-zÀ-ÿ' ]{3,40}\))/g;
   let m: RegExpExecArray | null;
+  while ((m = reTimed.exec(html)) !== null) {
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (hh > 27 || mm > 59) continue;
+    push(m[3], hh, mm);
+  }
+
+  // Pattern 1b: testo con genere fra parentesi a fine stringa, senza orario
+  // associato. Mantiene il comportamento attuale (match-by-prefix).
+  const re1 = /([A-Za-zÀ-ÿ0-9][^<>\r\n]{4,250}\([A-Za-zÀ-ÿ' ]{3,40}\))/g;
   while ((m = re1.exec(html)) !== null) push(m[1]);
 
   // Pattern 2: title="..." negli <img> delle schede (fallback senza genere).
@@ -243,7 +257,12 @@ function normForMatch(s: string): string {
     .trim();
 }
 
-function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?: string } {
+export function enrichTitle(
+  rawUpper: string,
+  rich: RichTitle[],
+  rawHh?: number,
+  rawMm?: number,
+): { title: string; genre?: string } {
   if (!rawUpper) return { title: rawUpper };
   const norm = normForMatch(rawUpper);
   const normTokens = norm.split(" ").filter(Boolean);
@@ -253,15 +272,54 @@ function enrichTitle(rawUpper: string, rich: string[]): { title: string; genre?:
   // "Roberta Valente Notaio in Sorrento - Stagione 1 Episodio 3 (Fiction)".
   let best = "";
   for (const cand of rich) {
-    const candNorm = normForMatch(cand);
+    const candNorm = normForMatch(cand.title);
     const candTokens = candNorm.split(" ").filter(Boolean);
     // Trova lunghezza prefisso comune di token.
     let common = 0;
     const lim = Math.min(normTokens.length, candTokens.length);
     while (common < lim && normTokens[common] === candTokens[common]) common += 1;
     const commonChars = candTokens.slice(0, common).join(" ").length;
-    if ((common >= 3 || commonChars >= 15) && cand.length > best.length) {
-      best = cand;
+    if ((common >= 3 || commonChars >= 15) && cand.title.length > best.length) {
+      best = cand.title;
+    }
+  }
+  // Fallback (NUOVO): se nessun prefisso ha matchato e abbiamo l'orario della
+  // riga grezza, cerca un rich title con stesso HH:MM esatto. Risolve il caso
+  // di sigle generiche ("EV-SP", "EV-CN") che non condividono token col
+  // titolo reale ma sono al medesimo orario.
+  if (!best && rawHh !== undefined && rawMm !== undefined) {
+    let timeBest = "";
+    for (const cand of rich) {
+      if (cand.hh !== rawHh || cand.mm !== rawMm) continue;
+      if (cand.title.length > timeBest.length) timeBest = cand.title;
+    }
+    if (timeBest) best = timeBest;
+  }
+  // Fallback aggiuntivo (NUOVO): placeholder generici tipo "EV-SP" / "EV-CN"
+  // / "EV-FILM" non condividono token col titolo reale e spesso il rich title
+  // nella scheda non ha un HH:MM nelle vicinanze. Mappa la sigla al genere
+  // atteso e prendi l'unico rich title compatibile.
+  if (!best) {
+    const placeholder = rawUpper.toUpperCase().replace(/\s+/g, "").trim();
+    const PLACEHOLDER_TO_GENRE: Record<string, string[]> = {
+      "EV-SP": ["Sport", "Calcio", "Tennis", "Motori", "Basket", "Pallavolo", "Pallacanestro", "Rugby", "Volley", "Nuoto", "Ciclismo"],
+      "EV-CN": ["Film", "Cinema"],
+      "EV-FILM": ["Film", "Cinema"],
+      "EV-TV": ["Fiction", "Serie Tv", "Telefilm", "Miniserie"],
+    };
+    const wanted = PLACEHOLDER_TO_GENRE[placeholder];
+    if (wanted) {
+      let phBest = "";
+      for (const cand of rich) {
+        const mm = cand.title.match(/\(([^()]{2,40})\)\s*$/);
+        if (!mm) continue;
+        const genreCanon = mm[1].trim()
+          .toLowerCase()
+          .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+        if (!wanted.includes(genreCanon)) continue;
+        if (cand.title.length > phBest.length) phBest = cand.title;
+      }
+      if (phBest) best = phBest;
     }
   }
   const source = best || rawUpper
@@ -357,7 +415,7 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
     }
     prevStartMs = startMs;
 
-    const { title: titleEnriched, genre } = enrichTitle(titleRaw, richTitles);
+    const { title: titleEnriched, genre } = enrichTitle(titleRaw, richTitles, hh, mm);
 
     const key = `${startIso}|${titleEnriched.slice(0, 50)}`;
     if (seen.has(key)) continue;

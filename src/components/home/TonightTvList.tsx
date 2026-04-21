@@ -125,13 +125,17 @@ export default function TonightTvList() {
   }, []);
 
   const tonightHighlights = useMemo(() => {
+    // Finestra estesa 20:30-23:00 Europe/Rome per non escludere kickoff
+    // sportivi (Coppa Italia 20:40, Champions/Serie A 20:45) e prime serate
+    // anticipate. La soglia MIN_DURATION elimina poi tg/promo/filler.
     const inPrimeWindow = (h: TvHighlight) => {
       const minutes = h.hourRome * 60 + h.minuteRome;
-      return minutes >= 21 * 60 && minutes <= 22 * 60 + 30;
+      return minutes >= 20 * 60 + 30 && minutes <= 23 * 60;
     };
-    // Considera "vero" programma di prima serata solo se dura almeno 20 min:
-    // evita stacchi pubblicitari, sigle, R-TNOV e simili "filler" da 1-2 min.
-    const MIN_DURATION = 20;
+    // Soglia 40 min: con la finestra piu' larga servono criteri piu' stretti
+    // per il "vero" programma di prima serata. Calcio 100+, fiction 90+,
+    // film 100+, news show 40+. Tg regionali (~30 min) esclusi.
+    const MIN_DURATION = 40;
     const isMainProgram = (h: TvHighlight) => h.durationMin >= MIN_DURATION;
 
     const pool = familyFilter === "all"
@@ -202,7 +206,7 @@ export default function TonightTvList() {
                 <span className="text-gold-gradient">Stasera in TV</span>
               </h2>
               <p className="text-xs text-muted-foreground mt-1">
-                Prima serata (dalle 21:00) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
+                Prima serata (dalle 20:30) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery
               </p>
             </div>
           </div>
