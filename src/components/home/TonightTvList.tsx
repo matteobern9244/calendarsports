@@ -249,7 +249,7 @@ export default function TonightTvList() {
               aria-rowcount={tonightHighlights.length + 1}
               aria-colcount={6}
               className="
-                divide-y-2 divide-border rounded-md border border-border/40 bg-card/40 overflow-hidden
+                divide-y-2 divide-border rounded-md border-2 border-border bg-card/40 overflow-hidden
                 sm:grid sm:divide-y-0
                 sm:[grid-template-columns:3.5rem_minmax(5rem,auto)_minmax(0,1fr)_6.5rem_4.5rem]
                 lg:[grid-template-columns:8rem_3.5rem_minmax(5rem,auto)_minmax(0,1fr)_7rem_4.5rem]
