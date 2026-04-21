@@ -1,133 +1,121 @@
 
 
-## Limitare transizioni globali al solo istante del cambio tema
+## Badge "Ora italiana" sulle pagine eventi
 
-### Stato attuale (verificato)
+### Obiettivo
 
-In `src/index.css` righe 161-176 c'è una transizione globale **permanente** su 6 proprietà di colore applicata a `*, *::before, *::after`:
+Aggiungere un piccolo badge informativo accanto al titolo di ogni pagina con eventi che dichiari esplicitamente: "Tutti gli orari sono in ora italiana locale" + sigla fuso corrente (`CET` da fine ottobre a fine marzo, `CEST` da fine marzo a fine ottobre), calcolata runtime così è sempre corretta.
 
-```css
-*, *::before, *::after {
-  transition:
-    background-color 280ms ease,
-    border-color 280ms ease,
-    color 200ms ease,
-    fill 280ms ease,
-    stroke 280ms ease,
-    box-shadow 280ms ease;
-}
-```
+### Dove
 
-Esiste una classe escape `.theme-no-transition` ma **nessuno la usa** (zero match in `src/`, zero match in `useTheme.ts`).
+Pagine eventi che mostrano orari:
+- `src/pages/Index.tsx` (Home — Prossimi Eventi + Stasera in TV)
+- `src/pages/Formula1Page.tsx`
+- `src/pages/MotoGPPage.tsx`
+- `src/pages/JuventusPage.tsx`
+- `src/pages/SinnerPage.tsx`
+- `src/pages/StreamingPage.tsx`
 
-### Problema
+### Approccio
 
-La transizione globale è attiva **sempre**, non solo durante il cambio tema:
+**1. Nuovo componente `src/components/common/TimezoneBadge.tsx`**
 
-- ogni `hover` su un `EventCard` o pill broadcaster anima `background-color`/`border-color` su 280ms anche quando dovrebbe essere immediato;
-- componenti pesanti come `StreamingPage` (palinsesto con dozzine di `Accordion` e righe canale), `Formula1Page`/`MotoGPPage` (tabelle classifica piloti+costruttori), `JuventusPage` (calendario Serie A) hanno **centinaia di nodi** che pagano il costo di stylre recalc su ogni interazione;
-- `box-shadow 280ms` su `*` è particolarmente costoso (forza repaint su elementi figli);
-- componenti che hanno **già** la loro `transition-colors`/`transition-all` (Header navigation, SeasonSelector, Button, ecc.) ricevono **due transizioni in conflitto**: la regola `*` perde per specificità ma la composizione resta da risolvere ad ogni interazione.
+Componente piccolo, riutilizzabile, accessibile. Mostra icona `Clock` di lucide + testo `Orari in ora italiana · CEST` (o `CET`). Tooltip su hover con messaggio esteso: "Tutti gli orari mostrati sono nel fuso Europe/Rome".
 
-I componenti che servono davvero animati al cambio tema sono pochi: lo sfondo (`body`), bordi globali (regola `* { @apply border-border }`), e gli elementi che usano token `--background`, `--foreground`, `--muted`, ecc. Tutti questi cambiano valore HSL quando `<html>` passa da `.dark` a `:root`.
+```tsx
+import { Clock } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-### Soluzione
-
-**Inversione della logica**: niente transizione permanente, transizione **solo nell'istante del toggle tema**.
-
-1. **`src/index.css`**: rimuovere il blocco `*, *::before, *::after { transition: ... }` permanente. Sostituirlo con una regola attiva **solo** quando `<html>` ha la classe `theme-transitioning`:
-
-```css
-/* Transizione applicata SOLO durante il toggle tema (~300ms),
-   gestita dall'hook useTheme. Evita costi di transizione su tutte
-   le interazioni (hover, focus, mount) di componenti pesanti. */
-html.theme-transitioning,
-html.theme-transitioning *,
-html.theme-transitioning *::before,
-html.theme-transitioning *::after {
-  transition:
-    background-color 280ms ease,
-    border-color 280ms ease,
-    color 200ms ease,
-    fill 280ms ease,
-    stroke 280ms ease,
-    box-shadow 280ms ease;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html.theme-transitioning,
-  html.theme-transitioning *,
-  html.theme-transitioning *::before,
-  html.theme-transitioning *::after {
-    transition: none !important;
+function getRomeTimezoneAbbreviation(): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Rome",
+      timeZoneName: "short",
+    }).formatToParts(new Date());
+    const tz = parts.find(p => p.type === "timeZoneName")?.value;
+    // Normalizza: a volte ritorna "GMT+1"/"GMT+2" → mappiamo a CET/CEST
+    if (tz === "GMT+1" || tz === "UTC+1") return "CET";
+    if (tz === "GMT+2" || tz === "UTC+2") return "CEST";
+    return tz || "CET";
+  } catch {
+    return "CET";
   }
 }
+
+export default function TimezoneBadge({ className }: { className?: string }) {
+  const tz = getRomeTimezoneAbbreviation();
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--gold))]/30",
+              "bg-[hsl(var(--gold))]/10 px-2.5 py-1 text-[10px] font-heading font-semibold uppercase tracking-wider",
+              "text-[hsl(var(--gold))]",
+              className
+            )}
+            aria-label={`Tutti gli orari sono in ora italiana locale (${tz})`}
+          >
+            <Clock className="h-3 w-3" aria-hidden="true" />
+            Orari in ora italiana · {tz}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Tutti gli orari mostrati sono nel fuso Europe/Rome ({tz}).
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 ```
 
-La classe `.theme-no-transition` esistente diventa obsoleta — la rimuovo.
+Note tecniche:
+- Calcolo `CET`/`CEST` runtime via `Intl.DateTimeFormat` con `timeZone: "Europe/Rome"` e `timeZoneName: "short"`. Niente date hardcoded di passaggio DST.
+- Stile coerente con palette oro esistente, niente colori hardcoded.
+- Accessibile: `aria-label` sul wrapper, `aria-hidden` sull'icona, tooltip per screen reader.
+- `Tooltip` già disponibile in `src/components/ui/tooltip.tsx`.
 
-2. **`src/hooks/useTheme.ts`**: nell'`useEffect` che applica il tema, **prima** di cambiare classe `light`/`dark`:
-   - aggiungi `theme-transitioning` su `<html>`;
-   - imposta un `setTimeout` a 320ms (28 0ms transizione + 40ms buffer) per rimuoverla.
+**2. Posizionamento nelle pagine**
 
-Patch concettuale:
+Inserire il badge subito sotto/accanto al `SectionHeader` principale di ogni pagina, in modo discreto ma visibile. Esempio:
 
-```ts
-useEffect(() => {
-  const root = document.documentElement;
-
-  // Attiva transizioni globali solo per la durata del toggle.
-  // Skip al primo mount (evita transizione su valori iniziali = noop visivo
-  // ma costo reale su pagine pesanti).
-  if (!isFirstMount.current) {
-    root.classList.add("theme-transitioning");
-    window.setTimeout(() => {
-      root.classList.remove("theme-transitioning");
-    }, 320);
-  }
-  isFirstMount.current = false;
-
-  root.classList.remove("light", "dark");
-  root.classList.add(theme);
-  root.style.colorScheme = theme;
-  localStorage.setItem("cse-theme", theme);
-
-  // ...resto invariato (theme-color meta)
-}, [theme]);
+```tsx
+<div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <SectionHeader title="Formula 1" />
+  <TimezoneBadge />
+</div>
 ```
 
-`isFirstMount` è un `useRef(true)` per evitare di attivare la transizione al primo render (tema già coerente con DOM grazie allo script anti-FOUC in `index.html`).
+Per `Index.tsx` (Home) il badge va nella riga superiore vicino al pulsante "Sincronizza", per non aggiungere rumore alla griglia eventi.
 
 ### File modificati
 
 | File | Modifica |
 |---|---|
-| `src/index.css` | Rimuove la transizione globale `*` permanente. Sostituita con regola `html.theme-transitioning *` attiva solo durante il toggle. Rimossa la classe orfana `.theme-no-transition`. Mantenuto il rispetto di `prefers-reduced-motion`. |
-| `src/hooks/useTheme.ts` | Aggiunge/rimuove la classe `theme-transitioning` su `<html>` per 320ms al cambio tema, esclusivo del primo mount. |
-| `changelog.md` | Voce sotto Unreleased: "Performance: transizioni globali tema applicate solo durante il toggle (320ms), non più su ogni interazione hover/focus dei componenti pesanti." |
+| `src/components/common/TimezoneBadge.tsx` | **NUOVO** — componente con `Intl.DateTimeFormat` + tooltip Radix. |
+| `src/pages/Index.tsx` | Badge inline nella header row sopra "Stasera in TV". |
+| `src/pages/Formula1Page.tsx` | Badge accanto a `SectionHeader`. |
+| `src/pages/MotoGPPage.tsx` | Badge accanto a `SectionHeader`. |
+| `src/pages/JuventusPage.tsx` | Badge accanto a `SectionHeader`. |
+| `src/pages/SinnerPage.tsx` | Badge accanto a `SectionHeader`. |
+| `src/pages/StreamingPage.tsx` | Badge accanto a `SectionHeader`. |
+| `changelog.md` | Voce sotto Unreleased: "Aggiunto badge 'Orari in ora italiana · CET/CEST' nelle pagine eventi, sigla DST calcolata runtime via `Intl.DateTimeFormat`." |
 
 ### Cosa NON cambia
 
-- Cambio tema visivamente identico a prima (transizione 280ms ease su colore + sfondo + bordi).
-- Componenti con `transition-colors`/`transition-all` locali (Header, Button, SeasonSelector, ecc.) continuano ad animarsi al hover come prima — **anzi meglio**, senza regola `*` in conflitto.
-- Anti-FOUC, theme-color meta, palette, brand tokens: invariati.
+- Logica di formattazione date/orari (già su `Europe/Rome` in `dateUtils.ts` e nei singoli componenti). Il badge è solo informativo.
+- Struttura pagine, route, dati, hook React Query: invariati.
 - Versione resta **2.1.0**.
-
-### Benefici attesi
-
-- **Hover su `StreamingPage`/`Formula1Page`/`MotoGPPage`/`JuventusPage`**: niente più transizione di 280ms su `box-shadow` propagata a centinaia di nodi → riduzione style recalc + paint per interazione.
-- **Mount/unmount di componenti** (es. apertura `Accordion` palinsesto, dialog `ReleaseDetailDialog`): nessuna transizione spuria sui figli.
-- **`prefers-reduced-motion`**: comportamento invariato (nessuna transizione).
-- **Cambio tema**: identico, percepito come prima.
 
 ### Checklist post-edit
 
-1. Toggle sole/luna: transizione fluida 280ms come oggi, in light → dark e viceversa.
-2. Hover su EventCard, badge, righe palinsesto: cambio colore istantaneo come da classi locali, nessuna animazione spuria di sfondo/ombra.
-3. Apertura Accordion in `/streaming`: nessun "wave" di transizione sui canali.
-4. `prefers-reduced-motion: reduce` in DevTools: cambio tema istantaneo, nessuna transizione.
-5. Grep `theme-no-transition` → 0 occorrenze.
-6. `npm run lint` + `npm run build`.
-7. Aggiornare `changelog.md`.
-8. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
+1. Badge visibile e leggibile in light + dark.
+2. Sigla mostra `CEST` ora (ad aprile 2026), `CET` automaticamente da fine ottobre.
+3. Tooltip funziona con mouse + tastiera (focus).
+4. Nessun overflow su mobile (badge a capo se header è stretto).
+5. `npm run lint` + `npm run build`.
+6. Aggiornare `changelog.md`.
+7. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
 
