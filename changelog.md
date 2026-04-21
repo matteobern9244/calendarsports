@@ -18,6 +18,19 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Sezione "Highlights"** nelle pagine Juventus, Formula 1 e MotoGP, alimentata
+  dai feed RSS pubblici delle 3 playlist YouTube ufficiali (Juventus, Sky Sport
+  F1, MotoGP) tramite la nuova edge function `supabase/functions/highlights-youtube`.
+  Nuovo endpoint `?sport=juventus|f1|motogp&limit=12` che ritorna fino a 25
+  video reali con `videoId`, `title`, `publishedAt`, `source` (canale ufficiale)
+  e thumbnail YouTube deterministica. Cache HTTP `public, max-age=600` per
+  contenere il carico verso YouTube e `staleTime` 10 minuti su React Query
+  (`useHighlights` in `src/hooks/useSportsData.ts`). Layout responsive con
+  card grafiche 16:9 (overlay play, badge "Nuovo" per video ≤ 3 giorni, data
+  italiana, fonte canale, tempo relativo via nuovo helper `formatRelativeIT`
+  in `src/lib/dateUtils.ts`) e CTA "Vedi playlist completa" verso la
+  playlist YouTube. Nessuna API key richiesta, nessun dato hardcoded: titoli,
+  date e link provengono interamente dal feed live.
 - **Pagina dettaglio partita Juventus** su rotta `/juventus/partite/:matchId`
   (`src/pages/JuventusMatchPage.tsx`). Header con loghi entrambe le squadre,
   score tipografico se la partita è terminata, badge competizione, data/ora
