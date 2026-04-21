@@ -1,44 +1,359 @@
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from '../_shared/security.ts';
 
-// Sinner 2026 schedule from Wikipedia (verified March 2026)
-function getSinnerSchedule2026(): any[] {
-  return [
-    { name: 'Australian Open', date: '2026-01-18', dateEnd: '2026-02-01', surface: 'Hard', location: 'Melbourne, AUS', tier: 'Grand Slam', result: 'SF' },
-    { name: 'Qatar Open', date: '2026-02-16', dateEnd: '2026-02-21', surface: 'Hard', location: 'Doha, QAT', tier: 'ATP 500', result: 'QF' },
-    { name: 'Indian Wells Masters', date: '2026-03-04', dateEnd: '2026-03-15', surface: 'Hard', location: 'Indian Wells, USA', tier: 'ATP 1000', result: 'W' },
-    { name: 'Miami Open', date: '2026-03-18', dateEnd: '2026-03-29', surface: 'Hard', location: 'Miami, USA', tier: 'ATP 1000', result: 'W' },
-    { name: 'Monte-Carlo Masters', date: '2026-04-05', dateEnd: '2026-04-12', surface: 'Clay', location: 'Roquebrune-Cap-Martin, FRA', tier: 'ATP 1000', result: null },
-    { name: 'Madrid Open', date: '2026-04-22', dateEnd: '2026-05-03', surface: 'Clay', location: 'Madrid, ESP', tier: 'ATP 1000', result: null },
-    { name: 'Internazionali d\'Italia', date: '2026-05-06', dateEnd: '2026-05-17', surface: 'Clay', location: 'Roma, ITA', tier: 'ATP 1000', result: null },
-    { name: 'Roland Garros', date: '2026-05-24', dateEnd: '2026-06-07', surface: 'Clay', location: 'Parigi, FRA', tier: 'Grand Slam', result: null },
-    { name: 'Halle Open', date: '2026-06-15', dateEnd: '2026-06-21', surface: 'Grass', location: 'Halle, GER', tier: 'ATP 500', result: null },
-    { name: 'Wimbledon', date: '2026-06-29', dateEnd: '2026-07-12', surface: 'Grass', location: 'Londra, GBR', tier: 'Grand Slam', result: null },
-    { name: 'Canadian Open', date: '2026-08-01', dateEnd: '2026-08-13', surface: 'Hard', location: 'Montreal, CAN', tier: 'ATP 1000', result: null },
-    { name: 'Cincinnati Open', date: '2026-08-13', dateEnd: '2026-08-23', surface: 'Hard', location: 'Cincinnati, USA', tier: 'ATP 1000', result: null },
-    { name: 'US Open', date: '2026-08-30', dateEnd: '2026-09-13', surface: 'Hard', location: 'New York, USA', tier: 'Grand Slam', result: null },
-    { name: 'China Open', date: '2026-09-30', dateEnd: '2026-10-06', surface: 'Hard', location: 'Pechino, CHN', tier: 'ATP 500', result: null },
-    { name: 'Shanghai Masters', date: '2026-10-07', dateEnd: '2026-10-18', surface: 'Hard', location: 'Shanghai, CHN', tier: 'ATP 1000', result: null },
-    { name: 'Vienna Open', date: '2026-10-19', dateEnd: '2026-10-25', surface: 'Hard (Indoor)', location: 'Vienna, AUT', tier: 'ATP 500', result: null },
-    { name: 'Paris Masters', date: '2026-11-02', dateEnd: '2026-11-08', surface: 'Hard (Indoor)', location: 'Parigi, FRA', tier: 'ATP 1000', result: null },
-    { name: 'ATP Finals', date: '2026-11-15', dateEnd: '2026-11-22', surface: 'Hard (Indoor)', location: 'Torino, ITA', tier: 'Tour Finals', result: null },
-  ];
+// =====================================================================
+// SOURCE: Wikipedia (en.wikipedia.org) - public HTML scraping
+// CACHE:  30 minutes server-side to respect fair use
+// LIMITS: latency 24-48h editor lag; scraper fragile to layout changes
+// =====================================================================
+
+const WIKI_HEADERS = {
+  'User-Agent': 'CalendarEvents/2.1 (https://rydercalendarevents.lovable.app)',
+  'Accept': 'text/html',
+};
+const CACHE_TTL_MS = 30 * 60 * 1000;
+const cache = new Map<string, { at: number; data: unknown }>();
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at > CACHE_TTL_MS) { cache.delete(key); return null; }
+  return entry.data as T;
+}
+function setCached(key: string, data: unknown) {
+  cache.set(key, { at: Date.now(), data });
 }
 
-// Sinner 2026 results from Wikipedia
-function getSinnerResults2026(): any[] {
-  return [
-    { tournament: 'Australian Open', date: '2026-01-18', round: 'Semifinale', opponent: 'N. Djokovic', score: '6-3 3-6 6-4 4-6 4-6', result: 'S', surface: 'Hard' },
-    { tournament: 'Qatar Open', date: '2026-02-16', round: 'Quarti', opponent: 'J. Menšík', score: '6-7 6-2 3-6', result: 'S', surface: 'Hard' },
-    { tournament: 'Indian Wells Masters', date: '2026-03-04', round: 'Finale', opponent: 'D. Medvedev', score: '7-6 7-6', result: 'V', surface: 'Hard' },
-    { tournament: 'Miami Open', date: '2026-03-18', round: 'Finale', opponent: 'J. Lehečka', score: '6-4 6-4', result: 'V', surface: 'Hard' },
-  ];
+async function fetchWiki(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { headers: WIKI_HEADERS });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch (e) {
+    console.error('Wiki fetch error', url, e);
+    return null;
+  }
 }
 
+// ----- Helpers ---------------------------------------------------------
+function stripTags(s: string): string {
+  return s.replace(/<[^>]+>/g, ' ').replace(/&#160;/g, ' ').replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
+}
+
+function parseInfobox(html: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  // matches infobox-label/data pairs (first occurrence per label retained)
+  const re = /class="infobox-label"[^>]*>([\s\S]{1,200}?)<\/th>\s*<td class="infobox-data"[^>]*>([\s\S]{0,500}?)<\/td>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const k = stripTags(m[1]).toLowerCase();
+    if (!out[k]) out[k] = stripTags(m[2]);
+  }
+  return out;
+}
+
+function parseDateText(s: string): string | null {
+  // "16 August 2001" or "13 April 2026"
+  const m = s.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+  if (!m) return null;
+  const months: Record<string, string> = {
+    january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+    july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
+  };
+  const mm = months[m[2].toLowerCase()];
+  if (!mm) return null;
+  return `${m[3]}-${mm}-${m[1].padStart(2, '0')}`;
+}
+
+// ----- Player info -----------------------------------------------------
+const PHOTO_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Jannik_Sinner_2025_US_Open.jpg/500px-Jannik_Sinner_2025_US_Open.jpg';
+
+async function getPlayerInfo() {
+  const cached = getCached<unknown>('player-info');
+  if (cached) return cached;
+
+  const html = await fetchWiki('https://en.wikipedia.org/wiki/Jannik_Sinner');
+  const seasonHtml = await fetchWiki('https://en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season');
+
+  const ib = html ? parseInfobox(html) : {};
+
+  const currentRanking = ib['current ranking'] || '';
+  const rankNumMatch = currentRanking.match(/No\.\s*(\d+)/);
+  const rankDateMatch = currentRanking.match(/\((\d{1,2}\s+[A-Za-z]+\s+\d{4})\)/);
+
+  const highest = ib['highest ranking'] || '';
+  const highestNumMatch = highest.match(/No\.\s*(\d+)/);
+  const highestDateMatch = highest.match(/\((\d{1,2}\s+[A-Za-z]+\s+\d{4})\)/);
+
+  const careerRecord = ib['career record'] || '';
+  const careerTitles = ib['career titles'] || '';
+  const prizeMoney = ib['prize money'] || '';
+  const height = ib['height'] || '';
+  const plays = ib['plays'] || '';
+  const coach = ib['coach'] || '';
+  const turnedPro = ib['turned pro'] || '';
+
+  // Born: "( 2001-08-16 ) 16 August 2001 (age 24) Innichen , Italy"
+  const born = ib['born'] || '';
+  const birthDate = (born.match(/\d{4}-\d{2}-\d{2}/) || [null])[0]
+    || parseDateText(born);
+  const birthPlaceMatch = born.match(/age\s*\d+\)\s*(.+)$/);
+  const birthPlace = birthPlaceMatch ? birthPlaceMatch[1].trim() : '';
+
+  // 2026 season stats
+  let seasonRecord: string | null = null;
+  let seasonTitles: number | null = null;
+  if (seasonHtml) {
+    const sib = parseInfobox(seasonHtml);
+    // labels in season page typically "singles win-loss", "singles titles"
+    for (const k of Object.keys(sib)) {
+      if (k.includes('singles win') || k === 'singles record') seasonRecord = sib[k];
+      if (k.includes('singles titles')) {
+        const n = parseInt(sib[k]); if (!isNaN(n)) seasonTitles = n;
+      }
+    }
+  }
+
+  const data = {
+    name: 'Jannik Sinner',
+    ranking: rankNumMatch ? parseInt(rankNumMatch[1]) : null,
+    rankingDate: rankDateMatch ? parseDateText(rankDateMatch[1]) : null,
+    careerHigh: highestNumMatch ? parseInt(highestNumMatch[1]) : null,
+    careerHighDate: highestDateMatch ? parseDateText(highestDateMatch[1]) : null,
+    nationality: 'Italia',
+    country: 'IT',
+    birthDate,
+    birthPlace,
+    height,
+    plays,
+    coach,
+    turnedPro: turnedPro ? parseInt(turnedPro) || turnedPro : null,
+    careerRecord,
+    careerTitles: careerTitles ? parseInt(careerTitles) || careerTitles : null,
+    prizeMoney,
+    seasonRecord,
+    seasonTitles,
+    photoUrl: PHOTO_URL,
+    source: 'Wikipedia (en.wikipedia.org)',
+  };
+
+  setCached('player-info', data);
+  return data;
+}
+
+// ----- 2026 season matches & tournaments -------------------------------
+interface MatchRow {
+  tournament: string;
+  tournamentSlug: string;
+  date: string;            // ISO start date of tournament
+  dateEnd: string | null;
+  surface: string;
+  location: string;
+  tier: string;
+  round: string;
+  opponent: string;
+  opponentRank: number | null;
+  score: string;
+  result: 'V' | 'S' | null; // Win/Loss
+}
+
+interface TournamentRow {
+  name: string;
+  date: string;
+  dateEnd: string | null;
+  surface: string;
+  location: string;
+  tier: string;
+  status: 'completato' | 'in corso' | 'programmato';
+  result: string | null;   // e.g. 'W', 'F', 'SF', or null if upcoming
+}
+
+function parseTournamentHeader(cellHtml: string): {
+  name: string; location: string; tier: string; surface: string;
+  date: string | null; dateEnd: string | null;
+} {
+  const text = stripTags(cellHtml);
+  // Patterns inside header cell:
+  // "Australian Open Melbourne, Australia Grand Slam tournament Hard, outdoor 18 January – 1 February 2026"
+  const lines = text.split(/(?<=Australia|France|Italy|USA|Spain|Germany|Austria|UK|China|Canada|Qatar|UAE)\s|(?:Tournament|Hard|Clay|Grass|Hard \(Indoor\))/);
+  // simpler approach: regex on date range
+  const dateRangeRe = /(\d{1,2})\s+([A-Za-z]+)(?:\s*[–-]\s*(\d{1,2})\s+([A-Za-z]+))?\s+(\d{4})/;
+  const dr = text.match(dateRangeRe);
+  let date: string | null = null;
+  let dateEnd: string | null = null;
+  if (dr) {
+    const months: Record<string, string> = {
+      january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',
+      july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'
+    };
+    const startMonth = months[dr[2].toLowerCase()];
+    const endMonth = dr[4] ? months[dr[4].toLowerCase()] : startMonth;
+    const year = dr[5];
+    if (startMonth) date = `${year}-${startMonth}-${dr[1].padStart(2,'0')}`;
+    if (dr[3] && endMonth) dateEnd = `${year}-${endMonth}-${dr[3].padStart(2,'0')}`;
+  }
+
+  // Name: first link inside cell
+  const nameMatch = cellHtml.match(/<a[^>]*title="[^"]*"[^>]*>([^<]+)<\/a>/);
+  const name = nameMatch ? stripTags(nameMatch[1]) : text.split(/\s\s/)[0];
+
+  // Surface
+  let surface = '';
+  if (/Hard,\s*indoor|Hard \(Indoor\)/i.test(text)) surface = 'Hard (Indoor)';
+  else if (/Hard/i.test(text)) surface = 'Hard';
+  else if (/Clay/i.test(text)) surface = 'Clay';
+  else if (/Grass/i.test(text)) surface = 'Grass';
+
+  // Tier
+  let tier = '';
+  if (/Grand Slam/i.test(text)) tier = 'Grand Slam';
+  else if (/ATP Finals|Tour Finals/i.test(text)) tier = 'Tour Finals';
+  else if (/ATP 1000|Masters 1000/i.test(text)) tier = 'ATP 1000';
+  else if (/ATP 500/i.test(text)) tier = 'ATP 500';
+  else if (/ATP 250/i.test(text)) tier = 'ATP 250';
+  else if (/Davis Cup/i.test(text)) tier = 'Davis Cup';
+
+  // Location: usually after name, before tier
+  const afterName = name ? text.substring(text.indexOf(name) + name.length) : text;
+  const locMatch = afterName.match(/^\s*([A-Z][\w\s,'-]+?)\s+(?:Grand Slam|ATP|Tour Finals|Davis|Hard|Clay|Grass)/);
+  const location = locMatch ? locMatch[1].trim().replace(/\s+,/g,',') : '';
+
+  return { name: name || 'Unknown', location, tier, surface, date, dateEnd };
+}
+
+async function getSeasonData() {
+  const cached = getCached<{ matches: MatchRow[]; tournaments: TournamentRow[] }>('season-2026');
+  if (cached) return cached;
+
+  const html = await fetchWiki('https://en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season');
+  if (!html) return { matches: [], tournaments: [] };
+
+  // Locate Singles_matches section
+  const sectionStart = html.indexOf('id="Singles_matches"');
+  if (sectionStart < 0) return { matches: [], tournaments: [] };
+  const tableStart = html.indexOf('<table', sectionStart);
+  const tableEnd = html.indexOf('</table>', tableStart);
+  if (tableStart < 0 || tableEnd < 0) return { matches: [], tournaments: [] };
+  const tableHtml = html.substring(tableStart, tableEnd);
+
+  // Parse rows
+  const rows = tableHtml.split(/<tr[^>]*>/).slice(1);
+  const matches: MatchRow[] = [];
+  const tournamentMap = new Map<string, { header: ReturnType<typeof parseTournamentHeader>; matches: MatchRow[] }>();
+  let currentTour: ReturnType<typeof parseTournamentHeader> | null = null;
+  let currentTourKey = '';
+
+  for (const row of rows) {
+    const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(m => m[1]);
+    if (cells.length === 0) continue;
+
+    // Tournament header cell has rowspan
+    const firstCellMatch = row.match(/<td[^>]*rowspan="(\d+)"[^>]*>([\s\S]*?)<\/td>/);
+    if (firstCellMatch && cells.length === 1) {
+      currentTour = parseTournamentHeader(firstCellMatch[2]);
+      currentTourKey = currentTour.name;
+      tournamentMap.set(currentTourKey, { header: currentTour, matches: [] });
+      continue;
+    }
+
+    // Match row: 6 cells (match#, round, opponent, rank, result, score)
+    if (cells.length >= 6 && currentTour) {
+      const round = stripTags(cells[1]);
+      const opponent = stripTags(cells[2]).replace(/\s*\(.*?\)\s*$/, '').trim();
+      const rankText = stripTags(cells[3]);
+      const opponentRank = parseInt(rankText) || null;
+      const resultText = stripTags(cells[4]).toLowerCase();
+      const result: 'V' | 'S' | null = resultText.includes('win') ? 'V'
+        : resultText.includes('loss') ? 'S' : null;
+      const score = stripTags(cells[5]).replace(/\[\d+\]/g, '').trim();
+
+      const m: MatchRow = {
+        tournament: currentTour.name,
+        tournamentSlug: currentTour.name.toLowerCase().replace(/\s+/g, '-'),
+        date: currentTour.date || '',
+        dateEnd: currentTour.dateEnd,
+        surface: currentTour.surface,
+        location: currentTour.location,
+        tier: currentTour.tier,
+        round,
+        opponent,
+        opponentRank,
+        score,
+        result,
+      };
+      matches.push(m);
+      tournamentMap.get(currentTourKey)?.matches.push(m);
+    }
+  }
+
+  // Build tournament summary list
+  const now = new Date();
+  const tournaments: TournamentRow[] = [];
+  for (const [, { header, matches: tm }] of tournamentMap) {
+    if (!header.date) continue;
+    const startD = new Date(header.date);
+    const endD = header.dateEnd ? new Date(header.dateEnd) : startD;
+
+    let result: string | null = null;
+    if (tm.length > 0) {
+      const last = tm[tm.length - 1];
+      if (last.result === 'V') {
+        // Won the tournament if last round is final marker
+        if (/^F$|Final/i.test(last.round)) result = 'W';
+        else result = last.round;
+      } else if (last.result === 'S') {
+        result = last.round;
+      }
+    }
+
+    let status: TournamentRow['status'] = 'programmato';
+    if (endD < now && tm.length > 0) status = 'completato';
+    else if (startD <= now && endD >= now) status = 'in corso';
+
+    tournaments.push({
+      name: header.name,
+      date: header.date,
+      dateEnd: header.dateEnd,
+      surface: header.surface,
+      location: header.location,
+      tier: header.tier,
+      status,
+      result,
+    });
+  }
+
+  // Add upcoming tournaments from ATP 2026 calendar (best-effort)
+  // For simplicity, append a curated upcoming list if Wikipedia season page lacks future events
+  const upcomingFromSeason = tournaments.some(t => new Date(t.date) > now);
+  if (!upcomingFromSeason) {
+    const upcoming: TournamentRow[] = [
+      { name: 'Madrid Open', date: '2026-04-22', dateEnd: '2026-05-03', surface: 'Clay', location: 'Madrid, Spagna', tier: 'ATP 1000', status: 'programmato', result: null },
+      { name: 'Italian Open', date: '2026-05-04', dateEnd: '2026-05-17', surface: 'Clay', location: 'Roma, Italia', tier: 'ATP 1000', status: 'programmato', result: null },
+      { name: 'Roland Garros', date: '2026-05-24', dateEnd: '2026-06-07', surface: 'Clay', location: 'Parigi, Francia', tier: 'Grand Slam', status: 'programmato', result: null },
+      { name: 'Halle Open', date: '2026-06-15', dateEnd: '2026-06-21', surface: 'Grass', location: 'Halle, Germania', tier: 'ATP 500', status: 'programmato', result: null },
+      { name: 'Wimbledon', date: '2026-06-29', dateEnd: '2026-07-12', surface: 'Grass', location: 'Londra, UK', tier: 'Grand Slam', status: 'programmato', result: null },
+      { name: 'Canadian Open', date: '2026-08-01', dateEnd: '2026-08-13', surface: 'Hard', location: 'Toronto, Canada', tier: 'ATP 1000', status: 'programmato', result: null },
+      { name: 'Cincinnati Open', date: '2026-08-13', dateEnd: '2026-08-23', surface: 'Hard', location: 'Cincinnati, USA', tier: 'ATP 1000', status: 'programmato', result: null },
+      { name: 'US Open', date: '2026-08-30', dateEnd: '2026-09-13', surface: 'Hard', location: 'New York, USA', tier: 'Grand Slam', status: 'programmato', result: null },
+      { name: 'Shanghai Masters', date: '2026-10-07', dateEnd: '2026-10-18', surface: 'Hard', location: 'Shanghai, Cina', tier: 'ATP 1000', status: 'programmato', result: null },
+      { name: 'Paris Masters', date: '2026-11-02', dateEnd: '2026-11-08', surface: 'Hard (Indoor)', location: 'Parigi, Francia', tier: 'ATP 1000', status: 'programmato', result: null },
+      { name: 'ATP Finals', date: '2026-11-15', dateEnd: '2026-11-22', surface: 'Hard (Indoor)', location: 'Torino, Italia', tier: 'Tour Finals', status: 'programmato', result: null },
+    ];
+    for (const u of upcoming) tournaments.push(u);
+  }
+
+  tournaments.sort((a, b) => a.date.localeCompare(b.date));
+
+  const data = { matches, tournaments };
+  setCached('season-2026', data);
+  return data;
+}
+
+// =====================================================================
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   const rl = checkRateLimit(req, { key: 'sports-tennis' });
   if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
@@ -48,74 +363,52 @@ Deno.serve(async (req) => {
     const action = url.searchParams.get('action');
     const seasonParam = url.searchParams.get('season');
 
-    // Validate season strictly when provided to prevent future URL injection
     if (seasonParam !== null && !/^\d{4}$/.test(seasonParam)) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid season parameter' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    let data: any;
+    const season = seasonParam ? parseInt(seasonParam) : 2026;
+    let data: unknown;
 
     switch (action) {
       case 'player-info': {
-        data = {
-          name: 'Jannik Sinner',
-          ranking: 2,
-          nationality: 'Italia',
-          birthDate: '2001-08-16',
-          age: Math.floor((Date.now() - new Date('2001-08-16').getTime()) / (365.25 * 24 * 60 * 60 * 1000)),
-          height: '188 cm',
-          weight: '76 kg',
-          birthPlace: 'San Candido, Italia',
-          turnedPro: 2018,
-          coach: 'Darren Cahill / Simone Vagnozzi',
-          plays: 'Destro',
-          seasonRecord: '19-2',
-          titles2026: 2,
-        };
+        data = await getPlayerInfo();
         break;
       }
-
       case 'next-event': {
+        if (season !== 2026) { data = null; break; }
+        const { tournaments } = await getSeasonData();
         const now = new Date();
-        const schedule = getSinnerSchedule2026();
-        const next = schedule.find(t => new Date(t.dateEnd || t.date) > now && !t.result);
-        data = next || null;
+        data = tournaments.find(t => new Date(t.dateEnd || t.date) >= now && !t.result) || null;
         break;
       }
-
-      case 'results': {
-        data = getSinnerResults2026();
-        break;
-      }
-
       case 'schedule': {
-        const schedule = getSinnerSchedule2026();
-        const now = new Date();
-        data = schedule.map(t => ({
-          ...t,
-          status: t.result ? 'completato' : new Date(t.date) < now ? 'in corso' : 'programmato',
-        }));
+        if (season !== 2026) { data = []; break; }
+        const { tournaments } = await getSeasonData();
+        data = tournaments;
         break;
       }
-
+      case 'results': {
+        if (season !== 2026) { data = []; break; }
+        const { matches } = await getSeasonData();
+        data = matches;
+        break;
+      }
       default:
-        return new Response(JSON.stringify({ error: 'Azione non valida. Usa: player-info, schedule, results, next-event' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        return new Response(JSON.stringify({ success: false, error: 'Azione non valida. Usa: player-info, schedule, results, next-event' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data, source: 'ATP Tour / Wikipedia' }), {
+    return new Response(JSON.stringify({ success: true, data, source: 'Wikipedia (en.wikipedia.org)' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Tennis API error:', error);
     return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Errore sconosciuto' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
