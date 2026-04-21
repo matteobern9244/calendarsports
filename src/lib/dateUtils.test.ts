@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDuration, formatDurationSpoken } from "./dateUtils";
+import { formatDuration, formatDurationSpoken, toRomeDate, formatJuventusDateTime } from "./dateUtils";
 
 describe("formatDuration", () => {
   describe("valori invalidi -> stringa vuota", () => {
@@ -97,5 +97,61 @@ describe("formatDurationSpoken", () => {
   });
   it("usa singolare minuto in composizione (61 min)", () => {
     expect(formatDurationSpoken(61)).toBe("1 ora e 1 minuto");
+  });
+});
+
+describe("toRomeDate", () => {
+  it("accetta ISO con Z", () => {
+    const d = toRomeDate("2026-04-21T19:45:00Z");
+    expect(d).toBeInstanceOf(Date);
+    expect(d!.toISOString()).toBe("2026-04-21T19:45:00.000Z");
+  });
+  it("accetta ISO con offset +01:00", () => {
+    const d = toRomeDate("2026-04-21T20:45:00+01:00");
+    expect(d).toBeInstanceOf(Date);
+    expect(d!.toISOString()).toBe("2026-04-21T19:45:00.000Z");
+  });
+  it("tratta stringa naive come UTC", () => {
+    const naive = toRomeDate("2026-04-21T19:45:00");
+    const z = toRomeDate("2026-04-21T19:45:00Z");
+    expect(naive).toBeInstanceOf(Date);
+    expect(naive!.getTime()).toBe(z!.getTime());
+  });
+  it("ritorna null per input vuoti o invalidi", () => {
+    expect(toRomeDate("")).toBeNull();
+    expect(toRomeDate(null)).toBeNull();
+    expect(toRomeDate(undefined)).toBeNull();
+    expect(toRomeDate("non-una-data")).toBeNull();
+  });
+  it("accetta oggetti Date validi", () => {
+    const orig = new Date("2026-04-21T19:45:00Z");
+    expect(toRomeDate(orig)).toBe(orig);
+  });
+});
+
+describe("formatJuventusDateTime", () => {
+  it("formatta in ora Roma (estate, UTC+2)", () => {
+    const result = formatJuventusDateTime("2026-04-21T19:45:00Z");
+    expect(result).toEqual({ date: "21/04/2026", time: "21:45", full: "21/04/2026 21:45" });
+  });
+  it("formatta in ora Roma (inverno, UTC+1)", () => {
+    const result = formatJuventusDateTime("2026-01-15T19:45:00Z");
+    expect(result.time).toBe("20:45");
+    expect(result.date).toBe("15/01/2026");
+  });
+  it("naive senza offset = stesso risultato della Z", () => {
+    const naive = formatJuventusDateTime("2026-04-21T19:45:00");
+    const z = formatJuventusDateTime("2026-04-21T19:45:00Z");
+    expect(naive).toEqual(z);
+  });
+  it("ritorna placeholder per input nullo", () => {
+    expect(formatJuventusDateTime(null)).toEqual({ date: "—", time: "", full: "—" });
+    expect(formatJuventusDateTime(undefined)).toEqual({ date: "—", time: "", full: "—" });
+    expect(formatJuventusDateTime("")).toEqual({ date: "—", time: "", full: "—" });
+  });
+  it("gestisce edge case mezzanotte UTC -> giorno dopo a Roma", () => {
+    const result = formatJuventusDateTime("2026-04-21T23:30:00Z");
+    expect(result.date).toBe("2026-04-22".split("-").reverse().join("/"));
+    expect(result.time).toBe("01:30");
   });
 });

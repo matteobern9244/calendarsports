@@ -18,6 +18,38 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Changed
 
+- **Date Juventus sempre normalizzate in fuso `Europe/Rome`**.
+  Nuovi helper centralizzati `toRomeDate` e `formatJuventusDateTime`
+  in `src/lib/dateUtils.ts`: tutte le stringhe ISO senza offset
+  (caso teorico ma non garantito da Sky/Lega) vengono trattate come
+  UTC e poi convertite in ora italiana via
+  `Intl.DateTimeFormat({ timeZone: "Europe/Rome" })`. I tre callsite
+  hand-rolled in `src/pages/JuventusPage.tsx` (card "Prossima Partita"
+  + card calendario) e `src/pages/Index.tsx` (sezione Juventus) usano
+  ora l'helper unico. Comportamento esterno per gli utenti invariato
+  nei casi normali; eliminato il rischio che un orologio device su
+  fuso non-Europe/Rome o una stringa naive bypassino la conversione.
+- **Backend `sports-football`**: la `dateKey` per il lookup
+  broadcaster (sia in `fetchBroadcasterMap` sia in
+  `extractJuventusMatches`) viene ora calcolata sulla **data Roma**
+  della partita anziché sulla data UTC. Risolve il drift mezzanotte
+  per match che iniziano dopo le 22:00 UTC (es. 01:30 Roma del
+  giorno successivo): broadcaster ora trovato correttamente.
+
+### Added
+
+- Lint guard `npm run check:tz-juventus`
+  (`scripts/check-rome-tz.mjs`): impedisce nuovi callsite di
+  `toLocaleTimeString` / `toLocaleDateString` privi di
+  `timeZone: "Europe/Rome"` nelle pagine Juventus / Home /
+  componenti Home. Integrato negli step CI di `ci-develop.yml` e
+  `ci-pr-main.yml` accanto a `check:italian`. Suggerisce gli helper
+  centralizzati di `dateUtils.ts`.
+- Test Vitest aggiuntivi (5 nuovi blocchi in
+  `src/lib/dateUtils.test.ts`) e suite Deno
+  `supabase/functions/sports-football/index.test.ts` che copre
+  l'edge case mezzanotte UTC del lookup broadcaster.
+
 - **Loghi costruttori F1 e MotoGP da fonti ufficiali stabili**.
   F1: `F1_CONSTRUCTOR_LOGOS` (`supabase/functions/sports-f1/index.ts`)
   ora punta al CDN ufficiale `media.formula1.com/.../teams/2025/{slug}-logo.png`

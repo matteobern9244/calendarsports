@@ -36,6 +36,9 @@ jobs:
       - name: Italian UI guard
         run: npm run check:italian
 
+      - name: Rome timezone guard (Juventus)
+        run: npm run check:tz-juventus
+
       - name: Unit tests
         run: npm run test
 

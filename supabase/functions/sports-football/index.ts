@@ -25,6 +25,30 @@ type SkyWidgetResponse = {
   seasonUsed: string;
 };
 
+const ROME_DATE_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Rome',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * Restituisce la data della partita nel fuso `Europe/Rome` come
+ * `YYYY-MM-DD`. Se l'input è una stringa ISO senza offset, viene
+ * trattato come UTC (tutti i provider football pubblicano in UTC).
+ * Ritorna `null` per input invalidi.
+ */
+function romeDateKeyOf(input: string | null | undefined): string | null {
+  if (!input) return null;
+  let normalized = input;
+  if (typeof input === 'string' && /T\d{2}:\d{2}/.test(input) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(input)) {
+    normalized = `${input}Z`;
+  }
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return null;
+  return ROME_DATE_FMT.format(d);
+}
+
 function unescapeHtml(text: string): string {
   return text
     .replace(/&quot;/g, '"')
@@ -136,8 +160,12 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
       }
 
       if (m.matchDateUtc) {
-        const dateKey = m.matchDateUtc.substring(0, 10);
-        map[`date:${dateKey}`] = broadcasterStr;
+        // Chiave normalizzata sul giorno italiano: "partita di sabato sera"
+        // resta sabato anche se l'UTC sfora la mezzanotte.
+        const romeDateKey = romeDateKeyOf(m.matchDateUtc);
+        if (romeDateKey) {
+          map[`date:${romeDateKey}`] = broadcasterStr;
+        }
       }
     }
 
@@ -172,8 +200,8 @@ function extractJuventusMatches(model: any, competitionId: string, broadcasterMa
           if (roundNum && broadcasterMap[String(roundNum)]) {
             broadcaster = broadcasterMap[String(roundNum)];
           } else if (match.date) {
-            const dateKey = new Date(match.date).toISOString().substring(0, 10);
-            broadcaster = broadcasterMap[`date:${dateKey}`] || null;
+            const dateKey = romeDateKeyOf(match.date);
+            broadcaster = (dateKey && broadcasterMap[`date:${dateKey}`]) || null;
           }
         }
 
