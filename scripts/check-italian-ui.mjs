@@ -292,12 +292,12 @@ function extractCandidates(src) {
   //  - non deve contenere caratteri tipici del codice: ; = ( ) [ ] { }
   //    | & ` $ < > " ' \
   //  - non deve essere un identificatore tipo "MyType<X" residuo
-  const jsxText = />([^<>{}\n]+)</g;
+  const jsxText = />([^<>{}]+)</g;
   for (const m of src.matchAll(jsxText)) {
     const value = m[1].trim();
     if (!value) continue;
     if (!/[A-Za-zÀ-ÿ]/.test(value)) continue;
-    if (/[;=()\[\]{}|&`$"'\\]/.test(value)) continue;
+    if (/[;=()\[\]{}|&`$"\\]/.test(value)) continue;
     // scarta frammenti che iniziano con minuscola+lettere senza spazi e
     // sembrano identificatori (es. "currentYear", "props")
     if (!/\s/.test(value) && /^[a-z][A-Za-z0-9_]*$/.test(value)) continue;
