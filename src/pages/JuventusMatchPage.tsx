@@ -358,6 +358,8 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
             title="Formazioni ufficiali"
             description="Le formazioni titolari e i convocati vengono comunicati dai club poco prima del fischio d'inizio. Apri la pagina ufficiale Sky Sport qui sotto per consultare gli undici in campo, la panchina e gli indisponibili in tempo reale."
             externalLink={match.link}
+            externalLabel="Vedi formazioni su Sky Sport"
+            ctaHint="Tocca qui per scoprire chi scende in campo"
           />
         </TabsContent>
 
@@ -366,6 +368,8 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
             title="Modulo e disposizione tattica"
             description="Lo schieramento tattico delle due squadre viene aggiornato in tempo reale durante la partita. Apri la pagina ufficiale Sky Sport qui sotto per vedere il modulo scelto dagli allenatori e i movimenti dei giocatori sul campo."
             externalLink={match.link}
+            externalLabel="Vedi modulo su Sky Sport"
+            ctaHint="Tocca qui per analizzare la tattica"
           />
         </TabsContent>
 
@@ -426,6 +430,8 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
             title="Cronaca minuto per minuto"
             description="Gol, ammonizioni, espulsioni e sostituzioni vengono raccontati in tempo reale nella diretta testuale. Apri la pagina ufficiale Sky Sport qui sotto per seguire la cronaca completa dell'incontro, azione per azione."
             externalLink={match.link}
+            externalLabel="Segui la cronaca su Sky Sport"
+            ctaHint="Tocca qui per la diretta testuale"
           />
         </TabsContent>
       </Tabs>

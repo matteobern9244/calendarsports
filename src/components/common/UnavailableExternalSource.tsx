@@ -6,6 +6,12 @@ interface UnavailableExternalSourceProps {
   description: string;
   externalLink?: string | null;
   externalLabel?: string;
+  /**
+   * Microcopy mostrata appena sopra il pulsante (es. "Tocca qui per
+   * vedere le formazioni ufficiali su Sky Sport"). Se non fornita,
+   * viene generata automaticamente a partire da `externalLabel`.
+   */
+  ctaHint?: string;
 }
 
 /**
@@ -19,7 +25,9 @@ export default function UnavailableExternalSource({
   description,
   externalLink,
   externalLabel = "Apri su Sky Sport",
+  ctaHint,
 }: UnavailableExternalSourceProps) {
+  const hint = ctaHint ?? `Tocca il pulsante qui sotto per ${externalLabel.toLowerCase()}`;
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 gap-4 rounded-2xl border border-dashed border-border bg-muted/30 text-center">
       <Info className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
@@ -30,12 +38,22 @@ export default function UnavailableExternalSource({
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       {externalLink && (
-        <Button asChild variant="outline" size="sm">
-          <a href={externalLink} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-4 w-4 mr-2" />
-            {externalLabel}
-          </a>
-        </Button>
+        <div className="flex flex-col items-center gap-2 mt-1">
+          <p className="text-xs font-heading uppercase tracking-wider text-[hsl(var(--gold))]/90">
+            {hint}
+          </p>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="border-[hsl(var(--gold))]/40 hover:border-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/10 transition-colors"
+          >
+            <a href={externalLink} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              {externalLabel}
+            </a>
+          </Button>
+        </div>
       )}
     </div>
   );
