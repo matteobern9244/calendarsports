@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { User } from "lucide-react";
 import { f1NationalityToIso } from "@/lib/f1Utils";
+import TeamLogo from "@/components/common/TeamLogo";
 
 export default function Formula1Page() {
   const season = getCurrentF1Season();
@@ -162,14 +163,13 @@ export default function Formula1Page() {
                       <TableCell className="font-heading font-bold">{c.position}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {c.logoUrl && (
-                            <img
-                              src={c.logoUrl}
-                              alt={c.constructor}
-                              className="h-6 w-10 object-contain flex-shrink-0"
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                            />
-                          )}
+                          <TeamLogo
+                            src={c.logoUrl}
+                            name={c.constructor}
+                            size={32}
+                            shape="rounded"
+                            className="h-8 w-12"
+                          />
                           <span className="font-semibold">{c.constructor}</span>
                         </div>
                       </TableCell>

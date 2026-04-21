@@ -11,7 +11,7 @@ import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } fr
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { User } from "lucide-react";
+import TeamLogo from "@/components/common/TeamLogo";
 
 const MOTOGP_CONSTRUCTOR_COLORS: Record<string, { border: string; bg: string }> = {
   ducati:  { border: 'hsl(var(--brand-ducati))',  bg: 'hsl(var(--brand-ducati) / 0.08)' },
@@ -128,13 +128,13 @@ export default function MotoGPPage() {
                       <TableCell className="font-heading font-bold">{s.position}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {s.photoUrl ? (
-                            <img src={s.photoUrl} alt={s.name} className="h-8 w-8 rounded-full object-cover bg-muted flex-shrink-0" />
-                          ) : (
-                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          )}
+                          <TeamLogo
+                            src={s.photoUrl}
+                            name={s.name}
+                            size={32}
+                            shape="circle"
+                            className="object-cover"
+                          />
                           {s.number != null && (
                             <span
                               className="font-heading font-bold text-xs text-primary bg-primary/10 rounded-full h-7 w-7 flex items-center justify-center flex-shrink-0"
@@ -198,14 +198,13 @@ export default function MotoGPPage() {
                                 : { borderColor: 'hsl(var(--border))' }
                             }
                           >
-                            {c.logoUrl && (
-                              <img
-                                src={c.logoUrl}
-                                alt={c.team}
-                                className="h-full w-full object-contain"
-                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                              />
-                            )}
+                            <TeamLogo
+                              src={c.logoUrl}
+                              name={c.team}
+                              size={32}
+                              shape="rounded"
+                              className="h-full w-full bg-transparent border-0"
+                            />
                           </div>
                           <span className="font-semibold">{c.team}</span>
                         </div>

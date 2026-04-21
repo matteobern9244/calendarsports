@@ -18,6 +18,39 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Changed
 
+- **Loghi e foto — fallback iniziali robusto su tutta l'app**.
+  Nuovo componente `src/components/common/TeamLogo.tsx`: quando un'immagine
+  remota fallisce (Wikimedia rate-limit, hot-link block, 404) mostra un
+  badge con le iniziali della squadra/pilota su `bg-muted` con tipografia
+  `font-heading`, garantendo contrasto sia in tema chiaro che scuro.
+  `referrerPolicy="no-referrer"` per massimizzare il successo di
+  caricamento. Sostituite tutte le `<img>` "logo/avatar" che prima
+  scomparivano con `display:none` su errore in `Formula1Page.tsx`
+  (costruttori), `MotoGPPage.tsx` (foto piloti + loghi costruttori) e
+  `JuventusPage.tsx` (loghi squadre in classifica e calendario).
+
+### Added
+
+- **Juventus — card "Prossima Partita"**. Nuova card premium gold/navy
+  sopra i tab di `JuventusPage.tsx` con avversario, logo, data/ora,
+  broadcaster e countdown live. Riusa i dati paginati del calendario,
+  con micro-fetch dedicato della pagina contenente il prossimo match
+  quando l'utente naviga altrove.
+
+### Fixed
+
+- **Juventus — riga Juventus in classifica ora chiaramente visibile**
+  in entrambi i temi: gradient gold orizzontale, bordo sinistro 4px
+  oro, logo ingrandito con ring oro, posizione/squadra/punti in oro
+  con `font-heading`.
+- **MotoGP — foto Michele Pirro**: sostituito URL Pulselive 404
+  inventato con foto reale Wikipedia
+  (`Michele_Pirro_at_the_2025_Malaysian_Grand_Prix.jpg`).
+- **MotoGP — Gresini Racing ora mappato a Ducati**. Aggiunta keyword
+  `gresini` in `getTeamConstructor` (`supabase/functions/sports-motogp/index.ts`):
+  Gresini è team satellite Ducati, ora riceve correttamente
+  `constructor: "ducati"` e logo Ducati.
+
 - **MotoGP — calendario completamente live, rimosso hardcode**.
   `supabase/functions/sports-motogp/index.ts`: eliminata la costante
   `MOTOGP_CALENDAR_2026` (22 GP hardcoded). Le action `calendar` e
