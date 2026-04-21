@@ -1,12 +1,11 @@
 import SectionHeader from "@/components/common/SectionHeader";
-import SeasonSelector from "@/components/common/SeasonSelector";
 import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
+import { getCurrentMotoGPSeason } from "@/lib/currentSeason";
 import { useMotoGPCalendar, useMotoGPStandings, useMotoGPConstructorStandings } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
@@ -23,10 +22,10 @@ const MOTOGP_CONSTRUCTOR_COLORS: Record<string, { border: string; bg: string }> 
 };
 
 export default function MotoGPPage() {
-  const { seasons, setSeason } = useSeasonPreferences();
-  const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useMotoGPCalendar(seasons.motogp);
-  const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useMotoGPStandings(seasons.motogp);
-  const { data: constructors, isLoading: csLoading, error: csError, refetch: csRefetch } = useMotoGPConstructorStandings(seasons.motogp);
+  const season = getCurrentMotoGPSeason();
+  const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useMotoGPCalendar(season);
+  const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useMotoGPStandings(season);
+  const { data: constructors, isLoading: csLoading, error: csError, refetch: csRefetch } = useMotoGPConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
 
   if (!isOnline && calError && !calendar && stError && !standings && csError && !constructors) {
@@ -41,10 +40,6 @@ export default function MotoGPPage() {
     <div className="container py-8 sm:py-12">
       <div className="mb-2">
         <SectionHeader title="MotoGP" />
-      </div>
-
-      <div className="mb-6">
-        <SeasonSelector currentSeason={seasons.motogp} onSelect={(y) => setSeason("motogp", y)} />
       </div>
 
       <Tabs defaultValue="calendario" className="w-full">

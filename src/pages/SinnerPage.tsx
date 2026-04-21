@@ -1,5 +1,4 @@
 import SectionHeader from "@/components/common/SectionHeader";
-import SeasonSelector from "@/components/common/SeasonSelector";
 import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
@@ -7,7 +6,7 @@ import EmptyState from "@/components/common/EmptyState";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import PlayerHeader from "@/components/sinner/PlayerHeader";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
+import { getCurrentSinnerSeason } from "@/lib/currentSeason";
 import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useSportsData";
 import { formatDateIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
@@ -15,10 +14,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 export default function SinnerPage() {
-  const { seasons, setSeason } = useSeasonPreferences();
+  const season = getCurrentSinnerSeason();
   const { data: playerInfo } = useSinnerInfo();
-  const { data: results, isLoading: resLoading, error: resError, refetch: resRefetch } = useSinnerResults(seasons.sinner);
-  const { data: schedule, isLoading: schLoading, error: schError, refetch: schRefetch } = useSinnerSchedule(seasons.sinner);
+  const { data: results, isLoading: resLoading, error: resError, refetch: resRefetch } = useSinnerResults(season);
+  const { data: schedule, isLoading: schLoading, error: schError, refetch: schRefetch } = useSinnerSchedule(season);
   const { isOnline } = useOnlineStatus();
 
   if (!isOnline && resError && !results && schError && !schedule && !playerInfo) {
@@ -57,10 +56,6 @@ export default function SinnerPage() {
         />
       )}
 
-      <div className="mb-6">
-        <SeasonSelector currentSeason={seasons.sinner} onSelect={(y) => setSeason("sinner", y)} />
-      </div>
-
       <Tabs defaultValue="risultati" className="w-full">
         <TabsList className="mb-6 bg-muted">
           <TabsTrigger value="risultati" className="font-heading text-xs tracking-wider uppercase">Risultati</TabsTrigger>
@@ -71,7 +66,7 @@ export default function SinnerPage() {
           {resLoading && <LoadingState message="Caricamento risultati..." />}
           {resError && <ErrorState message="Errore nel caricamento dei risultati" onRetry={() => resRefetch()} />}
           {!resLoading && !resError && (!results || results.length === 0) && (
-            <EmptyState message={`Nessun risultato disponibile per la stagione ${seasons.sinner}.`} />
+            <EmptyState message={`Nessun risultato disponibile per la stagione ${season}.`} />
           )}
           {results && results.length > 0 && (() => {
             const { items: orderedResults, highlightIndex } = prioritizeNextUpcoming(results, (result: any) => result.date);
@@ -115,7 +110,7 @@ export default function SinnerPage() {
           {schLoading && <LoadingState message="Caricamento programma..." />}
           {schError && <ErrorState message="Errore nel caricamento del programma" onRetry={() => schRefetch()} />}
           {!schLoading && !schError && (!schedule || schedule.length === 0) && (
-            <EmptyState message={`Nessun torneo disponibile per la stagione ${seasons.sinner}`} />
+            <EmptyState message={`Nessun torneo disponibile per la stagione ${season}`} />
           )}
           {schedule && schedule.length > 0 && (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

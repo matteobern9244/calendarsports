@@ -1,13 +1,12 @@
 import { cn } from "@/lib/utils";
 import SectionHeader from "@/components/common/SectionHeader";
-import SeasonSelector from "@/components/common/SeasonSelector";
 import EventCountdown from "@/components/common/EventCountdown";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
+import { getCurrentJuventusSeason } from "@/lib/currentSeason";
 import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
 import { formatDateIT } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
@@ -23,7 +22,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 
 const PAGE_SIZE = 12;
@@ -56,22 +55,16 @@ const COMPETITION_COLORS: Record<string, string> = {
 };
 
 export default function JuventusPage() {
-  const { seasons, setSeason } = useSeasonPreferences();
-  const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useSerieAStandings(seasons.juventus);
+  const season = getCurrentJuventusSeason();
+  const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useSerieAStandings(season);
   const [page, setPage] = useState(1);
   const [userInteracted, setUserInteracted] = useState(false);
   const { data: calendarData, isLoading: calLoading, error: calError, refetch: calRefetch } = useJuventusCalendar(
-    seasons.juventus,
+    season,
     page,
     PAGE_SIZE,
   );
   const { isOnline } = useOnlineStatus();
-
-  // Reset to page 1 and clear interaction flag when season changes
-  useEffect(() => {
-    setPage(1);
-    setUserInteracted(false);
-  }, [seasons.juventus]);
 
   const calendar = calendarData as PaginatedCalendar | undefined;
 
@@ -104,10 +97,6 @@ export default function JuventusPage() {
     <div className="container py-8 sm:py-12">
       <div className="mb-2">
         <SectionHeader title="Juventus" />
-      </div>
-
-      <div className="mb-6">
-        <SeasonSelector currentSeason={seasons.juventus} onSelect={(y) => setSeason("juventus", y)} />
       </div>
 
       <Tabs defaultValue="calendario" className="w-full">
