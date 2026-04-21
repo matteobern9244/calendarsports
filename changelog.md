@@ -52,6 +52,20 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Fixed
 
+- **Streaming – Nuove uscite validate per l'Italia**: la edge function
+  `streaming-releases` ora applica due livelli di filtro per garantire che
+  ogni titolo mostrato sia effettivamente disponibile in abbonamento sul
+  provider richiesto in regione IT. (1) TMDB Discover viene chiamato con
+  `with_watch_monetization_types=flatrate`, escludendo titoli disponibili
+  solo a noleggio/acquisto/ads sullo stesso provider (es. titoli del Prime
+  Video Store che apparivano come "novita' Prime"). (2) Per ogni candidato
+  viene chiamato `/{type}/{id}/watch/providers` (regione IT) e tenuto solo
+  se `results.IT.flatrate` contiene il `provider_id` richiesto, garantendo
+  disponibilita' corrente e non solo storica. Stesso filtro applicato anche
+  al fallback con finestra estesa. UI: nuova nota informativa sotto il
+  selettore range nel tab "Nuove uscite". Versione applicativa invariata
+  `2.1.0` (bugfix di correttezza dati). Nessun nuovo segreto, nessuna
+  nuova dipendenza.
 - **Streaming – default famiglia TV su RAI**: atterrando su `/streaming`
   senza query string, il tab "TV stasera" ora seleziona di default la
   famiglia **RAI** invece di Sky Sport (fonte palinsesto piu' coperta in
