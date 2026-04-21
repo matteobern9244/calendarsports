@@ -31,7 +31,6 @@ import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
 import EmptyState from "@/components/common/EmptyState";
 import ErrorState from "@/components/common/ErrorState";
-import TimezoneBadge from "@/components/common/TimezoneBadge";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import ReleaseDetailDialog from "@/components/streaming/ReleaseDetailDialog";
 import ReleaseCountdownBadge from "@/components/streaming/ReleaseCountdownBadge";
@@ -227,7 +226,6 @@ export default function StreamingPage() {
             title="Streaming"
             subtitle="Palinsesto TV serale e nuove uscite della settimana"
           />
-          <TimezoneBadge />
         </div>
         <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
           <div className="flex items-center gap-3">

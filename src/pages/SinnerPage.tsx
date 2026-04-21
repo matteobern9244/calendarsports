@@ -4,7 +4,6 @@ import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
-import TimezoneBadge from "@/components/common/TimezoneBadge";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import PlayerHeader from "@/components/sinner/PlayerHeader";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -32,9 +31,8 @@ export default function SinnerPage() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-2">
         <SectionHeader title="Jannik Sinner" />
-        <TimezoneBadge />
       </div>
 
       {/* Player header with photo, ranking, season stats */}
