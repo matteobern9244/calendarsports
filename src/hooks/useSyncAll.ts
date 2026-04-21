@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { STREAMING_PROVIDERS } from "@/hooks/useStreamingData";
+import { STREAMING_PROVIDERS, STREAMING_FAMILIES } from "@/hooks/useStreamingData";
 import {
   streamingApi,
   callEdgeFunctionWithMeta,
