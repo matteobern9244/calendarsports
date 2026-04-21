@@ -352,14 +352,20 @@ function findTeamLogo(teamName: string, teamMap: Record<string, string>): string
   if (!teamName) return null;
   const key = normalizeTeamKey(teamName);
   if (teamMap[key]) return teamMap[key];
-  // Fuzzy fallback: la classifica Sky usa nomi tipo "Ducati Lenovo Team"
-  // mentre Pulselive ha "Ducati Lenovo Team" — match diretto. Per varianti
-  // tipo "Aprilia Racing" vs "Aprilia Racing" cerchiamo per substring.
-  const skyTokens = key.split(' ').filter((t) => t.length >= 4);
+  // Fuzzy fallback: scarta token comuni (sponsor, parole generiche) e
+  // calcola overlap di token significativi >=4 char tra il nome Sky e
+  // ciascun nome Pulselive. Sceglie il match con piu' token in comune.
+  const STOP = new Set(['team', 'racing', 'motogp', 'red', 'bull', 'monster', 'energy', 'castrol', 'pertamina', 'enduro', 'prima', 'pramac', 'lcr', 'lenovo', 'trackhouse', 'tech3', 'gresini', 'factory']);
+  const skyTokens = key.split(' ').filter((t) => t.length >= 4 && !STOP.has(t));
+  if (skyTokens.length === 0) return null;
+  let best: { url: string; score: number } | null = null;
   for (const [pulseKey, url] of Object.entries(teamMap)) {
-    const allMatch = skyTokens.every((t) => pulseKey.includes(t));
-    if (allMatch && skyTokens.length >= 2) return url;
+    const pulseTokens = new Set(pulseKey.split(' ').filter((t) => t.length >= 4));
+    let score = 0;
+    for (const t of skyTokens) if (pulseTokens.has(t)) score++;
+    if (score > 0 && (!best || score > best.score)) best = { url, score };
   }
+  return best ? best.url : null;
   return null;
 }
 
