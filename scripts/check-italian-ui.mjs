@@ -168,6 +168,7 @@ const FORBIDDEN_WORDS = new Set(
     "Logout",
     "Login",
     "Welcome",
+    "Best",
     "Live",
     "Upcoming",
     "Today",
