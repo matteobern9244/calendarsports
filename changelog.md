@@ -16,6 +16,27 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > policy o policy Lovable. La versione applicativa esposta dal footer e da
 > `src/lib/version.ts` resta `2.1.0`.
 
+### Added
+
+- **Pagina dettaglio partita Juventus** su rotta `/juventus/partite/:matchId`
+  (`src/pages/JuventusMatchPage.tsx`). Header con loghi entrambe le squadre,
+  score tipografico se la partita è terminata, badge competizione, data/ora
+  in `Europe/Rome` via `formatJuventusDateTime`, broadcaster e countdown.
+  Cinque tab nell'ordine richiesto: **Anteprima** (dati pre-partita reali),
+  **Formazione**, **Modulo**, **Risultato** (parziale/finale dal payload Sky)
+  e **Cronologia eventi**. Card del calendario e card "Prossima Partita" in
+  `src/pages/JuventusPage.tsx` ora wrappate in `<Link>` verso il dettaglio
+  (focus ring per accessibilità preservato).
+- **Componente `UnavailableExternalSource`**
+  (`src/components/common/UnavailableExternalSource.tsx`): stato vuoto
+  riusabile e onesto per i tab Formazione / Modulo / Cronologia eventi. Sky
+  Sport, Lega Serie A, TheSportsDB free e altri provider gratuiti non
+  espongono lineup, modulo tattico o cronaca eventi via API pubblica: il
+  componente lo dichiara esplicitamente in italiano e rimanda all'eventuale
+  `match.link` reale (pagina Sky della partita) con CTA "Apri su Sky Sport".
+  Nessun dato finto né mock introdotto, nel rispetto della policy
+  `no hardcoded`.
+
 ### Changed
 
 - **Date Juventus sempre normalizzate in fuso `Europe/Rome`**.
