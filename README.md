@@ -61,7 +61,16 @@ L'app espone sei viste principali:
   fascia di **prima serata (dalle 21:00 in poi)** e paginazione interna
   alla scheda (8 canali per pagina).
 - `Streaming` (`/streaming`): tab TV stasera (palinsesto reale per famiglia)
-  + tab Nuove uscite (TMDB con range date e filtro Film/Serie).
+  + tab Nuove uscite (TMDB con range date e filtro Film/Serie). Le "Nuove
+  uscite" si basano su TMDB Discover filtrato per `primary_release_date`
+  (film) / `first_air_date` (serie) e `with_watch_providers` regione `IT`:
+  e' la **data di prima pubblicazione mondiale**, non la data di ingresso
+  sulla piattaforma in Italia (TMDB non espone quel campo su Discover). I
+  range UI sono "Prossimi 7 giorni", "Prossimi 30 giorni" (default) e
+  "Finestra estesa" (-30 / +60 giorni). Quando la finestra richiesta e'
+  vuota, l'edge function `streaming-releases` allarga automaticamente il
+  range (`-14` / `+30` giorni) ed espone `widenedWindow: true` nel payload,
+  cosi' l'UI puo' segnalarlo all'utente.
 - `Jannik Sinner`: profilo sintetico, risultati e calendario tornei.
 - `Juventus`: calendario partite e classifica Serie A.
 - `Formula 1`: calendario GP, classifica piloti e costruttori.
