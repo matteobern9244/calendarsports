@@ -239,7 +239,14 @@ export default function TonightTvList() {
 
         {tonightHighlights.length > 0 ? (
           <>
-            <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 overflow-hidden">
+            <ul
+              className="
+                divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 overflow-hidden
+                sm:grid sm:divide-y-0
+                sm:[grid-template-columns:3.5rem_minmax(5rem,auto)_minmax(0,1fr)_6.5rem_4.5rem]
+                lg:[grid-template-columns:8rem_3.5rem_minmax(5rem,auto)_minmax(0,1fr)_7rem_4.5rem]
+              "
+            >
               {pagedHighlights.map((row, i) => {
                 const prev = pagedHighlights[i - 1];
                 const showFamilyDivider = !prev || prev.family !== row.family;
@@ -250,7 +257,7 @@ export default function TonightTvList() {
                         aria-hidden="true"
                         data-testid="family-divider"
                         data-family={row.family}
-                        className="h-[3px] bg-primary border-y border-primary/40 list-none"
+                        className="h-[3px] bg-primary border-y border-primary/40 list-none sm:col-span-full"
                       />
                     )}
                     {showFamilyDivider && (() => {
@@ -259,7 +266,7 @@ export default function TonightTvList() {
                         <li
                           data-testid="family-label-mobile"
                           data-family={row.family}
-                          className="sm:hidden flex items-center gap-1.5 px-2.5 pt-2 pb-1 bg-primary/5"
+                          className="lg:hidden flex items-center gap-1.5 px-2.5 pt-2 pb-1 bg-primary/5 sm:col-span-full"
                         >
                           <FamilyIcon className="h-3.5 w-3.5 text-primary/80 shrink-0" aria-hidden="true" />
                           <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-primary/80">
@@ -268,60 +275,65 @@ export default function TonightTvList() {
                         </li>
                       );
                     })()}
-                    <li className="px-2.5 sm:px-3 py-2.5 sm:py-2 text-sm">
-                      {/* Desktop: layout su singola riga */}
-                      <div className="hidden sm:flex sm:items-center sm:gap-3">
-                        {(() => {
-                          const FamilyIcon = FAMILY_ICONS[row.family];
-                          return (
-                            <span
-                              className={`inline-flex items-center gap-1.5 font-heading font-bold text-xs uppercase tracking-wider w-24 shrink-0 ${
-                                showFamilyDivider ? "text-primary/80" : "text-transparent"
-                              }`}
-                              aria-hidden={!showFamilyDivider}
-                            >
-                              <FamilyIcon
-                                className={`h-3.5 w-3.5 shrink-0 ${showFamilyDivider ? "text-primary/80" : "text-transparent"}`}
-                                aria-hidden="true"
-                              />
-                              {familyLabelMap[row.family]}
-                            </span>
-                          );
-                        })()}
-                        <span className="font-mono font-bold text-primary w-12 shrink-0 text-sm leading-none">
-                          {row.time}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-bold uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
-                        >
-                          {row.channel}
-                        </Badge>
-                        <div className="min-w-0 flex-1 flex items-center gap-3">
-                          <span
-                            className="flex-1 min-w-0 truncate font-medium text-sm leading-tight"
-                            title={row.title}
-                          >
-                            {row.title}
-                          </span>
-                          {(() => {
-                            const g = row.genre || inferGenre(row.family, row.channel, row.title);
-                            return g ? (
+                    <li className="px-2.5 py-2.5 text-sm sm:contents">
+                      {/* Desktop/Tablet: celle grid (display:contents sul li) */}
+                      {(() => {
+                        const FamilyIcon = FAMILY_ICONS[row.family];
+                        const g = row.genre || inferGenre(row.family, row.channel, row.title);
+                        const dur = formatDuration(row.durationMin);
+                        return (
+                          <>
+                            {/* Cella famiglia: solo lg, vuota se non e' la prima riga del gruppo */}
+                            <div className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-2 lg:border-t lg:border-border/40">
+                              {showFamilyDivider ? (
+                                <>
+                                  <FamilyIcon className="h-3.5 w-3.5 text-primary/80 shrink-0" aria-hidden="true" />
+                                  <span className="font-heading font-bold text-xs uppercase tracking-wider text-primary/80 truncate">
+                                    {familyLabelMap[row.family]}
+                                  </span>
+                                </>
+                              ) : null}
+                            </div>
+                            {/* Cella ora */}
+                            <div className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40 font-mono font-bold text-primary text-sm leading-none">
+                              {row.time}
+                            </div>
+                            {/* Cella canale */}
+                            <div className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40">
                               <Badge
-                                variant="secondary"
-                                className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none"
+                                variant="outline"
+                                className="text-[10px] font-bold uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
                               >
-                                {g}
+                                {row.channel}
                               </Badge>
-                            ) : null;
-                          })()}
-                          {formatDuration(row.durationMin) && (
-                            <span className="shrink-0 whitespace-nowrap font-mono leading-none text-xs text-muted-foreground">
-                              {formatDuration(row.durationMin)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                            </div>
+                            {/* Cella titolo */}
+                            <div className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40 sm:min-w-0">
+                              <span
+                                className="truncate font-medium text-sm leading-tight"
+                                title={row.title}
+                              >
+                                {row.title}
+                              </span>
+                            </div>
+                            {/* Cella genere — sempre presente per mantenere la colonna */}
+                            <div className="hidden sm:flex sm:items-center sm:justify-end sm:px-2 sm:py-2 sm:border-t sm:border-border/40">
+                              {g ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none"
+                                >
+                                  {g}
+                                </Badge>
+                              ) : null}
+                            </div>
+                            {/* Cella durata */}
+                            <div className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-2 sm:border-t sm:border-border/40 font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                              {dur || ""}
+                            </div>
+                          </>
+                        );
+                      })()}
 
                       {/* Mobile: layout a 2 righe per migliore leggibilita' */}
                       <div className="sm:hidden flex flex-col gap-1.5">
