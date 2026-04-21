@@ -54,7 +54,16 @@ export default function Formula1Page() {
               externalLabel="Scopri ora su Formula1.com"
             />
           )}
-          {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
+          {calError && (
+            <ErrorState
+              message={`Calendario F1 ${season} non disponibile`}
+              detail="La nostra fonte dati non sta rispondendo correttamente. Puoi riprovare oppure consultare il calendario ufficiale Formula 1 mentre risolviamo il problema."
+              onRetry={() => calRefetch()}
+              externalLink="https://www.formula1.com/en/racing/2025"
+              externalLabel="Vedi calendario su Formula1.com"
+              ctaHint="Tocca qui per consultare il calendario ufficiale ora"
+            />
+          )}
           {!calLoading && !calError && (!calendar || calendar.length === 0) && (
             <UnavailableExternalSource
               title={`Calendario F1 ${season}`}
