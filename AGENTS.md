@@ -147,8 +147,9 @@ Leggere inoltre, se l'intervento tocca documentazione o setup:
 - `supabase/functions/sports-f1`: Jolpica/OpenF1 + fallback statici.
 - `supabase/functions/sports-football`: Sky Sport + Lega Serie A.
 - `supabase/functions/sports-tennis`: dataset statico Sinner 2026.
-- `supabase/functions/sports-motogp`: Sky Sport + calendario statico 2026 +
-  mapping statici.
+- `supabase/functions/sports-motogp`: API ufficiale motogp.com (Pulselive)
+  per calendario e next-event, Sky Sport per le classifiche, mapping statici
+  solo per enrichment piloti (foto, numeri, nazionalità) e loghi costruttori.
 
 ## Import del client Supabase
 
@@ -248,7 +249,10 @@ import { supabase } from "@/integrations/supabase/client";
 - Copertura test minima.
 - Presenza storica di `.env` reale nel repo.
 - Dipendenze da scraping di provider terzi.
-- Contenuti stagionali statici o hardcoded.
+- Contenuti stagionali statici residui: dataset Sinner 2026 in
+  `sports-tennis` e mapping enrichment MotoGP (foto piloti, numeri,
+  nazionalita', loghi costruttori). Calendari F1 e MotoGP sono live
+  (Jolpica/Ergast e Pulselive rispettivamente).
 - Possibile divergenza tra repository GitHub, progetto Supabase collegato e
   versione live gestita in Lovable.
 
