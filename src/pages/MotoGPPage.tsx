@@ -13,11 +13,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { User } from "lucide-react";
 
 const MOTOGP_CONSTRUCTOR_COLORS: Record<string, { border: string; bg: string }> = {
-  ducati:  { border: '#CC0000', bg: 'rgba(204, 0, 0, 0.08)' },
-  aprilia: { border: '#000000', bg: 'rgba(0, 0, 0, 0.06)' },
-  ktm:     { border: '#FF6600', bg: 'rgba(255, 102, 0, 0.10)' },
-  yamaha:  { border: '#003DA5', bg: 'rgba(0, 61, 165, 0.08)' },
-  honda:   { border: '#E40521', bg: 'rgba(228, 5, 33, 0.08)' },
+  ducati:  { border: 'hsl(var(--brand-ducati))',  bg: 'hsl(var(--brand-ducati) / 0.08)' },
+  aprilia: { border: 'hsl(var(--brand-aprilia))', bg: 'hsl(var(--brand-aprilia) / 0.06)' },
+  ktm:     { border: 'hsl(var(--brand-ktm))',     bg: 'hsl(var(--brand-ktm) / 0.10)' },
+  yamaha:  { border: 'hsl(var(--brand-yamaha))',  bg: 'hsl(var(--brand-yamaha) / 0.08)' },
+  honda:   { border: 'hsl(var(--brand-honda))',   bg: 'hsl(var(--brand-honda) / 0.08)' },
 };
 
 export default function MotoGPPage() {
