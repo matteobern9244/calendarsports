@@ -16,6 +16,51 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > policy o policy Lovable. La versione applicativa esposta dal footer e da
 > `src/lib/version.ts` resta `2.1.0`.
 
+### Performance
+
+- **Ottimizzazione caricamento immagini e loghi (solo compressione, mai
+  sostituzione visiva).** Tutti gli asset binari in `public/` sono stati
+  ricompressi mantenendo invariate dimensioni in pixel, formato e aspetto
+  visivo (verifica QA: scarto medio RGB <3 su 128×128 sample, impercettibile
+  a occhio). Risultati misurati:
+  - `logo-header.jpg`: 1150 KB → 84 KB (-93%) — JPEG q85 progressive, 2064×512.
+  - `og-image.jpg`: 1015 KB → 88 KB (-91%) — JPEG q85, 1376×768.
+  - `favicon.png`: 736 KB → 47 KB (-94%) — PNG palette ottimizzata, 1024×1024.
+  - `constructors-f1/audi.png`: 652 KB → 52 KB (-92%).
+  - `constructors-f1/cadillac.png`: 197 KB → 31 KB (-84%).
+  - `constructors-motogp/{aprilia,ducati,honda,ktm,yamaha}.png`: 519/166/144/118/95 KB
+    → 20/20/14/12/9 KB (media -90%).
+  - **Nessun resize, nessuna conversione di formato, nessun rinomina,
+    nessun nuovo asset creato.**
+- **Hint browser in `index.html`**: aggiunti `preconnect` per `flagcdn.com`,
+  `i.ytimg.com`, `image.tmdb.org`, host Supabase; `dns-prefetch` per
+  `upload.wikimedia.org`; `preload` del logo header con `fetchpriority=high`
+  per migliorare LCP.
+- **Attributi `<img>` standardizzati** (zero impatto visivo): aggiunti
+  `decoding="async"`, `loading="lazy"` (tranne LCP), `width`/`height`
+  espliciti per evitare CLS in:
+  - `Header.tsx` (logo: `fetchpriority="high"` + `decoding="async"`).
+  - `PlayerHeader.tsx` (foto Sinner: `fetchpriority="high"` + `decoding="async"`).
+  - `TeamLogo.tsx` (`decoding="async"`).
+  - `HighlightCard.tsx` (`decoding="async"`, `width=320` `height=180`,
+    `srcSet` 1x mqdefault / 2x hqdefault).
+  - `ReleaseDetailDialog.tsx` (poster + cast: `decoding="async"`,
+    `width`/`height`).
+  - `Formula1Page.tsx` (foto piloti + bandiere flagcdn).
+  - `MotoGPPage.tsx` (bandiere flagcdn).
+  - `StreamingPage.tsx` (poster grid).
+- **Variante CDN più leggera (stessa immagine, dimensione corretta)**:
+  - `supabase/functions/highlights-youtube`: `thumbnailUrl` passa da
+    `hqdefault.jpg` (480×360, ~30 KB) a `mqdefault.jpg` (320×180, ~12 KB).
+    Il client serve `hqdefault` su display retina via `srcSet` 2x.
+    Risparmio ~60% sui byte della griglia highlights.
+  - `supabase/functions/streaming-releases`: `normalizeItem` normalizza
+    eventuali path `w500/w780/original` su `w342` (sufficiente per card
+    ~150-200px e dialog ~180px, anche su retina). `TMDB_IMG` era già
+    `w342`: la regex è una difesa contro regressioni future.
+- Risparmio aggregato stimato per pagina: header -1.1 MB, F1 costruttori
+  -730 KB, MotoGP costruttori -900 KB, highlights -210 KB su 12 card.
+
 ### Fixed
 
 - **Dettaglio partita Juventus mostrava sempre la stessa partita
