@@ -388,7 +388,7 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
     }
     prevStartMs = startMs;
 
-    const { title: titleEnriched, genre } = enrichTitle(titleRaw, richTitles);
+    const { title: titleEnriched, genre } = enrichTitle(titleRaw, richTitles, hh, mm);
 
     const key = `${startIso}|${titleEnriched.slice(0, 50)}`;
     if (seen.has(key)) continue;
