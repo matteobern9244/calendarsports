@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/pagination";
 import { useEffect, useState } from "react";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
+import TeamLogo from "@/components/common/TeamLogo";
+import { Sparkles } from "lucide-react";
 
 const PAGE_SIZE = 12;
 
@@ -67,6 +69,34 @@ export default function JuventusPage() {
   const { isOnline } = useOnlineStatus();
 
   const calendar = calendarData as PaginatedCalendar | undefined;
+
+  // Determine the page that contains the global "next upcoming" match so we
+  // can always show the NextMatchCard, even if the user navigates away from
+  // that page.
+  const nextMatchPage =
+    calendar && typeof calendar.nextUpcomingIndex === "number" && calendar.nextUpcomingIndex >= 0
+      ? Math.floor(calendar.nextUpcomingIndex / PAGE_SIZE) + 1
+      : null;
+  const nextOnCurrentPage =
+    calendar && nextMatchPage !== null && nextMatchPage === calendar.page;
+  const { data: nextMatchData } = useJuventusCalendar(
+    season,
+    nextOnCurrentPage || nextMatchPage === null ? undefined : nextMatchPage,
+    nextOnCurrentPage || nextMatchPage === null ? undefined : PAGE_SIZE,
+  );
+  const nextMatchCalendar = nextMatchData as PaginatedCalendar | undefined;
+  const nextMatch: any = (() => {
+    if (!calendar || nextMatchPage === null) return null;
+    if (nextOnCurrentPage) {
+      const localIdx = calendar.nextUpcomingIndex - (calendar.page - 1) * calendar.pageSize;
+      return calendar.items[localIdx] ?? null;
+    }
+    if (nextMatchCalendar && nextMatchCalendar.page === nextMatchPage) {
+      const localIdx = calendar.nextUpcomingIndex - (nextMatchPage - 1) * PAGE_SIZE;
+      return nextMatchCalendar.items[localIdx] ?? null;
+    }
+    return null;
+  })();
 
   // Smart landing: jump to the page containing the next upcoming match on first load
   useEffect(() => {
