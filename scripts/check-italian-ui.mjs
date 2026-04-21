@@ -132,7 +132,6 @@ const ALLOWLIST_WORDS = new Set(
     "PM",
     // termini accettati nell'uso italiano corrente
     "Home",
-    "Live",
   ].map((w) => w.toLowerCase()),
 );
 
