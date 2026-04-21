@@ -159,3 +159,31 @@ export function formatDuration(min: number): string {
   const m = rounded % 60;
   return m === 0 ? `${h}h` : `${h}h ${m} min`;
 }
+
+/**
+ * Variante "parlata" di {@link formatDuration} pensata per `aria-label`
+ * destinati a screen reader italiani. Espande ore/minuti con singolare e
+ * plurale espliciti.
+ *
+ * Esempi:
+ * - `formatDurationSpoken(45)` -> "45 minuti"
+ * - `formatDurationSpoken(1)` -> "1 minuto"
+ * - `formatDurationSpoken(60)` -> "1 ora"
+ * - `formatDurationSpoken(120)` -> "2 ore"
+ * - `formatDurationSpoken(65)` -> "1 ora e 5 minuti"
+ * - `formatDurationSpoken(125)` -> "2 ore e 5 minuti"
+ * - `formatDurationSpoken(0)` -> ""
+ */
+export function formatDurationSpoken(min: number): string {
+  if (!Number.isFinite(min) || min <= 0) return "";
+  const rounded = Math.round(min);
+  if (rounded < 60) {
+    return rounded === 1 ? "1 minuto" : `${rounded} minuti`;
+  }
+  const h = Math.floor(rounded / 60);
+  const m = rounded % 60;
+  const oraPart = h === 1 ? "1 ora" : `${h} ore`;
+  if (m === 0) return oraPart;
+  const minPart = m === 1 ? "1 minuto" : `${m} minuti`;
+  return `${oraPart} e ${minPart}`;
+}
