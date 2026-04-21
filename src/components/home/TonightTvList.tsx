@@ -557,11 +557,11 @@ export default function TonightTvList() {
                             <div
                               role="cell"
                               aria-colindex={6}
-                              aria-label={durSpoken ? `Durata ${durSpoken}` : undefined}
-                              aria-hidden={durSpoken ? undefined : true}
+                              aria-label={durAriaLabel}
                               className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-4 sm:border-t-2 sm:border-border font-mono text-xs text-foreground/75 tabular-nums whitespace-nowrap transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
+                              title={row.hasExplicitEnd ? undefined : "Orario di fine non disponibile dalla fonte"}
                             >
-                              {dur || ""}
+                              {durDisplay}
                             </div>
                           </>
                         );
