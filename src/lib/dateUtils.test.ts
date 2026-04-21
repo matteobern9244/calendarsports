@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDuration } from "./dateUtils";
+import { formatDuration, formatDurationSpoken } from "./dateUtils";
 
 describe("formatDuration", () => {
   describe("valori invalidi -> stringa vuota", () => {
@@ -61,5 +61,41 @@ describe("formatDuration", () => {
     it("arrotonda 59.6 a 60 -> '1h'", () => {
       expect(formatDuration(59.6)).toBe("1h");
     });
+  });
+});
+
+describe("formatDurationSpoken", () => {
+  it("ritorna '' per 0", () => {
+    expect(formatDurationSpoken(0)).toBe("");
+  });
+  it("ritorna '' per valori negativi", () => {
+    expect(formatDurationSpoken(-5)).toBe("");
+  });
+  it("ritorna '' per NaN", () => {
+    expect(formatDurationSpoken(Number.NaN)).toBe("");
+  });
+  it("usa singolare per 1 minuto", () => {
+    expect(formatDurationSpoken(1)).toBe("1 minuto");
+  });
+  it("usa plurale per 45 minuti", () => {
+    expect(formatDurationSpoken(45)).toBe("45 minuti");
+  });
+  it("usa singolare per 1 ora esatta (60 min)", () => {
+    expect(formatDurationSpoken(60)).toBe("1 ora");
+  });
+  it("usa plurale per 2 ore esatte (120 min)", () => {
+    expect(formatDurationSpoken(120)).toBe("2 ore");
+  });
+  it("compone ore e minuti (65 min)", () => {
+    expect(formatDurationSpoken(65)).toBe("1 ora e 5 minuti");
+  });
+  it("compone ore e minuti (90 min)", () => {
+    expect(formatDurationSpoken(90)).toBe("1 ora e 30 minuti");
+  });
+  it("compone ore e minuti (125 min)", () => {
+    expect(formatDurationSpoken(125)).toBe("2 ore e 5 minuti");
+  });
+  it("usa singolare minuto in composizione (61 min)", () => {
+    expect(formatDurationSpoken(61)).toBe("1 ora e 1 minuto");
   });
 });

@@ -20,7 +20,7 @@ import {
   type TvFamilyPayload,
 } from "@/hooks/useStreamingData";
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
-import { formatDuration } from "@/lib/dateUtils";
+import { formatDuration, formatDurationSpoken } from "@/lib/dateUtils";
 import { inferGenre } from "@/lib/genreUtils";
 
 // Pittogrammi per famiglia: scelti per evocare l'identita' del broadcaster
@@ -240,6 +240,10 @@ export default function TonightTvList() {
         {tonightHighlights.length > 0 ? (
           <>
             <ul
+              role="table"
+              aria-label="Programmi in prima serata stasera"
+              aria-rowcount={tonightHighlights.length + 1}
+              aria-colcount={6}
               className="
                 divide-y divide-border/40 rounded-md border border-border/40 bg-card/40 overflow-hidden
                 sm:grid sm:divide-y-0
@@ -247,9 +251,26 @@ export default function TonightTvList() {
                 lg:[grid-template-columns:8rem_3.5rem_minmax(5rem,auto)_minmax(0,1fr)_7rem_4.5rem]
               "
             >
+              {/* Riga di intestazione invisibile: espone i columnheader agli
+                  screen reader senza impatto visivo. Su mobile (<sm) la <li>
+                  e' completamente sr-only; su >=sm si fonde nella grid via
+                  display:contents e ogni cella resta sr-only. */}
+              <li
+                role="row"
+                aria-rowindex={1}
+                className="sr-only sm:contents"
+              >
+                <div role="columnheader" aria-colindex={1} className="sr-only">Famiglia</div>
+                <div role="columnheader" aria-colindex={2} className="sr-only">Ora</div>
+                <div role="columnheader" aria-colindex={3} className="sr-only">Canale</div>
+                <div role="columnheader" aria-colindex={4} className="sr-only">Titolo</div>
+                <div role="columnheader" aria-colindex={5} className="sr-only">Genere</div>
+                <div role="columnheader" aria-colindex={6} className="sr-only">Durata</div>
+              </li>
               {pagedHighlights.map((row, i) => {
                 const prev = pagedHighlights[i - 1];
                 const showFamilyDivider = !prev || prev.family !== row.family;
+                const ariaRowIndex = safePage * TV_PAGE_SIZE + i + 2;
                 return (
                   <Fragment key={`${row.family}-${row.channel}-${row.time}-${i}`}>
                     {showFamilyDivider && i > 0 && (
@@ -266,6 +287,8 @@ export default function TonightTvList() {
                         <li
                           data-testid="family-label-mobile"
                           data-family={row.family}
+                          role="rowheader"
+                          aria-label={`Famiglia ${familyLabelMap[row.family]}`}
                           className="lg:hidden flex items-center gap-1.5 px-2.5 pt-2 pb-1 bg-primary/5 sm:col-span-full"
                         >
                           <FamilyIcon className="h-3.5 w-3.5 text-primary/80 shrink-0" aria-hidden="true" />
@@ -275,31 +298,53 @@ export default function TonightTvList() {
                         </li>
                       );
                     })()}
-                    <li className="px-2.5 py-2.5 text-sm sm:contents">
+                    <li
+                      role="row"
+                      aria-rowindex={ariaRowIndex}
+                      className="px-2.5 py-2.5 text-sm sm:contents"
+                    >
                       {/* Desktop/Tablet: celle grid (display:contents sul li) */}
                       {(() => {
                         const FamilyIcon = FAMILY_ICONS[row.family];
                         const g = row.genre || inferGenre(row.family, row.channel, row.title);
                         const dur = formatDuration(row.durationMin);
+                        const durSpoken = formatDurationSpoken(row.durationMin);
+                        const familyLabel = familyLabelMap[row.family];
                         return (
                           <>
                             {/* Cella famiglia: solo lg, vuota se non e' la prima riga del gruppo */}
-                            <div className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-2 lg:border-t lg:border-border/40">
+                            <div
+                              role={showFamilyDivider ? "rowheader" : "cell"}
+                              aria-colindex={1}
+                              aria-label={showFamilyDivider ? `Famiglia ${familyLabel}` : undefined}
+                              aria-hidden={showFamilyDivider ? undefined : true}
+                              className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-2 lg:border-t lg:border-border/40"
+                            >
                               {showFamilyDivider ? (
                                 <>
                                   <FamilyIcon className="h-3.5 w-3.5 text-primary/80 shrink-0" aria-hidden="true" />
                                   <span className="font-heading font-bold text-xs uppercase tracking-wider text-primary/80 truncate">
-                                    {familyLabelMap[row.family]}
+                                    {familyLabel}
                                   </span>
                                 </>
                               ) : null}
                             </div>
                             {/* Cella ora */}
-                            <div className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40 font-mono font-bold text-primary text-sm leading-none">
+                            <div
+                              role="cell"
+                              aria-colindex={2}
+                              aria-label={`Inizio alle ${row.time}`}
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40 font-mono font-bold text-primary text-sm leading-none"
+                            >
                               {row.time}
                             </div>
                             {/* Cella canale */}
-                            <div className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40">
+                            <div
+                              role="cell"
+                              aria-colindex={3}
+                              aria-label={`Canale ${row.channel}`}
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40"
+                            >
                               <Badge
                                 variant="outline"
                                 className="text-[10px] font-bold uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
@@ -308,7 +353,11 @@ export default function TonightTvList() {
                               </Badge>
                             </div>
                             {/* Cella titolo */}
-                            <div className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40 sm:min-w-0">
+                            <div
+                              role="cell"
+                              aria-colindex={4}
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-2 sm:border-t sm:border-border/40 sm:min-w-0"
+                            >
                               <span
                                 className="truncate font-medium text-sm leading-tight"
                                 title={row.title}
@@ -317,7 +366,13 @@ export default function TonightTvList() {
                               </span>
                             </div>
                             {/* Cella genere — sempre presente per mantenere la colonna */}
-                            <div className="hidden sm:flex sm:items-center sm:justify-end sm:px-2 sm:py-2 sm:border-t sm:border-border/40">
+                            <div
+                              role="cell"
+                              aria-colindex={5}
+                              aria-label={g ? `Genere ${g}` : undefined}
+                              aria-hidden={g ? undefined : true}
+                              className="hidden sm:flex sm:items-center sm:justify-end sm:px-2 sm:py-2 sm:border-t sm:border-border/40"
+                            >
                               {g ? (
                                 <Badge
                                   variant="secondary"
@@ -328,17 +383,40 @@ export default function TonightTvList() {
                               ) : null}
                             </div>
                             {/* Cella durata */}
-                            <div className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-2 sm:border-t sm:border-border/40 font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                            <div
+                              role="cell"
+                              aria-colindex={6}
+                              aria-label={durSpoken ? `Durata ${durSpoken}` : undefined}
+                              aria-hidden={durSpoken ? undefined : true}
+                              className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-2 sm:border-t sm:border-border/40 font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap"
+                            >
                               {dur || ""}
                             </div>
                           </>
                         );
                       })()}
 
-                      {/* Mobile: layout a 2 righe per migliore leggibilita' */}
-                      <div className="sm:hidden flex flex-col gap-1.5">
+                      {/* Mobile: layout a 2 righe per migliore leggibilita'.
+                          Per gli screen reader esponiamo una descrizione
+                          aggregata via <article aria-label> cosi' la riga e'
+                          annunciata in una sola frase coerente. */}
+                      {(() => {
+                        const g = row.genre || inferGenre(row.family, row.channel, row.title);
+                        const durSpoken = formatDurationSpoken(row.durationMin);
+                        const ariaParts = [
+                          `${familyLabelMap[row.family]} ${row.channel}`,
+                          `alle ${row.time}`,
+                          row.title,
+                        ];
+                        if (g) ariaParts.push(`genere ${g}`);
+                        if (durSpoken) ariaParts.push(`durata ${durSpoken}`);
+                        return (
+                          <article
+                            aria-label={ariaParts.join(", ")}
+                            className="sm:hidden flex flex-col gap-1.5"
+                          >
                         {/* Riga 1: ora + canale + durata */}
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap" aria-hidden="true">
                           <span className="font-mono font-bold text-primary text-sm leading-none shrink-0">
                             {row.time}
                           </span>
@@ -355,12 +433,11 @@ export default function TonightTvList() {
                           )}
                         </div>
                         {/* Riga 2: titolo + genere */}
-                        <div className="flex items-start gap-2 flex-wrap">
+                        <div className="flex items-start gap-2 flex-wrap" aria-hidden="true">
                           <span className="font-medium text-[13px] leading-snug break-words flex-1 min-w-0">
                             {row.title}
                           </span>
                           {(() => {
-                            const g = row.genre || inferGenre(row.family, row.channel, row.title);
                             return g ? (
                               <Badge
                                 variant="secondary"
@@ -371,7 +448,9 @@ export default function TonightTvList() {
                             ) : null;
                           })()}
                         </div>
-                      </div>
+                          </article>
+                        );
+                      })()}
                     </li>
                   </Fragment>
                 );
@@ -391,7 +470,11 @@ export default function TonightTvList() {
                   <ChevronLeft className="h-4 w-4" />
                   <span className="hidden sm:inline">Precedente</span>
                 </Button>
-                <span className="text-[11px] font-heading uppercase tracking-wider text-muted-foreground">
+                <span
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="text-[11px] font-heading uppercase tracking-wider text-muted-foreground"
+                >
                   Pagina {safePage + 1} / {totalTvPages} · {tonightHighlights.length} canali
                 </span>
                 <Button
