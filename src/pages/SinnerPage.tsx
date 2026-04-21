@@ -2,7 +2,7 @@ import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
-import EmptyState from "@/components/common/EmptyState";
+import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import PlayerHeader from "@/components/sinner/PlayerHeader";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -66,7 +66,12 @@ export default function SinnerPage() {
           {resLoading && <LoadingState message="Caricamento risultati..." />}
           {resError && <ErrorState message="Errore nel caricamento dei risultati" onRetry={() => resRefetch()} />}
           {!resLoading && !resError && (!results || results.length === 0) && (
-            <EmptyState message={`Nessun risultato disponibile per la stagione ${season}.`} />
+            <UnavailableExternalSource
+              title={`Risultati stagione ${season}`}
+              description="I risultati dei match di Jannik Sinner per questa stagione non sono ancora stati pubblicati dalla nostra fonte. Apri il profilo ufficiale ATP qui sotto per consultare lo storico completo delle partite, i punteggi set per set e le statistiche aggiornate."
+              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/overview"
+              externalLabel="Apri su ATP Tour"
+            />
           )}
           {results && results.length > 0 && (() => {
             const { items: orderedResults, highlightIndex } = prioritizeNextUpcoming(results, (result: any) => result.date);
@@ -110,7 +115,12 @@ export default function SinnerPage() {
           {schLoading && <LoadingState message="Caricamento programma..." />}
           {schError && <ErrorState message="Errore nel caricamento del programma" onRetry={() => schRefetch()} />}
           {!schLoading && !schError && (!schedule || schedule.length === 0) && (
-            <EmptyState message={`Nessun torneo disponibile per la stagione ${season}`} />
+            <UnavailableExternalSource
+              title={`Calendario tornei ${season}`}
+              description="Il calendario dei tornei di Jannik Sinner per questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale ATP qui sotto per consultare il programma completo del circuito, le sedi di gioco e le date aggiornate."
+              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/player-activity"
+              externalLabel="Apri calendario su ATP Tour"
+            />
           )}
           {schedule && schedule.length > 0 && (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
