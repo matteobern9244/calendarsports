@@ -482,17 +482,24 @@ Deno.serve(async (req) => {
     }
 
     let data: any;
-    let dataSource: 'live' | 'static' | 'static-fallback' = 'live';
+    let dataSource: 'live' | 'static-fallback' = 'live';
+    const seasonYear = seasonParam ? parseInt(seasonParam, 10) : new Date().getFullYear();
 
     switch (action) {
       case 'calendar': {
-        const now = new Date();
-        data = MOTOGP_CALENDAR_2026.map(e => ({
-          ...e,
-          status: new Date(e.date_end) < now ? 'finished' : 'upcoming',
-        }));
-        // Calendario MotoGP: dataset hardcoded 2026 in attesa di una fonte live.
-        dataSource = 'static';
+        try {
+          const events = await fetchMotoGPCalendar(seasonYear);
+          const now = new Date();
+          data = events.map(e => ({
+            ...e,
+            status: new Date(e.date_end) < now ? 'finished' : 'upcoming',
+          }));
+          dataSource = 'live';
+        } catch (e) {
+          console.error('MotoGP calendar fetch failed:', e);
+          data = [];
+          dataSource = 'static-fallback';
+        }
         break;
       }
 
@@ -523,11 +530,17 @@ Deno.serve(async (req) => {
       }
 
       case 'next-event': {
-        const now = new Date();
-        const next = MOTOGP_CALENDAR_2026.find(e => new Date(e.date_start) > now);
-        data = next ? { ...next, status: 'upcoming' } : null;
-        // next-event deriva dal calendario hardcoded 2026.
-        dataSource = 'static';
+        try {
+          const events = await fetchMotoGPCalendar(seasonYear);
+          const now = new Date();
+          const next = events.find(e => new Date(e.date_start) > now);
+          data = next ? { ...next, status: 'upcoming' } : null;
+          dataSource = 'live';
+        } catch (e) {
+          console.error('MotoGP next-event fetch failed:', e);
+          data = null;
+          dataSource = 'static-fallback';
+        }
         break;
       }
 
@@ -541,7 +554,12 @@ Deno.serve(async (req) => {
     const meta = {
       dataSource,
       season: seasonParam ? parseInt(seasonParam, 10) : null,
-      source: dataSource === 'static' ? 'Calendario MotoGP 2026 (statico)' : 'Sky Sport MotoGP',
+      source:
+        dataSource === 'live' && (action === 'calendar' || action === 'next-event')
+          ? 'motogp.com (Pulselive API)'
+          : dataSource === 'live'
+            ? 'Sky Sport MotoGP'
+            : 'Fallback (dati non disponibili)',
     };
     return new Response(JSON.stringify({ success: true, data, meta, source: meta.source }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
