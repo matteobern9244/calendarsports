@@ -18,6 +18,16 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Theme-color dinamico per browser chrome / PWA**: il `<meta name="theme-color">`
+  neutro (senza `media`) viene ora scritto inline in `index.html` in base al tema
+  salvato in `localStorage` (`cse-theme`) prima del primo paint, e aggiornato
+  runtime da `useTheme.ts` ad ogni toggle sole/luna. La barra di stato del
+  browser e la chrome PWA seguono il tema scelto dall'utente
+  (`#0B1A33` dark, `#F5F7FA` light) indipendentemente da `prefers-color-scheme`.
+  I due `<meta theme-color media="...">` esistenti restano come fallback.
+  `manifest.webmanifest` invariato (splash PWA resta navy). Nessun cambio
+  funzionale, versione invariata `2.1.0`.
+
 - **Refactor – colori hardcoded estratti in CSS variables semantici**:
   introdotti nuovi token `--brand-dazn`, `--brand-dazn-contrast`,
   `--brand-sky`, `--brand-ducati`, `--brand-aprilia`, `--brand-ktm`,
