@@ -41,54 +41,56 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   -3`, shadow gold, top line, glow radiale, badge gradient).
 - **Glow pulsante gold** sull'icona della voce di navigazione attiva
   (`Header.tsx`), sincronizzato con il loop di scintille (`SparkleLoop`).
-- **Icona PWA dedicata "Calendar Events"** (`public/favicon.png`,
-  1024x1024 PNG): icona quadrata con scritta "CALENDAR EVENTS" su due
-  righe in oro metallico (`#D4AF37` -> `#F5D272`) su sfondo navy
-  `#0B1A33`, piccolo pittogramma calendario gold sopra il testo e linee
-  di accento gold. Usata sia come favicon (`<link rel="icon">` +
-  `apple-touch-icon` in `index.html`) sia come icona PWA installabile
-  (`public/manifest.webmanifest`, entries `purpose: any` e
-  `purpose: maskable`). Sostituisce il riferimento precedente a un
-  `favicon.png` non presente nel repository, eliminando l'icona generica
-  del browser su Add-to-Home-Screen iOS/Android. La scritta e'
-  perfettamente leggibile anche a dimensione icona home screen.
-- **Icone famiglia nelle chip filtro "Stasera in TV"**
-  (`src/components/home/TonightTvList.tsx`): ogni chip mostra ora
-  un'icona Lucide caratterizzante accanto all'etichetta — `LayoutGrid`
-  per "Tutti", `Radio` per RAI, `Tv` per Mediaset, `Trophy` per Sky
-  Sport, `Film` per Sky Cinema, `Compass` per Discovery — riusando lo
-  stesso mapping `FAMILY_ICONS` gia' utilizzato per le label di gruppo
-  nella lista programmi, per coerenza visiva tra filtri e righe.
+- **Icona PWA dedicata** (`public/favicon.png`, 1024x1024 PNG): nuova
+  icona quadrata coerente con il brand "Calendar Events" (calendario
+  gold su sfondo navy `#0B1A33`, monogramma "CE"), usata sia come
+  favicon (`<link rel="icon">` e `apple-touch-icon` in `index.html`) sia
+  come icona PWA installabile (`public/manifest.webmanifest`, entries
+  `purpose: any` e `purpose: maskable`). Sostituisce il riferimento
+  precedente a un `favicon.png` non presente nel repository, eliminando
+  l'icona generica del browser su Add-to-Home-Screen iOS/Android.
 
 ### Fixed
 
-- **Leggibilita' "Stasera in TV" su mobile** — righe della tabella
-  (`src/components/home/TonightTvList.tsx`): le righe collassavano ora,
-  badge canale, titolo lungo, badge genere e durata sulla stessa riga,
-  rendendo i titoli (es. "Roberta Valente Notaio in Sorrento - Stagione
-  1 Episodio 3 - Cuba Libre") difficili da leggere su viewport stretti
-  (≤640px). Introdotto layout responsive a 2 righe esclusivo del
-  breakpoint mobile (`sm:hidden`): riga 1 con ora + badge canale +
-  durata (allineata a destra via `ml-auto`), riga 2 con titolo
+- **"Nuove uscite" sempre vuote**: la sezione `/streaming?tab=releases`
+  mostrava `EmptyState` anche per provider attivi (Netflix, Prime, HBO Max)
+  perche' i range UI di default ("Oggi", "Prossimi 3 giorni", "Prossimi 7
+  giorni") erano troppo stretti rispetto al modo in cui TMDB indicizza i
+  cataloghi streaming. TMDB Discover filtra per `primary_release_date` (film)
+  / `first_air_date` (serie), non per data di ingresso sulla piattaforma in
+  Italia, quindi finestre da 1-7 giorni restituiscono spesso 0 risultati anche
+  con `TMDB_API_KEY` configurata e provider corretto. Tre interventi
+  conservativi:
+  1. **`src/pages/StreamingPage.tsx`**: sostituiti i tre range con finestre
+     piu' realistiche — `7d` (Prossimi 7 giorni), `30d` (Prossimi 30 giorni,
+     **nuovo default**), `90d` (Finestra estesa: -30 / +60 giorni).
+  2. **`supabase/functions/streaming-releases/index.ts`**: aggiunto fallback
+     trasparente lato backend. Quando la finestra richiesta restituisce 0
+     items, l'edge function ritenta automaticamente con
+     `dateFrom -= 14 giorni` e `dateTo += 30 giorni`, mantenendo provider e
+     `watch_region=IT` invariati. Il payload espone `widenedWindow: boolean`
+     e i campi `effectiveFrom` / `effectiveTo` per tracciabilita'. Cache
+     invariata (1h, chiave per `provider:dateFrom:dateTo`).
+  3. **EmptyState informativo**: messaggio aggiornato che spiega la natura
+     del filtro TMDB + bottone "Allarga finestra" che imposta `range = "90d"`
+     quando la finestra corrente e' vuota; quando il fallback widened scatta,
+     un hint italic informa che si sta mostrando una finestra estesa.
+  Verifica: curl edge function con Netflix range 7d → ritorna ≥10 items
+  (widenedWindow=true), HBO Max range 30d → ritorna 3 items
+  (widenedWindow=true). Versione applicativa invariata `2.1.0` (bugfix).
+  Nessun cambio di provider TMDB, secret, scraping o dipendenze.
+
+- **Leggibilita' "Stasera in TV" su mobile**
+  (`src/components/home/TonightTvList.tsx`): le righe della tabella
+  collassavano ora, badge canale, titolo lungo, badge genere e durata
+  sulla stessa riga, rendendo i titoli (es. "Roberta Valente Notaio in
+  Sorrento - Stagione 1 Episodio 3 - Cuba Libre") difficili da leggere
+  su viewport stretti (≤640px). Introdotto layout responsive a 2 righe
+  esclusivo del breakpoint mobile (`sm:hidden`): riga 1 con ora + badge
+  canale + durata (allineata a destra via `ml-auto`), riga 2 con titolo
   full-width + badge genere. Layout desktop (`hidden sm:flex`)
   invariato. Nessuna modifica alla logica di filtraggio, ordinamento
   prima serata, paginazione o ai dati sottostanti.
-- **Leggibilita' chip filtro "Stasera in TV"**
-  (`src/components/home/TonightTvList.tsx`): le chip non-attive avevano
-  contrasto insufficiente (background trasparente, testo muted), poco
-  leggibili in dark mode. Aggiunto bordo `border-primary/30`, sfondo
-  `bg-card/60` e testo `text-foreground` in stato inattivo, hover
-  `bg-primary/15` con bordo `border-primary/60`, stato attivo gold
-  pieno (`bg-primary` + `text-primary-foreground`) con ring gold via
-  `shadow-[0_0_0_1px_hsl(var(--gold)/0.6)]`.
-- **Visibilita' completa chip filtro su mobile**
-  (`src/components/home/TonightTvList.tsx`): la riga di chip era
-  `overflow-x-auto` su mobile, facendo apparire "Discovery" tagliata
-  fuori schermo dopo "Sky Cinema" senza indicatore di scroll. Sostituito
-  scroll orizzontale con griglia `grid grid-cols-3 gap-1.5` esclusiva
-  mobile (2 righe x 3 colonne: TUTTI/RAI/MEDIASET sopra, SKY SPORT/SKY
-  CINEMA/DISCOVERY sotto). Su desktop layout invariato (`sm:flex
-  sm:flex-wrap`).
 - **Regressione di leggibilita' nelle card** (`EventCard.tsx`): rimosso
   `overflow-hidden` dal container (clippava badge "Prossimo" sporgente,
   countdown e contenuto wrappato) e aggiunto `relative z-[1]` ai contenitori

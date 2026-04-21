@@ -38,6 +38,15 @@ const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const CREDITS_TTL_MS = 24 * 60 * 60 * 1000;
 
+// Quando la finestra richiesta non produce risultati, ampliamo automaticamente
+// la ricerca di N giorni indietro e M giorni in avanti, mantenendo provider e
+// regione invariati. TMDB indicizza i titoli streaming per primary_release_date
+// (film) / first_air_date (serie), non per data di ingresso sulla piattaforma:
+// finestre strette (1-7 giorni) restituiscono spesso 0 risultati anche se il
+// catalogo del provider e' attivo.
+const WIDEN_BACK_DAYS = 14;
+const WIDEN_FWD_DAYS = 30;
+
 function todayRomeISO(): string {
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Rome",
@@ -234,20 +243,43 @@ Deno.serve(async (req) => {
     }
 
     const providerCfg = PROVIDERS[provider];
-    const [movies, tv] = await Promise.all([
-      tmdbDiscover("movie", providerCfg.id, dateFrom, dateTo, apiKey).catch(() => []),
-      tmdbDiscover("tv", providerCfg.id, dateFrom, dateTo, apiKey).catch(() => []),
-    ]);
+    const sortItems = (arr: ReturnType<typeof normalizeItem>[]) =>
+      arr.sort((a, b) => {
+        // ordina prima per data crescente, poi per voto decrescente
+        const dateCmp = (a.releaseDate ?? "").localeCompare(b.releaseDate ?? "");
+        if (dateCmp !== 0) return dateCmp;
+        return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
+      });
 
-    const items = [
-      ...movies.map((m) => normalizeItem(m, "movie")),
-      ...tv.map((t) => normalizeItem(t, "tv")),
-    ].sort((a, b) => {
-      // ordina prima per data crescente, poi per voto decrescente
-      const dateCmp = (a.releaseDate ?? "").localeCompare(b.releaseDate ?? "");
-      if (dateCmp !== 0) return dateCmp;
-      return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
-    });
+    const fetchWindow = async (from: string, to: string) => {
+      const [movies, tv] = await Promise.all([
+        tmdbDiscover("movie", providerCfg.id, from, to, apiKey).catch(() => []),
+        tmdbDiscover("tv", providerCfg.id, from, to, apiKey).catch(() => []),
+      ]);
+      return sortItems([
+        ...movies.map((m) => normalizeItem(m, "movie")),
+        ...tv.map((t) => normalizeItem(t, "tv")),
+      ]);
+    };
+
+    let items = await fetchWindow(dateFrom, dateTo);
+    let widenedWindow = false;
+    let effectiveFrom = dateFrom;
+    let effectiveTo = dateTo;
+
+    // Fallback: se la finestra richiesta e' vuota, ampliamo trasparentemente.
+    // Manteniamo provider e regione invariati: rilassiamo solo il range date.
+    if (items.length === 0) {
+      const widenedFrom = addDaysISO(dateFrom, -WIDEN_BACK_DAYS);
+      const widenedTo = addDaysISO(dateTo, WIDEN_FWD_DAYS);
+      const widenedItems = await fetchWindow(widenedFrom, widenedTo);
+      if (widenedItems.length > 0) {
+        items = widenedItems;
+        widenedWindow = true;
+        effectiveFrom = widenedFrom;
+        effectiveTo = widenedTo;
+      }
+    }
 
     const payload = {
       provider,
@@ -256,6 +288,9 @@ Deno.serve(async (req) => {
       date: dateFrom,
       dateFrom,
       dateTo,
+      effectiveFrom,
+      effectiveTo,
+      widenedWindow,
       items,
       configured: true,
     };

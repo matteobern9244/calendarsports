@@ -61,7 +61,16 @@ L'app espone sei viste principali:
   fascia di **prima serata (dalle 21:00 in poi)** e paginazione interna
   alla scheda (8 canali per pagina).
 - `Streaming` (`/streaming`): tab TV stasera (palinsesto reale per famiglia)
-  + tab Nuove uscite (TMDB con range date e filtro Film/Serie).
+  + tab Nuove uscite (TMDB con range date e filtro Film/Serie). Le "Nuove
+  uscite" si basano su TMDB Discover filtrato per `primary_release_date`
+  (film) / `first_air_date` (serie) e `with_watch_providers` regione `IT`:
+  e' la **data di prima pubblicazione mondiale**, non la data di ingresso
+  sulla piattaforma in Italia (TMDB non espone quel campo su Discover). I
+  range UI sono "Prossimi 7 giorni", "Prossimi 30 giorni" (default) e
+  "Finestra estesa" (-30 / +60 giorni). Quando la finestra richiesta e'
+  vuota, l'edge function `streaming-releases` allarga automaticamente il
+  range (`-14` / `+30` giorni) ed espone `widenedWindow: true` nel payload,
+  cosi' l'UI puo' segnalarlo all'utente.
 - `Jannik Sinner`: profilo sintetico, risultati e calendario tornei.
 - `Juventus`: calendario partite e classifica Serie A.
 - `Formula 1`: calendario GP, classifica piloti e costruttori.
@@ -94,22 +103,12 @@ Funzionalita' trasversali:
   ogni riga di programma e' divisa su due livelli (riga 1: ora + canale
   + durata; riga 2: titolo + genere) per garantire la leggibilita' dei
   titoli lunghi; layout desktop a singola riga invariato;
-- **chip filtro famiglia con icone e griglia mobile 3x2**
-  (`src/components/home/TonightTvList.tsx`): le 6 chip filtro
-  ("Tutti / RAI / Mediaset / Sky Sport / Sky Cinema / Discovery")
-  mostrano un'icona Lucide caratterizzante accanto all'etichetta
-  (`LayoutGrid`, `Radio`, `Tv`, `Trophy`, `Film`, `Compass`) e su
-  mobile sono disposte in una griglia `grid-cols-3` su due righe
-  (niente scroll orizzontale, tutte le 6 famiglie sempre visibili);
-  contrasto migliorato in stato inattivo (bordo + sfondo card +
-  testo full-foreground) per leggibilita' in dark mode;
-- **icona PWA dedicata "Calendar Events"** (`public/favicon.png`,
-  1024x1024) usata sia come favicon che come icona installabile dal
-  manifest (`public/manifest.webmanifest`, `purpose: any` +
-  `maskable`): scritta "CALENDAR EVENTS" su due righe in oro
-  metallico su sfondo navy coerente col brand, leggibile anche a
-  dimensione icona home screen, sostituisce l'icona generica del
-  browser quando l'app viene aggiunta alla home su iOS/Android.
+- **icona PWA dedicata** (`public/favicon.png`, 1024x1024) usata sia
+  come favicon che come icona installabile dal manifest
+  (`public/manifest.webmanifest`, `purpose: any` + `maskable`):
+  calendario gold su sfondo navy coerente col brand, sostituisce
+  l'icona generica del browser quando l'app viene aggiunta alla home
+  su iOS/Android.
 
 ### Streaming: fonte dati TV
 

@@ -51,13 +51,18 @@ import { useSyncAll } from "@/hooks/useSyncAll";
 const CHANNELS_PER_PAGE = 6;
 const RELEASES_PER_PAGE = 8;
 
-type RangeId = "1d" | "3d" | "7d";
+type RangeId = "7d" | "30d" | "90d";
 type KindId = "all" | "movie" | "tv";
 
-const RANGES: { id: RangeId; label: string; days: number }[] = [
-  { id: "1d", label: "Oggi", days: 0 },
-  { id: "3d", label: "Prossimi 3 giorni", days: 2 },
-  { id: "7d", label: "Prossimi 7 giorni", days: 6 },
+// Le "Nuove uscite" usano TMDB Discover filtrando per primary_release_date
+// (film) / first_air_date (serie) e per provider IT. TMDB non espone una data
+// di "platform add", quindi finestre da 1-7 giorni sono spesso vuote.
+// Default 30 giorni: copre la finestra realistica di novita' indicizzate.
+// daysBack = 0 per i range "futuri", >0 per la finestra estesa.
+const RANGES: { id: RangeId; label: string; daysBack: number; daysFwd: number }[] = [
+  { id: "7d", label: "Prossimi 7 giorni", daysBack: 0, daysFwd: 7 },
+  { id: "30d", label: "Prossimi 30 giorni", daysBack: 0, daysFwd: 30 },
+  { id: "90d", label: "Finestra estesa", daysBack: 30, daysFwd: 60 },
 ];
 
 const KINDS: { id: KindId; label: string }[] = [
@@ -106,7 +111,7 @@ export default function StreamingPage() {
     : "netflix";
   const initialRange = isRange(params.get("range"))
     ? (params.get("range") as RangeId)
-    : "1d";
+    : "30d";
   const initialKind = isKind(params.get("kind"))
     ? (params.get("kind") as KindId)
     : "all";
@@ -137,7 +142,7 @@ export default function StreamingPage() {
       next.set("family", family);
     } else {
       next.set("provider", provider);
-      if (range !== "1d") next.set("range", range);
+      if (range !== "30d") next.set("range", range);
       if (kindFilter !== "all") next.set("kind", kindFilter);
     }
     if (page > 1) next.set("page", String(page));
@@ -153,8 +158,13 @@ export default function StreamingPage() {
 
   const { dateFrom, dateTo } = useMemo(() => {
     const today = todayRomeISO();
-    const days = RANGES.find((r) => r.id === range)?.days ?? 0;
-    return { dateFrom: today, dateTo: addDaysISO(today, days) };
+    const cfg = RANGES.find((r) => r.id === range);
+    const back = cfg?.daysBack ?? 0;
+    const fwd = cfg?.daysFwd ?? 30;
+    return {
+      dateFrom: addDaysISO(today, -back),
+      dateTo: addDaysISO(today, fwd),
+    };
   }, [range]);
 
   const releasesQuery = useReleasesByProvider(provider, dateFrom, dateTo);
@@ -380,13 +390,31 @@ export default function StreamingPage() {
           {releasesQuery.isSuccess &&
             releasesQuery.data?.configured &&
             filteredItems.length === 0 && (
-              <EmptyState
-                message={`Nessuna uscita per ${providerLabel} con i filtri selezionati.`}
-              />
+              <div className="flex flex-col items-center gap-3">
+                <EmptyState
+                  message={`Nessuna uscita catalogata da TMDB per ${providerLabel} nella finestra selezionata. Le uscite si basano sulla data di prima pubblicazione mondiale, non sull'ingresso sulla piattaforma.`}
+                />
+                {range !== "90d" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRange("90d")}
+                    className="rounded-full font-heading uppercase tracking-wider text-xs"
+                  >
+                    Allarga finestra
+                  </Button>
+                )}
+              </div>
             )}
 
           {releasesQuery.isSuccess && filteredItems.length > 0 && (
             <>
+              {releasesQuery.data?.widenedWindow && (
+                <p className="text-xs text-muted-foreground italic">
+                  Mostriamo una finestra estesa perche' nel range richiesto non
+                  c'erano novita' indicizzate da TMDB per {providerLabel}.
+                </p>
+              )}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
