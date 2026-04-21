@@ -355,16 +355,16 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
 
         <TabsContent value="formazione">
           <UnavailableExternalSource
-            title="Formazione non disponibile"
-            description="Sky Sport e Lega Serie A non espongono le formazioni via API pubblica gratuita."
+            title="Formazioni ufficiali"
+            description="Le formazioni titolari e i convocati vengono comunicati dai club poco prima del fischio d'inizio. Apri la pagina ufficiale Sky Sport qui sotto per consultare gli undici in campo, la panchina e gli indisponibili in tempo reale."
             externalLink={match.link}
           />
         </TabsContent>
 
         <TabsContent value="modulo">
           <UnavailableExternalSource
-            title="Modulo non disponibile"
-            description="Lo schieramento tattico non è esposto dalle fonti pubbliche gratuite (Sky, Lega Serie A)."
+            title="Modulo e disposizione tattica"
+            description="Lo schieramento tattico delle due squadre viene aggiornato live durante la partita. Apri la pagina ufficiale Sky Sport qui sotto per vedere il modulo scelto dagli allenatori e i movimenti dei giocatori sul campo."
             externalLink={match.link}
           />
         </TabsContent>
@@ -423,8 +423,8 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
 
         <TabsContent value="cronologia">
           <UnavailableExternalSource
-            title="Cronologia eventi non disponibile"
-            description="Gol, ammonizioni e sostituzioni non sono esposti dalle fonti pubbliche gratuite (Sky, Lega Serie A)."
+            title="Cronaca minuto per minuto"
+            description="Gol, ammonizioni, espulsioni e sostituzioni vengono raccontati live nella diretta testuale. Apri la pagina ufficiale Sky Sport qui sotto per seguire la cronaca completa dell'incontro, azione per azione."
             externalLink={match.link}
           />
         </TabsContent>
