@@ -155,7 +155,22 @@ export default function MotoGPPage() {
                           <span className="font-semibold">{s.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{s.team || '—'}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {s.team ? (
+                          <div className="flex items-center gap-2">
+                            <TeamLogo
+                              src={s.teamLogoUrl}
+                              name={s.team}
+                              size={20}
+                              shape="rounded"
+                              className="bg-background"
+                            />
+                            <span>{s.team}</span>
+                          </div>
+                        ) : (
+                          '—'
+                        )}
+                      </TableCell>
                       <TableCell className="text-center font-bold text-primary">{s.points}</TableCell>
                     </TableRow>
                   ))}
