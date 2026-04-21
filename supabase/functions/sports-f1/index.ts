@@ -26,7 +26,19 @@ const F1_DRIVER_PHOTOS: Record<string, string> = {
   'gasly': 'https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/P/PIEGAS01_Pierre_Gasly/piegas01.png.transform/1col/image.png',
   'bortoleto': 'https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/G/GABBOR01_Gabriel_Bortoleto/gabbor01.png.transform/1col/image.png',
   'colapinto': 'https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/F/FRACOL01_Franco_Colapinto/fracol01.png.transform/1col/image.png',
+  // Rookie/piloti 2026 senza foto ufficiale F1 (CDN restituisce sagoma vuota
+  // tramite Cloudinary `d_driver_fallback_image.png`). Usiamo Wikimedia stabile.
+  'lindblad': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Arvid_Lindblad_at_the_Red_Bull_Fan_Zone_%E2%80%93_Crown_Riverwalk%2C_Melbourne_%28028A7832%29.jpg/330px-Arvid_Lindblad_at_the_Red_Bull_Fan_Zone_%E2%80%93_Crown_Riverwalk%2C_Melbourne_%28028A7832%29.jpg',
+  'perez': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Sergio_Perez%2C_Red_Bull_Racing_F1_Team%2C_British_GP%2C_Silverstone_2021_%2851348582452%29.jpg/330px-Sergio_Perez%2C_Red_Bull_Racing_F1_Team%2C_British_GP%2C_Silverstone_2021_%2851348582452%29.jpg',
+  'bottas': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Valtteri_Bottas_at_the_2022_Austrian_Grand_Prix.jpg/330px-Valtteri_Bottas_at_the_2022_Austrian_Grand_Prix.jpg',
 };
+
+// Normalizza la chiave nome pilota: lowercase + rimozione accenti + trim.
+// Necessario perche' Jolpica restituisce "Pérez" con accento mentre OpenF1 e
+// la mappa statica usano "perez" senza accento.
+function normalizeKey(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
 
 // F1 Constructor logos
 const F1_CONSTRUCTOR_LOGOS: Record<string, string> = {
