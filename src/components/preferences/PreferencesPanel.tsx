@@ -1,4 +1,4 @@
-import { Sun, Moon, Palette } from "lucide-react";
+import { Sun, Moon, Palette, Zap, BatteryLow, Timer } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -11,11 +11,13 @@ import { cn } from "@/lib/utils";
 import { usePreferencesPanel } from "@/contexts/PreferencesPanelContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
+import { useCountdownMode } from "@/hooks/useCountdownMode";
 
 export default function PreferencesPanel() {
   const { open, setOpen } = usePreferencesPanel();
   const isMobile = useIsMobile();
   const { theme, setTheme } = useTheme();
+  const { mode: countdownMode, setMode: setCountdownMode } = useCountdownMode();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -42,7 +44,7 @@ export default function PreferencesPanel() {
             <span className="text-gold-gradient">Preferenze</span>
           </SheetTitle>
           <SheetDescription>
-            Personalizza il tema dell'interfaccia.
+            Personalizza tema e comportamento dei countdown.
           </SheetDescription>
         </SheetHeader>
 
@@ -104,6 +106,74 @@ export default function PreferencesPanel() {
                           active
                             ? "bg-gradient-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
                             : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Countdown */}
+          <section aria-labelledby="pref-countdown">
+            <h3
+              id="pref-countdown"
+              className="flex items-center gap-2 text-xs font-heading uppercase tracking-widest text-muted-foreground mb-3"
+            >
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))]">
+                <Timer className="h-3.5 w-3.5" />
+              </span>
+              Countdown
+            </h3>
+            <div className="rounded-xl border border-border/60 bg-background/40 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-heading uppercase tracking-wider text-foreground">
+                    Frequenza aggiornamento
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Tempo reale: aggiornamenti al secondo. Risparmio: aggiornamenti al minuto, riduce il consumo CPU su dispositivi mobili.
+                  </p>
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label="Frequenza aggiornamento countdown"
+                  className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 p-1 self-start"
+                >
+                  {(
+                    [
+                      { value: "realtime", label: "Tempo reale", Icon: Zap },
+                      { value: "saver", label: "Risparmio", Icon: BatteryLow },
+                    ] as const
+                  ).map(({ value, label, Icon }) => {
+                    const active = countdownMode === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => {
+                          if (countdownMode === value) return;
+                          setCountdownMode(value);
+                          toast.success("Countdown aggiornati", {
+                            description:
+                              value === "saver"
+                                ? "Modalità risparmio: aggiornamenti ogni minuto."
+                                : "Modalità tempo reale: aggiornamenti ogni secondo.",
+                          });
+                        }}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5",
+                          "text-xs font-heading font-semibold uppercase tracking-wider",
+                          "transition-colors",
+                          active
+                            ? "bg-gradient-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
+                            : "text-muted-foreground hover:text-foreground",
                         )}
                       >
                         <Icon className="h-3.5 w-3.5" aria-hidden="true" />

@@ -154,10 +154,20 @@ export default function JuventusMatchPage() {
     );
   }
 
-  return <MatchDetail match={foundMatch} />;
+  return (
+    <MatchDetail
+      match={foundMatch}
+      onRetry={() => {
+        setFoundMatch(null);
+        setExhausted(false);
+        setSearchPage(1);
+        firstPageQuery.refetch();
+      }}
+    />
+  );
 }
 
-function MatchDetail({ match }: { match: any }) {
+function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
   const isFinished = match.status === "FullTime";
   const isJuveHome = match.homeTeam?.toLowerCase().includes("juventus");
   const opponent = isJuveHome ? match.awayTeam : match.homeTeam;
@@ -270,7 +280,9 @@ function MatchDetail({ match }: { match: any }) {
               </span>
             );
           })}
-          {!isFinished && match.date && <EventCountdown startDate={match.date} />}
+          {!isFinished && match.date && (
+            <EventCountdown startDate={match.date} onRetry={onRetry} />
+          )}
         </div>
       </motion.div>
 
@@ -402,7 +414,7 @@ function MatchDetail({ match }: { match: any }) {
               <EmptyState message="Risultato non ancora disponibile: la partita non è stata giocata." />
               {match.date && (
                 <div className="flex justify-center">
-                  <EventCountdown startDate={match.date} />
+                  <EventCountdown startDate={match.date} onRetry={onRetry} />
                 </div>
               )}
             </div>

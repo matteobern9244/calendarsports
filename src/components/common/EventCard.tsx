@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 import { Calendar, Clock } from "lucide-react";
 import { motion } from "framer-motion";
-import EventCountdown from "./EventCountdown";
+import { useState } from "react";
+import EventCountdown, { type CountdownStatus } from "./EventCountdown";
 
 interface EventCardProps {
   sport: string;
@@ -12,10 +13,21 @@ interface EventCardProps {
   time?: string;
   /** ISO date string of the event start, used for live countdown */
   startDate?: string;
+  /**
+   * ISO date string opzionale di fine evento (es. weekend MotoGP). Quando
+   * presente, la transizione `in_corso -> completato` segue il timestamp
+   * reale invece del fallback ±3h.
+   */
+  endDate?: string;
   status?: "prossimo" | "in_corso" | "completato";
   highlight?: boolean;
   children?: React.ReactNode;
   className?: string;
+  /**
+   * Callback opzionale per il bottone "Riprova" mostrato quando
+   * `startDate` non e' parsabile.
+   */
+  onRetry?: () => void;
 }
 
 export default function EventCard({
@@ -25,11 +37,24 @@ export default function EventCard({
   date,
   time,
   startDate,
+  endDate,
   status = "prossimo",
   highlight = false,
   children,
   className,
+  onRetry,
 }: EventCardProps) {
+  // Stato live derivato in tempo reale dal countdown: appena l'evento
+  // entra nella finestra "in corso" (in base a startDate/endDate reali) il
+  // badge in alto a destra passa automaticamente a "IN DIRETTA" senza
+  // dover ricaricare la pagina ne aspettare il prossimo refetch.
+  const [liveStatus, setLiveStatus] = useState<CountdownStatus | null>(null);
+  const effectiveStatus =
+    liveStatus === "live"
+      ? "in_corso"
+      : liveStatus === "ended"
+        ? "completato"
+        : status;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -75,13 +100,13 @@ export default function EventCard({
         <span className="text-[10px] font-heading font-bold tracking-[0.2em] uppercase text-primary">
           {sport}
         </span>
-        {status === "in_corso" && (
+        {effectiveStatus === "in_corso" && (
           <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-destructive">
             <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
             IN DIRETTA
           </span>
         )}
-        {status === "completato" && (
+        {effectiveStatus === "completato" && (
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             Completato
           </span>
@@ -104,8 +129,14 @@ export default function EventCard({
             {time}
           </span>
         )}
-        {startDate && status !== "completato" && (
-          <EventCountdown startDate={startDate} className="ml-auto" />
+        {startDate && effectiveStatus !== "completato" && (
+          <EventCountdown
+            startDate={startDate}
+            endDate={endDate}
+            onStatusChange={setLiveStatus}
+            onRetry={onRetry}
+            className="ml-auto"
+          />
         )}
       </div>
 

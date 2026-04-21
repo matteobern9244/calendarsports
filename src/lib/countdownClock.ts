@@ -34,8 +34,57 @@ let nowSecond = Date.now();
 let nowMinute = nowSecond;
 let lastMinuteBucket = Math.floor(nowSecond / 60_000);
 
+// Modalita' globale del clock:
+// - "realtime": comportamento storico (1s se serve, altrimenti 30s).
+// - "saver": forza tick a 60s indipendentemente dalla risoluzione richiesta,
+//   per ridurre il consumo CPU su dispositivi mobili.
+export type CountdownMode = "realtime" | "saver";
+const COUNTDOWN_MODE_STORAGE_KEY = "cse-countdown-mode";
+let globalMode: CountdownMode = "realtime";
+let modeInitialized = false;
+
+function readPersistedMode(): CountdownMode {
+  if (typeof window === "undefined") return "realtime";
+  try {
+    const raw = window.localStorage.getItem(COUNTDOWN_MODE_STORAGE_KEY);
+    return raw === "saver" ? "saver" : "realtime";
+  } catch {
+    return "realtime";
+  }
+}
+
+function ensureModeInitialized(): void {
+  if (modeInitialized) return;
+  modeInitialized = true;
+  globalMode = readPersistedMode();
+}
+
+export function getCountdownMode(): CountdownMode {
+  ensureModeInitialized();
+  return globalMode;
+}
+
+export function setCountdownMode(mode: CountdownMode): void {
+  ensureModeInitialized();
+  if (globalMode === mode) return;
+  globalMode = mode;
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(COUNTDOWN_MODE_STORAGE_KEY, mode);
+    } catch {
+      // Ignora errori di quota o accesso bloccato.
+    }
+  }
+  rescheduleInterval();
+  // Tick immediato: i chip si allineano subito al nuovo regime senza
+  // aspettare il prossimo intervallo.
+  tick();
+}
+
 function computeDesiredTickMs(): number | null {
   if (subscribers.size === 0) return null;
+  ensureModeInitialized();
+  if (globalMode === "saver") return 60_000;
   for (const s of subscribers) {
     if (s.res === "second") return 1000;
   }
@@ -116,6 +165,7 @@ function ensureVisibilityBound(): void {
 export function subscribeCountdown(cb: () => void, res: Resolution): () => void {
   const sub: Subscriber = { cb, res };
   subscribers.add(sub);
+  ensureModeInitialized();
   ensureVisibilityBound();
   rescheduleInterval();
   return () => {

@@ -90,8 +90,10 @@ export default function MotoGPPage() {
                   date={startDate ? formatDateIT(startDate) : "—"}
                   time={e.time ? formatTimeIT(e.time, startDate) : undefined}
                   startDate={e.time && startDate ? `${startDate}T${e.time}` : startDate}
+                  endDate={endDate ? `${endDate}T23:59:59Z` : undefined}
                   status={status}
                   highlight={i === highlightIndex}
+                  onRetry={() => calRefetch()}
                 >
                   {endDate && startDate !== endDate && (
                     <p className="text-sm text-muted-foreground">Weekend di gara fino al {formatDateIT(endDate)}</p>

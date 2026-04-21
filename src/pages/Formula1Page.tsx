@@ -65,6 +65,7 @@ export default function Formula1Page() {
                   startDate={r.time ? `${r.date}T${r.time}` : r.date}
                   status={getEventStatus(r.date)}
                   highlight={idx === highlightIndex}
+                  onRetry={() => calRefetch()}
                 >
                   <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
                     {r.firstPractice && <span>PL1: {formatTimeIT(r.firstPractice.time, r.firstPractice.date)}</span>}
