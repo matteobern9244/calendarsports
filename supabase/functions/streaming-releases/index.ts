@@ -243,20 +243,43 @@ Deno.serve(async (req) => {
     }
 
     const providerCfg = PROVIDERS[provider];
-    const [movies, tv] = await Promise.all([
-      tmdbDiscover("movie", providerCfg.id, dateFrom, dateTo, apiKey).catch(() => []),
-      tmdbDiscover("tv", providerCfg.id, dateFrom, dateTo, apiKey).catch(() => []),
-    ]);
+    const sortItems = (arr: ReturnType<typeof normalizeItem>[]) =>
+      arr.sort((a, b) => {
+        // ordina prima per data crescente, poi per voto decrescente
+        const dateCmp = (a.releaseDate ?? "").localeCompare(b.releaseDate ?? "");
+        if (dateCmp !== 0) return dateCmp;
+        return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
+      });
 
-    const items = [
-      ...movies.map((m) => normalizeItem(m, "movie")),
-      ...tv.map((t) => normalizeItem(t, "tv")),
-    ].sort((a, b) => {
-      // ordina prima per data crescente, poi per voto decrescente
-      const dateCmp = (a.releaseDate ?? "").localeCompare(b.releaseDate ?? "");
-      if (dateCmp !== 0) return dateCmp;
-      return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
-    });
+    const fetchWindow = async (from: string, to: string) => {
+      const [movies, tv] = await Promise.all([
+        tmdbDiscover("movie", providerCfg.id, from, to, apiKey).catch(() => []),
+        tmdbDiscover("tv", providerCfg.id, from, to, apiKey).catch(() => []),
+      ]);
+      return sortItems([
+        ...movies.map((m) => normalizeItem(m, "movie")),
+        ...tv.map((t) => normalizeItem(t, "tv")),
+      ]);
+    };
+
+    let items = await fetchWindow(dateFrom, dateTo);
+    let widenedWindow = false;
+    let effectiveFrom = dateFrom;
+    let effectiveTo = dateTo;
+
+    // Fallback: se la finestra richiesta e' vuota, ampliamo trasparentemente.
+    // Manteniamo provider e regione invariati: rilassiamo solo il range date.
+    if (items.length === 0) {
+      const widenedFrom = addDaysISO(dateFrom, -WIDEN_BACK_DAYS);
+      const widenedTo = addDaysISO(dateTo, WIDEN_FWD_DAYS);
+      const widenedItems = await fetchWindow(widenedFrom, widenedTo);
+      if (widenedItems.length > 0) {
+        items = widenedItems;
+        widenedWindow = true;
+        effectiveFrom = widenedFrom;
+        effectiveTo = widenedTo;
+      }
+    }
 
     const payload = {
       provider,
@@ -265,6 +288,9 @@ Deno.serve(async (req) => {
       date: dateFrom,
       dateFrom,
       dateTo,
+      effectiveFrom,
+      effectiveTo,
+      widenedWindow,
       items,
       configured: true,
     };
