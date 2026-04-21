@@ -18,6 +18,23 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Changed
 
+- **Stasera in TV — chip genere garantito su ogni riga**.
+  `src/lib/genreUtils.ts`: `inferGenre` cambia firma a
+  `(family, channel, title) => string` (era `string | undefined`) e
+  applica una cascata deterministica: famiglia/canale dedicati →
+  keyword italiane estese (aggiunti Affari Tuoi, Belve, Don Matteo,
+  Bake Off, Casa a Prima Vista, Che Tempo Che Fa, Verissimo, ecc.,
+  con nuove categorie Fiction, Cooking, Lifestyle) → pattern
+  strutturali (estrazione `(Genere)` finale, stagione/episodio) →
+  default deterministico per famiglia (`rai`/`mediaset` → `Tv`,
+  `sky-sport` → `Sport`, `sky-cinema` → `Film`, `discovery` →
+  `Lifestyle`). `src/components/home/TonightTvList.tsx`: rimossi i
+  rami condizionali `g ?` su Badge desktop/mobile e `aria-hidden` su
+  cella genere; il chip viene ora sempre renderizzato e la cella e'
+  sempre annunciata. Risolve i casi reali (Affari Tuoi, Belve) in cui
+  alcune righe restavano senza chip per assenza di match keyword.
+  Nessun cambio a payload, edge function, lista canali o policy.
+
 - **Scraping TV — fallback deterministico per placeholder `EV-*`**.
   `supabase/functions/streaming-tv/index.ts`: `enrichTitle` ora applica per
   raw `EV-SP`/`EV-CN`/`EV-FILM`/`EV-TV` un singolo passaggio di scoring che

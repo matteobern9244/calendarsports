@@ -70,8 +70,36 @@ describe("inferGenre", () => {
   });
 
   describe("nessun match -> undefined", () => {
-    it("ritorna undefined per titoli generici su canali non specializzati", () => {
-      expect(inferGenre("rai", "Rai 3", "Programma sconosciuto xyz")).toBeUndefined();
+    it("ritorna default famiglia 'Tv' per titoli generici su RAI/Mediaset", () => {
+      expect(inferGenre("rai", "Rai 3", "Programma sconosciuto xyz")).toBe("Tv");
+      expect(inferGenre("mediaset", "Italia 1", "Programma sconosciuto xyz")).toBe("Tv");
+    });
+    it("ritorna 'Sport' come default per Sky Sport sconosciuto", () => {
+      expect(inferGenre("sky-sport", "Sky Sport Arena", "Programma generico")).toBe("Sport");
+    });
+    it("ritorna 'Lifestyle' come default per Discovery sconosciuto", () => {
+      expect(inferGenre("discovery", "Real Time", "Programma generico")).toBe("Lifestyle");
+    });
+  });
+
+  describe("nuove keyword italiane", () => {
+    it("riconosce Affari Tuoi come Quiz", () => {
+      expect(inferGenre("rai", "Rai 1", "Affari Tuoi")).toBe("Quiz");
+    });
+    it("riconosce Belve come Talk Show", () => {
+      expect(inferGenre("rai", "Rai 2", "Belve")).toBe("Talk Show");
+    });
+    it("riconosce Don Matteo come Fiction", () => {
+      expect(inferGenre("rai", "Rai 1", "Don Matteo")).toBe("Fiction");
+    });
+    it("riconosce Bake Off Italia come Cooking", () => {
+      expect(inferGenre("discovery", "Real Time", "Bake Off Italia")).toBe("Cooking");
+    });
+    it("riconosce Casa a Prima Vista come Lifestyle", () => {
+      expect(inferGenre("discovery", "Real Time", "Casa a Prima Vista")).toBe("Lifestyle");
+    });
+    it("estrae genere da '(Inchieste)' finale e mappa a Talk Show", () => {
+      expect(inferGenre("mediaset", "Italia 1", "Le Iene presentano - Il verdetto (Inchieste)")).toBe("Talk Show");
     });
   });
 });
