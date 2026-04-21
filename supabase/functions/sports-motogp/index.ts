@@ -98,6 +98,44 @@ const MOTOGP_RIDER_FULL_NAMES: Record<string, string> = {
   'rossi': 'Valentino Rossi',
 };
 
+// MotoGP rider race numbers keyed by surname (or surname-initial for ambiguous cases).
+// Based on official MotoGP 2026 starting grid. Wildcard/replacements not mapped: returned as null.
+const MOTOGP_RIDER_NUMBERS_BY_SURNAME: Record<string, number> = {
+  'bagnaia': 63,
+  'marquez-m': 93,
+  'marquez-a': 73,
+  'marc marquez': 93,
+  'alex marquez': 73,
+  'martin': 89,
+  'acosta': 31,
+  'bastianini': 23,
+  'bezzecchi': 72,
+  'vinales': 12,
+  'viñales': 12,
+  'quartararo': 20,
+  'binder': 33,
+  'miller': 43,
+  'morbidelli': 21,
+  'di giannantonio': 49,
+  'fernandez-r': 25,
+  'fernandez-a': 37,
+  'fernandez': 25,
+  'zarco': 5,
+  'marini': 10,
+  'mir': 36,
+  'rins': 42,
+  'ogura': 79,
+  'razgatlioglu': 54,
+  'aldeguer': 24,
+  'moreira': 11,
+  'garcia': 7,
+  'pirro': 51,
+  'savadori': 32,
+  'pedrosa': 26,
+  'crutchlow': 35,
+  'bradl': 6,
+};
+
 function expandRiderName(skyName: string): string {
   const normalized = skyName.toLowerCase().trim();
   const parts = normalized.replace(/\./g, '').trim().split(/\s+/);
