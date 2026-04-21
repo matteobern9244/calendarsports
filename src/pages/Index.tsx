@@ -5,6 +5,7 @@ import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
+import { getCurrentJuventusSeason } from "@/lib/currentSeason";
 import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ export default function HomePage() {
   }, [lastSyncAt]);
 
   const { data: f1Data, isLoading: f1Loading, error: f1Error, refetch: f1Refetch } = useF1NextRace();
-  const { data: juveCalendar, isLoading: juveLoading, error: juveError, refetch: juveRefetch } = useJuventusCalendar(2025);
+  const { data: juveCalendar, isLoading: juveLoading, error: juveError, refetch: juveRefetch } = useJuventusCalendar(getCurrentJuventusSeason());
   const { data: sinnerNext, isLoading: sinnerLoading, error: sinnerError, refetch: sinnerRefetch } = useSinnerNextEvent();
   const { data: motogpNext, isLoading: motogpLoading, error: motogpError, refetch: motogpRefetch } = useMotoGPNextEvent();
 

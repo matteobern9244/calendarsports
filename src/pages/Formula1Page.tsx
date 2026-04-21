@@ -1,12 +1,11 @@
 import SectionHeader from "@/components/common/SectionHeader";
-import SeasonSelector from "@/components/common/SeasonSelector";
 import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
+import { getCurrentF1Season } from "@/lib/currentSeason";
 import { useF1Calendar, useF1DriverStandings, useF1ConstructorStandings } from "@/hooks/useSportsData";
 import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
@@ -16,10 +15,10 @@ import { User } from "lucide-react";
 import { f1NationalityToIso } from "@/lib/f1Utils";
 
 export default function Formula1Page() {
-  const { seasons, setSeason } = useSeasonPreferences();
-  const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useF1Calendar(seasons.f1);
-  const { data: drivers, isLoading: drvLoading, error: drvError, refetch: drvRefetch } = useF1DriverStandings(seasons.f1);
-  const { data: constructors, isLoading: conLoading, error: conError } = useF1ConstructorStandings(seasons.f1);
+  const season = getCurrentF1Season();
+  const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useF1Calendar(season);
+  const { data: drivers, isLoading: drvLoading, error: drvError, refetch: drvRefetch } = useF1DriverStandings(season);
+  const { data: constructors, isLoading: conLoading, error: conError } = useF1ConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
 
   // Fallback offline: nessuna sezione ha dati in cache e siamo offline
@@ -35,10 +34,6 @@ export default function Formula1Page() {
     <div className="container py-8 sm:py-12">
       <div className="mb-2">
         <SectionHeader title="Formula 1" />
-      </div>
-
-      <div className="mb-6">
-        <SeasonSelector currentSeason={seasons.f1} onSelect={(y) => setSeason("f1", y)} />
       </div>
 
       <Tabs defaultValue="calendario" className="w-full">
