@@ -170,53 +170,94 @@ function parseDateText(s: string): string | null {
 }
 
 // ----- Player info -----------------------------------------------------
-const PHOTO_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Jannik_Sinner_2025_US_Open.jpg/500px-Jannik_Sinner_2025_US_Open.jpg';
+// Foto principale dall'infobox IT (US Open 2025, cropped)
+const PHOTO_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Jannik_Sinner_US_Open_2025_%28cropped%29.jpg/500px-Jannik_Sinner_US_Open_2025_%28cropped%29.jpg';
 
 async function getPlayerInfo() {
   const cached = getCached<unknown>('player-info');
   if (cached) return cached;
 
-  const html = await fetchWiki('https://en.wikipedia.org/wiki/Jannik_Sinner');
+  // Profilo da Wikipedia ITALIA (etichette in italiano, contiene Peso e palmarès Slam)
+  const html = await fetchWiki('https://it.wikipedia.org/wiki/Jannik_Sinner');
+  // Stagione 2026 resta su Wikipedia EN: la voce IT non esiste in modo stabile
   const seasonHtml = await fetchWiki('https://en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season');
 
-  const ib = html ? parseInfobox(html) : {};
+  const ib = html ? parseSinottico(html) : {};
 
-  const currentRanking = ib['current ranking'] || '';
-  const rankNumMatch = currentRanking.match(/No\.\s*(\d+)/);
-  const rankDateMatch = currentRanking.match(/\((\d{1,2}\s+[A-Za-z]+\s+\d{4})\)/);
+  // --- Ranking attuale (singolare) ---
+  // Esempio raw IT: "1º"
+  const currentRanking = ib['ranking attuale'] || '';
+  const rankNumMatch = currentRanking.match(/(\d+)\s*[ºo°]/);
 
-  const highest = ib['highest ranking'] || '';
-  const highestNumMatch = highest.match(/No\.\s*(\d+)/);
-  const highestDateMatch = highest.match(/\((\d{1,2}\s+[A-Za-z]+\s+\d{4})\)/);
+  // --- Miglior ranking (singolare) ---
+  // Esempio raw IT: "1º (10 giugno 2024)"
+  const highest = ib['miglior ranking'] || '';
+  const highestNumMatch = highest.match(/(\d+)\s*[ºo°]/);
+  const highestDateIso = parseItalianDateInline(highest);
 
-  const careerRecord = ib['career record'] || '';
-  const careerTitles = ib['career titles'] || '';
-  const prizeMoney = ib['prize money'] || '';
-  const height = ib['height'] || '';
-  const plays = ib['plays'] || '';
-  const coach = ib['coach'] || '';
-  const turnedPro = ib['turned pro'] || '';
+  // --- Vittorie/sconfitte (singolare) ---
+  // Esempio raw IT: "345–88 (79.68%)"
+  const careerRecord = ib['vittorie/sconfitte'] || '';
 
-  // Born: "( 2001-08-16 ) 16 August 2001 (age 24) Innichen , Italy"
-  const born = ib['born'] || '';
-  const birthDate = (born.match(/\d{4}-\d{2}-\d{2}/) || [null])[0]
-    || parseDateText(born);
-  // Birthplace: text after "(age N)" up to end (may have trailing ".")
-  let birthPlace = '';
-  const birthPlaceMatch = born.match(/age\s*\d+\)\s*(.+?)\s*$/);
-  if (birthPlaceMatch) birthPlace = birthPlaceMatch[1].trim();
-  // Fallback: parse the original infobox cell looking for birthplace div
-  if (!birthPlace && html) {
-    const bpRe = /class="birthplace"[^>]*>([\s\S]*?)<\/div>/;
-    const bpm = html.match(bpRe);
-    if (bpm) birthPlace = stripTags(bpm[1]);
+  // --- Titoli vinti (singolare) ---
+  const careerTitlesRaw = ib['titoli vinti'] || '';
+  const careerTitlesNum = parseInt(careerTitlesRaw);
+
+  // --- Misure ---
+  const heightRaw = ib['altezza'] || '';
+  // Normalizzo "191 cm" anche se ci sono spazi/markup residui
+  const heightNum = heightRaw.match(/(\d{2,3})/);
+  const height = heightNum ? `${heightNum[1]} cm` : heightRaw;
+
+  const weightRaw = ib['peso'] || '';
+  const weightNum = weightRaw.match(/(\d{2,3})/);
+  const weight = weightNum ? `${weightNum[1]} kg` : weightRaw;
+
+  // --- Coach: NON presente nell'infobox IT, tentativo regex sul testo ---
+  let coach: string | null = null;
+  if (html) {
+    // Pattern tipici: "allenato da Nome Cognome", "è allenato da Nome Cognome"
+    const coachMatch = html.match(/allenat[oi]\s+da\s+(?:<[^>]+>)*([A-ZÀ-Ý][\w'À-ÿ-]+(?:\s+[A-ZÀ-Ý][\w'À-ÿ-]+){1,3})/);
+    if (coachMatch) coach = stripTags(coachMatch[1]);
   }
+
+  // --- Mano di gioco: idem, non in infobox IT - tentativo regex ---
+  let plays: string | null = null;
+  if (html) {
+    const playsMatch = html.match(/(destrimane|mancino)/i);
+    if (playsMatch) {
+      plays = playsMatch[1].toLowerCase() === 'mancino' ? 'Sinistra' : 'Destra';
+    }
+  }
+
+  // --- Nascita: dal primo paragrafo ("San Candido, 16 agosto 2001") ---
+  let birthPlace = 'San Candido';
+  let birthDate: string | null = '2001-08-16';
+  if (html) {
+    const bioMatch = html.match(/<b[^>]*>Jannik Sinner<\/b>[\s\S]{0,200}?\(([^)]+)\)/);
+    if (bioMatch) {
+      const inside = stripTags(bioMatch[1]);
+      // "San Candido, 16 agosto 2001"
+      const parts = inside.split(',').map((s) => s.trim());
+      if (parts.length >= 2) {
+        birthPlace = parts[0] || birthPlace;
+        const iso = parseItalianDateInline(parts.slice(1).join(' '));
+        if (iso) birthDate = iso;
+      }
+    }
+  }
+
+  // --- Palmarès Slam ---
+  const slamResults = html ? parseSlamResults(html) : null;
+
+  // --- Statistiche aggiornate al ... ---
+  const statsUpdatedAt = html ? parseStatsUpdatedAt(html) : null;
 
   // 2026 season stats - real Wikipedia labels are "Season record" and "Calendar titles"
   let seasonRecord: string | null = null;
   let seasonTitles: number | null = null;
   if (seasonHtml) {
-    const sib = parseInfobox(seasonHtml);
+    const sib = parseInfobox(seasonHtml); // EN season page conserva schema infobox-label
     // First "Season record" entry is Singles (appears before Doubles)
     if (sib['season record']) seasonRecord = sib['season record'];
     if (sib['calendar titles']) {
@@ -228,24 +269,27 @@ async function getPlayerInfo() {
   const data = {
     name: 'Jannik Sinner',
     ranking: rankNumMatch ? parseInt(rankNumMatch[1]) : null,
-    rankingDate: rankDateMatch ? parseDateText(rankDateMatch[1]) : null,
+    rankingDate: statsUpdatedAt, // su IT il ranking attuale non ha data inline; uso statsUpdatedAt
     careerHigh: highestNumMatch ? parseInt(highestNumMatch[1]) : null,
-    careerHighDate: highestDateMatch ? parseDateText(highestDateMatch[1]) : null,
+    careerHighDate: highestDateIso,
     nationality: 'Italia',
     country: 'IT',
     birthDate,
     birthPlace,
     height,
+    weight,
     plays,
     coach,
-    turnedPro: turnedPro ? parseInt(turnedPro) || turnedPro : null,
+    turnedPro: null,
     careerRecord,
-    careerTitles: careerTitles ? parseInt(careerTitles) || careerTitles : null,
-    prizeMoney,
+    careerTitles: !isNaN(careerTitlesNum) ? careerTitlesNum : null,
+    prizeMoney: null, // non presente nell'infobox IT
     seasonRecord,
     seasonTitles,
+    slamResults,
+    statsUpdatedAt,
     photoUrl: PHOTO_URL,
-    source: 'Wikipedia (en.wikipedia.org)',
+    source: 'Wikipedia Italia (it.wikipedia.org)',
   };
 
   setCached('player-info', data);
