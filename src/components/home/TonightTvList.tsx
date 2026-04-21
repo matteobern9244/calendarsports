@@ -44,6 +44,15 @@ interface TvHighlight {
   durationMin: number;
   hourRome: number;
   minuteRome: number;
+  /**
+   * Minuti totali dalla mezzanotte Europe/Rome dell'orario di fine
+   * programma. Per programmi che attraversano la mezzanotte (es. start
+   * 23:30, end 01:15) viene normalizzato aggiungendo 24*60 in modo che
+   * `endMinutesFromMidnight > startMinutes` sia sempre vero. Cosi' il
+   * test di overlap con la finestra di prima serata e' un semplice
+   * confronto numerico, senza casi speciali per il wrap.
+   */
+  endMinutesFromMidnight: number;
   title: string;
   genre?: string;
 }
