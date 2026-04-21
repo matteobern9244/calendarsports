@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -445,9 +444,22 @@ export default function StreamingPage() {
                     key={`${item.type}-${item.tmdbId}`}
                     type="button"
                     onClick={() => setSelected(item)}
-                    className="text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                    className="text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
                   >
-                    <Card className="overflow-hidden transition-transform group-hover:-translate-y-0.5 group-hover:shadow-lg">
+                    <motion.div
+                      whileHover={{ y: -4 }}
+                      className={cn(
+                        "relative overflow-hidden rounded-2xl border bg-card",
+                        "transition-[box-shadow,border-color,transform] duration-300 ease-out",
+                        "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
+                        "hover:shadow-[0_18px_40px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
+                        "border-[hsl(var(--gold))]/20 hover:border-[hsl(var(--gold))]/55",
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-x-0 top-0 h-px z-10 bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+                      />
                       {item.poster ? (
                         <img
                           src={item.poster}
@@ -463,7 +475,7 @@ export default function StreamingPage() {
                           <Sparkles className="h-8 w-8 text-muted-foreground" />
                         </div>
                       )}
-                      <CardContent className="p-3 space-y-1">
+                      <div className="p-3 space-y-1">
                         <div className="flex items-start justify-between gap-2 flex-wrap">
                           <p className="font-heading text-sm font-semibold leading-tight line-clamp-2 min-w-0 flex-1">
                             {item.title}
@@ -483,8 +495,8 @@ export default function StreamingPage() {
                             </span>
                           )}
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </motion.div>
                   </button>
                 ))}
               </motion.div>
