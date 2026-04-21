@@ -319,7 +319,7 @@ export default function JuventusPage() {
           {!calLoading && !calError && calendar && calendar.total === 0 && (
             <UnavailableExternalSource
               title={`Calendario Juventus ${season}`}
-              description="Il calendario delle partite Juventus per questa stagione non è ancora disponibile dalla nostra fonte. Apri la pagina ufficiale Sky Sport qui sotto per consultare tutti gli appuntamenti del club bianconero, con date, orari e competizioni (Serie A, Coppa Italia, Champions League)."
+              description="Il calendario delle partite Juventus per questa stagione non è ancora disponibile dalla nostra fonte. Apri la pagina ufficiale Sky Sport qui sotto per consultare tutti gli appuntamenti del club bianconero, con giornate, orari e competizioni (Serie A, Coppa Italia, Champions League)."
               externalLink="https://sport.sky.it/calcio/serie-a/squadre/juventus"
               externalLabel="Vedi calendario su Sky Sport"
               ctaHint="Tocca qui per tutte le partite bianconere"
