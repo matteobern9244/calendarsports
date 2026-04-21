@@ -1,112 +1,145 @@
 
 
-## Pagina dettaglio partita Juventus (solo dati reali disponibili)
+## Sezione "Highlights" per Juventus, Formula 1 e MotoGP
 
-### Premessa onesta sui dati
+### Fonte dati (verificata)
 
-Verificato in sessione di analisi: **non esistono fonti pubbliche e gratuite** che espongano formazioni, modulo, eventi e cronaca per le partite Juventus.
-- Sky Sport: nessun widget dettaglio match esposto pubblicamente (404 su tutti i tentativi).
-- Lega Serie A API: solo lista partite, nessun endpoint lineup/events.
-- TheSportsDB free: ritorna lo stesso lineup fake (Aston Villa) per qualunque match; timeline e stats sono Patreon-only.
-- football-data.org e API-Football: richiedono API key (a pagamento o registrazione esterna).
+YouTube espone **feed RSS pubblici** per qualsiasi playlist senza API key:
+`https://www.youtube.com/feeds/videos.xml?playlist_id={ID}`. Verificato HTTP 200 per tutte e 3 le playlist richieste, con ~15 entries ciascuna. Ogni entry contiene **dati reali**: `<title>`, `<yt:videoId>`, `<published>` (ISO 8601 con offset), `<author><name>` (canale = fonte). Le thumbnail si ottengono via URL deterministico `https://i.ytimg.com/vi/{videoId}/hqdefault.jpg` (480×360, sempre disponibile). Nessun mock, nessun hardcode di video.
 
-Per rispettare la regola "no hardcoded, solo dati reali" (memoria `data-policy`), la pagina dettaglio mostra **solo le informazioni già presenti nel payload Sky del calendario** e rimanda a Sky.it per cronaca/formazioni live.
+### Architettura
 
-I tab richiesti vengono onorati così:
-- **Anteprima**: dati pre-partita reali (data, ora Roma, stadio mancante quindi competizione, broadcaster, countdown). Sempre disponibile.
-- **Risultato**: parziali e finale dal payload Sky (status `FullTime` + `homeScore`/`awayScore`). Disponibile solo per partite giocate.
-- **Formazione** + **Modulo** + **Cronologia eventi**: ognuno mostra uno stato vuoto chiaro ("Dati formazione non disponibili dalla fonte gratuita") con CTA "Apri su Sky Sport" che porta al `link` reale già presente nel payload (`match.link`, es. `https://sport.sky.it/calcio/serie-a/partite/2025/giornata-2/genoa-juventus/risultato-gol`). Nessun dato finto, nessun mock.
+#### A. Nuova Edge Function `supabase/functions/highlights-youtube/index.ts`
 
-### Implementazione
+- Endpoint unico: `GET /highlights-youtube?sport=juventus|f1|motogp&limit=12`.
+- Mappa interna `sport → playlistId` con i 3 ID forniti.
+- Fetch del feed RSS, parsing con `DOMParser` di Deno (`deno-dom` standard) o regex semplici (preferito: regex su `<entry>` per evitare dipendenze, pattern già verificato sui sample).
+- Per ogni entry estrae `videoId`, `title`, `published`, `author` (canale ufficiale).
+- Output normalizzato:
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "videoId": "cp37e-K70Gw",
+        "title": "Juventus 2-0 Bologna | HIGHLIGHTS Serie A",
+        "publishedAt": "2026-04-19T22:10:32+00:00",
+        "source": "Juventus",
+        "url": "https://www.youtube.com/watch?v=cp37e-K70Gw",
+        "thumbnailUrl": "https://i.ytimg.com/vi/cp37e-K70Gw/hqdefault.jpg"
+      }
+    ],
+    "meta": { "dataSource": "live", "source": "youtube-rss", "sport": "juventus" }
+  }
+  ```
+- CORS abilitato (riusa `_shared/security.ts` come le altre edge functions).
+- Cache HTTP 10 minuti (`Cache-Control: public, max-age=600`) per ridurre richieste a YouTube.
+- Se YouTube risponde non-2xx o feed vuoto: ritorna `success:true, data:[], meta.dataSource:"unknown"` (stato vuoto onesto, nessun fake).
 
-#### A. Routing — `src/App.tsx`
+#### B. Client adapter `src/lib/api/sportsApi.ts`
 
-Aggiungere route dinamica `/juventus/partite/:matchId` che monta la nuova pagina dettaglio dentro il `Layout` esistente. Nessun cambio agli altri route.
+Aggiungere:
+```ts
+export type HighlightSport = "juventus" | "f1" | "motogp";
+export const highlightsApi = {
+  list: (sport: HighlightSport, limit = 12) =>
+    callEdgeFunction("highlights-youtube", { sport, limit: String(limit) }),
+};
+```
 
-#### B. Nuova pagina `src/pages/JuventusMatchPage.tsx`
+#### C. Hook `src/hooks/useSportsData.ts`
 
-- Recupera la partita corrente filtrando il calendario completo via hook esistente `useJuventusCalendar(season)` finchè non trova `String(m.id) === matchId`. In caso di paginazione, scorre le pagine come fa la card "Prossima Partita". Niente nuove chiamate backend, niente nuovi endpoint.
-- Header partita: badge competizione, data + ora `Europe/Rome` via `formatJuventusDateTime`, nomi squadre con `<TeamLogo>`, score tipografico grande (se finita), countdown se non finita, broadcaster pill.
-- `<Tabs>` con 5 trigger nell'ordine richiesto: **Anteprima** (default), **Formazione**, **Modulo**, **Risultato**, **Cronologia eventi**.
-- Tutti i testi e label in italiano (rispetta `check:italian`).
-- Tutte le date in `Europe/Rome` (rispetta `check:tz-juventus`).
+```ts
+export function useHighlights(sport: HighlightSport, limit = 12) {
+  return useQuery({
+    queryKey: ["highlights", sport, limit],
+    queryFn: () => highlightsApi.list(sport, limit),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+```
 
-#### C. Tab `Anteprima`
+#### D. Componente UI condiviso `src/components/highlights/HighlightsSection.tsx`
 
-Card grid responsive con dati reali dal payload calendario:
-- Competizione (badge colorato).
-- Giornata / matchday se presente (`m.matchday`).
-- Data e ora italiana via `formatJuventusDateTime`.
-- Broadcaster (chip con `getBroadcasterStyle` per ogni canale).
-- Countdown live `<EventCountdown>` se la partita non è ancora cominciata.
-- Squadre (logo + nome, `vs`) e indicazione casa/trasferta per Juventus.
-- Link "Approfondisci su Sky Sport" → `match.link` (target `_blank`, `rel="noopener noreferrer"`).
+- Props: `sport: HighlightSport`, `accentColor?: string` (per allineare al tema della pagina: oro Juventus, rosso Ferrari per F1, brand MotoGP).
+- Header: `<SectionHeader title="Highlights" subtitle="Ultimi video dal canale ufficiale" />`.
+- Stato loading: `<LoadingState message="Caricamento highlights..." />`.
+- Stato errore: `<ErrorState message="Impossibile caricare gli highlights." onRetry={...} />`.
+- Stato vuoto: `<EmptyState message="Nessun highlight disponibile al momento." />`.
+- Layout: griglia responsive `grid gap-4 sm:grid-cols-2 lg:grid-cols-3` con animazioni Framer Motion `staggerChildren` (coerente col resto dell'app).
+- Card highlight (componente interno `HighlightCard`):
+  - Wrapper `<a href={url} target="_blank" rel="noopener noreferrer">` con focus-ring oro.
+  - Thumbnail 16:9 con overlay play button al center, hover scale-105, gradiente bottom-up per leggibilità testo.
+  - Badge "NUOVO" (gold) sui video pubblicati negli ultimi 3 giorni.
+  - Badge data formato italiano (es. "19 apr 2026") via helper `formatDateIT`.
+  - Titolo `font-heading` clamp-2 righe.
+  - Footer micro-meta: icona YouTube + nome canale (fonte) + tempo relativo ("2 giorni fa") via helper interno `formatRelativeIT`.
+  - Lazy-load thumbnail (`loading="lazy"`).
+  - Stile coerente con `EventCard`: `rounded-2xl border border-border bg-card shadow-[...]` + hover lift `whileHover={{ y: -3 }}`.
+- CTA in fondo alla sezione: link "Vedi tutti su YouTube" → URL playlist completa, target `_blank`.
+- Tutto in italiano (`check:italian` compliant).
 
-#### D. Tab `Risultato`
+#### E. Integrazione nelle 3 pagine
 
-- Se `status === "FullTime"`: pannello tipografico grande con `homeScore` - `awayScore`, scaler colore (verde Juve vince, rosso perde, giallo pareggio coerente con la card calendario esistente).
-- Marcatori non mostrati: non disponibili dalla fonte → micro-nota "Marcatori non disponibili dalla fonte. Apri su Sky Sport per il dettaglio." con link al `match.link`.
-- Se la partita non è ancora terminata: `<EmptyState>` "Risultato non ancora disponibile" + countdown.
+**JuventusPage** (`src/pages/JuventusPage.tsx`): aggiungere un nuovo `<TabsTrigger value="highlights">Highlights</TabsTrigger>` accanto a Calendario/Classifica e relativo `<TabsContent value="highlights"><HighlightsSection sport="juventus" /></TabsContent>`.
 
-#### E. Tab `Formazione`, `Modulo`, `Cronologia eventi`
+**Formula1Page** (`src/pages/Formula1Page.tsx`): nuovo tab Highlights dopo Costruttori, `<HighlightsSection sport="f1" />`.
 
-Tutti e tre rendono lo stesso pattern (componente condiviso interno `<UnavailableExternalSource>`):
-- Stato vuoto chiaro e onesto: "Dati formazione non disponibili dalla fonte attuale." / "Modulo non disponibile dalla fonte attuale." / "Cronologia eventi non disponibile dalla fonte attuale.".
-- CTA `<a>` "Vedi su Sky Sport" → `match.link`, target `_blank`.
-- Spiegazione breve in `text-muted-foreground`: "Sky Sport non espone formazioni e cronaca via API pubblica gratuita.".
-- Niente icone fuorvianti tipo skeleton o "loading" che possano suggerire un caricamento futuro: la mancanza è strutturale, non temporanea.
+**MotoGPPage** (`src/pages/MotoGPPage.tsx`): nuovo tab Highlights dopo Costruttori, `<HighlightsSection sport="motogp" />`.
 
-#### F. Linking dalla pagina lista — `src/pages/JuventusPage.tsx`
-
-- Card "Prossima Partita": rendere l'intera card cliccabile come `<Link to={\`/juventus/partite/${nextMatch.id}\`}>` mantenendo lo styling (focus ring per accessibilità).
-- Card calendario nella griglia: ogni `motion.div` partita avvolta da `<Link>` allo stesso pattern. `match.id` è già nel payload Sky (verificato: `"id":"2558520"`).
-- Nessun cambio al backend.
-
-#### G. Stati di errore e edge case
-
-- `matchId` non trovato nel calendario: pagina mostra `<ErrorState message="Partita non trovata" />` con bottone "Torna al calendario" verso `/juventus`.
-- `match.link` mancante (raro): nascondere CTA "Apri su Sky Sport" e mostrare solo il messaggio di indisponibilità.
-- Loading: `<LoadingState message="Caricamento dettaglio partita..." />` mentre la pagina contenente la partita viene fetchata.
+Nessuna modifica al layout principale né alla Home (la richiesta è per le 3 pagine sport).
 
 ### File modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `src/pages/JuventusMatchPage.tsx` | NEW | Pagina dettaglio con header + 5 tab. Risolve la partita via `useJuventusCalendar` (paginato finché trova `String(m.id) === matchId`). Usa `formatJuventusDateTime`, `<TeamLogo>`, `<EventCountdown>`, `getBroadcasterStyle`. |
-| `src/App.tsx` | EDIT | Aggiungere `<Route path="/juventus/partite/:matchId" element={<JuventusMatchPage />} />` dentro il `<Layout>`. |
-| `src/pages/JuventusPage.tsx` | EDIT | Wrappare card "Prossima Partita" e ogni card calendario in `<Link to={\`/juventus/partite/${m.id}\`}>` preservando il layout e lo styling motion. |
-| `src/components/common/UnavailableExternalSource.tsx` | NEW | Stato vuoto riusabile con messaggio italiano + CTA "Apri su Sky Sport" se `link` presente. Usato dai 3 tab Formazione / Modulo / Cronologia eventi. |
-| `changelog.md` | EDIT | `### Added`: pagina dettaglio partita Juventus con 5 tab (Anteprima, Formazione, Modulo, Risultato, Cronologia eventi). Tab senza fonte dati gratuita rimandano a Sky Sport. |
-| `README.md` | EDIT | Sezione Juventus: nota esplicita che lineup/modulo/eventi non sono disponibili dalla fonte gratuita Sky/Lega; la pagina dettaglio mostra solo dati reali (data, score, broadcaster) e linka a Sky.it. |
+| `supabase/functions/highlights-youtube/index.ts` | NEW | Edge function: parsing RSS YouTube, normalizzazione output, CORS, rate-limit, cache 10min. |
+| `src/lib/api/sportsApi.ts` | EDIT | Nuovo `highlightsApi.list(sport, limit)`. |
+| `src/hooks/useSportsData.ts` | EDIT | Nuovo hook `useHighlights(sport, limit)`. |
+| `src/components/highlights/HighlightsSection.tsx` | NEW | Sezione completa con header, loading/error/empty, griglia animata, CTA playlist. |
+| `src/components/highlights/HighlightCard.tsx` | NEW | Card singola: thumbnail 16:9, overlay play, badge NUOVO/data, titolo, fonte, hover lift, link a YouTube. |
+| `src/lib/dateUtils.ts` | EDIT | Aggiungere helper `formatRelativeIT(dateStr)` ("oggi", "1 giorno fa", "3 giorni fa", "2 settimane fa"). Riusabile anche altrove. |
+| `src/pages/JuventusPage.tsx` | EDIT | Nuovo tab "Highlights" + render `<HighlightsSection sport="juventus" />`. |
+| `src/pages/Formula1Page.tsx` | EDIT | Nuovo tab "Highlights" + render `<HighlightsSection sport="f1" />`. |
+| `src/pages/MotoGPPage.tsx` | EDIT | Nuovo tab "Highlights" + render `<HighlightsSection sport="motogp" />`. |
+| `README.md` | EDIT | Sezione "Highlights": fonte = feed RSS pubblici YouTube delle 3 playlist ufficiali, no API key, cache 10min, possibile drift se le playlist vengono cancellate o rese private. |
+| `changelog.md` | EDIT | `### Added`: sezione Highlights su Juventus/F1/MotoGP da feed RSS YouTube ufficiali (titolo, data, fonte, link reali). |
 
 ### Cosa NON cambia
 
-- Nessuna modifica alle Edge Functions: tutto deriva dal payload `sports-football?action=calendar` esistente.
-- Nessuna nuova dipendenza npm.
-- Nessuna API key aggiunta.
-- Nessuna modifica a `useSportsData.ts`, `sportsApi.ts`, layout, header, tema.
-- Branch policy invariata: lavoro su `develop`, PR verso `develop`, assegnata `@matteobern9244`.
+- Nessuna API key richiesta (RSS pubblico).
+- Nessuna nuova dipendenza npm o Deno.
+- Branch policy invariata: `develop` → PR verso `develop`, assegnata `@matteobern9244`.
+- Layout, header, route, tema, hook esistenti.
+- Nessun dato hardcoded: titoli/date/video provengono interamente dal feed live.
+
+### Rischi e mitigazioni
+
+- **Playlist YouTube cancellata o resa privata**: feed ritorna 404/vuoto → empty state onesto, nessun crash.
+- **Rate-limit YouTube su alto traffico**: cache HTTP 10min lato edge function + `staleTime` 10min React Query. Sufficiente per traffico tipico.
+- **Cambio struttura RSS YouTube**: regex parsing è semplice e tollerante; in caso di breaking change, output diventa empty (no errore visibile all'utente, log lato edge).
+- **Thumbnail YouTube CDN**: URL `i.ytimg.com/vi/{id}/hqdefault.jpg` è documentato e stabile da anni.
 
 ### Validazione
 
 1. `npm run lint`, `npm run build`, `npm run test`, `npm run check:italian`, `npm run check:tz-juventus`.
-2. Apertura preview su `/juventus`:
-   - Click su una card → naviga a `/juventus/partite/{id}`.
-   - Tab Anteprima: dati corretti per partita futura.
-   - Tab Risultato: score corretto per partita giocata, empty state per partita futura.
-   - Tab Formazione / Modulo / Cronologia eventi: empty state onesto + link Sky funzionante.
-3. Check su mobile (responsive): tab list scrollabile, card leggibile.
-4. Accessibility: i `<Link>` hanno focus ring visibile, i tab Radix hanno aria gestita nativamente.
+2. Deploy `highlights-youtube`.
+3. `curl .../highlights-youtube?sport=juventus&limit=12` → 12 video reali con titoli leggibili.
+4. Apertura preview:
+   - `/juventus` → tab Highlights → 12 card con thumbnail, titoli reali, data italiana.
+   - `/formula1` → tab Highlights → contenuti Sky Sport F1 reali.
+   - `/motogp` → tab Highlights → contenuti motogp.com / canale ufficiale.
+   - Click su card apre il video corrispondente su YouTube in nuova tab.
+   - CTA "Vedi tutti su YouTube" apre la playlist completa.
+5. Mobile: griglia 1 colonna leggibile, thumbnail non distorte.
 
 ### Checklist post-edit
 
-1. Route `/juventus/partite/:matchId` registrata.
-2. Pagina dettaglio risolve la partita dal calendario reale.
-3. Card lista cliccabili → navigano al dettaglio.
-4. Tutti i 5 tab presenti nell'ordine richiesto.
-5. Tab senza dati reali mostrano messaggio onesto + link Sky.
-6. Date in Europe/Rome via `formatJuventusDateTime`.
-7. UI completamente in italiano.
-8. `changelog.md` e `README.md` aggiornati con nota onesta sulla disponibilità dati.
-9. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
+1. Edge function `highlights-youtube` deployata e risponde su tutti e 3 gli sport.
+2. `useHighlights` integrato e cached 10min.
+3. `HighlightsSection` + `HighlightCard` riusati identici nelle 3 pagine.
+4. Tab "Highlights" presente in Juventus, F1, MotoGP.
+5. UI in italiano, focus-ring accessibile, link `target="_blank" rel="noopener noreferrer"`.
+6. `changelog.md` e `README.md` aggiornati con fonte reale (RSS YouTube) e nota sui rischi di drift.
+7. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
