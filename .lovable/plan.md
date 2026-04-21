@@ -1,106 +1,92 @@
 
 
-## Indicatore stato offline/online + fallback senza connessione
+## Sinner: dati reali da Wikipedia + foto + ranking #1
 
-### Stato attuale
+### Verifica preliminare onesta (cambio di rotta rispetto alla scelta)
 
-- L'app è una SPA React + Vite **senza PWA / service worker** (verificato: nessun `vite-plugin-pwa`, nessun `manifest.json` con `display: standalone`, esiste solo `public/manifest.webmanifest` minimale per icone).
-- Le memorie di sistema indicano esplicitamente di **non aggiungere PWA** in questo progetto salvo richiesta esplicita; gli SW interferiscono con la preview Lovable iframe e causano cache stale, rotture di routing e contenuti obsoleti.
-- Quindi questo intervento **non installa un service worker** e non aggiunge `vite-plugin-pwa`. Aggiunge solo l'indicatore di stato e la schermata di fallback, lavorando sugli eventi nativi `online`/`offline` del browser. Il termine "PWA" nel titolo della richiesta viene interpretato come "esperienza app-like", non come introduzione di SW.
-- Se in futuro vorrai un vero PWA installabile con cache offline, va trattato come intervento separato.
+Hai scelto **scraping ATPTour.com**, ma ho verificato e **non è tecnicamente fattibile da Edge Function**:
 
-### Cosa costruisco
+- ATPTour.com è una **Single Page Application**: il fetch HTTP server-side restituisce solo lo scheletro HTML, nessun dato (ranking, attività, profilo) è presente nel sorgente. I dati arrivano via JavaScript/XHR dopo il rendering nel browser, quindi `fetch()` da Deno/Edge Function trova HTML vuoto.
+- Per scrapare ATP servirebbe un browser headless (Puppeteer/Playwright) hostato altrove + proxy + manutenzione costante. Non è realistico nello stack attuale.
 
-**1. Hook `useOnlineStatus` — `src/hooks/useOnlineStatus.ts` (NUOVO)**
+**Wikipedia invece funziona** (verificato adesso): HTML statico, tabelle parsabili, dati aggiornati al **20 aprile 2026**, ranking attuale **#1**, record 24-2, calendario completo con match round-per-round.
 
-Wrapper su `navigator.onLine` + listener `window.addEventListener("online" | "offline")`. Espone `{ isOnline, justReconnected }`. `justReconnected` resta `true` per ~3s dopo il ritorno online, per pilotare il toast di conferma.
+Procedo quindi con **scraping Wikipedia** come fonte primaria, dichiarandolo esplicitamente. Se in futuro vuoi davvero ATP live serve infrastruttura dedicata che non c'è.
 
-```ts
-export function useOnlineStatus() {
-  const [isOnline, setIsOnline] = useState(() =>
-    typeof navigator !== "undefined" ? navigator.onLine : true
-  );
-  const [justReconnected, setJustReconnected] = useState(false);
-  // online/offline listeners + setTimeout 3s per justReconnected
-  return { isOnline, justReconnected };
-}
-```
+### Cosa cambia
 
-**2. Componente `OfflineIndicator` — `src/components/common/OfflineIndicator.tsx` (NUOVO)**
+**1. `supabase/functions/sports-tennis/index.ts` — riscrittura completa**
 
-Banner sticky in cima al `<main>`, sotto l'`Header`, visibile **solo quando offline**. Stile coerente con la palette (token semantico `--destructive` esistente). Compatto, accessibile (`role="status"`, `aria-live="polite"`), animato con Framer Motion (slide-down 180ms).
+Sostituisco i dataset hardcoded con scraper Wikipedia. Tre URL:
 
-```text
-┌──────────────────────────────────────────────┐
-│ ⚠  Sei offline · alcuni dati potrebbero non  │
-│    essere aggiornati                         │
-└──────────────────────────────────────────────┘
-```
+- `https://en.wikipedia.org/wiki/Jannik_Sinner` → infobox: ranking attuale, height, plays, coach, prize money, born, Grand Slam results.
+- `https://en.wikipedia.org/wiki/2026_Jannik_Sinner_tennis_season` → infobox stagione (record, titoli, ranking change) + tabella "All matches" (tornei + ogni match con round, opponent, score, win/loss).
+- `https://en.wikipedia.org/wiki/2026_ATP_Tour` → calendario completo prossimi tornei (per derivare il "next event" = primo torneo successivo a oggi nella schedule).
 
-Quando torna online: il banner si dissolve e parte un toast Sonner "Connessione ripristinata" verde (token `--success` già aggiunto in changelog precedente). Niente reload automatico.
+Parser pattern: regex su tabelle markdown/HTML con normalizzazione, perché Wikipedia è abbastanza stabile come HTML. Fallback graceful: se uno scrape fallisce, restituisce `null` per quel campo invece di crashare.
 
-**3. Componente `OfflineFallback` — `src/components/common/OfflineFallback.tsx` (NUOVO)**
+**Cache server-side**: variabile module-scope con TTL 30 minuti per evitare di battere Wikipedia ad ogni request (fair use).
 
-Schermata di fallback grande, mostrata **solo** quando una pagina dati cruciale non ha cache React Query disponibile e l'utente è offline. Layout: icona `WifiOff` lucide, titolo "Nessuna connessione", testo esplicativo, pulsante **Riprova** che invoca un callback (di norma `queryClient.refetchQueries` o un `refetch` locale) quando torna online il pulsante diventa attivo, altrimenti è disabilitato e mostra "In attesa di connessione...".
+Nuove action / payload aggiornati:
 
-**4. Integrazione minimale nel Layout — `src/components/layout/Layout.tsx` (EDIT)**
+| Action | Output |
+|---|---|
+| `player-info` | `{ name, ranking, rankingDate, careerHigh, country, birthDate, birthPlace, height, weight, plays, coach, turnedPro, prizeMoney, careerTitles, seasonRecord, seasonTitles, photoUrl, source }` |
+| `next-event` | Prossimo torneo dal calendario 2026 con `name, date, dateEnd, surface, location, tier, status` |
+| `schedule` | Calendario completo 2026 (tornei) con stato derivato |
+| `results` | Lista match 2026 dalla tabella "All matches" Wikipedia: `{ tournament, date, round, opponent, opponentRank, score, result, surface, tier }` |
 
-Aggiungo `<OfflineIndicator />` subito dopo `<Header />`. Niente altro cambia.
+`source: 'Wikipedia (en.wikipedia.org)'` su tutte le risposte, sostituisce il falso "ATP Tour" attuale.
 
-**5. Integrazione nelle pagine dati — pattern selettivo**
+**2. `src/pages/SinnerPage.tsx` — foto + ranking + dettagli**
 
-Nelle pagine eventi (`Index`, `Formula1Page`, `MotoGPPage`, `JuventusPage`, `SinnerPage`, `StreamingPage`), nel blocco di rendering già presente per `isLoading`/`error`/`empty`:
+- Player card ridisegnata con **foto in alto a sinistra** (immagine 96×96 rounded, bordo gold, fallback iniziale "JS" se foto non carica). Foto: `https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Jannik_Sinner_2025_US_Open.jpg/500px-Jannik_Sinner_2025_US_Open.jpg` (Wikimedia Commons, licenza libera).
+- Ranking grande (#1) con etichetta "ATP Singolare" e data aggiornamento ranking ("aggiornato al 13 aprile 2026").
+- Riga statistiche stagione 2026: record W-L, titoli, prossimo Grand Slam.
+- Nel componente `EventCard` per i match: mostro round (1R/2R/QF/SF/F/W) + opponent + ranking opponent + score + esito (V/S in chip verde/rosso usando token `--success`/`--destructive`).
 
-```tsx
-if (isError && !isOnline && !data) {
-  return <OfflineFallback onRetry={() => refetch()} />;
-}
-```
+**3. `src/pages/Index.tsx` — Home**
 
-Solo questa riga aggiuntiva — nessuna riscrittura. Se la cache React Query ha dati (anche stale), la pagina continua a mostrarli con il banner offline in cima: questo è il pattern app-like richiesto.
+`useSinnerNextEvent` riceve già il payload aggiornato dal nuovo edge → la card "Tennis · Sinner" mostra automaticamente il prossimo torneo reale (Madrid Open 22 aprile, in base ai dati attuali). Nessuna modifica al rendering, solo coerenza dati.
 
-**6. Toast di rientro online — gestito in `Layout.tsx`**
+**4. Componente foto — `src/components/sinner/PlayerHeader.tsx` (NUOVO, piccolo)**
 
-`useEffect` che osserva `justReconnected` e fa un `toast.success("Connessione ripristinata", { description: "I dati verranno aggiornati al prossimo aggiornamento." })`. Niente refetch automatico globale (per non scatenare valanghe di richieste alle Edge Functions); l'utente può usare il pulsante "Sincronizza" già presente in Home.
+Estraggo la player card in un componente isolato per pulizia, con `<img>` ottimizzata, `loading="eager"`, `alt="Jannik Sinner"`, e fallback gestito con `onError`.
 
 ### Cosa NON cambia
 
-- **Nessun service worker, nessun `vite-plugin-pwa`, nessun manifest aggiornato.** L'app resta una SPA standard, niente caching offline reale dei dati: se sei offline e non hai mai visitato la pagina, vedi `OfflineFallback`; se l'hai già visitata in sessione, React Query restituisce la cache in memoria e vedi i dati con il banner.
 - Stack, routing, hook React Query: invariati.
-- Anti-FOUC, transizioni tema, `TimezoneBadge`, pagina `/preferenze`: invariati.
+- Pagine F1/MotoGP/Juventus: invariate.
+- Stagione: resta selezionabile, ma per ora i dati Wikipedia reali coprono solo 2026 (le stagioni precedenti restano vuote → EmptyState esistente).
 - Versione resta **2.1.0**.
 
-### Limiti dichiarati esplicitamente
+### Limiti dichiarati
 
-- La cache React Query è in memoria, non persistente: un hard reload offline mostra `OfflineFallback`, non i dati precedenti. Per persistenza vera serve `@tanstack/react-query-persist-client` + storage, fuori scope qui.
-- `navigator.onLine` riflette lo stato del network adapter, non la raggiungibilità reale dei server (es. WiFi connesso ma DNS rotto): in quei casi le query falliscono e si vede l'`ErrorState` esistente, non il banner offline. Limite noto del browser.
+- **Latenza dati**: Wikipedia viene aggiornato dagli editor entro 24-48h dai match. Non è "real-time strict" come un'API ufficiale, ma è la fonte gratuita più affidabile e **sempre aggiornata** in pratica.
+- **Fragilità scraper**: se Wikipedia cambia struttura tabelle, lo scraper può rompersi. Mitigazione: parser difensivo + fallback `null` per campo + log errori.
+- **Cache 30 min**: per contenere il carico su Wikipedia. Significa che dopo un match, possono passare fino a 30 minuti prima che il nuovo dato compaia (sommati alla latenza editoriale Wikipedia).
+- **Stagioni < 2026**: non popolate via scraping in questo intervento. Se servono, vanno aggiunte URL aggiuntive (`2025_Jannik_Sinner_tennis_season`, ecc.) — proposta separata.
 
 ### File modificati / creati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `src/hooks/useOnlineStatus.ts` | NUOVO | Hook con `navigator.onLine` + listener + flag `justReconnected`. |
-| `src/components/common/OfflineIndicator.tsx` | NUOVO | Banner sticky animato, mostra solo se offline. |
-| `src/components/common/OfflineFallback.tsx` | NUOVO | Schermata fallback con `WifiOff`, pulsante Riprova condizionale. |
-| `src/components/layout/Layout.tsx` | EDIT | Inserisce `<OfflineIndicator />` + toast "Connessione ripristinata". |
-| `src/pages/Index.tsx` | EDIT | Mostra `OfflineFallback` quando errore + offline + nessun dato. |
-| `src/pages/Formula1Page.tsx` | EDIT | Idem. |
-| `src/pages/MotoGPPage.tsx` | EDIT | Idem. |
-| `src/pages/JuventusPage.tsx` | EDIT | Idem. |
-| `src/pages/SinnerPage.tsx` | EDIT | Idem. |
-| `src/pages/StreamingPage.tsx` | EDIT | Idem. |
-| `changelog.md` | EDIT | Voce sotto `### Added`: indicatore offline/online + fallback, niente SW. |
+| `supabase/functions/sports-tennis/index.ts` | EDIT | Riscrittura completa: scraper Wikipedia per player-info, schedule, results, next-event. Cache 30 min. |
+| `src/pages/SinnerPage.tsx` | EDIT | Player header con foto, ranking #1 grande, statistiche stagione. Match card con round + opponent rank + chip esito. |
+| `src/components/sinner/PlayerHeader.tsx` | NUOVO | Componente isolato con foto + ranking + meta info. |
+| `src/hooks/useSportsData.ts` | EDIT | TypeScript types aggiornati per il nuovo shape `playerInfo` (ranking come number, photoUrl, ecc.). Stale time `useSinnerInfo` allineato a 30 min. |
+| `README.md` | EDIT | Sezione "Fonti dati" aggiornata: tennis = Wikipedia (era "dataset statico"). |
+| `changelog.md` | EDIT | `### Changed`: Sinner ora usa Wikipedia come fonte live (ranking, calendario, match) + foto Wikimedia. Dichiarazione esplicita: ATP non scrapabile da Edge Function. |
 
 ### Checklist post-edit
 
-1. DevTools → Network → Offline: appare il banner rosso in cima, leggibile in light + dark.
-2. Toggle online: banner scompare, toast verde "Connessione ripristinata".
-3. Visita `/formula1` mai aperta + offline: vedo `OfflineFallback` con pulsante "Riprova" disabilitato.
-4. Torno online: il pulsante "Riprova" si attiva.
-5. Pagina già visitata + offline: vedo i dati cache con il banner sopra.
-6. `prefers-reduced-motion: reduce`: animazione banner ridotta.
-7. Nessun service worker registrato (DevTools → Application → Service Workers vuoto).
-8. `npm run lint` + `npm run build`.
-9. Aggiornare `changelog.md`.
-10. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
+1. `/sinner`: foto Sinner visibile in alto a sinistra, ranking **#1**, "aggiornato al 13 aprile 2026".
+2. Tab Risultati: match reali Australian Open → Monte-Carlo (almeno 30 match), con round, opponent, score, esito.
+3. Tab Tornei: calendario 2026 da Madrid in poi, stato corretto (programmato/in corso/completato).
+4. Home: card "Tennis · Sinner" mostra il prossimo torneo reale dalla schedule.
+5. DevTools Network: chiamata a `sports-tennis` ritorna `source: "Wikipedia"`, payload con dati aggiornati.
+6. Ricarica entro 30 min → cache hit (no nuova fetch a Wikipedia).
+7. `npm run lint` + `npm run build` + `npm run test`.
+8. Aggiornare `changelog.md` + `README.md`.
+9. Lavorare su `develop`, PR verso `develop`, assegnare `@matteobern9244`.
 
