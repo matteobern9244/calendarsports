@@ -4,6 +4,7 @@ import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
+import TimezoneBadge from "@/components/common/TimezoneBadge";
 import { useSeasonPreferences } from "@/hooks/useSeasonPreferences";
 import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useSportsData";
 import { formatDateIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
@@ -18,7 +19,10 @@ export default function SinnerPage() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="Jannik Sinner" />
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <SectionHeader title="Jannik Sinner" />
+        <TimezoneBadge />
+      </div>
 
       {/* Player info card */}
       {playerInfo && (
