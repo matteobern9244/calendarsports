@@ -18,7 +18,7 @@ export default function SinnerPage() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="Jannik Sinner" subtitle="Dati da ATP Tour" />
+      <SectionHeader title="Jannik Sinner" />
 
       {/* Player info card */}
       {playerInfo && (
@@ -46,10 +46,10 @@ export default function SinnerPage() {
         </TabsList>
 
         <TabsContent value="risultati">
-          {resLoading && <LoadingState message="Caricamento risultati da ATP Tour..." />}
+          {resLoading && <LoadingState message="Caricamento risultati..." />}
           {resError && <ErrorState message="Errore nel caricamento dei risultati" onRetry={() => resRefetch()} />}
           {!resLoading && !resError && (!results || results.length === 0) && (
-            <EmptyState message={`Nessun risultato disponibile per la stagione ${seasons.sinner}. Lo scraping ATP potrebbe essere limitato.`} />
+            <EmptyState message={`Nessun risultato disponibile per la stagione ${seasons.sinner}.`} />
           )}
           {results && results.length > 0 && (() => {
             const { items: orderedResults, highlightIndex } = prioritizeNextUpcoming(results, (result: any) => result.date);
@@ -74,7 +74,7 @@ export default function SinnerPage() {
         </TabsContent>
 
         <TabsContent value="tornei">
-          {schLoading && <LoadingState message="Caricamento programma da ATP Tour..." />}
+          {schLoading && <LoadingState message="Caricamento programma..." />}
           {schError && <ErrorState message="Errore nel caricamento del programma" onRetry={() => schRefetch()} />}
           {!schLoading && !schError && (!schedule || schedule.length === 0) && (
             <EmptyState message={`Nessun torneo disponibile per la stagione ${seasons.sinner}`} />
