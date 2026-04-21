@@ -18,6 +18,13 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Sinner – allineamento header e messaggi**: rimosso sottotitolo
+  "Dati da ATP Tour" dall'header della pagina `/sinner` e normalizzati i
+  messaggi di loading/empty rimuovendo i riferimenti a "ATP Tour" e allo
+  scraping. Allineamento UX con le altre pagine sportive (Formula 1,
+  MotoGP, Juventus) che non espongono la fonte dati nel sottotitolo.
+  Nessun cambio a edge function `sports-tennis`, hook o shape payload.
+  Versione applicativa invariata `2.1.0`.
 - **MotoGP – calendario 2026 allineato a motogp.com**: corretto nome del
   round 4 (Jerez, 24–26 aprile) da `GP d'Andalusia` a `GP di Spagna`,
   allineandolo al calendario ufficiale 2026 pubblicato su `motogp.com`.
