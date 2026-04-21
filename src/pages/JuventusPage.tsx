@@ -27,7 +27,7 @@ export default function JuventusPage() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <SectionHeader title="Juventus" subtitle="Dati reali da Sky Sport Italia" />
+      <SectionHeader title="Juventus" />
 
       <div className="mb-6">
         <SeasonSelector currentSeason={seasons.juventus} onSelect={(y) => setSeason("juventus", y)} />
