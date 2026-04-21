@@ -157,8 +157,13 @@
   html.dark { color-scheme: dark; }
   html:not(.dark) { color-scheme: light; }
 
-  /* Transizione fluida del cambio tema, solo su proprietà di colore */
-  *, *::before, *::after {
+  /* Transizione applicata SOLO durante il toggle tema (~300ms),
+     gestita dall'hook useTheme. Evita costi di transizione su tutte
+     le interazioni (hover, focus, mount) di componenti pesanti. */
+  html.theme-transitioning,
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
     transition:
       background-color 280ms ease,
       border-color 280ms ease,
@@ -168,15 +173,13 @@
       box-shadow 280ms ease;
   }
 
-  .theme-no-transition,
-  .theme-no-transition *,
-  .theme-no-transition *::before,
-  .theme-no-transition *::after {
-    transition: none !important;
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { transition: none !important; }
+    html.theme-transitioning,
+    html.theme-transitioning *,
+    html.theme-transitioning *::before,
+    html.theme-transitioning *::after {
+      transition: none !important;
+    }
   }
 }
 

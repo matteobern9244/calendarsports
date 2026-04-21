@@ -18,6 +18,19 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Performance – transizioni globali tema scoped al toggle**: rimossa la
+  regola permanente `*, *::before, *::after { transition: ... }` da
+  `src/index.css`. La transizione 280ms ease su `background-color`,
+  `border-color`, `color`, `fill`, `stroke`, `box-shadow` ora si attiva
+  solo quando `<html>` ha la classe `theme-transitioning`, applicata da
+  `useTheme.ts` per 320ms al cambio sole/luna (skip al primo mount).
+  Effetto visivo del toggle invariato; eliminato il costo di style
+  recalc/paint su hover, focus e mount in pagine con molti nodi
+  (`/streaming`, `/formula1`, `/motogp`, `/juventus`). Rispetto di
+  `prefers-reduced-motion` mantenuto. Rimossa la classe orfana
+  `.theme-no-transition`. Nessun cambio funzionale, versione invariata
+  `2.1.0`.
+
 - **Badge broadcaster: copertura estesa** oltre DAZN/Sky con helper unico
   `src/lib/broadcasterStyle.ts`. Aggiunti token `--brand-now`, `--brand-amazon`,
   `--brand-mediaset`, `--brand-rai`, `--brand-tv8`, `--brand-discovery`,
