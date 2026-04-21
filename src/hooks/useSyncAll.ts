@@ -153,24 +153,82 @@ export function useSyncAll() {
         setSyncProgress(8 + Math.round(done * 13));
       }
 
-      // === Step 3: palinsesti TV ===
+      // === Step 2bis: Highlights YouTube (Juventus, F1, MotoGP) ===
+      setSyncStep("Aggiornamento highlights YouTube...");
+      toast.loading("Aggiornamento highlights YouTube...", { id: toastId });
+      await Promise.all(
+        (["juventus", "f1", "motogp"] as const).map(async (sport) => {
+          try {
+            const { data, meta } = await callEdgeFunctionWithMeta(
+              "highlights-youtube",
+              { sport, limit: "12" },
+            );
+            queryClient.setQueryData(["highlights", sport, 12], data);
+            if (requiresWarning(meta)) {
+              fallbackBySport[sport].add(meta?.dataSource ?? "unknown");
+            }
+          } catch (err) {
+            console.warn(`Sync highlights ${sport} failed:`, err);
+            fallbackBySport[sport].add("error");
+          }
+        }),
+      );
+      setSyncProgress(70);
+
+      // === Step 3: Juventus calendar — tutte le pagine ===
+      setSyncStep("Aggiornamento calendario Juventus completo...");
+      toast.loading("Aggiornamento calendario Juventus completo...", { id: toastId });
+      const firstPage = queryClient.getQueryData<{ totalPages?: number }>(
+        ["juventus", "calendar", seasonJ, 1, 12],
+      );
+      const totalPages = Math.min(10, firstPage?.totalPages ?? 1);
+      if (totalPages > 1) {
+        await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, i) => i + 2).map(async (p) => {
+            try {
+              const { data } = await callEdgeFunctionWithMeta("sports-football", {
+                action: "calendar",
+                season: String(seasonJ),
+                page: String(p),
+                pageSize: "12",
+              });
+              queryClient.setQueryData(["juventus", "calendar", seasonJ, p, 12], data);
+            } catch (err) {
+              console.warn(`Sync juventus calendar page ${p} failed:`, err);
+            }
+          }),
+        );
+      }
+      setSyncProgress(78);
+
+      // === Step 4: palinsesti TV — prefetch reale 5 famiglie ===
       setSyncStep("Aggiornamento palinsesti TV...");
       toast.loading("Aggiornamento palinsesti TV...", { id: toastId });
-      await queryClient.invalidateQueries({ queryKey: ["streaming-tv"], refetchType: "all" });
-      setSyncProgress(80);
+      await Promise.all(
+        STREAMING_FAMILIES.map((f) =>
+          queryClient.prefetchQuery({
+            queryKey: ["streaming-tv", f.id],
+            queryFn: () => streamingApi.getTvByFamily(f.id),
+            staleTime: 0,
+          }),
+        ),
+      );
+      setSyncProgress(88);
 
-      // === Step 4: nuove uscite streaming ===
+      // === Step 5: nuove uscite streaming — 14gg + 30gg ===
       setSyncStep("Aggiornamento nuove uscite streaming...");
       toast.loading("Aggiornamento nuove uscite streaming...", { id: toastId });
       const today = todayRomeISO();
-      const dateTo = addDaysISO(today, 14);
+      const ranges = [addDaysISO(today, 14), addDaysISO(today, 30)];
       await Promise.all(
-        STREAMING_PROVIDERS.map((p) =>
-          queryClient.prefetchQuery({
-            queryKey: ["streaming-releases", p.id, today, dateTo],
-            queryFn: () => streamingApi.getReleasesByProvider(p.id, today, dateTo),
-            staleTime: 0,
-          }),
+        STREAMING_PROVIDERS.flatMap((p) =>
+          ranges.map((dateTo) =>
+            queryClient.prefetchQuery({
+              queryKey: ["streaming-releases", p.id, today, dateTo],
+              queryFn: () => streamingApi.getReleasesByProvider(p.id, today, dateTo),
+              staleTime: 0,
+            }),
+          ),
         ),
       );
       setSyncProgress(100);
