@@ -107,6 +107,16 @@
     --sidebar-accent-foreground: 220 10% 90%;
     --sidebar-border: 220 25% 16%;
     --sidebar-ring: 43 96% 56%;
+
+    /* Brand di terzi — leggermente schiariti per leggibilità in dark */
+    --brand-dazn: 240 27% 14%;
+    --brand-dazn-contrast: 0 0% 96%;
+    --brand-sky: 201 90% 55%;
+    --brand-ducati: 0 85% 55%;
+    --brand-aprilia: 0 0% 10%;
+    --brand-ktm: 24 100% 55%;
+    --brand-yamaha: 215 90% 55%;
+    --brand-honda: 354 85% 58%;
   }
 }
 
