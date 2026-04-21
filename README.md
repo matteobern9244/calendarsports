@@ -379,6 +379,18 @@ Superfici analizzate: testo JSX, attributi `aria-label`,
 `toast.error(...)`/`toast.info(...)`/`toast.warning(...)`/
 `toast.loading(...)` e assegnazioni `document.title = "..."`.
 
+Titoli pagina e titoli modali hanno copertura dedicata con messaggi di
+errore espliciti:
+
+- `document.title = "..."` e `document.title = \`...\`` (template literal,
+  parte statica): segnalati come `TITOLO PAGINA (document.title)`.
+- contenuto di `<DialogTitle>`, `<AlertDialogTitle>`, `<SheetTitle>`,
+  `<DrawerTitle>`, `<SidebarTitle>`: segnalato come
+  `TITOLO MODALE (<TagName>)`.
+- prop `title="..."` su qualunque componente il cui nome contiene
+  `Dialog`, `Modal`, `Sheet` o `Drawer` (es. `<ConfirmDialog title="...">`):
+  segnalata come `TITOLO MODALE (prop title su <TagName>)`.
+
 Marker per skip mirato (usare con parsimonia, motivare in changelog):
 
 - `// @lingua-ignore` a fine riga: salta la singola riga
