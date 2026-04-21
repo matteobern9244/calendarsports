@@ -106,6 +106,30 @@ async function tmdbCredits(
   return await res.json();
 }
 
+// Verifica che il titolo sia effettivamente disponibile in abbonamento (flatrate)
+// sul provider richiesto in regione IT al momento della query. TMDB Discover
+// puo' restituire match basati su finestre storiche: questa chiamata conferma
+// la disponibilita' corrente. Ritorna true se IT.flatrate include providerId.
+async function tmdbItemAvailableIT(
+  kind: "movie" | "tv",
+  id: number,
+  providerId: number,
+  apiKey: string,
+): Promise<boolean> {
+  try {
+    const url = new URL(`${TMDB_BASE}/${kind}/${id}/watch/providers`);
+    url.searchParams.set("api_key", apiKey);
+    const res = await fetch(url.toString());
+    if (!res.ok) return false;
+    const json = await res.json();
+    const flatrate = json?.results?.IT?.flatrate;
+    if (!Array.isArray(flatrate)) return false;
+    return flatrate.some((p: any) => p?.provider_id === providerId);
+  } catch (_err) {
+    return false;
+  }
+}
+
 function normalizeItem(raw: any, kind: "movie" | "tv") {
   const title = kind === "movie" ? raw.title : raw.name;
   const releaseDate = kind === "movie" ? raw.release_date : raw.first_air_date;
