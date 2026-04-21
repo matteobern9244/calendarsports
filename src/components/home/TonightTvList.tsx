@@ -373,18 +373,15 @@ export default function TonightTvList() {
                             <div
                               role="cell"
                               aria-colindex={5}
-                              aria-label={g ? `Genere ${g}` : undefined}
-                              aria-hidden={g ? undefined : true}
+                              aria-label={`Genere ${g}`}
                               className="hidden sm:flex sm:items-center sm:justify-end sm:px-2 sm:py-2 sm:border-t sm:border-border/40"
                             >
-                              {g ? (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none"
-                                >
-                                  {g}
-                                </Badge>
-                              ) : null}
+                              <Badge
+                                variant="secondary"
+                                className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none"
+                              >
+                                {g}
+                              </Badge>
                             </div>
                             {/* Cella durata */}
                             <div
@@ -412,7 +409,7 @@ export default function TonightTvList() {
                           `alle ${row.time}`,
                           row.title,
                         ];
-                        if (g) ariaParts.push(`genere ${g}`);
+                        ariaParts.push(`genere ${g}`);
                         if (durSpoken) ariaParts.push(`durata ${durSpoken}`);
                         return (
                           <article
@@ -441,16 +438,12 @@ export default function TonightTvList() {
                           <span className="font-medium text-[13px] leading-snug break-words flex-1 min-w-0">
                             {row.title}
                           </span>
-                          {(() => {
-                            return g ? (
-                              <Badge
-                                variant="secondary"
-                                className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none mt-0.5"
-                              >
-                                {g}
-                              </Badge>
-                            ) : null;
-                          })()}
+                          <Badge
+                            variant="secondary"
+                            className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none mt-0.5"
+                          >
+                            {g}
+                          </Badge>
                         </div>
                           </article>
                         );
