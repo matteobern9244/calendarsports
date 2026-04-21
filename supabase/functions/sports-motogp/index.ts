@@ -56,6 +56,68 @@ const MOTOGP_RIDER_PHOTOS_BY_SURNAME: Record<string, string> = {
   'pirro': 'https://resources.motogp.pulselive.com/photo-resources/2024/03/04/b8d4a5e3-c3c4-4bd0-b8e9-c3f5e8a3d9f2/pirro.png?height=200&width=200',
 };
 
+// Full names for riders. Key format: "surname" or "surname-initial" (lowercase, normalized).
+// Used to expand Sky Sport short names ("Pirro M.") to full "Nome Cognome" ("Michele Pirro").
+const MOTOGP_RIDER_FULL_NAMES: Record<string, string> = {
+  'bagnaia': 'Francesco Bagnaia',
+  'marquez-m': 'Marc Marquez',
+  'marquez-a': 'Alex Marquez',
+  'martin': 'Jorge Martin',
+  'acosta': 'Pedro Acosta',
+  'bastianini': 'Enea Bastianini',
+  'bezzecchi': 'Marco Bezzecchi',
+  'vinales': 'Maverick Viñales',
+  'viñales': 'Maverick Viñales',
+  'quartararo': 'Fabio Quartararo',
+  'binder': 'Brad Binder',
+  'miller': 'Jack Miller',
+  'morbidelli': 'Franco Morbidelli',
+  'di giannantonio': 'Fabio Di Giannantonio',
+  'fernandez-r': 'Raul Fernandez',
+  'fernandez-a': 'Augusto Fernandez',
+  'fernandez': 'Raul Fernandez',
+  'zarco': 'Johann Zarco',
+  'marini': 'Luca Marini',
+  'mir': 'Joan Mir',
+  'rins': 'Alex Rins',
+  'ogura': 'Ai Ogura',
+  'razgatlioglu': 'Toprak Razgatlioglu',
+  'aldeguer': 'Fermin Aldeguer',
+  'moreira': 'Diogo Moreira',
+  'garcia': 'Sergio Garcia',
+  'pirro': 'Michele Pirro',
+  'savadori': 'Lorenzo Savadori',
+  'pedrosa': 'Dani Pedrosa',
+  'crutchlow': 'Cal Crutchlow',
+  'bradl': 'Stefan Bradl',
+  'oncu': 'Deniz Öncü',
+  'rossi': 'Valentino Rossi',
+};
+
+function expandRiderName(skyName: string): string {
+  const normalized = skyName.toLowerCase().trim();
+  const parts = normalized.replace(/\./g, '').trim().split(/\s+/);
+  const initial = parts.length > 1 && parts[parts.length - 1].length <= 2 ? parts[parts.length - 1] : null;
+  const surname = initial ? parts.slice(0, -1).join(' ') : normalized;
+
+  // Try surname-initial key first (handles Marquez M./A., Fernandez R./A.)
+  if (initial && MOTOGP_RIDER_FULL_NAMES[`${surname}-${initial}`]) {
+    return MOTOGP_RIDER_FULL_NAMES[`${surname}-${initial}`];
+  }
+  // Direct surname match
+  if (MOTOGP_RIDER_FULL_NAMES[surname]) return MOTOGP_RIDER_FULL_NAMES[surname];
+
+  // Accent-insensitive fallback
+  const surnameNormalized = surname.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  for (const [key, full] of Object.entries(MOTOGP_RIDER_FULL_NAMES)) {
+    const keyNormalized = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (surnameNormalized === keyNormalized) return full;
+  }
+
+  // Fallback: return original Sky name to avoid losing data
+  return skyName;
+}
+
 // MotoGP constructor/team logos
 const MOTOGP_CONSTRUCTOR_LOGOS: Record<string, string> = {
   'ducati': 'https://resources.motogp.pulselive.com/photo-resources/2023/01/01/d8e3b2f5-c4c4-4bd0-b8e9-c3f5e8a3d9f2/ducati.png?height=40&width=80',
