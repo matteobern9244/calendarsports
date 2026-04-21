@@ -252,15 +252,22 @@ Rischi:
 
 Fonti correnti:
 
-- dati statici codificati nella Edge Function `sports-tennis`;
-- il codice dichiara come fonte concettuale ATP Tour / Wikipedia, ma il runtime
-  attuale usa dataset statici 2026.
+- **scraping Wikipedia** in `sports-tennis` da tre URL pubblici:
+  `Jannik_Sinner` (ranking corrente, infobox carriera, foto Wikimedia
+  Commons), `2026_Jannik_Sinner_tennis_season` (record stagione, titoli,
+  match round-per-round con opponent rank e score), e calendario tornei
+  derivato dalla stessa pagina con fallback su lista upcoming curata.
+- cache server-side 30 minuti per rispetto fair use Wikipedia.
+- ATPTour.com è stato valutato e scartato: è una SPA che richiede browser
+  rendering, quindi non scrapabile da Edge Function `fetch()`.
 
 Rischi:
 
-- forte rischio di obsolescenza;
-- manutenzione manuale a ogni nuova stagione;
-- nessun refresh automatico da API ufficiale.
+- latenza editoriale Wikipedia (24-48h dopo i match);
+- fragilità del parser regex se Wikipedia cambia struttura tabelle;
+- stagioni precedenti al 2026 non popolate (richiedono URL aggiuntivi);
+- foto profilo hot-linkata da Wikimedia Commons (URL stabile, licenza
+  libera, ma soggetta a cambi raro caso di rinomina file).
 
 ### MotoGP
 
