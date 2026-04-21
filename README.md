@@ -360,6 +360,18 @@ npm run preview
 npm run lint
 ```
 
+### Controllo lingua UI italiana
+
+```bash
+npm run check:italian
+```
+
+Lo script `scripts/check-italian-ui.mjs` analizza `src/` (escluse cartelle
+UI shadcn rigenerabili e file di test) e fallisce se trova stringhe utente
+in inglese fuori allowlist. Le uniche eccezioni autorizzate sono i token
+`STREAMING` (sezione) e `CALENDAR EVENTS` (nome app). Il controllo gira
+anche nei workflow CI `ci-develop` e `ci-pr-main`.
+
 ### Test
 
 ```bash
