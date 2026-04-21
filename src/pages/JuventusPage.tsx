@@ -8,7 +8,7 @@ import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
 import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
-import { formatDateIT } from "@/lib/dateUtils";
+import { formatJuventusDateTime } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -133,10 +133,7 @@ export default function JuventusPage() {
         const isJuveHome = nextMatch.homeTeam?.toLowerCase().includes('juventus');
         const opponent = isJuveHome ? nextMatch.awayTeam : nextMatch.homeTeam;
         const opponentLogo = isJuveHome ? nextMatch.awayLogo : nextMatch.homeLogo;
-        const dateStr = nextMatch.date ? formatDateIT(nextMatch.date) : '—';
-        const timeStr = nextMatch.date
-          ? new Date(nextMatch.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' })
-          : '';
+        const { date: dateStr, time: timeStr } = formatJuventusDateTime(nextMatch.date);
         const compColor = COMPETITION_COLORS[nextMatch.competition] || '';
         return (
           <motion.div
@@ -332,8 +329,7 @@ export default function JuventusPage() {
                   ? juveGoals > oppGoals ? 'V' : juveGoals < oppGoals ? 'S' : 'P'
                   : null;
                 const resultColor = result === 'V' ? 'text-green-500' : result === 'S' ? 'text-red-500' : 'text-yellow-500';
-                const dateStr = m.date ? formatDateIT(m.date) : '—';
-                const timeStr = m.date ? new Date(m.date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }) : '';
+                const { date: dateStr, time: timeStr } = formatJuventusDateTime(m.date);
                 const isNext = i === highlightIndex;
                 const compColor = COMPETITION_COLORS[m.competition] || '';
 

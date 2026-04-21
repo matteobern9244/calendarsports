@@ -1,7 +1,37 @@
+/**
+ * Normalizza un input data in un `Date` riferito al fuso UTC quando
+ * la stringa ISO non contiene un offset esplicito (`Z` oppure
+ * `+HH:MM`/`-HH:MM`). Tutti i provider che usiamo (Sky, Lega Serie A,
+ * Jolpica, Pulselive, motogp.com) pubblicano gli orari in UTC: la
+ * policy "naive = UTC" è più sicura del default JS che interpreterebbe
+ * la stringa come ora locale del client.
+ *
+ * Ritorna `null` per input invalidi, vuoti o non parsabili.
+ */
+export function toRomeDate(input: string | Date | null | undefined): Date | null {
+  if (input == null) return null;
+  if (input instanceof Date) {
+    return Number.isNaN(input.getTime()) ? null : input;
+  }
+  if (typeof input !== "string") return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // Se è una stringa ISO con parte time (contiene "T") senza offset,
+  // forziamo l'interpretazione come UTC aggiungendo "Z".
+  let normalized = trimmed;
+  if (/T\d{2}:\d{2}/.test(trimmed) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(trimmed)) {
+    normalized = `${trimmed}Z`;
+  }
+  const d = new Date(normalized);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 /** Format UTC date string to Italian locale date */
 export function formatDateIT(dateStr: string): string {
+  const date = toRomeDate(dateStr);
+  if (!date) return dateStr;
   try {
-    const date = new Date(dateStr);
     const day = date.toLocaleDateString("it-IT", { day: "2-digit", timeZone: "Europe/Rome" });
     const month = date.toLocaleDateString("it-IT", { month: "2-digit", timeZone: "Europe/Rome" });
     const year = date.toLocaleDateString("it-IT", { year: "numeric", timeZone: "Europe/Rome" });
@@ -9,6 +39,30 @@ export function formatDateIT(dateStr: string): string {
   } catch {
     return dateStr;
   }
+}
+
+/**
+ * Helper specializzato per le date Juventus: garantisce che ogni
+ * stringa proveniente dal backend (Sky/Lega) sia normalizzata e
+ * presentata sempre in fuso `Europe/Rome`, indipendentemente dal
+ * fuso del client. Centralizza la formattazione per evitare drift
+ * (vedi `scripts/check-rome-tz.mjs`).
+ */
+export function formatJuventusDateTime(
+  input: string | Date | null | undefined
+): { date: string; time: string; full: string } {
+  const date = toRomeDate(input);
+  if (!date) return { date: "—", time: "", full: "—" };
+  const day = date.toLocaleDateString("it-IT", { day: "2-digit", timeZone: "Europe/Rome" });
+  const month = date.toLocaleDateString("it-IT", { month: "2-digit", timeZone: "Europe/Rome" });
+  const year = date.toLocaleDateString("it-IT", { year: "numeric", timeZone: "Europe/Rome" });
+  const time = date.toLocaleTimeString("it-IT", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Rome",
+  });
+  const dateStr = `${day}/${month}/${year}`;
+  return { date: dateStr, time, full: `${dateStr} ${time}` };
 }
 
 function getDateTimestamp(dateStr?: string | null): number {

@@ -6,7 +6,7 @@ import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
-import { formatDateIT, formatTimeIT } from "@/lib/dateUtils";
+import { formatDateIT, formatTimeIT, formatJuventusDateTime } from "@/lib/dateUtils";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -75,17 +75,13 @@ export default function HomePage() {
       if (nextMatch) {
         const isHome = nextMatch.homeTeam?.toLowerCase().includes("juventus");
         const opponent = isHome ? nextMatch.awayTeam : nextMatch.homeTeam;
-        const timeStr = new Date(nextMatch.date).toLocaleTimeString("it-IT", {
-          hour: "2-digit",
-          minute: "2-digit",
-          timeZone: "Europe/Rome",
-        });
+        const { date: dateStr, time: timeStr } = formatJuventusDateTime(nextMatch.date);
         upcoming.push({
           sport: "Calcio · Juventus",
           title: `${isHome ? "vs" : "@"} ${opponent}`,
           subtitle: `${nextMatch.competition || 'Serie A'} · ${nextMatch.competition === 'Serie A' ? `Giornata ${nextMatch.matchday || "—"}` : `Turno ${nextMatch.matchday || "—"}`}`,
           rawDate: nextMatch.date,
-          date: formatDateIT(nextMatch.date),
+          date: dateStr,
           time: timeStr,
           broadcaster: nextMatch.broadcaster || undefined,
         });

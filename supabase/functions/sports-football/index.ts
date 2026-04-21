@@ -136,8 +136,12 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
       }
 
       if (m.matchDateUtc) {
-        const dateKey = m.matchDateUtc.substring(0, 10);
-        map[`date:${dateKey}`] = broadcasterStr;
+        // Chiave normalizzata sul giorno italiano: "partita di sabato sera"
+        // resta sabato anche se l'UTC sfora la mezzanotte.
+        const romeDateKey = romeDateKeyOf(m.matchDateUtc);
+        if (romeDateKey) {
+          map[`date:${romeDateKey}`] = broadcasterStr;
+        }
       }
     }
 
@@ -172,8 +176,8 @@ function extractJuventusMatches(model: any, competitionId: string, broadcasterMa
           if (roundNum && broadcasterMap[String(roundNum)]) {
             broadcaster = broadcasterMap[String(roundNum)];
           } else if (match.date) {
-            const dateKey = new Date(match.date).toISOString().substring(0, 10);
-            broadcaster = broadcasterMap[`date:${dateKey}`] || null;
+            const dateKey = romeDateKeyOf(match.date);
+            broadcaster = (dateKey && broadcasterMap[`date:${dateKey}`]) || null;
           }
         }
 
