@@ -359,7 +359,7 @@ async function fetchSkyStandings(): Promise<{
           const pts = parseInt(c2.replace(/<[^>]+>/g, '').trim());
           if (!isNaN(pos) && teamName) {
             const constructor = getTeamConstructor(teamName);
-            teams.push({ position: pos, team: teamName, points: pts || 0, logoUrl: constructor ? (MOTOGP_CONSTRUCTOR_LOGOS[constructor] || null) : null });
+            teams.push({ position: pos, team: teamName, points: pts || 0, logoUrl: constructor ? (MOTOGP_CONSTRUCTOR_LOGOS[constructor] || null) : null, constructor: constructor });
           }
         }
       }
