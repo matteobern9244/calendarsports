@@ -475,8 +475,14 @@ export default function TonightTvList() {
                       {(() => {
                         const FamilyIcon = FAMILY_ICONS[row.family];
                         const g = row.genre || inferGenre(row.family, row.channel, row.title);
-                        const dur = formatDuration(row.durationMin);
-                        const durSpoken = formatDurationSpoken(row.durationMin);
+                        const dur = row.hasExplicitEnd ? formatDuration(row.durationMin) : "";
+                        const durSpoken = row.hasExplicitEnd
+                          ? formatDurationSpoken(row.durationMin)
+                          : "";
+                        const durDisplay = row.hasExplicitEnd ? dur : "—";
+                        const durAriaLabel = row.hasExplicitEnd
+                          ? (durSpoken ? `Durata ${durSpoken}` : undefined)
+                          : "Durata non disponibile dalla fonte";
                         const familyLabel = familyLabelMap[row.family];
                         return (
                           <>
