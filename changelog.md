@@ -11,10 +11,92 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
-> **Nota**: tutte le voci sotto sono UI/UX only sopra la baseline `2.1.0`.
+> **Nota**: tutte le voci sotto sono UI/UX only sopra la baseline `2.2.0`.
 > Nessun cambio di stack, fonti dati, schema payload, edge function, branch
 > policy o policy Lovable. La versione applicativa esposta dal footer e da
-> `src/lib/version.ts` resta `2.1.0`.
+> `src/lib/version.ts` è stata bumpata a `2.2.0` con questa release.
+
+## [2.2.0] — UI/UX consolidation (2026-04-21)
+
+Bump applicativo `2.1.0` → `2.2.0` esposto da `src/lib/version.ts` e dal
+footer (`Calendar Events · v2.2.0`, `v` minuscola). Nessun cambio di stack,
+fonti dati, schema payload edge function, branch policy o policy Lovable.
+Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
+
+### Changed
+
+- **Timezone Europe/Rome esteso a tutte le pagine sportive.** Audit e
+  refactor di `src/pages/SinnerPage.tsx`, `src/pages/JuventusPage.tsx`,
+  `src/pages/JuventusMatchPage.tsx`, `src/pages/Formula1Page.tsx` e
+  `src/pages/MotoGPPage.tsx` per sostituire ogni `new Date(iso).getTime()`
+  diretto sugli ISO con l'helper `toRomeDate` di `src/lib/dateUtils.ts`
+  (policy "stringa naive = UTC, output Europe/Rome"). Caso reale corretto:
+  in `MotoGPPage.tsx` il calcolo dello stato weekend (`prossimo` /
+  `in_corso` / `completato`) usava `new Date(date)` sui campi date-only
+  (`YYYY-MM-DD`), che venivano interpretati come midnight nel fuso del
+  browser; ora `toRomeDate(date)?.getTime()` garantisce un timestamp
+  coerente in qualunque fuso client. Nessun cambio al payload backend.
+- **Stasera in TV — orario di fine programma in card.** In
+  `src/components/home/TonightTvList.tsx` la cella ora di ogni programma
+  in prima serata mostra adesso l'intervallo `HH:MM – HH:MM` quando il
+  payload edge function include `endTime` esplicito (`hasExplicitEnd`
+  true), così l'utente capisce perché un titolo è ancora in onda nella
+  fascia 21:00–23:00. Per i programmi con sola durata stimata viene
+  conservato l'orario di inizio singolo, evitando di esporre orari
+  inferiti come fossero ufficiali. Versione mobile (`<article>`) e
+  desktop/tablet (grid table) aggiornate in modo coerente; aria-label
+  parlate adeguate ("dalle 21:30 alle 23:25"). Nessuna modifica a edge
+  function, lista canali, payload o filtri.
+- **Risultati Sinner — paginazione fissa a 4 card per pagina.** In
+  `src/pages/SinnerPage.tsx` la sezione "Risultati" mostra ora sempre
+  esattamente 4 elementi visibili (le ultime 4 schede della pagina
+  corrente); il resto scorre tramite la paginazione esistente
+  (`Precedente` / `Successiva`). Constante `RESULTS_PAGE_SIZE = 4`
+  unica fonte di verità (passata anche al prefetch e all'hook
+  `useSinnerResults`). Ridotto carico cognitivo: nessuna lista
+  infinita, scroll prevedibile, identica esperienza su mobile e
+  desktop.
+
+### Added
+
+- **Stato di caricamento durante cambio pagina nei risultati Sinner.**
+  `src/pages/SinnerPage.tsx` mostra un overlay `LoadingState` con
+  messaggio "Caricamento risultati…" quando `useSinnerResults`
+  è `isFetching` su una pagina diversa dalla cache locale, eliminando
+  l'ambiguità del momento in cui le 4 card precedenti restavano a
+  schermo durante il fetch della pagina successiva. Nessuna modifica
+  alla shape della query o al payload edge function.
+- **Prefetch della pagina successiva nei risultati Sinner.** Aggiunto
+  un `useEffect` in `src/pages/SinnerPage.tsx` che, appena la pagina
+  corrente diventa stabile e `totalResultPages` è noto, invoca
+  `queryClient.prefetchQuery` con la stessa `queryKey` di
+  `useSinnerResults` per la pagina `N+1`. Risultato: cliccando
+  "Successiva" la nuova lista è già in cache (`staleTime` 5 minuti) e
+  appare istantaneamente; il prefetch è skippato sull'ultima pagina e
+  quando `totalResultPages` non è ancora calcolato. Aggiornato
+  `src/pages/SinnerPage.test.tsx` con un helper `renderWithClient` che
+  monta i test dentro un `QueryClientProvider` (richiesto da
+  `useQueryClient`).
+- **Loading gate full-page su Juventus.** `src/pages/JuventusPage.tsx`
+  mostra ora `<LoadingState message="Caricamento dati Juventus..." />`
+  finché calendario, classifica e — quando rilevante — il fetch della
+  pagina contenente la prossima partita non sono tutti completati. Nuovo
+  derivato locale `isAwaitingNextMatch` che rileva i casi in cui il
+  prossimo match risiede su una pagina diversa da quella visualizzata,
+  così card "Prossima Partita" e resto del contenuto compaiono
+  insieme, senza lo sfarfallio in cui prima si vedeva la pagina
+  parzialmente popolata. Errori (`calError` / `stError`) bypassano il
+  gate per cedere il controllo agli stati `ErrorState` /
+  `OfflineFallback` esistenti.
+
+### Notes
+
+- Tutti i 124 test `vitest` continuano a passare dopo il refactor.
+- Lo script `npm run check:tz-juventus` resta verde: nessun nuovo
+  callsite di `toLocaleTimeString` / `toLocaleDateString` privo di
+  `timeZone: "Europe/Rome"` introdotto nelle pagine sport o Home.
+- Il footer continua a usare la `v` minuscola (`Calendar Events ·
+  v2.2.0`).
 
 ### Performance
 
