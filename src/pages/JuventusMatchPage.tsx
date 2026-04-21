@@ -364,7 +364,7 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
         <TabsContent value="modulo">
           <UnavailableExternalSource
             title="Modulo e disposizione tattica"
-            description="Lo schieramento tattico delle due squadre viene aggiornato live durante la partita. Apri la pagina ufficiale Sky Sport qui sotto per vedere il modulo scelto dagli allenatori e i movimenti dei giocatori sul campo."
+            description="Lo schieramento tattico delle due squadre viene aggiornato in tempo reale durante la partita. Apri la pagina ufficiale Sky Sport qui sotto per vedere il modulo scelto dagli allenatori e i movimenti dei giocatori sul campo."
             externalLink={match.link}
           />
         </TabsContent>
@@ -424,7 +424,7 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
         <TabsContent value="cronologia">
           <UnavailableExternalSource
             title="Cronaca minuto per minuto"
-            description="Gol, ammonizioni, espulsioni e sostituzioni vengono raccontati live nella diretta testuale. Apri la pagina ufficiale Sky Sport qui sotto per seguire la cronaca completa dell'incontro, azione per azione."
+            description="Gol, ammonizioni, espulsioni e sostituzioni vengono raccontati in tempo reale nella diretta testuale. Apri la pagina ufficiale Sky Sport qui sotto per seguire la cronaca completa dell'incontro, azione per azione."
             externalLink={match.link}
           />
         </TabsContent>
