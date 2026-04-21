@@ -66,6 +66,9 @@ const ALLOWLIST_WORDS = new Set(
     "DR",
     "JS",
     "Info",
+    // Round Robin: terminologia ufficiale ATP Finals usata in italiano
+    "Round",
+    "Robin",
     "ID",
     "URL",
     "API",
