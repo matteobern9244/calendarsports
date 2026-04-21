@@ -537,6 +537,7 @@ Deno.serve(async (req) => {
 
     const season = seasonParam ? parseInt(seasonParam) : 2026;
     let data: unknown;
+    let dataSource: 'wikipedia' | 'wikipedia+curated' | 'static-fallback' = 'wikipedia';
 
     switch (action) {
       case 'player-info': {
@@ -545,20 +546,25 @@ Deno.serve(async (req) => {
       }
       case 'next-event': {
         if (season !== 2026) { data = null; break; }
-        const { tournaments } = await getSeasonData();
+        const sd = await getSeasonData();
+        const { tournaments } = sd;
+        if (sd.curatedAppended) dataSource = 'wikipedia+curated';
         const now = new Date();
         data = tournaments.find(t => new Date(t.dateEnd || t.date) >= now && !t.result) || null;
         break;
       }
       case 'schedule': {
         if (season !== 2026) { data = []; break; }
-        const { tournaments } = await getSeasonData();
+        const sd = await getSeasonData();
+        const { tournaments } = sd;
+        if (sd.curatedAppended) dataSource = 'wikipedia+curated';
         data = tournaments;
         break;
       }
       case 'results': {
         if (season !== 2026) { data = []; break; }
-        const { matches } = await getSeasonData();
+        const sd = await getSeasonData();
+        const { matches } = sd;
         data = matches;
         break;
       }
@@ -568,7 +574,12 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data, source: 'Wikipedia (IT profilo + EN stagione 2026)' }), {
+    const meta = {
+      dataSource,
+      season,
+      source: 'Wikipedia (IT profilo + EN stagione 2026)',
+    };
+    return new Response(JSON.stringify({ success: true, data, meta, source: meta.source }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

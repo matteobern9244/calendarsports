@@ -392,6 +392,7 @@ Deno.serve(async (req) => {
     }
 
     let data: any;
+    let dataSource: 'live' | 'static' | 'static-fallback' = 'live';
 
     switch (action) {
       case 'calendar': {
@@ -400,6 +401,8 @@ Deno.serve(async (req) => {
           ...e,
           status: new Date(e.date_end) < now ? 'finished' : 'upcoming',
         }));
+        // Calendario MotoGP: dataset hardcoded 2026 in attesa di una fonte live.
+        dataSource = 'static';
         break;
       }
 
@@ -407,9 +410,11 @@ Deno.serve(async (req) => {
         try {
           const { pilots } = await fetchSkyStandings();
           data = pilots;
+          dataSource = pilots.length > 0 ? 'live' : 'static-fallback';
         } catch (e) {
           console.error('MotoGP standings fetch failed:', e);
           data = [];
+          dataSource = 'static-fallback';
         }
         break;
       }
@@ -418,9 +423,11 @@ Deno.serve(async (req) => {
         try {
           const { teams } = await fetchSkyStandings();
           data = teams;
+          dataSource = teams.length > 0 ? 'live' : 'static-fallback';
         } catch (e) {
           console.error('MotoGP constructor standings failed:', e);
           data = [];
+          dataSource = 'static-fallback';
         }
         break;
       }
@@ -429,6 +436,8 @@ Deno.serve(async (req) => {
         const now = new Date();
         const next = MOTOGP_CALENDAR_2026.find(e => new Date(e.date_start) > now);
         data = next ? { ...next, status: 'upcoming' } : null;
+        // next-event deriva dal calendario hardcoded 2026.
+        dataSource = 'static';
         break;
       }
 
@@ -439,7 +448,12 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data, source: 'Sky Sport / MotoGP' }), {
+    const meta = {
+      dataSource,
+      season: seasonParam ? parseInt(seasonParam, 10) : null,
+      source: dataSource === 'static' ? 'Calendario MotoGP 2026 (statico)' : 'Sky Sport MotoGP',
+    };
+    return new Response(JSON.stringify({ success: true, data, meta, source: meta.source }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

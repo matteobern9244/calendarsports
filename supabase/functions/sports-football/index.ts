@@ -363,7 +363,18 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data, source: 'Sky Sport Italia', requestedSeason: season, seasonUsed }), {
+    // dataSource:
+    //  - "live" se la stagione richiesta e' stata effettivamente servita da Sky;
+    //  - "fallback-previous-season" se l'helper ha dovuto ripiegare su season-1.
+    const dataSource: 'live' | 'fallback-previous-season' =
+      seasonUsed === season ? 'live' : 'fallback-previous-season';
+    const meta = {
+      dataSource,
+      season: /^\d{4}$/.test(season) ? parseInt(season, 10) : season,
+      seasonUsed: /^\d{4}$/.test(seasonUsed) ? parseInt(seasonUsed, 10) : seasonUsed,
+      source: 'Sky Sport Italia + Lega Serie A',
+    };
+    return new Response(JSON.stringify({ success: true, data, meta, source: meta.source, requestedSeason: season, seasonUsed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
