@@ -243,8 +243,8 @@ export default function JuventusPage() {
                                   className={cn(
                                     "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
                                     b.trim() === 'DAZN'
-                                      ? "bg-[#1a1a2e] text-[#f5f5f5] dark:bg-[#f5f5f5] dark:text-[#1a1a2e]"
-                                      : "bg-sky-600/20 text-sky-600 dark:bg-sky-400/20 dark:text-sky-400"
+                                      ? "bg-[hsl(var(--brand-dazn))] text-[hsl(var(--brand-dazn-contrast))] dark:bg-[hsl(var(--brand-dazn-contrast))] dark:text-[hsl(var(--brand-dazn))]"
+                                      : "bg-[hsl(var(--brand-sky))]/20 text-[hsl(var(--brand-sky))] dark:bg-[hsl(var(--brand-sky))]/30 dark:text-sky-100"
                                   )}
                                 >
                                   {b.trim()}
