@@ -150,4 +150,44 @@ describe("enrichTitle", () => {
     expect(result.title).toBe("Ev-Sp");
     expect(result.genre).toBeUndefined();
   });
+
+  it("EV-SP con piu' candidati Sport: vince quello piu' vicino in tempo", () => {
+    const rich: RichTitle[] = [
+      { title: "Calcio - Coppa Italia - Inter Vs Como (Sport)", hh: 20, mm: 40 },
+      { title: "Calcio Highlights Notte (Sport)", hh: 23, mm: 0 },
+    ];
+    const result = enrichTitle("EV-SP", rich, 20, 40);
+    expect(result.title).toBe("Calcio - Coppa Italia - Inter Vs Como");
+    expect(result.genre).toBe("Sport");
+  });
+
+  it("EV-SP con orario uguale ma generi diversi: filtro genere scarta News", () => {
+    const rich: RichTitle[] = [
+      { title: "Anteprima Tg5 (News)", hh: 20, mm: 40 },
+      { title: "Calcio - Coppa Italia (Sport)", hh: 20, mm: 40 },
+    ];
+    const result = enrichTitle("EV-SP", rich, 20, 40);
+    expect(result.title).toBe("Calcio - Coppa Italia");
+    expect(result.genre).toBe("Sport");
+  });
+
+  it("EV-SP senza orario: lengthBonus tiebreaker sceglie il titolo piu' lungo", () => {
+    const rich: RichTitle[] = [
+      { title: "Calcio (Sport)" },
+      { title: "Calcio - Coppa Italia - Inter Vs Como (Sport)" },
+    ];
+    const result = enrichTitle("EV-SP", rich);
+    expect(result.title).toBe("Calcio - Coppa Italia - Inter Vs Como");
+    expect(result.genre).toBe("Sport");
+  });
+
+  it("EV-SP senza candidati di genere atteso: safety net match per orario", () => {
+    const rich: RichTitle[] = [
+      { title: "Tg5 - Notte (News)", hh: 20, mm: 40 },
+    ];
+    const result = enrichTitle("EV-SP", rich, 20, 40);
+    expect(result.title).toBe("Tg5 - Notte");
+    // Genere News non e' nella whitelist del modulo live, quindi qui resta undefined.
+    expect(result.genre).toBeUndefined();
+  });
 });
