@@ -237,7 +237,7 @@ function getTeamConstructor(teamName: string): string | null {
 }
 
 async function fetchSkyStandings(): Promise<{
-  pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null }>;
+  pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null }>;
   teams: Array<{ position: number; team: string; points: number; logoUrl: string | null }>;
 }> {
   const res = await fetch(SKY_SPORT_MOTOGP_URL, {
@@ -246,7 +246,7 @@ async function fetchSkyStandings(): Promise<{
   if (!res.ok) throw new Error(`Sky Sport returned ${res.status}`);
   const html = await res.text();
 
-  const pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null }> = [];
+  const pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null }> = [];
   const teams: Array<{ position: number; team: string; points: number; logoUrl: string | null }> = [];
 
   // Parse pilot standings table
@@ -266,7 +266,7 @@ async function fetchSkyStandings(): Promise<{
           const teamRaw = c3.replace(/<[^>]+>/g, '').trim();
           const pts = parseInt(c4.replace(/<[^>]+>/g, '').trim());
           if (!isNaN(pos) && nameRaw) {
-            pilots.push({ position: pos, name: expandRiderName(nameRaw), team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw) });
+            pilots.push({ position: pos, name: expandRiderName(nameRaw), team: teamRaw, points: pts || 0, photoUrl: findRiderPhoto(nameRaw), number: findRiderNumber(nameRaw) });
           }
         }
       }
