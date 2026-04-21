@@ -1,86 +1,81 @@
 
-## Piano: Rebrand "CALENDAR EVENTS" + bump versione 2.0.0 + aggiornamento docs
 
-### 1. Rebrand UI → "CALENDAR EVENTS"
+## Fix "Nuove uscite" sempre vuoto
 
-**`src/components/layout/Header.tsx`**
-- Logo testo: cambiare `<span class="text-gold-gradient">Calendar</span> <span>Sports</span>` → `<span class="text-gold-gradient">Calendar</span> <span>Events</span>`.
-- Icona logo: sostituire `Trophy` (lucide) con `CalendarDays` per coerenza col nome generico "Events" (mantenendo il box gold-gradient e dimensioni h-9 w-9).
+### Diagnosi
 
-**`src/components/layout/Layout.tsx`**
-- Footer: testo `Calendar Sports Events` → `CALENDAR EVENTS · v{APP_VERSION}` mantenendo `font-heading tracking-wider uppercase`.
-- Importare versione da costante centralizzata (vedi §2).
+La funzione **non è rotta tecnicamente** (`TMDB_API_KEY` configurata, `configured: true`, risposta 200), ma è **mal calibrata** rispetto al modo in cui TMDB indicizza i cataloghi streaming.
 
-**`index.html`**
-- `<title>`: `Calendar Events — Sinner, Juventus, F1, MotoGP, Streaming`
-- `<meta name="description">`: aggiornare a "Segui eventi sportivi (Sinner, Juventus, F1, MotoGP) e palinsesti TV / nuove uscite streaming in un'unica app".
-- `<meta name="author">`: `Calendar Events`
-- `og:title`, `twitter:title`, `og:description`, `twitter:description`: stessa copy.
+Test eseguiti contro l'edge function `streaming-releases` in produzione:
 
-### 2. Versione 2.0.0 visibile
+| Range | dateFrom | dateTo | Risultato Netflix |
+|---|---|---|---|
+| "Oggi" (default UI) | 2026-04-21 | 2026-04-21 | **0 items** |
+| "Prossimi 7 giorni" | 2026-04-21 | 2026-04-28 | **0 items** |
+| Test diagnostico ampio | 2026-04-01 | 2026-05-31 | **decine di titoli** |
 
-**`package.json`**
-- `"version": "2.0.2"` → `"2.0.0"` (come richiesto esplicitamente dall'utente, anche se è un downgrade rispetto al 2.0.2 corrente — segnalare nel changelog come "rebrand reset").
+### Cause
 
-**Nuovo file `src/lib/version.ts`**
-```ts
-export const APP_VERSION = "2.0.0";
-export const APP_NAME = "Calendar Events";
+1. **Finestre troppo strette.** TMDB Discover con `with_watch_providers=8` (Netflix IT) restituisce risultati solo se `primary_release_date` cade nella finestra. Per il 21 aprile 2026 ci sono pochissimi titoli con quella data esatta — un range di 1, 3 o 7 giorni non basta.
+2. **Campo data sbagliato per "uscite streaming".** Il filtro su `primary_release_date` (film) e `first_air_date` (serie) significa **data della prima uscita mondiale del titolo**, non **data in cui è entrato sulla piattaforma in Italia**. TMDB non espone una data di "platform add" su `discover`; per quella servirebbe l'endpoint `changes` o `watch/providers` per singolo titolo.
+3. **Niente fallback nel periodo "vuoto".** Quando la finestra esatta non produce risultati, l'UI mostra `EmptyState` senza spiegare la natura del filtro.
+
+### Soluzione proposta (3 livelli, conservativi)
+
+**A. Allargare le finestre di default in `StreamingPage.tsx`**
+
+Sostituire i 3 range attuali con range più realistici per come TMDB indicizza:
+
+```text
+"7d"  → ultimi 0 / +7 giorni (era "Oggi")
+"30d" → ultimi 0 / +30 giorni (era "3 giorni")  ← nuovo default
+"90d" → ultimi -30 / +60 giorni (era "7 giorni")
 ```
-Un'unica fonte di verità, importata da `Layout.tsx` (footer) ed eventualmente in futuro da `Header.tsx`.
 
-### 3. Aggiornamento documentazione
+Etichette aggiornate: "Prossimi 7 giorni", "Prossimi 30 giorni", "Finestra estesa". Il default passa a "30d" (oggi → +30 giorni), allineato a come funziona realmente l'indice TMDB per i provider streaming.
 
-**`README.md`**
-- Titolo + intro: rinominare "Calendar Sports" → "Calendar Events".
-- Versione applicativa: `2.0.2` → `2.0.0`.
-- Sezione sezioni UI: già menziona Streaming, mantenere lista (Home, Streaming, Sinner, Juventus, F1, MotoGP).
-- Aggiungere nota: "il footer mostra la versione corrente da `src/lib/version.ts`".
+**B. Migliorare la copertura nell'edge function `streaming-releases`**
 
-**`changelog.md`**
-- Nuova sezione `## [2.0.0] - 2026-04-19` (sopra la 2.0.2 esistente, con nota esplicita "rebrand reset: la numerazione torna a 2.0.0 per marcare il cambio identità prodotto da 'Calendar Sports' a 'Calendar Events'; le voci 2.0.0/2.0.1/2.0.2 storiche restano come archivio sotto").
-- Voci da consolidare nella nuova 2.0.0 (raccolte dall'`[Unreleased]` corrente + ultime modifiche di sessione non ancora registrate):
-  - **Added**:
-    - Rebrand applicazione: nome "Calendar Events", icona `CalendarDays` nell'header, footer "CALENDAR EVENTS · v2.0.0".
-    - Costante `src/lib/version.ts` (`APP_VERSION`, `APP_NAME`).
-    - Sezione **Streaming** completa (TV stasera + Nuove uscite) con edge functions `streaming-tv` e `streaming-releases`.
-    - Componente dedicato `src/components/home/TonightTvList.tsx` (estratto da `Index.tsx` per ridurre complessità).
-    - Badge genere + durata programma in "Stasera in TV" + utility `formatDuration` in `src/lib/dateUtils.ts` con test unitari (edge: 0, NaN, 1h esatta).
-    - Etichette famiglia mobile sopra separatori oro nella scheda "Stasera in TV", con icone Lucide (`Radio`, `Tv`, `Trophy`, `Film`, `Compass`).
-    - Test E2E Playwright per separatori e label famiglia mobile (mock `streaming-tv` in `e2e/support/mockSportsApi.ts`).
-    - Sportitalia nella famiglia "Sport" e whitelist generi estesa.
-    - Suite GitHub Copilot repo-local + dependabot + guardrail auto-merge vs Copilot review.
-  - **Changed**:
-    - Footer semplificato a "CALENDAR EVENTS · v2.0.0".
-    - `package.json` version → 2.0.0 (rebrand reset).
-    - Metadati `index.html` (title/description/OG/Twitter) aggiornati.
-  - **Fixed**: copertura palinsesti famiglia Sport (audit 41 slug 2026-04-19), bundle prod env injection (riportare voce 2.0.2).
-  - **Note operative**: rebrand puramente cosmetico, nessun impatto su routing, fonti dati, edge functions, secrets, branch policy o sync Lovable↔GitHub.
-- Svuotare `[Unreleased]` (resta header vuoto pronto per prossime modifiche).
+Quando la prima query restituisce `[]`, fare un **secondo tentativo automatico ampliato** lato backend (fallback trasparente):
 
-**`AGENTS.md`**
-- Sezione "Contesto del progetto": sostituire "Applicazione web sportiva" → "Applicazione web di eventi sportivi e streaming". Nessuna altra modifica strutturale (le regole operative restano identiche).
+- Se `items.length === 0` dopo le due chiamate (movie + tv) sulla finestra richiesta, ripetere la stessa query con `dateFrom -= 14 giorni` e `dateTo += 30 giorni`, **senza** rilassare `with_watch_providers` (il provider resta corretto).
+- Aggiungere nel payload il campo `widenedWindow: boolean` per tracciabilità (l'UI può mostrare un piccolo hint "Mostriamo una finestra estesa perché in questo momento non ci sono novità imminenti").
+- Mantenere il filtro `with_watch_providers` (corretto) e `watch_region=IT`.
+- Cache key aggiornata per includere il flag widened in modo da non confondere risultati.
 
-**`.github/copilot-instructions.md`** (se contiene il nome prodotto)
-- Verificare e aggiornare eventuali occorrenze "Calendar Sports" → "Calendar Events".
+**C. EmptyState informativo**
 
-### 4. File NON toccati (esplicito)
-- `supabase/functions/*`, `supabase/config.toml`, `.env*`, `src/integrations/supabase/*`, `src/lib/supabaseClient.ts`, lockfile, workflow GitHub, branch policy.
-- Routing e nomi route invariati (`/sinner`, `/juventus`, ecc.).
-- Nessuna modifica a fonti dati o edge functions.
+Aggiornare `EmptyState` (o l'invocazione in `StreamingPage`) quando `releasesQuery.data?.items?.length === 0` per mostrare un messaggio più utile:
 
-### 5. Ordine di esecuzione
-1. Crea `src/lib/version.ts`.
-2. Aggiorna `Header.tsx` (logo + icona).
-3. Aggiorna `Layout.tsx` (footer con versione).
-4. Aggiorna `index.html` (title + meta).
-5. Bump `package.json` → 2.0.0.
-6. Aggiorna `README.md`.
-7. Aggiorna `changelog.md` con sezione 2.0.0 consolidata.
-8. Aggiorna `AGENTS.md` (una riga).
-9. Verifica visiva header/footer desktop+mobile.
+> "Nessuna uscita catalogata da TMDB per **{provider}** nella finestra selezionata. Prova ad allargare il range con il filtro qui sopra."
 
-### Rischi e note
-- **Downgrade versione 2.0.2 → 2.0.0**: tecnicamente è un downgrade SemVer; viene fatto solo perché l'utente lo richiede esplicitamente come "reset rebrand". Documentato chiaramente in changelog.
-- Nessun rischio sync Lovable↔GitHub: solo file frontend + docs.
-- `markdownlint` su `README.md`, `changelog.md`, `AGENTS.md` da rispettare.
+E un pulsante secondario "Allarga finestra" che imposta `range = "90d"`.
+
+### Cosa NON cambiare
+
+- **Niente nuove dipendenze.**
+- **Niente nuove tabelle Supabase.**
+- **Niente cambio del provider TMDB** o dell'API key.
+- **Niente scraping** dei siti dei provider (rispetto alla regola "evitare scraping fragile").
+- Versione resta **2.1.0** (bugfix, non release).
+
+### File da modificare
+
+| File | Modifica |
+|---|---|
+| `supabase/functions/streaming-releases/index.ts` | Aggiungere fallback automatico con finestra estesa quando `items=[]`; aggiungere `widenedWindow` al payload; aggiornare cache key. |
+| `src/pages/StreamingPage.tsx` | Sostituire array `RANGES` con finestre più ampie; default su "30d"; aggiungere CTA "Allarga finestra" nell'empty state. |
+| `src/hooks/useStreamingData.ts` | Aggiungere `widenedWindow?: boolean` a `ReleasesPayload`. |
+| `changelog.md` | Voce bugfix sotto la sezione corrente 2.1.0 (Cambiamenti / Bugfix): "Fix Nuove uscite vuote: finestre ampliate + fallback automatico TMDB". |
+| `README.md` | Aggiornare la nota sulla sezione Streaming: spiegare che le "Nuove uscite" si basano sul `primary_release_date` TMDB e che la finestra di default è 30 giorni. |
+
+### Checklist post-edit
+
+1. `supabase functions deploy streaming-releases` (automatico via Lovable).
+2. Curl test: `provider=netflix`, default range → deve restituire ≥1 item.
+3. Curl test: `provider=hbo` (provider con meno catalogo IT) → verificare che il fallback widened scatti.
+4. Verifica UI in `/streaming?tab=releases` desktop + mobile.
+5. `npm run lint` + `npm run build`.
+6. Aggiornare `changelog.md` e `README.md`, mantenendo versione 2.1.0.
+7. Lavorare su `develop`, PR verso `develop`, assegnare a `@matteobern9244`.
+
