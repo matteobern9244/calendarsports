@@ -1,6 +1,6 @@
 import { useEffect, useState, type SVGProps, type ReactElement } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, RotateCcw, Settings2 } from "lucide-react";
+import { Check, RotateCcw, Settings2, Sun, Moon, Palette } from "lucide-react";
 import { toast } from "sonner";
 import SectionHeader from "@/components/common/SectionHeader";
 import SeasonSelector from "@/components/common/SeasonSelector";
@@ -11,6 +11,7 @@ import {
   useSeasonPreferences,
   type SeasonKey,
 } from "@/hooks/useSeasonPreferences";
+import { useTheme } from "@/hooks/useTheme";
 import {
   TennisBrandIcon,
   JuveBrandIcon,
@@ -35,6 +36,7 @@ const SAVED_TIMEOUT_MS = 1800;
 
 export default function PreferencesPage() {
   const { seasons, setSeason, resetSeasons } = useSeasonPreferences();
+  const { theme, setTheme } = useTheme();
   const [savedKeys, setSavedKeys] = useState<Set<SeasonKey>>(new Set());
 
   useEffect(() => {
@@ -78,10 +80,84 @@ export default function PreferencesPage() {
     <div className="container py-8 md:py-12">
       <SectionHeader
         title="Preferenze"
-        subtitle="Gestisci le stagioni predefinite per le tue sezioni preferite. Le scelte vengono salvate sul tuo dispositivo."
+        subtitle="Personalizza tema e stagioni predefinite delle tue sezioni preferite. Le scelte vengono salvate sul tuo dispositivo."
       />
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Sezione Aspetto: tema chiaro/scuro */}
+      <Card className="mt-6 border-border/60 bg-card/70 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2.5 text-base font-heading uppercase tracking-wider">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))]">
+              <Palette className="h-4 w-4" />
+            </span>
+            Aspetto
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-heading uppercase tracking-wider text-foreground">
+                Tema dell'interfaccia
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Scegli tra modalità chiara e scura.
+              </p>
+            </div>
+            <div
+              role="radiogroup"
+              aria-label="Tema dell'interfaccia"
+              className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 p-1"
+            >
+              {(
+                [
+                  { value: "light", label: "Chiaro", Icon: Sun },
+                  { value: "dark", label: "Scuro", Icon: Moon },
+                ] as const
+              ).map(({ value, label, Icon }) => {
+                const active = theme === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => {
+                      if (theme === value) return;
+                      setTheme(value);
+                      toast.success("Tema aggiornato", {
+                        description:
+                          value === "dark"
+                            ? "Ora stai usando il tema scuro."
+                            : "Ora stai usando il tema chiaro.",
+                      });
+                    }}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5",
+                      "text-xs font-heading font-semibold uppercase tracking-wider",
+                      "transition-colors",
+                      active
+                        ? "bg-gradient-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mt-8 mb-3 flex items-center gap-3">
+        <h2 className="text-sm font-heading uppercase tracking-widest text-muted-foreground">
+          Stagioni predefinite
+        </h2>
+        <div className="h-px flex-1 bg-border/60" />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {SPORTS.map((sport) => {
           const { Icon } = sport;
           const current = seasons[sport.key];

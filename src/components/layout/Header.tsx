@@ -1,6 +1,6 @@
 import { useRef, useState, MouseEvent as ReactMouseEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Sun, Moon, Settings } from "lucide-react";
+import { Menu, X, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
@@ -14,10 +14,7 @@ import {
 } from "./BrandIcons";
 import { SparkleLoop } from "./SparkleLoop";
 
-interface HeaderProps {
-  theme: "light" | "dark";
-  toggleTheme: () => void;
-}
+// Header non riceve piu' props: tema e preferenze sono in /preferenze.
 
 const navItems = [
   { label: "HOME", shortLabel: "HOME", path: "/", Icon: HomeBrandIcon },
@@ -26,7 +23,6 @@ const navItems = [
   { label: "JUVENTUS", shortLabel: "JUVE", path: "/juventus", Icon: JuveBrandIcon },
   { label: "FORMULA 1", shortLabel: "F1", path: "/formula1", Icon: F1BrandIcon },
   { label: "MOTOGP", shortLabel: "MOTOGP", path: "/motogp", Icon: MotoGPBrandIcon },
-  { label: "PREFERENZE", shortLabel: "PREF", path: "/preferenze", Icon: Settings },
 ] as const;
 
 interface Burst {
@@ -35,12 +31,13 @@ interface Burst {
   y: number;
 }
 
-export default function Header({ theme, toggleTheme }: HeaderProps) {
+export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bursts, setBursts] = useState<Record<string, Burst | null>>({});
   const location = useLocation();
   const navigate = useNavigate();
   const burstSeq = useRef(0);
+  const preferencesActive = location.pathname === "/preferenze";
 
   const triggerBurst = (path: string, e: ReactMouseEvent<HTMLAnchorElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -169,13 +166,21 @@ export default function Header({ theme, toggleTheme }: HeaderProps) {
         {/* Theme toggle + mobile menu */}
         <div className="flex items-center gap-2 shrink-0">
           <Button
+            asChild
             variant="ghost"
             size="icon"
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Tema chiaro" : "Tema scuro"}
-            className="rounded-full border border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10 transition-colors"
+            aria-label="Preferenze"
+            aria-current={preferencesActive ? "page" : undefined}
+            className={cn(
+              "rounded-full border transition-colors",
+              preferencesActive
+                ? "border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))] shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
+                : "border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10"
+            )}
           >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            <Link to="/preferenze">
+              <Settings className="h-4 w-4" />
+            </Link>
           </Button>
           <Button
             variant="ghost"
