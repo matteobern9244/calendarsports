@@ -346,7 +346,7 @@ export default function JuventusPage() {
                     variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
                     whileHover={{ y: -3 }}
                     className={cn(
-                      "group relative rounded-2xl border bg-card px-4 py-3.5 flex items-center gap-3",
+                      "group relative rounded-2xl border bg-card",
                       "transition-[box-shadow,border-color,transform] duration-300 ease-out",
                       "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
                       "hover:shadow-[0_16px_36px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
@@ -355,6 +355,11 @@ export default function JuventusPage() {
                         : "border-[hsl(var(--gold))]/20 hover:border-[hsl(var(--gold))]/55"
                     )}
                   >
+                    <Link
+                      to={`/juventus/partite/${m.id}`}
+                      aria-label={`Apri dettaglio ${m.homeTeam} vs ${m.awayTeam}`}
+                      className="flex items-center gap-3 px-4 py-3.5 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
