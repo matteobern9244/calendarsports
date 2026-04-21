@@ -304,12 +304,9 @@ Deno.serve(async (req) => {
         ),
       );
       const validated = candidates
-        .filter((_, i) => checks[i].available)
-        .map((c, idx) => {
-          // ri-mappa l'indice originale per recuperare il deepLink corretto
-          const originalIndex = candidates.indexOf(c);
-          return normalizeItem(c.raw, c.kind, checks[originalIndex]?.deepLink ?? null);
-        });
+        .map((c, i) => ({ c, info: checks[i] }))
+        .filter(({ info }) => info.available)
+        .map(({ c, info }) => normalizeItem(c.raw, c.kind, info.deepLink));
       return sortItems(validated);
     };
 
