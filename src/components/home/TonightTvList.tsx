@@ -302,6 +302,20 @@ export default function TonightTvList() {
     [tonightHighlights, safePage],
   );
 
+  // Famiglie attualmente in pagina che hanno almeno un programma con
+  // dati incompleti (orario di fine mancante). Per ciascuna mostriamo
+  // un avviso con link alla Guida TV ufficiale, cosi' l'utente puo'
+  // verificare la durata reale alla fonte.
+  const incompleteFamilies = useMemo(() => {
+    const seen = new Set<StreamingFamilyId>();
+    for (const h of tonightHighlights) {
+      if (!h.hasExplicitEnd) seen.add(h.family);
+    }
+    return Array.from(seen).sort(
+      (a, b) => familyOrder[a] - familyOrder[b],
+    );
+  }, [tonightHighlights, familyOrder]);
+
   return (
     <Card className="border-primary/30 bg-gradient-to-br from-card to-card/60">
       <CardContent className="p-4 sm:p-5 space-y-4">
