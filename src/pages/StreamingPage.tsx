@@ -51,13 +51,18 @@ import { useSyncAll } from "@/hooks/useSyncAll";
 const CHANNELS_PER_PAGE = 6;
 const RELEASES_PER_PAGE = 8;
 
-type RangeId = "1d" | "3d" | "7d";
+type RangeId = "7d" | "30d" | "90d";
 type KindId = "all" | "movie" | "tv";
 
-const RANGES: { id: RangeId; label: string; days: number }[] = [
-  { id: "1d", label: "Oggi", days: 0 },
-  { id: "3d", label: "Prossimi 3 giorni", days: 2 },
-  { id: "7d", label: "Prossimi 7 giorni", days: 6 },
+// Le "Nuove uscite" usano TMDB Discover filtrando per primary_release_date
+// (film) / first_air_date (serie) e per provider IT. TMDB non espone una data
+// di "platform add", quindi finestre da 1-7 giorni sono spesso vuote.
+// Default 30 giorni: copre la finestra realistica di novita' indicizzate.
+// daysBack = 0 per i range "futuri", >0 per la finestra estesa.
+const RANGES: { id: RangeId; label: string; daysBack: number; daysFwd: number }[] = [
+  { id: "7d", label: "Prossimi 7 giorni", daysBack: 0, daysFwd: 7 },
+  { id: "30d", label: "Prossimi 30 giorni", daysBack: 0, daysFwd: 30 },
+  { id: "90d", label: "Finestra estesa", daysBack: 30, daysFwd: 60 },
 ];
 
 const KINDS: { id: KindId; label: string }[] = [
