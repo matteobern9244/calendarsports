@@ -139,7 +139,7 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
             {props.careerHigh != null && (
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground font-heading">
-                  Best ranking
+                  Miglior ranking
                 </p>
                 <p className="font-heading text-xl font-bold">#{props.careerHigh}</p>
               </div>

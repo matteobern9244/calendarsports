@@ -78,7 +78,7 @@ export default function EventCard({
         {status === "in_corso" && (
           <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-destructive">
             <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
-            LIVE
+            IN DIRETTA
           </span>
         )}
         {status === "completato" && (

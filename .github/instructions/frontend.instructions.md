@@ -5,6 +5,12 @@ applyTo: "src/**/*.ts,src/**/*.tsx,tailwind.config.ts,vite.config.ts"
 # Istruzioni Frontend
 
 - Preserva la natura SPA React/Vite del progetto.
+- **Lingua UI: italiano obbligatorio.** Tutta l'UI deve essere in italiano.
+  Uniche eccezioni: `STREAMING` (nome sezione) e `CALENDAR EVENTS` (nome app).
+  Nomi propri (squadre, atleti, competizioni, broadcaster, provider) restano
+  nella forma ufficiale. Sigle tecniche (ATP, WTA, GP, PL1, TMDB, RAI, Pos,
+  Pts, ecc.) non sono "inglese". Niente stringhe inglesi in placeholder,
+  `aria-label`, `sr-only`, toast, error message o titoli pagina.
 - Mantieni `BrowserRouter`, React Query e il data flow attuale salvo
   richiesta esplicita o motivazione tecnica forte.
 - Non cambiare naming di route, struttura delle pagine sportive o UI generale
