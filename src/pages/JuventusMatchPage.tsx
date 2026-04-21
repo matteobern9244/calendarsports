@@ -270,7 +270,12 @@ function MatchDetail({ match }: { match: any }) {
               </span>
             );
           })}
-          {!isFinished && match.date && <EventCountdown startDate={match.date} />}
+          {!isFinished && match.date && (
+            <EventCountdown
+              startDate={match.date}
+              onRetry={() => firstPageQuery.refetch()}
+            />
+          )}
         </div>
       </motion.div>
 
@@ -402,7 +407,10 @@ function MatchDetail({ match }: { match: any }) {
               <EmptyState message="Risultato non ancora disponibile: la partita non è stata giocata." />
               {match.date && (
                 <div className="flex justify-center">
-                  <EventCountdown startDate={match.date} />
+                  <EventCountdown
+                    startDate={match.date}
+                    onRetry={() => firstPageQuery.refetch()}
+                  />
                 </div>
               )}
             </div>

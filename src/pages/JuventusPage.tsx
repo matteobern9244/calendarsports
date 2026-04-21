@@ -203,7 +203,9 @@ export default function JuventusPage() {
                     })}
                   </div>
                 )}
-                {nextMatch.date && <EventCountdown startDate={nextMatch.date} />}
+                {nextMatch.date && (
+                  <EventCountdown startDate={nextMatch.date} onRetry={() => calRefetch()} />
+                )}
               </div>
             </div>
             </Link>

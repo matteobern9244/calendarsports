@@ -15,8 +15,17 @@ const ROOT = process.cwd();
 const TARGETS = [
   "src/pages/JuventusPage.tsx",
   "src/pages/Index.tsx",
+  "src/pages/Formula1Page.tsx",
+  "src/pages/MotoGPPage.tsx",
+  "src/pages/SinnerPage.tsx",
+  "src/pages/StreamingPage.tsx",
+  "src/pages/JuventusMatchPage.tsx",
 ];
-const TARGET_DIRS = ["src/components/home"];
+const TARGET_DIRS = [
+  "src/components/home",
+  "src/components/streaming",
+  "src/components/highlights",
+];
 
 const PATTERN = /\.(toLocaleTimeString|toLocaleDateString)\s*\(/g;
 
