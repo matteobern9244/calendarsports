@@ -323,8 +323,7 @@ export default function TonightTvList() {
                               aria-colindex={1}
                               aria-label={showFamilyDivider ? `Famiglia ${familyLabel}` : undefined}
                               aria-hidden={showFamilyDivider ? undefined : true}
-                              className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-2 lg:border-t-2 lg:border-border"
-                              data-row-cell
+                              className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-2 lg:border-t-2 lg:border-border transition-colors lg:group-hover:bg-primary/10 lg:group-focus-visible:bg-primary/15"
                             >
                               {showFamilyDivider ? (
                                 <>
