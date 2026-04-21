@@ -23,6 +23,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import TeamLogo from "@/components/common/TeamLogo";
 import { Sparkles } from "lucide-react";
