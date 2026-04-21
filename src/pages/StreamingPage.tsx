@@ -32,6 +32,7 @@ import LoadingState from "@/components/common/LoadingState";
 import EmptyState from "@/components/common/EmptyState";
 import ErrorState from "@/components/common/ErrorState";
 import ReleaseDetailDialog from "@/components/streaming/ReleaseDetailDialog";
+import ReleaseCountdownBadge from "@/components/streaming/ReleaseCountdownBadge";
 import {
   STREAMING_FAMILIES,
   STREAMING_PROVIDERS,
@@ -446,9 +447,15 @@ export default function StreamingPage() {
                         </div>
                       )}
                       <CardContent className="p-3 space-y-1">
-                        <p className="font-heading text-sm font-semibold leading-tight line-clamp-2">
-                          {item.title}
-                        </p>
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <p className="font-heading text-sm font-semibold leading-tight line-clamp-2 min-w-0 flex-1">
+                            {item.title}
+                          </p>
+                          <ReleaseCountdownBadge
+                            releaseDate={item.releaseDate}
+                            className="shrink-0"
+                          />
+                        </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <Badge variant="outline" className="text-[10px]">
                             {item.type === "movie" ? "Film" : "Serie"}
