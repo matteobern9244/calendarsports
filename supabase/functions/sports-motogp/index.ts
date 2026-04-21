@@ -54,6 +54,10 @@ const MOTOGP_RIDER_PHOTOS_BY_SURNAME: Record<string, string> = {
   'moreira': 'https://resources.motogp.pulselive.com/photo-resources/2026/03/04/63a4eefc-ce5c-40cc-9abd-870e7aabaa07/z6IXOQnm.png?height=200&width=200',
   'garcia': 'https://resources.motogp.pulselive.com/photo-resources/2025/11/07/3098c097-ebe6-438c-8615-673b8a8f5ff8/KVM5xr1H.png?height=200&width=200',
   'pirro': 'https://resources.motogp.pulselive.com/photo-resources/2024/03/04/b8d4a5e3-c3c4-4bd0-b8e9-c3f5e8a3d9f2/pirro.png?height=200&width=200',
+  'savadori': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Lorenzo_Savadori_2021.jpg/200px-Lorenzo_Savadori_2021.jpg',
+  'pedrosa': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Dani_Pedrosa_2018.jpg/200px-Dani_Pedrosa_2018.jpg',
+  'crutchlow': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Cal_Crutchlow_2019.jpg/200px-Cal_Crutchlow_2019.jpg',
+  'bradl': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Stefan_Bradl_2019.jpg/200px-Stefan_Bradl_2019.jpg',
 };
 
 // Full names for riders. Key format: "surname" or "surname-initial" (lowercase, normalized).
