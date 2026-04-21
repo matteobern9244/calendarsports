@@ -190,6 +190,10 @@ import { supabase } from "@/integrations/supabase/client";
   (ATP, WTA, GP, TMDB, RAI, Pos, Pts, ecc.) non sono considerate "inglese".
   Vietato introdurre testo inglese in stringhe utente, placeholder,
   `aria-label`, `sr-only`, toast, error message o titoli pagina.
+- Il workflow CI esegue `npm run check:italian` (script
+  `scripts/check-italian-ui.mjs`). Se devi introdurre intenzionalmente
+  una stringa non italiana (es. brand non in allowlist), aggiorna
+  l'allowlist nello stesso PR e dichiara il motivo nel changelog.
 - Non migrare lo stack verso framework diversi.
 - Non sostituire `BrowserRouter`, React Query o integrazione Supabase senza
   motivo forte e spiegato.
