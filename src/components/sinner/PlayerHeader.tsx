@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Ruler, Weight, Hand, MapPin, UserRound, Info } from "lucide-react";
 
 export interface SlamResultProp {
   best: string | null;
@@ -67,27 +68,31 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
 
   return (
     <section
-      className="mb-6 rounded-2xl border border-border bg-card p-4 sm:p-6"
+      className="mb-6 overflow-hidden rounded-2xl border border-border border-t-2 border-t-primary/60 bg-gradient-to-br from-card via-card to-secondary/10 p-5 shadow-sm sm:p-7"
       aria-label="Profilo giocatore"
     >
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-        {/* Photo top-left */}
-        <div className="shrink-0">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+        {/* Photo top-left with gold glow */}
+        <div className="relative shrink-0 self-center sm:self-start">
+          <div
+            aria-hidden
+            className="absolute -inset-1 rounded-2xl gold-gradient opacity-30 blur-md"
+          />
           {props.photoUrl && !imgError ? (
             <img
               src={props.photoUrl}
               alt={`${props.name} — foto`}
               loading="eager"
-              width={96}
-              height={96}
+              width={128}
+              height={160}
               onError={() => setImgError(true)}
-              className="h-24 w-24 rounded-2xl object-cover ring-2 ring-primary/40 shadow-md"
+              className="relative h-36 w-28 rounded-2xl object-cover object-top ring-2 ring-primary/60 ring-offset-2 ring-offset-card shadow-lg sm:h-40 sm:w-32"
             />
           ) : (
             <div
               className={cn(
-                "flex h-24 w-24 items-center justify-center rounded-2xl",
-                "gold-gradient font-heading text-3xl font-bold text-primary-foreground ring-2 ring-primary/40",
+                "relative flex h-36 w-28 items-center justify-center rounded-2xl sm:h-40 sm:w-32",
+                "gold-gradient font-heading text-4xl font-bold text-primary-foreground ring-2 ring-primary/60 ring-offset-2 ring-offset-card shadow-lg",
               )}
               aria-hidden
             >
