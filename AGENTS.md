@@ -184,6 +184,15 @@ import { supabase } from "@/integrations/supabase/client";
 ## Regole di modifica
 
 - Preservare UI, nomenclatura e struttura delle route salvo richiesta contraria.
+- **Fuso orario UI: `Europe/Rome` obbligatorio.** Tutte le date/ore
+  mostrate nelle pagine sportive devono essere convertite esplicitamente
+  nel fuso italiano. Per Juventus usa `formatJuventusDateTime` /
+  `toRomeDate` da `src/lib/dateUtils.ts` (centralizzano la policy
+  "stringa naive = UTC" e l'opzione `timeZone: "Europe/Rome"`). Vietato
+  chiamare `new Date(x).toLocaleTimeString(...)` o
+  `toLocaleDateString(...)` senza `timeZone: "Europe/Rome"` nelle
+  pagine Juventus / Home. Il workflow CI esegue `npm run check:tz-juventus`
+  (`scripts/check-rome-tz.mjs`) e fallisce in presenza di violazioni.
 - **Lingua UI: italiano obbligatorio.** Tutta l'UI dell'app e' in italiano.
   Le uniche eccezioni autorizzate sono i token `STREAMING` (nome sezione) e
   `CALENDAR EVENTS` (nome app). Nomi propri di squadre, atleti, competizioni,
