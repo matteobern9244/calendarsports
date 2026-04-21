@@ -249,7 +249,7 @@ export default function TonightTvList() {
               aria-rowcount={tonightHighlights.length + 1}
               aria-colcount={6}
               className="
-                divide-y-2 divide-border rounded-md border-2 border-border bg-card/40 overflow-hidden
+                divide-y-2 divide-border rounded-md border-2 border-border bg-card/70 overflow-hidden
                 sm:grid sm:divide-y-0
                 sm:[grid-template-columns:3.5rem_minmax(5rem,auto)_minmax(0,1fr)_6.5rem_4.5rem]
                 lg:[grid-template-columns:8rem_3.5rem_minmax(5rem,auto)_minmax(0,1fr)_7rem_4.5rem]
@@ -306,7 +306,7 @@ export default function TonightTvList() {
                       role="row"
                       aria-rowindex={ariaRowIndex}
                       tabIndex={0}
-                      className="group px-2.5 py-3.5 text-sm outline-none transition-colors hover:bg-primary/10 focus-visible:bg-primary/15 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset cursor-pointer sm:contents"
+                      className="group px-3 py-4 text-sm outline-none transition-colors hover:bg-primary/10 focus-visible:bg-primary/15 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset cursor-pointer sm:contents"
                     >
                       {/* Desktop/Tablet: celle grid (display:contents sul li) */}
                       {(() => {
@@ -323,7 +323,7 @@ export default function TonightTvList() {
                               aria-colindex={1}
                               aria-label={showFamilyDivider ? `Famiglia ${familyLabel}` : undefined}
                               aria-hidden={showFamilyDivider ? undefined : true}
-                              className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-3 lg:border-t-2 lg:border-border transition-colors lg:group-hover:bg-primary/10 lg:group-focus-visible:bg-primary/15"
+                              className="hidden lg:flex lg:items-center lg:gap-1.5 lg:pl-3 lg:pr-2 lg:py-4 lg:border-t-2 lg:border-border transition-colors lg:group-hover:bg-primary/10 lg:group-focus-visible:bg-primary/15"
                             >
                               {showFamilyDivider ? (
                                 <>
@@ -339,7 +339,7 @@ export default function TonightTvList() {
                               role="cell"
                               aria-colindex={2}
                               aria-label={`Inizio alle ${row.time}`}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-3 sm:border-t-2 sm:border-border font-mono font-bold text-primary text-sm leading-none transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-4 sm:border-t-2 sm:border-border font-mono font-bold text-primary text-sm leading-none transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
                               {row.time}
                             </div>
@@ -348,7 +348,7 @@ export default function TonightTvList() {
                               role="cell"
                               aria-colindex={3}
                               aria-label={`Canale ${row.channel}`}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-3 sm:border-t-2 sm:border-border transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-4 sm:border-t-2 sm:border-border transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
                               <Badge
                                 variant="outline"
@@ -361,10 +361,10 @@ export default function TonightTvList() {
                             <div
                               role="cell"
                               aria-colindex={4}
-                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-3 sm:border-t-2 sm:border-border sm:min-w-0 transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
+                              className="hidden sm:flex sm:items-center sm:px-2 sm:py-4 sm:border-t-2 sm:border-border sm:min-w-0 transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
                               <span
-                                className="truncate font-medium text-sm leading-tight"
+                                className="truncate font-medium text-sm leading-tight text-foreground"
                                 title={row.title}
                               >
                                 {row.title}
@@ -375,7 +375,7 @@ export default function TonightTvList() {
                               role="cell"
                               aria-colindex={5}
                               aria-label={`Genere ${g}`}
-                              className="hidden sm:flex sm:items-center sm:justify-end sm:px-2 sm:py-3 sm:border-t-2 sm:border-border transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
+                              className="hidden sm:flex sm:items-center sm:justify-end sm:px-2 sm:py-4 sm:border-t-2 sm:border-border transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
                               <Badge
                                 variant="secondary"
@@ -390,7 +390,7 @@ export default function TonightTvList() {
                               aria-colindex={6}
                               aria-label={durSpoken ? `Durata ${durSpoken}` : undefined}
                               aria-hidden={durSpoken ? undefined : true}
-                              className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-3 sm:border-t-2 sm:border-border font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
+                              className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-4 sm:border-t-2 sm:border-border font-mono text-xs text-foreground/75 tabular-nums whitespace-nowrap transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
                             >
                               {dur || ""}
                             </div>
@@ -415,7 +415,7 @@ export default function TonightTvList() {
                         return (
                           <article
                             aria-label={ariaParts.join(", ")}
-                            className="sm:hidden flex flex-col gap-1.5"
+                            className="sm:hidden flex flex-col gap-2"
                           >
                         {/* Riga 1: ora + canale + durata */}
                         <div className="flex items-center gap-2 flex-wrap" aria-hidden="true">
@@ -429,14 +429,14 @@ export default function TonightTvList() {
                             {row.channel}
                           </Badge>
                           {formatDuration(row.durationMin) && (
-                            <span className="text-[11px] text-muted-foreground whitespace-nowrap font-mono leading-none ml-auto">
+                            <span className="text-[11px] text-foreground/75 whitespace-nowrap font-mono leading-none ml-auto">
                               {formatDuration(row.durationMin)}
                             </span>
                           )}
                         </div>
                         {/* Riga 2: titolo + genere */}
                         <div className="flex items-start gap-2 flex-wrap" aria-hidden="true">
-                          <span className="font-medium text-[13px] leading-snug break-words flex-1 min-w-0">
+                          <span className="font-medium text-[13px] leading-snug break-words flex-1 min-w-0 text-foreground">
                             {row.title}
                           </span>
                           <Badge
