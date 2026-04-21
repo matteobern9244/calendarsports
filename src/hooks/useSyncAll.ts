@@ -5,9 +5,9 @@ import { STREAMING_PROVIDERS } from "@/hooks/useStreamingData";
 import {
   streamingApi,
   callEdgeFunctionWithMeta,
-  type EdgeMeta,
 } from "@/lib/api/sportsApi";
 import { todayRomeISO, addDaysISO } from "@/lib/dateUtils";
+import { requiresWarning } from "@/hooks/syncWarning";
 import {
   getCurrentSinnerSeason,
   getCurrentF1Season,
@@ -42,11 +42,6 @@ type PrefetchTask = {
   params: Record<string, string>;
   staleTime: number;
 };
-
-function isLiveSource(meta: EdgeMeta | undefined): boolean {
-  if (!meta?.dataSource) return true; // assenza = trattiamo come live (best effort)
-  return meta.dataSource === "live" || meta.dataSource === "wikipedia";
-}
 
 export function useSyncAll() {
   const queryClient = useQueryClient();
@@ -144,7 +139,7 @@ export function useSyncAll() {
             try {
               const { data, meta } = await callEdgeFunctionWithMeta(t.fn, t.params);
               queryClient.setQueryData(t.queryKey, data);
-              if (!isLiveSource(meta)) {
+              if (requiresWarning(meta)) {
                 fallbackBySport[sp].add(meta?.dataSource ?? "unknown");
               }
             } catch (err) {

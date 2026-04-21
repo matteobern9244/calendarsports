@@ -18,6 +18,29 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Changed
 
+- **MotoGP — calendario completamente live, rimosso hardcode**.
+  `supabase/functions/sports-motogp/index.ts`: eliminata la costante
+  `MOTOGP_CALENDAR_2026` (22 GP hardcoded). Le action `calendar` e
+  `next-event` ora interrogano l'API ufficiale **motogp.com (Pulselive)**:
+  `/results/seasons` per risolvere lo `seasonUuid` (con cache 24h) e
+  `/results/events?seasonUuid=...` per ottenere gli eventi reali. Filtro
+  `test === false` per escludere le sessioni di test, ordinamento
+  cronologico, `round` rinumerato 1..N. Nomi GP italianizzati via mappa
+  `MOTOGP_GP_NAME_IT` (es. `GRAND PRIX OF SPAIN` → `GP di Spagna`).
+  Su errore upstream: `dataSource: 'static-fallback'`, `data: []` /
+  `null`, nessun fallback hardcoded. `meta.source = "motogp.com
+  (Pulselive API)"`. Il calendario F1 era già live via Jolpica/Ergast,
+  nessuna modifica necessaria. **Effetto utente**: la sincronizzazione
+  carica i 22 GP reali della stagione corrente; il toast warning "Dati
+  non live per MotoGP" sparisce.
+- **Sincronizzazione — categorizzazione `dataSource` corretta**.
+  Nuovo modulo `src/hooks/syncWarning.ts` con `requiresWarning(meta)` e
+  `categorizeDataSource(meta)`: whitelist `live` / `wikipedia` /
+  `wikipedia+curated`. `useSyncAll.ts` rimuove `isLiveSource` e usa
+  `requiresWarning`. `"static"` ora considerato `degraded` (dopo la
+  migrazione MotoGP nessun endpoint del progetto deve più ritornare
+  `static` di proposito; se accade è un sintomo reale da segnalare).
+  Test unit in `src/hooks/syncWarning.test.ts` (10 casi).
 - **Stasera in TV — chip genere garantito su ogni riga**.
   `src/lib/genreUtils.ts`: `inferGenre` cambia firma a
   `(family, channel, title) => string` (era `string | undefined`) e

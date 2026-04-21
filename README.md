@@ -283,15 +283,26 @@ Rischi:
 
 Fonti correnti:
 
-- calendario statico 2026;
-- scraping Sky Sport per standings;
-- mapping statici per foto piloti e loghi team o costruttori.
+- **calendario live via API ufficiale motogp.com (Pulselive)**:
+  `https://api.motogp.pulselive.com/motogp/v1/results/seasons` per
+  risolvere lo `seasonUuid` della stagione corrente (cache 24h),
+  `/results/events?seasonUuid=...` per i singoli eventi. Filtro
+  `test === false` esclude le sessioni di test, i nomi GP vengono
+  italianizzati via mappa interna;
+- scraping Sky Sport per standings piloti e team
+  (`https://sport.sky.it/motogp/classifiche`);
+- mapping statici per foto piloti, numeri, nazionalità e loghi team o
+  costruttori (enrichment non disponibile dall'API).
 
 Rischi:
 
-- calendario hardcoded soggetto a drift;
-- scraping standings fragile;
-- mapping statici da aggiornare in caso di roster o team changes.
+- API Pulselive non documentata pubblicamente: shape può cambiare senza
+  preavviso. Su errore upstream l'edge function ritorna
+  `dataSource: 'static-fallback'` con `data: []` (nessun calendario
+  hardcoded di backup, scelta esplicita);
+- scraping standings Sky fragile;
+- mapping statici (foto, numeri, loghi) da aggiornare in caso di roster
+  o team changes.
 
 ## Setup locale
 

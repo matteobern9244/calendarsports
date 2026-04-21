@@ -1,31 +1,121 @@
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from '../_shared/security.ts';
 
-const MOTOGP_CALENDAR_2026 = [
-  { round: 1, name: 'GP della Thailandia', location: 'Buriram', circuit: 'Chang International Circuit', date_start: '2026-02-27', date_end: '2026-03-01', country: 'TH' },
-  { round: 2, name: 'GP del Brasile', location: 'Goiânia', circuit: 'Autódromo Ayrton Senna', date_start: '2026-03-20', date_end: '2026-03-22', country: 'BR' },
-  { round: 3, name: 'GP delle Americhe', location: 'Austin', circuit: 'Circuit Of The Americas', date_start: '2026-03-27', date_end: '2026-03-29', country: 'US' },
-  { round: 4, name: 'GP di Spagna', location: 'Jerez', circuit: 'Circuito de Jerez Ángel Nieto', date_start: '2026-04-24', date_end: '2026-04-26', country: 'ES' },
-  { round: 5, name: 'GP di Francia', location: 'Le Mans', circuit: 'Bugatti Circuit', date_start: '2026-05-08', date_end: '2026-05-10', country: 'FR' },
-  { round: 6, name: 'GP di Catalogna', location: 'Montmeló', circuit: 'Circuit de Barcelona Catalunya', date_start: '2026-05-15', date_end: '2026-05-17', country: 'ES' },
-  { round: 7, name: "GP d'Italia", location: 'Mugello', circuit: 'Autodromo del Mugello', date_start: '2026-05-29', date_end: '2026-05-31', country: 'IT' },
-  { round: 8, name: "GP d'Ungheria", location: 'Balatonfőkajár', circuit: 'Balaton Park Circuit', date_start: '2026-06-05', date_end: '2026-06-07', country: 'HU' },
-  { round: 9, name: 'GP della Repubblica Ceca', location: 'Brno', circuit: 'Automotodrom Brno', date_start: '2026-06-19', date_end: '2026-06-21', country: 'CZ' },
-  { round: 10, name: "GP d'Olanda", location: 'Assen', circuit: 'TT Circuit', date_start: '2026-06-26', date_end: '2026-06-28', country: 'NL' },
-  { round: 11, name: 'GP di Germania', location: 'Hohenstein-Ernstthal', circuit: 'Sachsenring', date_start: '2026-07-10', date_end: '2026-07-12', country: 'DE' },
-  { round: 12, name: 'GP della Gran Bretagna', location: 'Silverstone', circuit: 'Silverstone Circuit', date_start: '2026-08-07', date_end: '2026-08-09', country: 'GB' },
-  { round: 13, name: "GP d'Aragona", location: 'Alcañiz', circuit: 'Motorland Aragon', date_start: '2026-08-28', date_end: '2026-08-30', country: 'ES' },
-  { round: 14, name: 'GP di San Marino', location: 'Misano', circuit: 'Misano World Circuit', date_start: '2026-09-11', date_end: '2026-09-13', country: 'SM' },
-  { round: 15, name: "GP d'Austria", location: 'Spielberg', circuit: 'Red Bull Ring', date_start: '2026-09-18', date_end: '2026-09-20', country: 'AT' },
-  { round: 16, name: 'GP del Giappone', location: 'Motegi', circuit: 'Motegi Twin Ring', date_start: '2026-10-02', date_end: '2026-10-04', country: 'JP' },
-  { round: 17, name: "GP d'Indonesia", location: 'Mandalika', circuit: 'Mandalika International Street Circuit', date_start: '2026-10-09', date_end: '2026-10-11', country: 'ID' },
-  { round: 18, name: "GP d'Australia", location: 'Phillip Island', circuit: 'Phillip Island Grand Prix Circuit', date_start: '2026-10-23', date_end: '2026-10-25', country: 'AU' },
-  { round: 19, name: 'GP della Malesia', location: 'Sepang', circuit: 'Sepang International Circuit', date_start: '2026-10-30', date_end: '2026-11-01', country: 'MY' },
-  { round: 20, name: 'GP del Qatar', location: 'Lusail', circuit: 'Lusail International Circuit', date_start: '2026-11-06', date_end: '2026-11-08', country: 'QA' },
-  { round: 21, name: 'GP del Portogallo', location: 'Portimão', circuit: 'Algarve International Circuit', date_start: '2026-11-20', date_end: '2026-11-22', country: 'PT' },
-  { round: 22, name: 'GP di Valencia', location: 'Cheste', circuit: 'Circuit Ricardo Tormo', date_start: '2026-11-27', date_end: '2026-11-29', country: 'ES' },
-];
-
 const SKY_SPORT_MOTOGP_URL = 'https://sport.sky.it/motogp/classifiche';
+const MOTOGP_PULSELIVE_BASE = 'https://api.motogp.pulselive.com/motogp/v1/results';
+
+// Italianizzazione nomi GP. L'API Pulselive ritorna nomi inglesi tipo
+// "GRAND PRIX OF SPAIN". Mappiamo per nome evento (chiave: parte dopo
+// "GRAND PRIX OF/DE/DEL ...", uppercase) a nome italiano standard.
+// Coperti tutti i nomi GP che possono comparire nel calendario MotoGP.
+const MOTOGP_GP_NAME_IT: Record<string, string> = {
+  'THAILAND': 'GP della Thailandia',
+  'BRAZIL': 'GP del Brasile',
+  'THE UNITED STATES': 'GP delle Americhe',
+  'UNITED STATES': 'GP delle Americhe',
+  'AMERICAS': 'GP delle Americhe',
+  'SPAIN': 'GP di Spagna',
+  'FRANCE': 'GP di Francia',
+  'CATALONIA': 'GP di Catalogna',
+  'CATALUNYA': 'GP di Catalogna',
+  'ITALY': "GP d'Italia",
+  'HUNGARY': "GP d'Ungheria",
+  'CZECHIA': 'GP della Repubblica Ceca',
+  'CZECH REPUBLIC': 'GP della Repubblica Ceca',
+  'THE NETHERLANDS': "GP d'Olanda",
+  'NETHERLANDS': "GP d'Olanda",
+  'GERMANY': 'GP di Germania',
+  'UNITED KINGDOM': 'GP della Gran Bretagna',
+  'GREAT BRITAIN': 'GP della Gran Bretagna',
+  'BRITAIN': 'GP della Gran Bretagna',
+  'ARAGON': "GP d'Aragona",
+  'SAN MARINO': 'GP di San Marino',
+  'AUSTRIA': "GP d'Austria",
+  'JAPAN': 'GP del Giappone',
+  'INDONESIA': "GP d'Indonesia",
+  'AUSTRALIA': "GP d'Australia",
+  'MALAYSIA': 'GP della Malesia',
+  'QATAR': 'GP del Qatar',
+  'PORTUGAL': 'GP del Portogallo',
+  'VALENCIA': 'GP di Valencia',
+  'COMUNITAT VALENCIANA': 'GP di Valencia',
+  'ARGENTINA': "GP d'Argentina",
+  'INDIA': "GP d'India",
+};
+
+function italianizeGpName(rawName: string, countryName: string): string {
+  // rawName tipo "GRAND PRIX OF SPAIN", "GRAND PRIX DE FRANCE",
+  // "GRAND PRIX OF THE NETHERLANDS"
+  const upper = rawName.toUpperCase().trim();
+  const stripped = upper.replace(/^GRAND\s+PRIX\s+(OF\s+|DE\s+|DEL\s+|DI\s+)?/i, '').trim();
+  if (MOTOGP_GP_NAME_IT[stripped]) return MOTOGP_GP_NAME_IT[stripped];
+  // Fallback: prova con il country name (anche in upper)
+  const countryUpper = (countryName || '').toUpperCase().trim();
+  if (MOTOGP_GP_NAME_IT[countryUpper]) return MOTOGP_GP_NAME_IT[countryUpper];
+  // Ultima spiaggia: titolo Capitalizzato
+  const titled = stripped
+    .toLowerCase()
+    .split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+  return `GP di ${titled}`;
+}
+
+// Cache stagioni Pulselive (TTL 24h). Le stagioni cambiano una volta l'anno.
+let _seasonsCache: { at: number; data: Array<{ id: string; year: number; current: boolean }> } | null = null;
+const SEASONS_TTL_MS = 24 * 60 * 60 * 1000;
+
+async function fetchMotoGPSeasonId(year: number): Promise<string | null> {
+  const now = Date.now();
+  if (!_seasonsCache || now - _seasonsCache.at > SEASONS_TTL_MS) {
+    const res = await fetch(`${MOTOGP_PULSELIVE_BASE}/seasons`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CalendarSports/1.0)' },
+    });
+    if (!res.ok) throw new Error(`Pulselive seasons returned ${res.status}`);
+    const json = await res.json();
+    _seasonsCache = { at: now, data: json };
+  }
+  const season = _seasonsCache.data.find(s => s.year === year);
+  return season ? season.id : null;
+}
+
+type MotoGPCalendarEvent = {
+  round: number;
+  name: string;
+  location: string;
+  circuit: string;
+  date_start: string;
+  date_end: string;
+  country: string;
+};
+
+async function fetchMotoGPCalendar(year: number): Promise<MotoGPCalendarEvent[]> {
+  const seasonId = await fetchMotoGPSeasonId(year);
+  if (!seasonId) throw new Error(`Stagione MotoGP ${year} non trovata su Pulselive`);
+  const res = await fetch(`${MOTOGP_PULSELIVE_BASE}/events?seasonUuid=${seasonId}`, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CalendarSports/1.0)' },
+  });
+  if (!res.ok) throw new Error(`Pulselive events returned ${res.status}`);
+  const events = await res.json() as Array<Record<string, unknown>>;
+  if (!Array.isArray(events)) throw new Error('Pulselive events: payload non valido');
+  const races = events
+    .filter(e => e && e.test === false)
+    .map(e => {
+      const circuit = (e.circuit ?? {}) as Record<string, unknown>;
+      const country = (e.country ?? {}) as Record<string, unknown>;
+      return {
+        date_start: String(e.date_start ?? ''),
+        date_end: String(e.date_end ?? ''),
+        name: italianizeGpName(String(e.name ?? ''), String(country.name ?? '')),
+        location: String(circuit.place ?? ''),
+        circuit: String(circuit.name ?? ''),
+        country: String(country.iso ?? '').toUpperCase(),
+      };
+    })
+    .filter(e => e.date_start && e.date_end)
+    .sort((a, b) => a.date_start.localeCompare(b.date_start))
+    .map((e, i) => ({ round: i + 1, ...e }));
+  return races;
+}
 
 // MotoGP rider photos keyed by surname for reliable matching
 const MOTOGP_RIDER_PHOTOS_BY_SURNAME: Record<string, string> = {
@@ -392,17 +482,24 @@ Deno.serve(async (req) => {
     }
 
     let data: any;
-    let dataSource: 'live' | 'static' | 'static-fallback' = 'live';
+    let dataSource: 'live' | 'static-fallback' = 'live';
+    const seasonYear = seasonParam ? parseInt(seasonParam, 10) : new Date().getFullYear();
 
     switch (action) {
       case 'calendar': {
-        const now = new Date();
-        data = MOTOGP_CALENDAR_2026.map(e => ({
-          ...e,
-          status: new Date(e.date_end) < now ? 'finished' : 'upcoming',
-        }));
-        // Calendario MotoGP: dataset hardcoded 2026 in attesa di una fonte live.
-        dataSource = 'static';
+        try {
+          const events = await fetchMotoGPCalendar(seasonYear);
+          const now = new Date();
+          data = events.map(e => ({
+            ...e,
+            status: new Date(e.date_end) < now ? 'finished' : 'upcoming',
+          }));
+          dataSource = 'live';
+        } catch (e) {
+          console.error('MotoGP calendar fetch failed:', e);
+          data = [];
+          dataSource = 'static-fallback';
+        }
         break;
       }
 
@@ -433,11 +530,17 @@ Deno.serve(async (req) => {
       }
 
       case 'next-event': {
-        const now = new Date();
-        const next = MOTOGP_CALENDAR_2026.find(e => new Date(e.date_start) > now);
-        data = next ? { ...next, status: 'upcoming' } : null;
-        // next-event deriva dal calendario hardcoded 2026.
-        dataSource = 'static';
+        try {
+          const events = await fetchMotoGPCalendar(seasonYear);
+          const now = new Date();
+          const next = events.find(e => new Date(e.date_start) > now);
+          data = next ? { ...next, status: 'upcoming' } : null;
+          dataSource = 'live';
+        } catch (e) {
+          console.error('MotoGP next-event fetch failed:', e);
+          data = null;
+          dataSource = 'static-fallback';
+        }
         break;
       }
 
@@ -451,7 +554,12 @@ Deno.serve(async (req) => {
     const meta = {
       dataSource,
       season: seasonParam ? parseInt(seasonParam, 10) : null,
-      source: dataSource === 'static' ? 'Calendario MotoGP 2026 (statico)' : 'Sky Sport MotoGP',
+      source:
+        dataSource === 'live' && (action === 'calendar' || action === 'next-event')
+          ? 'motogp.com (Pulselive API)'
+          : dataSource === 'live'
+            ? 'Sky Sport MotoGP'
+            : 'Fallback (dati non disponibili)',
     };
     return new Response(JSON.stringify({ success: true, data, meta, source: meta.source }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
