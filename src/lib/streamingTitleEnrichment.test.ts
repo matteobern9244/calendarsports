@@ -42,6 +42,38 @@ function enrichTitle(
       best = cand.title;
     }
   }
+  const PLACEHOLDER_TO_GENRE: Record<string, string[]> = {
+    "EV-SP": ["Sport", "Calcio", "Tennis", "Motori", "Basket", "Pallavolo", "Pallacanestro", "Rugby", "Volley", "Nuoto", "Ciclismo"],
+    "EV-CN": ["Film", "Cinema"],
+    "EV-FILM": ["Film", "Cinema"],
+    "EV-TV": ["Fiction", "Serie Tv", "Telefilm", "Miniserie"],
+  };
+  const placeholder = rawUpper.toUpperCase().replace(/\s+/g, "").trim();
+  const wanted = PLACEHOLDER_TO_GENRE[placeholder];
+  if (!best && wanted) {
+    let bestScore = -Infinity;
+    let phBest = "";
+    for (const cand of rich) {
+      const mm = cand.title.match(/\(([^()]{2,40})\)\s*$/);
+      if (!mm) continue;
+      const genreCanon = mm[1].trim()
+        .toLowerCase()
+        .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+      if (!wanted.includes(genreCanon)) continue;
+      let score = 0;
+      if (rawHh !== undefined && rawMm !== undefined && cand.hh !== undefined && cand.mm !== undefined) {
+        const distance = Math.min(720, Math.abs(cand.hh * 60 + cand.mm - rawHh * 60 - rawMm));
+        if (distance === 0) score += 1000;
+        score -= distance;
+      }
+      score += Math.min(cand.title.length, 100) * 0.01;
+      if (score > bestScore) {
+        bestScore = score;
+        phBest = cand.title;
+      }
+    }
+    if (phBest) best = phBest;
+  }
   if (!best && rawHh !== undefined && rawMm !== undefined) {
     let timeBest = "";
     for (const cand of rich) {
@@ -49,29 +81,6 @@ function enrichTitle(
       if (cand.title.length > timeBest.length) timeBest = cand.title;
     }
     if (timeBest) best = timeBest;
-  }
-  if (!best) {
-    const placeholder = rawUpper.toUpperCase().replace(/\s+/g, "").trim();
-    const PLACEHOLDER_TO_GENRE: Record<string, string[]> = {
-      "EV-SP": ["Sport", "Calcio", "Tennis", "Motori", "Basket", "Pallavolo", "Pallacanestro", "Rugby", "Volley", "Nuoto", "Ciclismo"],
-      "EV-CN": ["Film", "Cinema"],
-      "EV-FILM": ["Film", "Cinema"],
-      "EV-TV": ["Fiction", "Serie Tv", "Telefilm", "Miniserie"],
-    };
-    const wanted = PLACEHOLDER_TO_GENRE[placeholder];
-    if (wanted) {
-      let phBest = "";
-      for (const cand of rich) {
-        const mm = cand.title.match(/\(([^()]{2,40})\)\s*$/);
-        if (!mm) continue;
-        const genreCanon = mm[1].trim()
-          .toLowerCase()
-          .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
-        if (!wanted.includes(genreCanon)) continue;
-        if (cand.title.length > phBest.length) phBest = cand.title;
-      }
-      if (phBest) best = phBest;
-    }
   }
   const source = best || rawUpper
     .toLowerCase()
@@ -139,6 +148,49 @@ describe("enrichTitle", () => {
   it("nessun match: fallback al raw cosmetizzato", () => {
     const result = enrichTitle("EV-SP", [], 20, 40);
     expect(result.title).toBe("Ev-Sp");
+    expect(result.genre).toBeUndefined();
+  });
+
+  it("EV-SP con piu' candidati Sport: vince quello piu' vicino in tempo", () => {
+    const rich: RichTitle[] = [
+      { title: "Calcio - Coppa Italia - Inter Vs Como (Sport)", hh: 20, mm: 40 },
+      { title: "Calcio Highlights Notte (Sport)", hh: 23, mm: 0 },
+    ];
+    const result = enrichTitle("EV-SP", rich, 20, 40);
+    expect(result.title).toBe("Calcio - Coppa Italia - Inter Vs Como");
+    expect(result.genre).toBe("Sport");
+  });
+
+  it("EV-SP con orario uguale ma generi diversi: filtro genere scarta News", () => {
+    const rich: RichTitle[] = [
+      { title: "Anteprima Tg5 (News)", hh: 20, mm: 40 },
+      { title: "Calcio - Coppa Italia (Sport)", hh: 20, mm: 40 },
+    ];
+    const result = enrichTitle("EV-SP", rich, 20, 40);
+    expect(result.title).toBe("Calcio - Coppa Italia");
+    expect(result.genre).toBe("Sport");
+  });
+
+  it("EV-SP senza orario: lengthBonus tiebreaker sceglie il titolo piu' lungo", () => {
+    const rich: RichTitle[] = [
+      { title: "Calcio (Sport)" },
+      { title: "Calcio - Coppa Italia - Inter Vs Como (Sport)" },
+    ];
+    const result = enrichTitle("EV-SP", rich);
+    expect(result.title).toBe("Calcio - Coppa Italia - Inter Vs Como");
+    expect(result.genre).toBe("Sport");
+  });
+
+  it("EV-SP senza candidati di genere atteso: safety net match per orario", () => {
+    const rich: RichTitle[] = [
+      { title: "Tg5 - Notte (News)", hh: 20, mm: 40 },
+    ];
+    const result = enrichTitle("EV-SP", rich, 20, 40);
+    // News non e' nella whitelist locale ridotta del test, quindi il titolo
+    // resta con il suffisso "(News)" e genre undefined. Cio' che conta e' che
+    // il safety net abbia comunque selezionato il rich title per orario
+    // esatto invece di cadere sul raw cosmetizzato "Ev-Sp".
+    expect(result.title).toBe("Tg5 - Notte (News)");
     expect(result.genre).toBeUndefined();
   });
 });

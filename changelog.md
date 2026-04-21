@@ -16,6 +16,21 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > policy o policy Lovable. La versione applicativa esposta dal footer e da
 > `src/lib/version.ts` resta `2.1.0`.
 
+### Changed
+
+- **Scraping TV — fallback deterministico per placeholder `EV-*`**.
+  `supabase/functions/streaming-tv/index.ts`: `enrichTitle` ora applica per
+  raw `EV-SP`/`EV-CN`/`EV-FILM`/`EV-TV` un singolo passaggio di scoring che
+  combina filtro hard di genere atteso, bonus +1000 per match orario esatto,
+  penalita' di distanza in minuti (clamp 12h) e tiebreaker `lengthBonus`
+  capped a +1.0. Risolve i casi con piu' rich title competitor (es. Canale
+  5 con partita 20:40 e highlights 23:00 entrambi `(Sport)`): vince quello
+  col genere giusto piu' vicino temporalmente al raw, evitando associazioni
+  spurie tra eventi sequenziali sullo stesso canale. Safety net invariato:
+  se nessun candidato passa il filtro genere, fallback al match per orario
+  esatto generico. Comportamento per raw non-placeholder e firma/payload
+  invariati.
+
 ### Fixed
 
 - **Stasera in TV: Canale 5 mancante in Home + titolo "Ev-Sp" non
