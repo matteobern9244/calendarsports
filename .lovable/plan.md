@@ -1,91 +1,86 @@
 
 
-## Estensione guard CI: titoli modali/dialog sempre in italiano
+## Sezione "Grande Slam" del profilo Sinner: leggibilità
 
-### Stato attuale
+### Problema
 
-Lo script `scripts/check-italian-ui.mjs` già copre:
-- `document.title = "..."` (kind `document-title`)
-- testo JSX dentro `<DialogTitle>...</DialogTitle>` perché viene catturato dal pattern generico `>([^<>{}]+)<`
+Nei chip Slam attuali (`AO V ·24·25`, `RG F ·25`, …) il significato delle sigle non è esplicito e gli anni in formato a 2 cifre attaccati con `·` sono difficili da decifrare. Solo l'attributo `title` (tooltip al hover) contiene il dato grezzo, invisibile su mobile.
 
-Gap rilevati:
-1. **Title dinamici via template/concatenazione**: `document.title = \`Preferenze · ${app}\`` non viene catturato (regex accetta solo `"..."`).
-2. **Prop `title=` su componenti dialog/modali**: già coperto in attributi generici (`title="..."`), ma nessuna verifica mirata che identifichi *quel* contesto come "titolo modale" → un fail risulta come generico `attr:title`.
-3. **`AlertDialogTitle`, `SheetTitle`, `DrawerTitle`**: come `DialogTitle`, il testo figlio è già coperto, ma se passato come stringa via prop (raro) sfuggirebbe.
-4. **Nessun pattern per `useEffect(() => { document.title = ... })`** con backtick template literal.
+### Obiettivo
 
-### Modifiche allo script `scripts/check-italian-ui.mjs`
+Rendere ogni chip auto-esplicativo a colpo d'occhio in italiano, senza perdere compattezza, senza regressioni desktop/mobile e mantenendo il trattamento "oro" sulle vittorie.
 
-**A. Pattern `document.title` esteso a template literals**
+### Modifiche
 
-Aggiungere secondo pattern:
-```js
-const docTitleTemplatePattern = /\bdocument\.title\s*=\s*`([^`${]+)`/g;
-```
-Cattura solo la parte statica del template (frammenti di testo prima di interpolazioni `${...}`). Le porzioni interpolate vanno comunque controllate sull'interpolato originario altrove. Kind: `document-title`.
+**File**: `src/components/sinner/PlayerHeader.tsx` (solo questo).
 
-**B. Pattern dedicato per titoli di dialog/modali**
+1. **Header sezione**: cambia `Grande Slam` → `Grande Slam · Miglior risultato` (sottotitolo implicito che chiarisce cosa rappresentano i chip). Mantenuto come singolo `<p>` con stesso stile, parola "Grande Slam" in evidenza e " · Miglior risultato" in `text-muted-foreground/70` più piccolo.
 
-Aggiungere estrattore mirato per i tag titolo dei componenti modali (Radix/shadcn):
-```js
-const dialogTitleTagPattern =
-  /<(DialogTitle|AlertDialogTitle|SheetTitle|DrawerTitle|SidebarTitle)\b[^>]*>([^<>{}]+)</g;
-```
-Estrai gruppo 2 come `value`, kind `dialog-title:<TagName>` (es. `dialog-title:DialogTitle`). Permette messaggi d'errore espliciti: "il titolo del modale contiene parole EN".
+2. **Mappatura sigle → etichette italiane** (nuova costante `RESULT_LABELS`):
+   - `V` → `Vittoria`
+   - `F` → `Finale`
+   - `SF` → `Semifinale`
+   - `QF` → `Quarti`
+   - `4T` → `Ottavi` (4° turno = ottavi nei Slam)
+   - `3T` → `3° turno`
+   - `2T` → `2° turno`
+   - `1T` → `1° turno`
+   - `RR` → `Round Robin` (solo Finals)
+   - fallback: mostra il valore raw
 
-**C. Prop `title=` su componenti dialog**
+3. **Layout chip ridisegnato** (da inline pill compatta a "mini-card"):
+   ```
+   ┌──────────────────┐
+   │ 🏆 AO            │   ← short tag in alto (font-heading bold)
+   │ Vittoria         │   ← etichetta estesa (font-heading semibold)
+   │ Australian Open  │   ← nome torneo full (text-xs muted)
+   │ 2024 · 2025      │   ← anni full a 4 cifre, separati da " · "
+   └──────────────────┘
+   ```
+   - Vittoria: `gold-gradient` con `text-primary-foreground`, icona `Trophy` da `lucide-react` accanto al short.
+   - Non vittoria: `border border-border bg-secondary/30 text-foreground`, nessuna icona.
+   - Card width minimo `min-w-[7.5rem]`, padding `px-3 py-2.5`, `rounded-lg`.
+   - Container: passa da `flex flex-wrap gap-2` a `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5` per layout sempre allineato e leggibile su tutti i breakpoint (5 chip Slam → 5 colonne su desktop largo, 3 su sm, 2 su mobile).
 
-Aggiungere pattern che cattura `title="..."` quando appare su tag che iniziano con maiuscola e contengono "Dialog"/"Modal"/"Sheet"/"Drawer" nel nome:
-```js
-const dialogTitlePropPattern =
-  /<(\w*(?:Dialog|Modal|Sheet|Drawer)\w*)\b[^>]*\btitle\s*=\s*"([^"]+)"/g;
-```
-Kind: `dialog-title-prop:<TagName>`.
+4. **Anni a 4 cifre**: rimuovi `shortYears` per i chip; mostra `years.join(" · ")` (es. `2024 · 2025`). Rimuovi la funzione `shortYears` se non più referenziata altrove (verificato: usata solo qui).
 
-**D. Messaggio d'errore migliorato**
+5. **Tooltip `title` mantenuto**: `${full}: ${r.raw}` resta come fallback informativo desktop.
 
-Quando `kind` inizia con `document-title` o `dialog-title`, aggiungere prefisso esplicito nel report:
-```
-✗ src/pages/Foo.tsx:42 — TITOLO PAGINA contiene parole EN [Settings]: "Settings"
-✗ src/components/Bar.tsx:18 — TITOLO MODALE (DialogTitle) contiene parole EN [Close]: "Close window"
-```
+6. **`aria-label` esteso per accessibilità**: ogni `<li>` riceve `aria-label={`${full}: ${resultLabel}${years.length ? `, anni ${years.join(", ")}` : ""}`}`.
 
-**E. Allowlist invariata**
+7. **Tema chiaro/scuro**: tutti i colori sono già token semantici (`primary`, `primary-foreground`, `border`, `secondary`, `muted-foreground`, `foreground`) → nessuna regressione attesa, contrasto preservato.
 
-Nessuna modifica all'allowlist o al `FORBIDDEN_WORDS`.
+### Verifica regressioni
+
+- **Desktop ≥ lg**: 5 colonne, 1 riga, allineamento perfetto.
+- **sm-md**: 3 colonne, 2 righe (3+2), nessun overflow.
+- **Mobile (375px)**: 2 colonne, 3 righe (2+2+1), card auto-fit con testo wrappato.
+- **Vittorie**: gold gradient invariato + icona trofeo per enfasi.
+- **Tema chiaro**: contrasto verificato via token (gold-gradient già in uso nello stesso componente per la KPI ranking).
+- **Guard CI italiana**: tutte le nuove stringhe sono italiane (`Vittoria`, `Finale`, `Semifinale`, `Quarti`, `Ottavi`, `1° turno`, ecc.). `Round Robin` è terminologia ufficiale ATP Finals usata correntemente in italiano (analogo a `Sprint`, `Pole`); va aggiunta a `ALLOWLIST_WORDS` in `scripts/check-italian-ui.mjs` con commento esplicativo. `Grande Slam · Miglior risultato` interamente italiano.
 
 ### File modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `scripts/check-italian-ui.mjs` | EDIT | Aggiunta pattern `document.title` con backtick template, estrattore mirato per `<DialogTitle>`/`<AlertDialogTitle>`/`<SheetTitle>`/`<DrawerTitle>`/`<SidebarTitle>` (kind `dialog-title:<Tag>`), pattern `title=` su tag che matchano `*Dialog*`/`*Modal*`/`*Sheet*`/`*Drawer*` (kind `dialog-title-prop:<Tag>`). Messaggio d'errore con prefisso esplicito "TITOLO PAGINA" / "TITOLO MODALE" per i kind dedicati. |
-| `README.md` | EDIT | Sezione "Controllo lingua UI italiana": aggiunto elenco esplicito delle nuove superfici coperte (titoli pagina via template literal, titoli modali Radix/shadcn, prop `title` su componenti modali). |
-| `changelog.md` | EDIT | `### Added`: "Estensione guard CI titoli: `check-italian-ui.mjs` ora cattura `document.title` con template literal, contenuto di `DialogTitle`/`AlertDialogTitle`/`SheetTitle`/`DrawerTitle`/`SidebarTitle` e prop `title` su componenti modali. Errori riportati con prefisso esplicito `TITOLO PAGINA` / `TITOLO MODALE`." |
-
-### Validazione (4 test negativi obbligatori)
-
-1. **`document.title` plain string EN** → `document.title = "Settings"` deve fallire con kind `document-title` e prefisso "TITOLO PAGINA".
-2. **`document.title` template literal EN** → `document.title = \`Settings · ${app}\`` deve fallire (parte statica "Settings ·").
-3. **`<DialogTitle>` con testo EN** → `<DialogTitle>Close window</DialogTitle>` deve fallire con kind `dialog-title:DialogTitle` e prefisso "TITOLO MODALE".
-4. **Prop `title="..."` su componente modale** → `<ConfirmDialog title="Delete item">` deve fallire con kind `dialog-title-prop:ConfirmDialog`.
-
-Tutti e 4 i test devono fallire con la versione aggiornata e passare con rollback.
-
-Baseline post-modifica: `npm run check:italian` → exit 0 sul codice attuale (non sono presenti regressioni, l'audit precedente è confermato pulito).
+| `src/components/sinner/PlayerHeader.tsx` | EDIT | Nuova costante `RESULT_LABELS`, nuovo layout mini-card per chip Slam (short + etichetta italiana + nome torneo + anni 4 cifre), icona `Trophy` per vittorie, container `grid` responsive 2/3/5 colonne, `aria-label` esteso, header con sottotitolo "Miglior risultato". Rimossa `shortYears`. |
+| `scripts/check-italian-ui.mjs` | EDIT | Aggiunta `Round` e `Robin` a `ALLOWLIST_WORDS` con commento (`// Round Robin: terminologia ufficiale ATP Finals usata in italiano`). |
+| `changelog.md` | EDIT | `### Changed`: "Profilo Sinner — sezione Grande Slam ridisegnata con chip auto-esplicativi (sigla + etichetta italiana del risultato + nome torneo + anni a 4 cifre), grid responsive 2/3/5 colonne, icona trofeo per le vittorie. Vocabolario: Vittoria, Finale, Semifinale, Quarti, Ottavi, 3°/2°/1° turno, Round Robin. Nessuna regressione UI attesa, tema chiaro/scuro preservato. Allowlist guard italiano estesa con `Round`/`Robin`." |
 
 ### Cosa NON cambia
 
-- Nessuna modifica al codice UI.
-- Nessuna nuova dipendenza.
-- Allowlist e `FORBIDDEN_WORDS` invariati.
-- Workflow CI invariati: lo step `Italian UI guard` esegue già `npm run check:italian`, le nuove regole entrano automaticamente in vigore.
-- Versione applicativa invariata `2.1.0`.
+- Layout della foto, KPI ranking/stagione/miglior ranking, chip bio (Altezza/Peso/Nato a) → invariati.
+- Dati dal backend (`sports-tennis/index.ts`) → invariati.
+- Versione applicativa `2.1.0`.
+- Nessuna nuova dipendenza (`Trophy` già disponibile in `lucide-react`).
 
 ### Checklist post-edit
 
-1. `npm run check:italian` → exit 0 sul codice attuale.
-2. Quattro test negativi sopra → tutti falliscono come previsto, poi rollback.
-3. `npm run lint` invariato.
-4. `changelog.md` e `README.md` aggiornati.
-5. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
+1. `/sinner` desktop scuro: chip Slam in 1 riga, vittorie con trofeo dorato, etichette italiane leggibili.
+2. `/sinner` desktop chiaro: stesso, contrasto OK.
+3. `/sinner` mobile 375px: 2 colonne, nessun testo troncato.
+4. `npm run check:italian` → exit 0.
+5. `npm run lint` + `npm run build` invariati.
+6. `changelog.md` aggiornato.
+7. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
