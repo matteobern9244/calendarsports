@@ -305,7 +305,8 @@ export default function TonightTvList() {
                     <li
                       role="row"
                       aria-rowindex={ariaRowIndex}
-                      className="px-2.5 py-2.5 text-sm sm:contents"
+                      tabIndex={0}
+                      className="group px-2.5 py-2.5 text-sm outline-none transition-colors hover:bg-primary/10 focus-visible:bg-primary/15 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset cursor-pointer sm:contents"
                     >
                       {/* Desktop/Tablet: celle grid (display:contents sul li) */}
                       {(() => {
