@@ -47,7 +47,13 @@ export default function Formula1Page() {
         </TabsList>
 
         <TabsContent value="calendario">
-          {calLoading && <LoadingState message="Caricamento calendario F1..." />}
+          {calLoading && (
+            <LoadingState
+              message="Caricamento calendario F1..."
+              externalLink="https://www.formula1.com/en/racing/2025"
+              externalLabel="Scopri ora su Formula1.com"
+            />
+          )}
           {calError && <ErrorState message="Errore nel caricamento del calendario" onRetry={() => calRefetch()} />}
           {!calLoading && !calError && (!calendar || calendar.length === 0) && (
             <UnavailableExternalSource
