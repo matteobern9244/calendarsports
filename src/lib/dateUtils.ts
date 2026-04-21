@@ -108,6 +108,39 @@ export function addDaysISO(dateIso: string, days: number): string {
 }
 
 /**
+ * Calcola la differenza in giorni di calendario tra `dateIso`
+ * (qualunque stringa parsabile da `Date`) e oggi nel fuso `Europe/Rome`.
+ * Le ore vengono azzerate confrontando le date come `YYYY-MM-DD` in
+ * timezone italiano, così "oggi" resta coerente per tutto il giorno.
+ *
+ * Ritorna:
+ * - numero positivo se la data è nel futuro
+ * - 0 se è oggi
+ * - numero negativo se è già passata
+ * - `null` se l'input non è una data valida
+ */
+export function daysUntilRome(dateIso: string | null | undefined): number | null {
+  if (!dateIso) return null;
+  const parsed = new Date(dateIso);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayIso = fmt.format(new Date());
+  const targetIso = fmt.format(parsed);
+
+  const [ty, tm, td] = todayIso.split("-").map(Number);
+  const [ry, rm, rd] = targetIso.split("-").map(Number);
+  const todayUtc = Date.UTC(ty, tm - 1, td);
+  const targetUtc = Date.UTC(ry, rm - 1, rd);
+  return Math.round((targetUtc - todayUtc) / (1000 * 60 * 60 * 24));
+}
+
+/**
  * Formatta una durata espressa in minuti come "45 min" o "1h 25 min".
  * Ritorna stringa vuota per valori non finiti, negativi o zero.
  *

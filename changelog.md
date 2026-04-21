@@ -18,6 +18,17 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Added
 
+- **Streaming – badge "giorni mancanti" su ciascuna nuova uscita**
+  (`src/components/streaming/ReleaseCountdownBadge.tsx`): accanto al titolo
+  di ogni card del tab `/streaming?tab=releases` viene mostrato un badge
+  compatto che indica la distanza in giorni di calendario tra `releaseDate`
+  e oggi (fuso `Europe/Rome`). Stati: "Oggi" / "Domani" (accento gold),
+  "Tra N giorni" (outline neutro), "Già uscito" (muted, utile quando scatta
+  il fallback `widenedWindow`). Calcolo affidato alla nuova utility
+  `daysUntilRome` in `src/lib/dateUtils.ts` che confronta le date come
+  `YYYY-MM-DD` in timezone italiano via `Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" })`,
+  evitando drift DST. Layout card invariato (badge in `flex-wrap` accanto al
+  titolo). Versione applicativa invariata `2.1.0`.
 - **Countdown live** al prossimo evento sportivo dentro ogni `EventCard`:
   nuovo componente `src/components/common/EventCountdown.tsx` (tick `1s` via
   `setInterval`) che mostra giorni / ore / minuti / secondi residui rispetto

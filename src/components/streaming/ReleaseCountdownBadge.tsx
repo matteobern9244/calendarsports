@@ -1,0 +1,67 @@
+import { cn } from "@/lib/utils";
+import { daysUntilRome } from "@/lib/dateUtils";
+
+interface ReleaseCountdownBadgeProps {
+  releaseDate: string;
+  className?: string;
+}
+
+/**
+ * Piccolo badge che mostra la distanza in giorni di calendario tra
+ * `releaseDate` e oggi (fuso Europe/Rome). Renderizza `null` se la data
+ * non è valida. Varianti:
+ * - "Oggi" / "Domani" → accento gold
+ * - "Tra N giorni" → outline neutro
+ * - "Già uscito" → muted
+ */
+export default function ReleaseCountdownBadge({
+  releaseDate,
+  className,
+}: ReleaseCountdownBadgeProps) {
+  const diff = daysUntilRome(releaseDate);
+  if (diff === null) return null;
+
+  let label: string;
+  let tone: "today" | "soon" | "future" | "past";
+  let ariaLabel: string;
+
+  if (diff === 0) {
+    label = "Oggi";
+    tone = "today";
+    ariaLabel = "Esce oggi";
+  } else if (diff === 1) {
+    label = "Domani";
+    tone = "soon";
+    ariaLabel = "Esce domani";
+  } else if (diff > 1) {
+    label = `Tra ${diff} giorni`;
+    tone = "future";
+    ariaLabel = `Mancano ${diff} giorni all'uscita`;
+  } else {
+    label = "Già uscito";
+    tone = "past";
+    ariaLabel = `Già uscito da ${Math.abs(diff)} giorn${Math.abs(diff) === 1 ? "o" : "i"}`;
+  }
+
+  const toneClasses: Record<typeof tone, string> = {
+    today:
+      "bg-[hsl(var(--gold))]/15 border-[hsl(var(--gold))]/50 text-[hsl(var(--gold))]",
+    soon:
+      "bg-[hsl(var(--gold))]/10 border-[hsl(var(--gold))]/35 text-[hsl(var(--gold))]",
+    future: "bg-transparent border-border/70 text-foreground/80",
+    past: "bg-muted/60 border-transparent text-muted-foreground",
+  };
+
+  return (
+    <span
+      aria-label={ariaLabel}
+      className={cn(
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-heading uppercase tracking-wider whitespace-nowrap",
+        toneClasses[tone],
+        className,
+      )}
+    >
+      {label}
+    </span>
+  );
+}
