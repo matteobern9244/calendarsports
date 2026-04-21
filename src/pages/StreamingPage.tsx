@@ -105,7 +105,7 @@ export default function StreamingPage() {
 
   const initialFamily = isFamily(params.get("family"))
     ? (params.get("family") as StreamingFamilyId)
-    : "sky-sport";
+    : "rai";
   const initialProvider = isProvider(params.get("provider"))
     ? (params.get("provider") as StreamingProviderId)
     : "netflix";
