@@ -81,7 +81,7 @@ export default function JuventusPage() {
       : null;
   const nextOnCurrentPage =
     calendar && nextMatchPage !== null && nextMatchPage === calendar.page;
-  const { data: nextMatchData } = useJuventusCalendar(
+  const { data: nextMatchData, isLoading: nextMatchLoading } = useJuventusCalendar(
     season,
     nextOnCurrentPage || nextMatchPage === null ? undefined : nextMatchPage,
     nextOnCurrentPage || nextMatchPage === null ? undefined : PAGE_SIZE,
@@ -121,6 +121,37 @@ export default function JuventusPage() {
     return (
       <div className="container py-8 sm:py-12">
         <OfflineFallback onRetry={() => { stRefetch(); calRefetch(); }} />
+      </div>
+    );
+  }
+
+  // Spinner di atterraggio: la pagina Juventus deve apparire "completa"
+  // solo quando tutti i dati strutturali (calendario corrente, eventuale
+  // pagina contenente la "Prossima Partita", classifica Serie A) sono
+  // sincronizzati. Senza questo gate l'utente vedeva la pagina renderizzare
+  // a tappe: prima il titolo, poi il calendario, e con un piccolo
+  // sfarfallio compariva la card "Prossima Partita" quando la seconda
+  // fetch (cross-page) arrivava in ritardo.
+  //
+  // Mostriamo lo spinner solo finche' nessun errore di rete e' presente:
+  // gli errori vengono gestiti piu' avanti nei singoli tab con i loro
+  // ErrorState dedicati e link esterni.
+  const isAwaitingNextMatch =
+    calendar !== undefined &&
+    nextMatchPage !== null &&
+    !nextOnCurrentPage &&
+    nextMatchLoading;
+  const isInitialLoading =
+    !calError &&
+    !stError &&
+    (calLoading || stLoading || isAwaitingNextMatch);
+  if (isInitialLoading) {
+    return (
+      <div className="container py-8 sm:py-12">
+        <div className="mb-2">
+          <SectionHeader title="Juventus" />
+        </div>
+        <LoadingState message="Caricamento dati Juventus..." />
       </div>
     );
   }
