@@ -307,7 +307,7 @@ function getTeamConstructor(teamName: string): string | null {
 
 async function fetchSkyStandings(): Promise<{
   pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null; nationality: string | null }>;
-  teams: Array<{ position: number; team: string; points: number; logoUrl: string | null }>;
+  teams: Array<{ position: number; team: string; points: number; logoUrl: string | null; constructor: string | null }>;
 }> {
   const res = await fetch(SKY_SPORT_MOTOGP_URL, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CalendarSports/1.0)' },
@@ -316,7 +316,7 @@ async function fetchSkyStandings(): Promise<{
   const html = await res.text();
 
   const pilots: Array<{ position: number; name: string; team: string; points: number; photoUrl: string | null; number: number | null; nationality: string | null }> = [];
-  const teams: Array<{ position: number; team: string; points: number; logoUrl: string | null }> = [];
+  const teams: Array<{ position: number; team: string; points: number; logoUrl: string | null; constructor: string | null }> = [];
 
   // Parse pilot standings table
   const pilotSection = html.split('Classifica Piloti MotoGP');
