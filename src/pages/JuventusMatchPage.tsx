@@ -40,6 +40,7 @@ const COMPETITION_COLORS: Record<string, string> = {
 
 function findMatch(calendar: PaginatedCalendar | undefined, matchId: string) {
   if (!calendar) return null;
+  if (!Array.isArray(calendar.items)) return null;
   return (
     calendar.items.find((m: any) => {
       if (m?.id == null) return false;
@@ -67,12 +68,8 @@ export default function JuventusMatchPage() {
 
   // Search across all pages until we find the match
   const [searchPage, setSearchPage] = useState(1);
-  const searchQuery = useJuventusCalendar(
-    season,
-    searchPage === 1 ? undefined : searchPage,
-    searchPage === 1 ? undefined : PAGE_SIZE,
-  );
-  const searchData = (searchPage === 1 ? firstPage : (searchQuery.data as PaginatedCalendar | undefined));
+  const searchQuery = useJuventusCalendar(season, searchPage, PAGE_SIZE);
+  const searchData = searchQuery.data as PaginatedCalendar | undefined;
 
   const [foundMatch, setFoundMatch] = useState<any | null>(null);
   const [exhausted, setExhausted] = useState(false);
