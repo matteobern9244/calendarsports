@@ -1,102 +1,133 @@
 
 
-## Chip genere garantito su ogni riga di "Stasera in TV"
+## Calendari F1 e MotoGP completamente live (rimozione hardcode)
 
-### Problema osservato (screenshot)
+### Diagnosi (verificata via `curl`)
 
-Nello screenshot, le righe `RAI 1 - Affari Tuoi` e `RAI 2 - Belve` non mostrano il chip genere (rettangoli rossi vuoti), mentre tutte le altre lo hanno. Causa: `inferGenre` in `src/lib/genreUtils.ts` ha una lista keyword hardcoded e parziale. "Affari Tuoi" e "Belve" non matchano:
-- `Affari Tuoi` non è in `/quiz|reazione a catena|l'eredita|caduta libera/` (è un game show ma non listato).
-- `Belve` non è in `/striscia|paperissima|zelig|le iene|propaganda|porta a porta|piazzapulita|dimartedi|cartabianca|stasera italia/` (è un talk ma non listato).
+**F1 — già live, nessuna modifica funzionale necessaria.**
+L'edge function `sports-f1` riga 89-108 fa già `fetch(\`${JOLPICA_BASE}/${season}.json\`)` per il calendario. Verifica: `https://api.jolpi.ca/ergast/f1/2026.json` ritorna 22 gare reali (`R1: Australian Grand Prix - 2026-03-08`, ...). `meta.dataSource = "live"`. **Nessun hardcode da rimuovere su F1.**
 
-Risultato: `inferGenre` ritorna `undefined` → in `TonightTvList.tsx` riga 380-388 e 444-453 il chip non viene renderizzato (`g ? <Badge> : null`). UI incoerente: alcune righe hanno chip, altre no.
+**MotoGP — calendario hardcoded, va sostituito con API ufficiale.**
+`supabase/functions/sports-motogp/index.ts` riga 3-26 contiene `MOTOGP_CALENDAR_2026` (22 GP costanti). Le action `calendar` (riga 398-407) e `next-event` (riga 435-442) leggono da questa costante e ritornano `dataSource: "static"`. Il toast "dati non live per MotoGP 2026" deriva proprio da qui.
 
-L'utente vuole **vedere sempre il chip per ogni riga**, con gestione robusta che non dipenda dall'esaustività di una lista keyword.
+**Fonte live identificata e verificata**: API Pulselive ufficiale di motogp.com (la stessa usata dal sito ufficiale).
+- Stagioni: `https://api.motogp.pulselive.com/motogp/v1/results/seasons` → ritorna lista anni con `id` UUID per ogni stagione (2026 → `e88b4e43-2209-47aa-8e83-0e0b1cedde6e`, marker `current: true`).
+- Eventi: `https://api.motogp.pulselive.com/motogp/v1/results/events?seasonUuid={id}` → ritorna 31 oggetti per il 2026 (22 GP + 9 sessioni di test). Ogni evento espone `name`, `circuit.name`, `circuit.place`, `country.iso`, `country.name`, `date_start`, `date_end`, `test`, `status`. Filtro `test === false` → esattamente 22 GP, dati identici al dataset hardcoded attuale.
 
-### Strategia: garanzia formale con cascata di fallback
+**Sky Sport (URL richiesti dall'utente) NON è una fonte praticabile per scraping server-side.** Verifica: `https://sport.sky.it/formula-1/calendario` e `/motogp/calendario` ritornano un HTML di 484 righe composto solo da nav/header/footer. Il calendario è renderizzato lato client (SPA con bundle JavaScript). Una Edge Function Deno non può eseguire JS del browser (no Puppeteer/Playwright in edge runtime). Tentare uno scraping HTML statico restituirebbe **zero gare**. Sky F1 e Sky MotoGP **già usati per le classifiche** (`fetchSkyStandings` riga 308-370) funzionano solo perché lì le tabelle classifiche sono server-rendered nell'HTML; il calendario invece no.
 
-Riscrivere `inferGenre` per restituire **sempre** una stringa non-undefined, con cascata deterministica:
+**Decisione tecnica**: per garantire dati live, reali, sincronizzati, usiamo le API ufficiali del rispettivo sport. Sono più stabili e affidabili dello scraping di Sky:
+- F1: **Jolpica/Ergast** (già in uso, immutato).
+- MotoGP: **Pulselive ufficiale motogp.com** (nuovo, sostituisce hardcode).
 
-1. **Genere fornito dall'edge function** (`row.genre` da scraping staseraintv) → usato così com'è. (Già attuale priorità in `TonightTvList.tsx`.)
-2. **Match per keyword specifico nel titolo** (logica attuale, espansa con più programmi italiani noti).
-3. **Match per famiglia/canale** (Sky Cinema → Film, Sky Sport → Sport, canali sport/cinema → idem).
-4. **Match per pattern strutturale del titolo** (presenza di `(Genere)` finale, `St. X - Ep. Y` → Serie Tv, ecc.).
-5. **Default per famiglia (fallback garantito)**:
-   - `rai` → `Tv` (programma generalista RAI)
-   - `mediaset` → `Tv` (programma generalista Mediaset)
-   - `sky-sport` → `Sport`
-   - `sky-cinema` → `Film`
-   - `discovery` → `Lifestyle`
+Localizzazione italiana dei nomi GP (l'API ritorna `GRAND PRIX OF SPAIN` in inglese) gestita con mappa di traduzione paese→nome italiano (`Spain` → `GP di Spagna`, `Italy` → `GP d'Italia`, ecc.) — niente di hardcoded sui dati: solo traduzione delle 25 nazioni che possono ospitare un round.
 
-Cambio firma: `inferGenre(family, channel, title): string` (era `string | undefined`). Il valore "garantito" non è un'invenzione fuorviante: rappresenta una classificazione macro coerente col canale, allineata alla policy "real data only" perché basata su segnali reali (famiglia + canale + titolo), non su mock.
+### Implementazione
 
-### Espansione lista keyword (priorità 2)
+#### A. `supabase/functions/sports-motogp/index.ts`
 
-Aggiungere alla lista `inferGenre` programmi italiani comuni mancanti. Lista compilata a partire dal palinsesto reale RAI/Mediaset/Discovery 2025/2026:
+1. **Rimuovere completamente** la costante `MOTOGP_CALENDAR_2026` (righe 3-26).
+2. **Aggiungere** mappe di traduzione:
+   - `COUNTRY_NAME_IT: Record<string, string>` — chiave `country.iso` (es. `IT`, `ES`, `TH`), valore nome italiano (`Italia`, `Spagna`, `Thailandia`, ...). Coperti tutti gli ISO che compaiono nel circuit list MotoGP: TH, BR, US, ES, FR, IT, HU, CZ, NL, DE, GB, SM, AT, JP, ID, AU, MY, QA, PT, AR, IN.
+   - `GP_NAME_IT(country: string, iso: string): string` — costruisce `GP di Spagna` / `GP d'Italia` / `GP della Thailandia` / `GP delle Americhe` (per US) usando regole di articolo italiano basate sulla nazione.
+3. **Nuove funzioni**:
+   - `async function fetchMotoGPSeasonId(year: number): Promise<string>` — chiama `/results/seasons`, trova `s.year === year`, ritorna `s.id`. Cache in-memory con TTL 24h (le stagioni cambiano una volta l'anno).
+   - `async function fetchMotoGPCalendar(year: number): Promise<MotoGPEvent[]>` — chiama `/results/events?seasonUuid={id}`, filtra `test === false`, ordina per `date_start`, rinumerica `round` 1..N, mappa ogni evento a:
+     ```
+     { round, name (it), location (circuit.place), circuit (circuit.name), date_start, date_end, country (iso uppercase) }
+     ```
+4. **Refactor action `calendar`** (riga 398-407):
+   ```
+   const events = await fetchMotoGPCalendar(year);
+   const now = new Date();
+   data = events.map(e => ({ ...e, status: new Date(e.date_end) < now ? 'finished' : 'upcoming' }));
+   dataSource = 'live';
+   ```
+   In caso di errore upstream: try/catch → log + `dataSource: 'static-fallback'` con `data: []` (l'app gestisce già lo stato vuoto). **Nessun calendario hardcoded come backup**: l'utente ha richiesto esplicitamente "niente hardcoded".
+5. **Refactor action `next-event`** (riga 435-442): usa lo stesso `fetchMotoGPCalendar`, prende il primo evento con `date_start > now`. `dataSource: 'live'`.
+6. **`source` meta** quando live: `"motogp.com (Pulselive API)"`.
+7. Mantenere invariato: action `standings`, `constructor-standings` (Sky scraping già live), enrichment piloti/team (foto, numeri, nazionalità, loghi).
 
-- **Quiz/Game show**: aggiungere `affari tuoi`, `the wall`, `avanti un altro`, `chi vuol essere milionario`, `soliti ignoti`.
-- **Talk Show**: aggiungere `belve`, `che tempo che fa`, `domenica in`, `verissimo`, `pomeriggio cinque`, `quarta repubblica`, `controcorrente`, `zona bianca`, `dritto e rovescio`, `accordi e disaccordi`, `otto e mezzo`, `in onda`.
-- **Reality**: aggiungere `gf vip`, `the voice`, `tu si que vales`, `italia s got talent`.
-- **Documentario**: aggiungere `ulisse`, `superquark`, `geo`, `kilimangiaro`, `passato e presente`.
-- **Fiction**: nuova categoria → `il commissario montalbano`, `don matteo`, `un posto al sole`, `cuori`, `mina settembre`, `che dio ci aiuti`, `imma tataranni`, `doc nelle tue mani`, `blanca`, `lolita lobosco`, `i bastardi di pizzofalcone`, `makari`, `carosello carosone`. Categoria mappata a `Fiction`.
-- **Cooking**: nuova categoria → `bake off`, `cucine da incubo`, `4 ristoranti`, `hell['s] kitchen`, `4 hotel`, `family food fight`. Categoria mappata a `Cooking`.
-- **Lifestyle**: nuova categoria per Discovery → `casa a prima vista`, `cortesie per gli ospiti`, `cake star`, `vado a vivere in campagna`, `little big italy`. Mappata a `Lifestyle`.
+#### B. `src/hooks/useSyncAll.ts` — fix toast falso positivo
 
-### Pattern strutturali (priorità 4)
+Il warning "Dati non live per MotoGP 2026" oggi appare anche quando le classifiche sono live. Con il fix backend di sopra, il calendario diventa live → il warning sparisce naturalmente per il caso happy path. Aggiungo comunque la categorizzazione corretta (già pianificata nel ticket precedente, ora ne approfitto):
 
-- `\([A-Za-zÀ-ÿ ]{3,30}\)\s*$` → estrazione del genere già presente nel titolo (es. `Le Iene presentano - Il verdetto (Inchieste)` → `Inchieste`). Mappato a `Talk Show` se "inchieste"/"reportage", altrimenti usato così com'è dopo capitalizzazione e validazione contro una whitelist.
-- `St\.\s*\d+|stagione \d+|s\d+e\d+|episodio \d+|puntata` → `Serie Tv` se non match Fiction prima.
-- `presenta|edizione del|edizione delle` insieme a `\btg|telegiornale` → `News`.
-- `puntata del \d+` su canale RAI/Mediaset generalista senza altro segnale → `Tv` (mantiene struttura riconoscibile).
+- Estrarre `requiresWarning(meta)` in `src/hooks/syncWarning.ts`. `dataSource ∈ {"live", "wikipedia", "wikipedia+curated"}` → no warning. Tutto il resto (`static-fallback`, `fallback-previous-season`, `mixed`, `unknown`, errori) → warning. **Rimuovo `"static"` dalla whitelist**: dopo questo fix nessun endpoint del progetto deve più ritornare `static` di proposito; se lo fa, è un sintomo di errore da segnalare.
 
-### Cambio firma e callsite
+#### C. Test
 
-`inferGenre` da `(family, channel, title): string | undefined` a `(family, channel, title): string`. Tre callsite in `TonightTvList.tsx`:
-- riga 313: `const g = row.genre || inferGenre(...)`. Resta valido. `g` ora è sempre `string`.
-- riga 376-377: `aria-label={g ? \`Genere ${g}\` : undefined}` → `aria-label={\`Genere ${g}\`}` (sempre presente).
-- riga 380-388: rimuove ramo `g ? ... : null`, sempre renderizza Badge.
-- riga 408 + 444-453: stesso pattern, rimuove condizionale, sempre Badge.
+1. **Edge function** — test Deno in `supabase/functions/sports-motogp/index.test.ts`:
+   - Mock `fetch` per `/results/seasons` e `/results/events`. Verifica:
+     - 22 eventi ritornati (filtro `test=false` applicato).
+     - `name` italianizzato (es. `GRAND PRIX OF SPAIN` → `GP di Spagna`).
+     - `round` rinumerato 1..22 in ordine cronologico.
+     - `dataSource === 'live'`.
+   - Test errore upstream → `dataSource === 'static-fallback'`, `data === []`, `success === true` (l'app non crasha).
+2. **Frontend** — `src/hooks/syncWarning.test.ts`:
+   - 8 casi: `live`/`wikipedia`/`wikipedia+curated` → false; `static`/`static-fallback`/`fallback-previous-season`/`mixed`/`unknown` → true; `undefined` → false (best effort).
+3. **Validazione manuale post-deploy** (script via `supabase--curl_edge_functions`):
+   ```
+   curl 'sports-motogp?action=calendar&season=2026' | jq '.meta.dataSource, (.data | length), .data[0]'
+   ```
+   Atteso: `"live"`, `22`, primo GP con `round: 1, name: "GP della Thailandia"`.
 
-`aria-hidden={g ? undefined : true}` → rimosso, cella sempre annunciata.
+#### D. Documentazione
+
+- `changelog.md` `### Changed`: *"Calendario MotoGP ora completamente live via API ufficiale motogp.com (Pulselive). Rimosso dataset hardcoded 2026: la sincronizzazione carica i 22 GP reali della stagione corrente. Calendario F1 era già live via Jolpica/Ergast (nessuna modifica)."*
+- `README.md` sezione fonti dati: aggiornare riga MotoGP da `"calendario hardcoded 2026 + Sky scraping classifiche"` a `"motogp.com Pulselive API (calendario) + Sky Sport scraping (classifiche)"`.
+- `AGENTS.md` "Limiti noti": rimuovere o ridurre la voce "Contenuti stagionali statici o hardcoded" (resta valida solo per il dataset Sinner statico, da indicare esplicitamente).
+
+### Cosa NON cambia
+
+- Edge function `sports-f1`: già live, intoccata.
+- Schema risposta JSON `sports-motogp`: campi identici (`round, name, location, circuit, date_start, date_end, country, status`). Nessun impatto su `MotoGPPage.tsx`, `useMotoGPCalendar`, hook React Query.
+- Mappe statiche **piloti** (foto, numeri, nazionalità) e **costruttori** (loghi): restano. Sono enrichment legittimo non disponibile dall'API Sky.
+- Layout, UI, pagine, accessibilità.
+- Lista canali streaming, scraping `staseraintv`.
+- Nessuna nuova dipendenza, env var, segreto.
+- Branch policy: lavoro su `develop`, PR verso `develop`, assegnata `@matteobern9244`.
+
+### Perché NON usiamo Sky come fonte calendario (chiarimento per l'utente)
+
+L'utente ha indicato `https://sport.sky.it/formula-1/calendario` e `https://sport.sky.it/motogp/calendario` come fonti di sync. Ho verificato direttamente con `code--fetch_website`: queste pagine sono SPA renderizzate dal browser. Il loro HTML server-side è vuoto di gare. Una Edge Function Supabase (Deno, no headless browser) non può estrarne il calendario.
+
+Le API ufficiali che propongo sono **più affidabili** di Sky perché:
+- Sono il backend ufficiale dei rispettivi sport (Jolpica = Ergast F1, Pulselive = motogp.com).
+- Espongono JSON strutturato stabile, non HTML soggetto a redesign Sky.
+- Già usate da migliaia di app sportive in produzione.
+- Aggiornate immediatamente quando il calendario cambia (es. cancellazioni, reschedule).
+
+Se l'utente vuole comunque Sky come fonte primaria, l'unica strada tecnica è introdurre un servizio esterno tipo Firecrawl (rendering JS) — costo aggiuntivo, latenza maggiore, fragilità DOM Sky. **Raccomando di mantenere le API ufficiali**, già live, gratuite, affidabili. Sky resta usato per le classifiche dove funziona benissimo.
 
 ### File modificati
 
 | File | Tipo | Modifica |
 |---|---|---|
-| `src/lib/genreUtils.ts` | EDIT | Cambio firma → `string`. Espansione keyword (Fiction, Cooking, Lifestyle aggiunte; Quiz/Talk Show/Reality/Documentario estesi). Estrazione `(Genere)` finale dal titolo con whitelist. Pattern strutturali (St./Ep./Stagione → Serie Tv). Default deterministico per famiglia in fondo (`rai`/`mediaset` → `Tv`, `sky-sport` → `Sport`, `sky-cinema` → `Film`, `discovery` → `Lifestyle`). Commenti spiegano cascata e perché non è "dato inventato". |
-| `src/lib/genreUtils.test.ts` | EDIT | Aggiungere casi: `Affari Tuoi` su RAI 1 → `Quiz`; `Belve` su RAI 2 → `Talk Show`; `Don Matteo` → `Fiction`; `Bake Off Italia` → `Cooking`; `Casa a Prima Vista` su Discovery → `Lifestyle`; titolo sconosciuto su RAI 1 → `Tv` (default famiglia); titolo sconosciuto su Sky Sport → `Sport`; estrazione `(Inchieste)` da `Le Iene presentano - Il verdetto (Inchieste)` → mappato a `Talk Show`. Aggiornare i test esistenti che si aspettavano `undefined` (riga "nessun match -> undefined") al nuovo comportamento (`Tv`). |
-| `src/components/home/TonightTvList.tsx` | EDIT | Riga 313: `const g = row.genre || inferGenre(...)` resta. Rimuovere condizionali `g ?` su Badge (desktop riga 380-388, mobile riga 444-453). Rimuovere `aria-hidden={g ? undefined : true}` su cella genere (riga 377): annunciata sempre. `aria-label` cella genere desktop sempre `\`Genere ${g}\``. ariaParts mobile (riga 415): `if (g)` rimosso, sempre `ariaParts.push(\`genere ${g}\`)`. |
-| `src/components/home/TonightTvList.test.tsx` | EDIT | Aggiornare il test esistente per riflettere chip genere sempre presente (se c'è un'asserzione che ammette assenza, renderla strict). |
-| `changelog.md` | EDIT | `### Changed`: "Stasera in TV: chip genere garantito su ogni riga grazie a cascata di fallback (keyword estese, estrazione genere dal titolo, default deterministico per famiglia). Affari Tuoi → Quiz, Belve → Talk Show, Don Matteo → Fiction, ecc. Eliminate righe senza chip." |
+| `supabase/functions/sports-motogp/index.ts` | EDIT | Rimuovere `MOTOGP_CALENDAR_2026`. Aggiungere `COUNTRY_NAME_IT`, `GP_NAME_IT`, `fetchMotoGPSeasonId` (con cache 24h), `fetchMotoGPCalendar`. Refactor action `calendar` e `next-event` per usare API Pulselive. `dataSource: 'live'` quando OK, `'static-fallback'` con `data: []` su errore upstream. |
+| `supabase/functions/sports-motogp/index.test.ts` | NEW | Mock fetch Pulselive, verifica numero eventi, italianizzazione, ordine cronologico, gestione errore. |
+| `src/hooks/syncWarning.ts` | NEW | `requiresWarning(meta)` con whitelist `live`/`wikipedia`/`wikipedia+curated`. |
+| `src/hooks/syncWarning.test.ts` | NEW | 8 casi di categorizzazione `dataSource`. |
+| `src/hooks/useSyncAll.ts` | EDIT | Sostituire `isLiveSource` con `requiresWarning` importato. |
+| `changelog.md` | EDIT | `### Changed`: calendario MotoGP live, F1 già live confermato. |
+| `README.md` | EDIT | Aggiornare sezione fonti dati MotoGP. |
+| `AGENTS.md` | EDIT | Ridurre la voce "contenuti stagionali statici" ai soli casi residui (Sinner). |
 
-### Cosa NON cambia
+### Validazione finale
 
-- Lista canali in `FAMILIES` (preservata).
-- Logica edge function `streaming-tv` (nessun deploy backend).
-- Layout grid CSS, accessibilità ARIA struttura, paginazione, filtri famiglia.
-- Layout mobile/desktop, divider colorato, hook React Query.
-- Nessuna nuova dipendenza, env var, segreto.
-
-### Rischi e mitigazioni
-
-- **Default `Tv` su RAI/Mediaset troppo generico**: scelto perché onesto (significa "programma TV generalista non classificato"). Alternativa "Varietà" rischia di essere errata (un quiz non è un varietà). Documentato come fallback esplicito.
-- **Cambio firma `string | undefined` → `string`**: i callsite sono tutti in `TonightTvList.tsx`. TypeScript segnalerà eventuali altri usi al build. Nessun impatto su edge function.
-- **Test esistenti rotti**: il caso "nessun match → undefined" cambia; aggiornato esplicitamente nel piano.
-- **Regressione non visiva**: nessuna, il chip ora appare dove prima non c'era.
-- **Lingua**: tutti i nuovi default (`Tv`, `Fiction`, `Cooking`, `Lifestyle`, `Sport`, `Film`) accettabili in italiano contemporaneo. `check:italian` passa (sono nomi categoria, già presenti nello stesso file).
-
-### Validazione
-
-1. `npm run lint`, `npm run build`, `npm run test` (incluso `genreUtils.test.ts` esteso).
-2. `npm run check:italian` exit 0.
-3. Apertura preview "Stasera in TV": ogni riga visualizza un chip genere coerente, nessun rettangolo vuoto.
-4. Casi spot-check da screenshot: `Affari Tuoi` → `QUIZ`; `Belve` → `TALK SHOW`; `Calcio - Coppa Italia` → `SPORT` (già funzionante); `Le Iene presentano (Inchieste)` → `TALK SHOW`; `Sport 24 Today` → `SPORT`.
+1. `npm run lint`, `npm run build`, `npm run test`.
+2. `npm run check:italian` exit 0 (i nomi `GP di Spagna` ecc. sono già italiano).
+3. Deploy edge function `sports-motogp`.
+4. `curl sports-motogp?action=calendar&season=2026` → 22 eventi, `meta.dataSource: "live"`, primo round `GP della Thailandia` 2026-02-27.
+5. `curl sports-motogp?action=next-event` → primo GP futuro reale.
+6. Apertura preview → click "Sincronizza" → toast `success` "Tutti i dati sono stati aggiornati", **nessun warning MotoGP**.
+7. Pagina MotoGP → tab Calendario mostra 22 gare reali con date corrette.
 
 ### Checklist post-edit
 
-1. `genreUtils.ts`: firma `string`, cascata documentata, lista keyword estesa, default per famiglia in fondo.
-2. `genreUtils.test.ts`: nuovi casi verdi, test "undefined" aggiornato.
-3. `TonightTvList.tsx`: tre callsite ripuliti dai condizionali `g ?`, chip sempre renderizzato.
-4. `TonightTvList.test.tsx`: asserzioni allineate.
-5. `changelog.md` aggiornato in `### Changed`.
+1. `MOTOGP_CALENDAR_2026` eliminato dal codice.
+2. `sports-motogp/index.ts` chiama Pulselive API per calendario e next-event.
+3. `useSyncAll.ts` non genera più falsi warning.
+4. Test verde in CI (Deno tests + Vitest frontend).
+5. `changelog.md`, `README.md`, `AGENTS.md` aggiornati.
 6. Branch `develop`, PR verso `develop`, assegnata `@matteobern9244`.
 
