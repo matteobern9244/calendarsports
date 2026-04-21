@@ -279,10 +279,6 @@ export default function StreamingPage() {
 
           {tvQuery.isSuccess && channels.length > 0 && (
             <>
-              <p className="text-xs text-muted-foreground italic">
-                Fonte palinsesto: <span className="font-mono">staseraintv.com</span> (scraping pubblico).
-                I dati possono variare o non essere disponibili per alcuni canali (es. Sky Sport non e' coperto dalla fonte).
-              </p>
               <Accordion type="multiple" className="space-y-2">
                 {visibleChannels.map((ch) => (
                   <AccordionItem
