@@ -22,6 +22,42 @@ async function callEdgeFunction(functionName: string, params: Record<string, str
   return json.data;
 }
 
+/**
+ * Variante che restituisce l'envelope completo (data + meta) per il flusso di
+ * sincronizzazione, dove serve sapere se i dati provengono da fonti live o
+ * fallback statici. Per le query React Query continua a essere usata
+ * `callEdgeFunction` che restituisce solo `data`.
+ */
+export type EdgeMeta = {
+  dataSource?: "live" | "static-fallback" | "fallback-previous-season" | "wikipedia" | "wikipedia+curated" | "static" | "mixed" | "unknown";
+  season?: number | string;
+  source?: string;
+  [key: string]: unknown;
+};
+
+export async function callEdgeFunctionWithMeta<T = unknown>(
+  functionName: string,
+  params: Record<string, string>,
+): Promise<{ data: T; meta: EdgeMeta }> {
+  const queryString = new URLSearchParams(params).toString();
+  const url = `${SUPABASE_PROJECT_URL}/functions/v1/${functionName}?${queryString}`;
+  const response = await fetch(url, {
+    headers: {
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "apikey": SUPABASE_ANON_KEY,
+    },
+  });
+  if (!response.ok) throw new Error(`Errore API: ${response.status}`);
+  const json = await response.json();
+  if (!json.success) throw new Error(json.error || "Errore sconosciuto");
+  const meta: EdgeMeta = json.meta ?? {
+    dataSource: typeof json.source === "string" ? "unknown" : undefined,
+    source: json.source,
+    season: json.seasonUsed ?? json.requestedSeason,
+  };
+  return { data: json.data as T, meta };
+}
+
 // === F1 API (Jolpica) ===
 export const f1Api = {
   getCalendar: (season: number) =>

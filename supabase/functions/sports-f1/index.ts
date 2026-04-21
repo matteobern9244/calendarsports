@@ -224,7 +224,15 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify({ success: true, data }), {
+    // dataSource: tutte le action live leggono da Jolpica (e opzionalmente OpenF1
+    // per le headshot, che non cambiano la natura dei dati). Le mappe statiche
+    // di foto/loghi sono solo enrichment: se Jolpica risponde, i dati core sono live.
+    const meta = {
+      dataSource: 'live' as const,
+      season: /^\d{4}$/.test(season) ? parseInt(season, 10) : season,
+      source: 'Jolpica F1 (Ergast) + OpenF1 (foto)',
+    };
+    return new Response(JSON.stringify({ success: true, data, meta, source: meta.source }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

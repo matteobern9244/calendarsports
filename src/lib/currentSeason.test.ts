@@ -4,6 +4,7 @@ import {
   getCurrentF1Season,
   getCurrentMotoGPSeason,
   getCurrentJuventusSeason,
+  formatJuventusSeasonLabel,
 } from "./currentSeason";
 
 describe("currentSeason helpers", () => {
@@ -39,5 +40,17 @@ describe("currentSeason helpers", () => {
 
   it("Juventus: settembre 2026 -> 2026", () => {
     expect(getCurrentJuventusSeason(new Date("2026-09-15T12:00:00Z"))).toBe(2026);
+  });
+
+  it("formatJuventusSeasonLabel: 2025 -> 2025/26", () => {
+    expect(formatJuventusSeasonLabel(2025)).toBe("2025/26");
+  });
+
+  it("formatJuventusSeasonLabel: 2099 -> 2099/00", () => {
+    expect(formatJuventusSeasonLabel(2099)).toBe("2099/00");
+  });
+
+  it("formatJuventusSeasonLabel: 2009 -> 2009/10", () => {
+    expect(formatJuventusSeasonLabel(2009)).toBe("2009/10");
   });
 });
