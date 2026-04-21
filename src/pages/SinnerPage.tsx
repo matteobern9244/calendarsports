@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
 import LoadingState from "@/components/common/LoadingState";
@@ -11,14 +13,44 @@ import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useS
 import { formatDateIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// Numero di risultati per pagina lato UI. Allineato al default del
+// backend (`supabase/functions/sports-tennis`, action `results`):
+// se cambia qui va aggiornato anche li' per evitare richieste a vuoto.
+const RESULTS_PAGE_SIZE = 12;
 
 export default function SinnerPage() {
   const season = getCurrentSinnerSeason();
+  const [resultsPage, setResultsPage] = useState(1);
   const { data: playerInfo } = useSinnerInfo();
-  const { data: results, isLoading: resLoading, error: resError, refetch: resRefetch } = useSinnerResults(season);
+  const { data: results, isLoading: resLoading, error: resError, refetch: resRefetch } = useSinnerResults(
+    season,
+    resultsPage,
+    RESULTS_PAGE_SIZE,
+  );
   const { data: schedule, isLoading: schLoading, error: schError, refetch: schRefetch } = useSinnerSchedule(season);
   const { isOnline } = useOnlineStatus();
+
+  // Reset paginazione quando cambia la stagione: pagine alte di una
+  // stagione precedente non hanno senso per la nuova.
+  useEffect(() => {
+    setResultsPage(1);
+  }, [season]);
+
+  // Compatibilita' di forma: il backend ora restituisce
+  // `{ items, pagination }`, ma per sicurezza accettiamo anche il
+  // vecchio shape `MatchRow[]` (es. cache stale o fallback).
+  const resultItems: any[] = Array.isArray(results)
+    ? results
+    : (results?.items ?? []);
+  const resultsPagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  } | null = !Array.isArray(results) && results?.pagination ? results.pagination : null;
 
   if (!isOnline && resError && !results && schError && !schedule && !playerInfo) {
     return (
@@ -80,7 +112,7 @@ export default function SinnerPage() {
               ctaHint="Tocca qui per i punteggi set per set ufficiali"
             />
           )}
-          {!resLoading && !resError && (!results || results.length === 0) && (
+          {!resLoading && !resError && resultItems.length === 0 && (
             <UnavailableExternalSource
               title={`Risultati stagione ${season}`}
               description="I risultati dei match di Jannik Sinner per questa stagione non sono ancora stati pubblicati dalla nostra fonte. Apri il profilo ufficiale ATP qui sotto per consultare lo storico completo delle partite, i punteggi set per set e le statistiche aggiornate."
@@ -89,9 +121,13 @@ export default function SinnerPage() {
               ctaHint="Tocca qui per i punteggi set per set"
             />
           )}
-          {results && results.length > 0 && (() => {
-            const { items: orderedResults, highlightIndex } = prioritizeNextUpcoming(results, (result: any) => result.date);
+          {resultItems.length > 0 && (() => {
+            const { items: orderedResults, highlightIndex } = prioritizeNextUpcoming(
+              resultItems,
+              (result: any) => result.date,
+            );
             return (
+            <>
             <motion.div className="grid gap-4 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
               {orderedResults.map((r: any, i: number) => (
                 <EventCard
@@ -123,6 +159,43 @@ export default function SinnerPage() {
                 </EventCard>
               ))}
             </motion.div>
+            {resultsPagination && resultsPagination.totalPages > 1 && (
+              <nav
+                aria-label="Paginazione risultati"
+                className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-border/40"
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setResultsPage((p) => Math.max(1, p - 1))}
+                  disabled={resultsPagination.page <= 1 || resLoading}
+                  className="h-9 px-3 gap-1 text-xs font-heading uppercase tracking-wider"
+                  aria-label="Pagina precedente dei risultati"
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Precedente</span>
+                </Button>
+                <span
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="text-[11px] sm:text-xs font-heading uppercase tracking-wider text-muted-foreground text-center"
+                >
+                  Pagina {resultsPagination.page} / {resultsPagination.totalPages} · {resultsPagination.total} risultati
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setResultsPage((p) => Math.min(resultsPagination.totalPages, p + 1))}
+                  disabled={resultsPagination.page >= resultsPagination.totalPages || resLoading}
+                  className="h-9 px-3 gap-1 text-xs font-heading uppercase tracking-wider"
+                  aria-label="Pagina successiva dei risultati"
+                >
+                  <span className="hidden sm:inline">Successiva</span>
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </nav>
+            )}
+            </>
             );
           })()}
         </TabsContent>

@@ -85,11 +85,14 @@ export function useSinnerSchedule(season: number) {
   });
 }
 
-export function useSinnerResults(season: number) {
+export function useSinnerResults(season: number, page?: number, pageSize?: number) {
   return useQuery({
-    queryKey: ["sinner", "results", season],
-    queryFn: () => tennisApi.getResults(season),
+    queryKey: ["sinner", "results", season, page ?? null, pageSize ?? null],
+    queryFn: () => tennisApi.getResults(season, page, pageSize),
     staleTime: 5 * 60 * 1000,
+    // Mantieni i risultati della pagina precedente durante il fetch
+    // della nuova: niente flash di skeleton al click su Successiva.
+    placeholderData: (prev) => prev,
   });
 }
 
