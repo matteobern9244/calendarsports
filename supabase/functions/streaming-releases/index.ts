@@ -443,7 +443,255 @@ Deno.serve(async (req) => {
       }
     }
 
-    // === ACTION: new-today (range) ===
+    // === ACTION: details (one-shot per dialog) ===
+    if (action === "details") {
+      const type = url.searchParams.get("type") ?? "";
+      const id = url.searchParams.get("id") ?? "";
+      if (!KIND_RE.test(type) || !ID_RE.test(id)) {
+        return jsonResponse(
+          { success: false, error: "Parametri details non validi" },
+          { status: 400 },
+          corsHeaders,
+        );
+      }
+      if (!apiKey) {
+        return jsonResponse(
+          { success: true, data: { type, id, configured: false } },
+          {},
+          corsHeaders,
+        );
+      }
+      const cacheKey = `details:${type}:${id}`;
+      const cached = cache.get(cacheKey);
+      if (cached && Date.now() - cached.at < DETAILS_TTL_MS) {
+        return jsonResponse({ success: true, data: cached.payload }, {}, corsHeaders);
+      }
+      try {
+        const raw = await tmdbDetails(type as "movie" | "tv", id, apiKey);
+        const providersInfo: ItemProvidersInfo = {
+          flatrate: Array.isArray(raw?.["watch/providers"]?.results?.IT?.flatrate)
+            ? raw["watch/providers"].results.IT.flatrate.map((p: any) => ({
+                provider_id: p.provider_id,
+                provider_name: p.provider_name ?? "",
+                logo_path: p.logo_path ?? null,
+              }))
+            : [],
+          free: Array.isArray(raw?.["watch/providers"]?.results?.IT?.free)
+            ? raw["watch/providers"].results.IT.free.map((p: any) => ({
+                provider_id: p.provider_id,
+                provider_name: p.provider_name ?? "",
+                logo_path: p.logo_path ?? null,
+              }))
+            : [],
+          ads: Array.isArray(raw?.["watch/providers"]?.results?.IT?.ads)
+            ? raw["watch/providers"].results.IT.ads.map((p: any) => ({
+                provider_id: p.provider_id,
+                provider_name: p.provider_name ?? "",
+                logo_path: p.logo_path ?? null,
+              }))
+            : [],
+          link: typeof raw?.["watch/providers"]?.results?.IT?.link === "string"
+            ? raw["watch/providers"].results.IT.link
+            : null,
+        };
+        const isMovie = type === "movie";
+        const title = isMovie ? raw.title : raw.name;
+        const releaseDate = isMovie ? raw.release_date : raw.first_air_date;
+        const rawPoster = raw.poster_path ? `${TMDB_IMG}${raw.poster_path}` : null;
+        const poster = rawPoster
+          ? rawPoster.replace(/\/t\/p\/(?:w500|w780|original)\//, "/t/p/w342/")
+          : null;
+        const backdrop = raw.backdrop_path
+          ? `https://image.tmdb.org/t/p/w780${raw.backdrop_path}`
+          : null;
+        const genres = Array.isArray(raw.genres)
+          ? raw.genres.map((g: any) => g?.name).filter((n: any): n is string => typeof n === "string" && n.length > 0)
+          : [];
+        const cast = normalizeCast(raw?.credits ?? {});
+        const directors = isMovie && Array.isArray(raw?.credits?.crew)
+          ? raw.credits.crew
+              .filter((c: any) => c?.job === "Director")
+              .map((c: any) => c?.name)
+              .filter((n: any): n is string => typeof n === "string")
+          : [];
+        const creators = !isMovie && Array.isArray(raw?.created_by)
+          ? raw.created_by.map((c: any) => c?.name).filter((n: any): n is string => typeof n === "string")
+          : [];
+        const trailerKey = pickTrailerYouTubeKey(raw?.videos);
+        const payload = {
+          type,
+          id,
+          title,
+          originalTitle: isMovie ? raw.original_title : raw.original_name,
+          releaseDate,
+          year: yearFromDate(releaseDate),
+          poster,
+          backdrop,
+          overview: raw.overview ?? "",
+          voteAverage: typeof raw.vote_average === "number" ? raw.vote_average : null,
+          voteCount: typeof raw.vote_count === "number" ? raw.vote_count : 0,
+          runtime: isMovie ? (typeof raw.runtime === "number" ? raw.runtime : null) : null,
+          numberOfSeasons: !isMovie ? (typeof raw.number_of_seasons === "number" ? raw.number_of_seasons : null) : null,
+          numberOfEpisodes: !isMovie ? (typeof raw.number_of_episodes === "number" ? raw.number_of_episodes : null) : null,
+          genres,
+          directors,
+          creators,
+          cast,
+          trailerYouTubeKey: trailerKey,
+          availableProviders: compactProviders(providersInfo),
+          justWatchLink: providersInfo.link,
+          configured: true,
+        };
+        cache.set(cacheKey, { at: Date.now(), payload });
+        // popoliamo anche la cache /watch/providers cosi' new-italy non rifa la chiamata
+        itemProvidersCache.set(`${type}:${id}`, { at: Date.now(), payload: providersInfo });
+        return jsonResponse({ success: true, data: payload }, {}, corsHeaders);
+      } catch (err) {
+        console.warn("[streaming-releases] details error", err);
+        return jsonResponse(
+          { success: false, error: "Dettaglio TMDB non disponibile" },
+          { status: 502 },
+          corsHeaders,
+        );
+      }
+    }
+
+    // === ACTION: new-italy (catalogo aggregato Italia) ===
+    if (action === "new-italy") {
+      const providerParam = url.searchParams.get("provider") ?? "all";
+      const kindParam = url.searchParams.get("kind") ?? "all";
+      const sortParam = url.searchParams.get("sort") ?? "release";
+      const genreIdParam = url.searchParams.get("genreId") ?? "";
+      if (!PROVIDER_FILTER_RE.test(providerParam)) {
+        return jsonResponse(
+          { success: false, error: "Provider non valido" },
+          { status: 400 },
+          corsHeaders,
+        );
+      }
+      if (!KIND_FILTER_RE.test(kindParam)) {
+        return jsonResponse(
+          { success: false, error: "Tipo non valido" },
+          { status: 400 },
+          corsHeaders,
+        );
+      }
+      if (!SORT_RE.test(sortParam)) {
+        return jsonResponse(
+          { success: false, error: "Ordinamento non valido" },
+          { status: 400 },
+          corsHeaders,
+        );
+      }
+      if (genreIdParam && !GENRE_RE.test(genreIdParam)) {
+        return jsonResponse(
+          { success: false, error: "Genere non valido" },
+          { status: 400 },
+          corsHeaders,
+        );
+      }
+
+      const today = todayRomeISO();
+      const dfParam = url.searchParams.get("dateFrom") ?? "";
+      const dtParam = url.searchParams.get("dateTo") ?? "";
+      const dateFrom = DATE_RE.test(dfParam) ? dfParam : addDaysISO(today, -7);
+      const dateTo = DATE_RE.test(dtParam) ? dtParam : addDaysISO(today, 30);
+      const providerKey = providerParam === "all" ? null : providerParam;
+      const providerId = providerKey ? PROVIDERS[providerKey]?.id : undefined;
+      const genreId = genreIdParam ? parseInt(genreIdParam, 10) : undefined;
+
+      if (!apiKey) {
+        return jsonResponse(
+          {
+            success: true,
+            data: {
+              region: "IT",
+              dateFrom,
+              dateTo,
+              provider: providerKey,
+              kind: kindParam,
+              sort: sortParam,
+              genreId: genreId ?? null,
+              items: [],
+              configured: false,
+            },
+          },
+          {},
+          corsHeaders,
+        );
+      }
+
+      const cacheKey = `new-italy:${providerKey ?? "all"}:${kindParam}:${dateFrom}:${dateTo}:${sortParam}:${genreId ?? ""}`;
+      const cached = cache.get(cacheKey);
+      if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+        return jsonResponse({ success: true, data: cached.payload }, {}, corsHeaders);
+      }
+
+      const sortByMovie = sortParam === "popularity" ? "popularity.desc" : "primary_release_date.desc";
+      const sortByTv = sortParam === "popularity" ? "popularity.desc" : "first_air_date.desc";
+
+      const wantMovie = kindParam === "all" || kindParam === "movie";
+      const wantTv = kindParam === "all" || kindParam === "tv";
+
+      const [movies, tv, movieGenres, tvGenres] = await Promise.all([
+        wantMovie
+          ? tmdbDiscoverItaly("movie", dateFrom, dateTo, apiKey, { providerId, sortBy: sortByMovie, genreId }).catch(() => [])
+          : Promise.resolve([]),
+        wantTv
+          ? tmdbDiscoverItaly("tv", dateFrom, dateTo, apiKey, { providerId, sortBy: sortByTv, genreId }).catch(() => [])
+          : Promise.resolve([]),
+        tmdbGenreMap("movie", apiKey),
+        tmdbGenreMap("tv", apiKey),
+      ]);
+
+      const candidates: Array<{ kind: "movie" | "tv"; raw: any }> = [
+        ...movies.map((m) => ({ kind: "movie" as const, raw: m })),
+        ...tv.map((t) => ({ kind: "tv" as const, raw: t })),
+      ];
+
+      // Arricchimento /watch/providers IT per ogni candidato (cache 1h).
+      const providersByItem = await Promise.all(
+        candidates.map((c) => tmdbItemProvidersFullIT(c.kind, c.raw.id, apiKey)),
+      );
+
+      const items = candidates.map((c, i) => {
+        const base = normalizeItem(c.raw, c.kind, providersByItem[i].link);
+        const map = c.kind === "movie" ? movieGenres : tvGenres;
+        base.genres = base.genreIds
+          .map((gid: number) => map[gid])
+          .filter((g: string | undefined): g is string => !!g);
+        base.availableProviders = compactProviders(providersByItem[i]);
+        base.justWatchLink = providersByItem[i].link;
+        return base;
+      });
+
+      // Ordinamento finale stabile lato server: rispetta sort scelto.
+      items.sort((a, b) => {
+        if (sortParam === "popularity") {
+          return (b.popularity ?? 0) - (a.popularity ?? 0);
+        }
+        // release desc + tie-break voto desc
+        const dateCmp = (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "");
+        if (dateCmp !== 0) return dateCmp;
+        return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
+      });
+
+      const payload = {
+        region: "IT",
+        dateFrom,
+        dateTo,
+        provider: providerKey,
+        kind: kindParam,
+        sort: sortParam,
+        genreId: genreId ?? null,
+        items,
+        configured: true,
+      };
+      cache.set(cacheKey, { at: Date.now(), payload });
+      return jsonResponse({ success: true, data: payload }, {}, corsHeaders);
+    }
+
+    // === ACTION: new-today (range, taglio rigoroso flatrate per provider) ===
     if (action !== "new-today") {
       return jsonResponse(
         { success: false, error: "Azione non supportata" },
