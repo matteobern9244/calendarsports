@@ -13,6 +13,39 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 _(nessuna voce aperta)_
 
+## [2.3.3] — Streaming Catalogo Italia: discovery per network/company TMDB (2026-04-27)
+
+Bump applicativo `2.3.2` → `2.3.3` esposto da `src/lib/version.ts`.
+Riallineata la logica della sezione **Streaming → Catalogo Italia** alla
+stessa strategia delle pagine pubbliche TMDB
+(`/network/213-netflix`, `/network/1024-prime-video`,
+`/network/2739-disney`, `/network/8304-hbo-max`):
+
+- Per le serie usiamo ora `with_networks=<networkId>` (213/1024/2739/8304),
+  per i film `with_companies=<companyId>` (145174/20580/2/174). In
+  precedenza usavamo solo `with_watch_providers` + finestra
+  `first_air_date` IT, che escludeva titoli realmente disponibili in IT
+  ma con prima messa in onda fuori dalla finestra (specialmente Prime
+  Video, Disney+ e HBO Max).
+- La disponibilità in IT resta validata per ogni titolo via
+  `/watch/providers IT`: solo i titoli realmente in catalogo IT su
+  provider mainstream vengono mostrati.
+- Aggiunto secondo fallback `fallbackRecent`: se la finestra
+  selezionata è vuota anche dopo l'allargamento ±14/+30gg, l'API
+  ritorna le uscite più recenti del provider con messaggio dedicato
+  in UI ("Nessuna uscita su {provider} nella finestra selezionata:
+  stiamo mostrando le uscite più recenti.").
+- Eliminata la soglia `vote_count.gte` rigida (era 5/20 movie, 2/10
+  tv): per discovery via network/company non ha più senso, allineata
+  a TMDB Discover ufficiale.
+
+File toccati: `supabase/functions/streaming-releases/index.ts`,
+`src/hooks/useStreamingData.ts`, `src/pages/StreamingPage.tsx`,
+`src/lib/version.ts`. Verificato via `curl` per Netflix, Prime Video,
+Disney+ e HBO Max: tutte le risposte restituiscono titoli reali (es.
+*Girigo*, *Cochinas*, *Star Wars: Maul - Shadow Lord*, *Gina
+Lollobrigida: Diva Contesa*) con disponibilità IT confermata.
+
 ## [2.3.2] — Streaming: vista unificata Catalogo Italia (2026-04-27)
 
 Bump applicativo `2.3.1` → `2.3.2` esposto da `src/lib/version.ts`.
