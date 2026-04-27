@@ -776,6 +776,39 @@ function ProviderSelector({
   );
 }
 
+function ItalyProviderFilter({
+  value,
+  onChange,
+}: {
+  value: StreamingProviderId | "all";
+  onChange: (v: StreamingProviderId | "all") => void;
+}) {
+  const options: { id: StreamingProviderId | "all"; label: string }[] = [
+    { id: "all", label: "Tutti" },
+    ...STREAMING_PROVIDERS,
+  ];
+  return (
+    <div className="-mx-4 px-4 overflow-x-auto">
+      <div className="flex gap-2 min-w-max">
+        {options.map((p) => (
+          <Button
+            key={p.id}
+            size="sm"
+            variant={value === p.id ? "default" : "outline"}
+            onClick={() => onChange(p.id)}
+            className={cn(
+              "rounded-full font-heading uppercase tracking-wider text-xs",
+              value === p.id && "shadow-md",
+            )}
+          >
+            {p.label}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PagerNav({
   page,
   pageCount,
