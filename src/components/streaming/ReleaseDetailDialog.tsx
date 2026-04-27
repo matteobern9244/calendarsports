@@ -1,4 +1,4 @@
-import { ExternalLink, Sparkles } from "lucide-react";
+import { ExternalLink, Sparkles, Film, Clapperboard, Play } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  useReleaseCredits,
+  useReleaseDetails,
   type ReleaseItem,
 } from "@/hooks/useStreamingData";
 import type { StreamingProviderId } from "@/lib/api/sportsApi";
@@ -37,17 +37,30 @@ export default function ReleaseDetailDialog({
   providerLabel,
   onClose,
 }: Props) {
-  const credits = useReleaseCredits(
+  const detailsQuery = useReleaseDetails(
     item?.type ?? null,
     item?.tmdbId ?? null,
   );
+  const details = detailsQuery.data;
 
   const open = !!item;
   const tmdbUrl = item
     ? `https://www.themoviedb.org/${item.type}/${item.tmdbId}`
     : "#";
   const providerHomepage = PROVIDER_HOMEPAGES[provider];
-  const targetUrl = item?.deepLink ?? providerHomepage;
+  // Per la vista "Catalogo Italia" preferiamo il link JustWatch del titolo
+  // (TMDB results.IT.link) che porta alla pagina di disponibilità Italia.
+  const justWatchLink = details?.justWatchLink ?? item?.justWatchLink ?? null;
+  const targetUrl = justWatchLink ?? item?.deepLink ?? providerHomepage;
+  const targetLabel = justWatchLink
+    ? "Vedi dove è disponibile"
+    : `Vai a ${providerLabel}`;
+
+  const overview = details?.overview ?? item?.overview ?? "";
+  const genres = details?.genres ?? item?.genres ?? [];
+  const year = details?.year ?? item?.year ?? null;
+  const cast = details?.cast ?? [];
+  const providers = details?.availableProviders ?? item?.availableProviders ?? [];
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -58,6 +71,7 @@ export default function ReleaseDetailDialog({
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline" className="text-[10px]">
                   {item.type === "movie" ? "Film" : "Serie"}
+                  {year ? ` · ${year}` : ""}
                 </Badge>
                 {item.releaseDate && (
                   <>
@@ -66,6 +80,16 @@ export default function ReleaseDetailDialog({
                     </Badge>
                     <ReleaseCountdownBadge releaseDate={item.releaseDate} />
                   </>
+                )}
+                {details?.runtime && (
+                  <Badge variant="outline" className="text-[10px] font-mono">
+                    {Math.floor(details.runtime / 60)}h {details.runtime % 60}m
+                  </Badge>
+                )}
+                {details?.numberOfSeasons && (
+                  <Badge variant="outline" className="text-[10px] font-mono">
+                    {details.numberOfSeasons} stagion{details.numberOfSeasons === 1 ? "e" : "i"}
+                  </Badge>
                 )}
                 {item.voteAverage !== null && item.voteAverage > 0 && (
                   <Badge variant="outline" className="text-[10px] font-mono">
@@ -76,8 +100,13 @@ export default function ReleaseDetailDialog({
               <DialogTitle className="font-heading text-2xl tracking-wide">
                 {item.title}
               </DialogTitle>
+              {genres.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {genres.join(" · ")}
+                </p>
+              )}
               <DialogDescription className="sr-only">
-                Dettaglio uscita {item.title} su {providerLabel}
+                Dettaglio uscita {item.title}
               </DialogDescription>
             </DialogHeader>
 
@@ -101,9 +130,9 @@ export default function ReleaseDetailDialog({
               </div>
 
               <div className="space-y-4 min-w-0">
-                {item.overview ? (
+                {overview ? (
                   <p className="text-sm text-foreground/90 leading-relaxed">
-                    {item.overview}
+                    {overview}
                   </p>
                 ) : (
                   <p className="text-sm text-muted-foreground italic">
@@ -111,30 +140,110 @@ export default function ReleaseDetailDialog({
                   </p>
                 )}
 
+                {(details?.directors?.length ?? 0) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    <span className="uppercase tracking-widest font-heading mr-1">
+                      Regia:
+                    </span>
+                    {details!.directors.join(", ")}
+                  </p>
+                )}
+                {(details?.creators?.length ?? 0) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    <span className="uppercase tracking-widest font-heading mr-1">
+                      Creatori:
+                    </span>
+                    {details!.creators.join(", ")}
+                  </p>
+                )}
+
+                {/* Disponibile su (provider IT da TMDB) */}
+                {providers.length > 0 && (
+                  <div>
+                    <h4 className="font-heading text-xs uppercase tracking-widest text-muted-foreground mb-2">
+                      Disponibile su (Italia)
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {providers.map((p) => (
+                        <span
+                          key={p.id}
+                          title={`${p.name} · ${p.type}`}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-xs"
+                        >
+                          {p.logo ? (
+                            <img
+                              src={p.logo}
+                              alt={p.name}
+                              width={20}
+                              height={20}
+                              loading="lazy"
+                              decoding="async"
+                              className="h-5 w-5 rounded-sm object-contain"
+                            />
+                          ) : (
+                            <Film className="h-4 w-4" />
+                          )}
+                          <span className="font-medium">{p.name}</span>
+                          {p.type !== "flatrate" && (
+                            <Badge variant="outline" className="text-[9px] uppercase">
+                              {p.type === "free" ? "Gratis" : "Con pubblicità"}
+                            </Badge>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {detailsQuery.isSuccess && providers.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">
+                    Non ancora disponibile in streaming in Italia.
+                  </p>
+                )}
+
+                {/* Trailer YouTube (se presente) */}
+                {details?.trailerYouTubeKey && (
+                  <div>
+                    <h4 className="font-heading text-xs uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
+                      <Play className="h-3.5 w-3.5" />
+                      Trailer
+                    </h4>
+                    <div className="aspect-video w-full overflow-hidden rounded-md border border-border/60 bg-muted">
+                      <iframe
+                        title={`Trailer di ${item.title}`}
+                        src={`https://www.youtube-nocookie.com/embed/${details.trailerYouTubeKey}`}
+                        className="h-full w-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        loading="lazy"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <h4 className="font-heading text-xs uppercase tracking-widest text-muted-foreground mb-2">
                     Cast principale
                   </h4>
-                  {credits.isLoading && (
+                  {detailsQuery.isLoading && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {Array.from({ length: 6 }).map((_, i) => (
                         <Skeleton key={i} className="h-12 w-full" />
                       ))}
                     </div>
                   )}
-                  {credits.isError && (
+                  {detailsQuery.isError && (
                     <p className="text-xs text-muted-foreground">
                       Cast non disponibile.
                     </p>
                   )}
-                  {credits.isSuccess && credits.data.cast.length === 0 && (
+                  {detailsQuery.isSuccess && cast.length === 0 && (
                     <p className="text-xs text-muted-foreground">
                       Cast non disponibile su TMDB.
                     </p>
                   )}
-                  {credits.isSuccess && credits.data.cast.length > 0 && (
+                  {detailsQuery.isSuccess && cast.length > 0 && (
                     <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {credits.data.cast.slice(0, 6).map((c) => (
+                      {cast.slice(0, 6).map((c) => (
                         <li
                           key={c.id}
                           className="flex items-center gap-2 text-xs bg-muted/40 rounded-md p-2 min-w-0"
@@ -173,7 +282,7 @@ export default function ReleaseDetailDialog({
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Vai a {providerLabel}
+                      {targetLabel}
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                   </Button>
