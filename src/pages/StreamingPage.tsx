@@ -204,7 +204,7 @@ export default function StreamingPage() {
         if (onlyUpcoming) next.set("upcoming", "1");
       } else {
         if (italyProvider !== "all") next.set("itProvider", italyProvider);
-        if (sort !== "release") next.set("sort", sort);
+        if (sort !== "popularity") next.set("sort", sort);
         if (genre !== null) next.set("genre", String(genre));
       }
       if (range !== "30d") next.set("range", range);
