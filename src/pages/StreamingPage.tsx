@@ -263,6 +263,11 @@ export default function StreamingPage() {
   const effectiveFrom = italyQuery.data?.effectiveFrom;
   const effectiveTo = italyQuery.data?.effectiveTo;
 
+  const activeRangeLabel = RANGES.find((r) => r.id === range)?.label ?? "";
+  const activeKindLabel = KINDS.find((k) => k.id === kindFilter)?.label ?? "";
+  const activeGenreLabel = GENRES.find((g) => g.id === genre)?.label ?? "Tutti i generi";
+  const activeSortLabel = sort === "popularity" ? "Popolarità" : "Data uscita";
+
   return (
     <div className="container py-8 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -479,6 +484,38 @@ export default function StreamingPage() {
             >
               Nessun titolo nella finestra selezionata: stiamo mostrando le uscite tra {formatDateIT(effectiveFrom)} e {formatDateIT(effectiveTo)}.
             </p>
+          )}
+
+          {activeQuery.isSuccess && activeQuery.data?.configured && (
+            <div
+              className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"
+              aria-live="polite"
+            >
+              <Badge variant="secondary" className="font-normal">
+                Provider: <span className="ml-1 font-semibold text-foreground">{providerLabel}</span>
+              </Badge>
+              <Badge variant="secondary" className="font-normal">
+                Tipo: <span className="ml-1 font-semibold text-foreground">{activeKindLabel}</span>
+              </Badge>
+              <Badge variant="secondary" className="font-normal">
+                Genere: <span className="ml-1 font-semibold text-foreground">{activeGenreLabel}</span>
+              </Badge>
+              <Badge variant="secondary" className="font-normal">
+                Ordina: <span className="ml-1 font-semibold text-foreground">{activeSortLabel}</span>
+              </Badge>
+              <Badge variant="secondary" className="font-normal">
+                Finestra:{" "}
+                <span className="ml-1 font-semibold text-foreground">
+                  {activeRangeLabel}
+                  {(widened || fallbackRecent) && effectiveFrom && effectiveTo
+                    ? ` (effettiva ${formatDateIT(effectiveFrom)} – ${formatDateIT(effectiveTo)})`
+                    : ""}
+                </span>
+              </Badge>
+              <Badge variant="outline" className="font-mono">
+                {filteredItems.length} titoli
+              </Badge>
+            </div>
           )}
 
           {activeQuery.isLoading && <LoadingState message="Caricamento uscite..." />}

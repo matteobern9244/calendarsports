@@ -215,20 +215,41 @@ export function useSyncAll() {
       );
       setSyncProgress(88);
 
-      // === Step 5: nuove uscite streaming — 14gg + 30gg ===
+      // === Step 5: nuove uscite streaming (Catalogo Italia) ===
+      // Prefetch della stessa query usata dalla pagina /streaming?tab=releases:
+      // `new-italy` con i 4 provider IT (Tutti + singoli) sulla finestra di
+      // default 7gg, in modo che "Sincronizza" scaldi davvero la cache che
+      // l'utente vedrà al primo render.
       setSyncStep("Aggiornamento nuove uscite streaming...");
       toast.loading("Aggiornamento nuove uscite streaming...", { id: toastId });
       const today = todayRomeISO();
-      const ranges = [addDaysISO(today, 14), addDaysISO(today, 30)];
+      const dateTo7 = addDaysISO(today, 7);
+      const italyProviderIds: Array<"all" | (typeof STREAMING_PROVIDERS)[number]["id"]> = [
+        "all",
+        ...STREAMING_PROVIDERS.map((p) => p.id),
+      ];
       await Promise.all(
-        STREAMING_PROVIDERS.flatMap((p) =>
-          ranges.map((dateTo) =>
-            queryClient.prefetchQuery({
-              queryKey: ["streaming-releases", p.id, today, dateTo],
-              queryFn: () => streamingApi.getReleasesByProvider(p.id, today, dateTo),
-              staleTime: 0,
-            }),
-          ),
+        italyProviderIds.map((pid) =>
+          queryClient.prefetchQuery({
+            queryKey: [
+              "streaming-releases-italy",
+              pid,
+              "all",
+              today,
+              dateTo7,
+              "release",
+              0,
+            ],
+            queryFn: () =>
+              streamingApi.getReleasesItaly({
+                provider: pid,
+                kind: "all",
+                dateFrom: today,
+                dateTo: dateTo7,
+                sort: "release",
+              }),
+            staleTime: 0,
+          }),
         ),
       );
       setSyncProgress(100);

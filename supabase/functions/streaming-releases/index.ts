@@ -36,60 +36,22 @@ const PROVIDERS: Record<string, { id: number; label: string; homepage: string }>
   hbo: { id: 1899, label: "HBO Max", homepage: "https://www.max.com" },
 };
 
-// TMDB network IDs (per le serie TV) e company IDs (per i film) usati dalle
-// pagine pubbliche TMDB che alimentano "Catalogo Italia". Allineati a:
-//   /network/213-netflix, /network/1024-prime-video,
-//   /network/2739-disney, /network/8304-hbo-max
-// Per i film usiamo la production company "ombrello" del provider, perchè
-// TMDB non espone un concetto di "movie network": Netflix produce i propri
-// film come company id 145174, Amazon Studios = 20580, Walt Disney Pictures
-// = 2 (con i sub-brand Marvel/Pixar/LucasFilm), Warner Bros = 174.
-const PROVIDER_TMDB_IDS: Record<
-  string,
-  { network: number; company: number }
-> = {
-  netflix: { network: 213, company: 145174 },
-  prime: { network: 1024, company: 20580 },
-  disney: { network: 2739, company: 2 },
-  hbo: { network: 8304, company: 174 },
-};
-
 // Mappa inversa: TMDB provider_id -> chiave interna (per riconoscere i
 // provider "principali" quando arricchiamo i titoli con /watch/providers).
 const TMDB_PROVIDER_ID_TO_KEY: Record<number, string> = Object.fromEntries(
   Object.entries(PROVIDERS).map(([key, cfg]) => [cfg.id, key]),
 );
 
-// Whitelist provider mainstream IT usata per "Catalogo Italia". Filtra il
-// rumore di Discover (Plex, Pluto TV, micro-AVOD locali) lasciando solo le
-// piattaforme rilevanti per il pubblico italiano. Gli ID corrispondono a
-// TMDB watch_provider region IT.
-//   8   Netflix
-//   119 Amazon Prime Video
-//   337 Disney+
-//   1899 HBO Max (Sky/NOW)
-//   2 Apple iTunes — escluso (TVOD)
-//   350 Apple TV+
-//   531 Paramount+
-//   554 Discovery+
-//   359 Rai Play
-//   484 Mediaset Infinity
-//   283 Crunchyroll
-//   421 RaiPlay
-//   675 NOW
+// Whitelist provider IT usata per "Catalogo Italia" quando l'utente
+// seleziona "Tutti". Limitata ai 4 provider esposti nei filtri UI
+// (Netflix, Prime Video, Disney+, HBO Max) per coerenza visiva: la card
+// "Tutti" deve mostrare solo titoli realmente disponibili su almeno uno
+// dei 4 provider che l'utente può poi filtrare singolarmente.
 const ITALY_MAINSTREAM_PROVIDER_IDS: number[] = [
-  8,   // Netflix
-  119, // Amazon Prime Video
-  337, // Disney+
-  350, // Apple TV+
-  531, // Paramount+
-  524, // Discovery+
-  554, // Discovery+ (alias)
+  8,    // Netflix
+  119,  // Amazon Prime Video
+  337,  // Disney+
   1899, // HBO Max (in IT esposto via Sky/NOW)
-  39,   // NOW (Sky)
-  283, // Crunchyroll
-  359, // Rai Play
-  484, // Mediaset Infinity
 ];
 const ITALY_MAINSTREAM_SET = new Set<number>(ITALY_MAINSTREAM_PROVIDER_IDS);
 const ITALY_MAINSTREAM_OR = ITALY_MAINSTREAM_PROVIDER_IDS.join("|");
@@ -235,48 +197,6 @@ async function tmdbDiscoverItaly(
 
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`TMDB ${kind} ${res.status}`);
-  const json = await res.json();
-  return Array.isArray(json.results) ? json.results : [];
-}
-
-/**
- * Variante "Catalogo per provider" allineata alle pagine TMDB
- * /network/<id> linkate dall'utente. Per le serie usa with_networks,
- * per i film with_companies. NON forza watch_region IT (la disponibilità
- * IT viene poi validata via /watch/providers per ogni titolo).
- * Sort di default: data uscita decrescente. Nessuna soglia voti rigida.
- */
-async function tmdbDiscoverByNetworkOrCompany(
-  kind: "movie" | "tv",
-  ids: { network: number; company: number },
-  apiKey: string,
-  opts: {
-    sortBy?: string;
-    genreId?: number;
-    page?: number;
-    dateFrom?: string;
-    dateTo?: string;
-  } = {},
-): Promise<any[]> {
-  const dateKey = kind === "movie" ? "primary_release_date" : "first_air_date";
-  const url = new URL(`${TMDB_BASE}/discover/${kind}`);
-  url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("language", "it-IT");
-  if (kind === "tv") {
-    url.searchParams.set("with_networks", String(ids.network));
-  } else {
-    url.searchParams.set("with_companies", String(ids.company));
-  }
-  if (opts.genreId) url.searchParams.set("with_genres", String(opts.genreId));
-  if (opts.dateFrom) url.searchParams.set(`${dateKey}.gte`, opts.dateFrom);
-  if (opts.dateTo) url.searchParams.set(`${dateKey}.lte`, opts.dateTo);
-  url.searchParams.set("sort_by", opts.sortBy ?? `${dateKey}.desc`);
-  url.searchParams.set("include_adult", "false");
-  url.searchParams.set("vote_count.gte", "0");
-  url.searchParams.set("page", String(opts.page ?? 1));
-
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`TMDB ${kind} network/company ${res.status}`);
   const json = await res.json();
   return Array.isArray(json.results) ? json.results : [];
 }
