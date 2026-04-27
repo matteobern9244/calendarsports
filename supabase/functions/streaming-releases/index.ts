@@ -171,7 +171,13 @@ async function tmdbDiscoverItaly(
   dateFrom: string,
   dateTo: string,
   apiKey: string,
-  opts: { providerId?: number; sortBy?: string; genreId?: number; page?: number } = {},
+  opts: {
+    providerId?: number;
+    sortBy?: string;
+    genreId?: number;
+    page?: number;
+    voteCountGte?: number;
+  } = {},
 ): Promise<any[]> {
   const dateKey = kind === "movie" ? "primary_release_date" : "first_air_date";
   const url = new URL(`${TMDB_BASE}/discover/${kind}`);
@@ -201,11 +207,11 @@ async function tmdbDiscoverItaly(
   url.searchParams.set("sort_by", opts.sortBy ?? `${dateKey}.desc`);
   url.searchParams.set("include_adult", "false");
   // Soglia minima di voti per tagliare i titoli senza riscontro reale.
-  // Più alta sui film (catalogo TMDB più rumoroso), più bassa sulle serie.
-  url.searchParams.set(
-    "vote_count.gte",
-    kind === "movie" ? "20" : "10",
-  );
+  // Adattiva: più bassa sui range stretti (novità imminenti senza voti
+  // ancora accumulati), più alta sui range larghi per ridurre il rumore.
+  const defaultVote = kind === "movie" ? 20 : 10;
+  const voteGte = typeof opts.voteCountGte === "number" ? opts.voteCountGte : defaultVote;
+  url.searchParams.set("vote_count.gte", String(voteGte));
   url.searchParams.set("page", String(opts.page ?? 1));
 
   const res = await fetch(url.toString());
