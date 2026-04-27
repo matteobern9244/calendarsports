@@ -126,6 +126,75 @@ async function tmdbDiscover(
   return Array.isArray(json.results) ? json.results : [];
 }
 
+/**
+ * Variante "Italia" senza vincolo provider: TMDB Discover restituisce tutti
+ * i titoli con almeno una disponibilità in regione IT (flatrate|free|ads)
+ * nella finestra di release richiesta. L'arricchimento provider per item
+ * avviene poi via /watch/providers IT con cache.
+ */
+async function tmdbDiscoverItaly(
+  kind: "movie" | "tv",
+  dateFrom: string,
+  dateTo: string,
+  apiKey: string,
+  opts: { providerId?: number; sortBy?: string; genreId?: number; page?: number } = {},
+): Promise<any[]> {
+  const dateKey = kind === "movie" ? "primary_release_date" : "first_air_date";
+  const url = new URL(`${TMDB_BASE}/discover/${kind}`);
+  url.searchParams.set("api_key", apiKey);
+  url.searchParams.set("language", "it-IT");
+  url.searchParams.set("watch_region", "IT");
+  url.searchParams.set(
+    "with_watch_monetization_types",
+    "flatrate|free|ads",
+  );
+  if (opts.providerId) {
+    url.searchParams.set("with_watch_providers", String(opts.providerId));
+  }
+  if (opts.genreId) {
+    url.searchParams.set("with_genres", String(opts.genreId));
+  }
+  url.searchParams.set(`${dateKey}.gte`, dateFrom);
+  url.searchParams.set(`${dateKey}.lte`, dateTo);
+  url.searchParams.set("sort_by", opts.sortBy ?? `${dateKey}.desc`);
+  url.searchParams.set("include_adult", "false");
+  url.searchParams.set("page", String(opts.page ?? 1));
+
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`TMDB ${kind} ${res.status}`);
+  const json = await res.json();
+  return Array.isArray(json.results) ? json.results : [];
+}
+
+/** Dettaglio titolo con append_to_response (credits, watch/providers, videos). */
+async function tmdbDetails(kind: "movie" | "tv", id: string, apiKey: string): Promise<any> {
+  const url = new URL(`${TMDB_BASE}/${kind}/${id}`);
+  url.searchParams.set("api_key", apiKey);
+  url.searchParams.set("language", "it-IT");
+  url.searchParams.set(
+    "append_to_response",
+    kind === "movie"
+      ? "credits,watch/providers,videos,release_dates"
+      : "credits,watch/providers,videos,content_ratings",
+  );
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`TMDB details ${kind} ${res.status}`);
+  return await res.json();
+}
+
+/** Estrae il primo trailer YouTube (preferendo lingua IT, poi originale). */
+function pickTrailerYouTubeKey(videos: any): string | null {
+  const results = Array.isArray(videos?.results) ? videos.results : [];
+  const ytTrailers = results.filter(
+    (v: any) => v?.site === "YouTube" && (v?.type === "Trailer" || v?.type === "Teaser"),
+  );
+  if (ytTrailers.length === 0) return null;
+  const it = ytTrailers.find((v: any) => v?.iso_639_1 === "it");
+  if (it?.key) return it.key;
+  const trailer = ytTrailers.find((v: any) => v?.type === "Trailer");
+  return (trailer ?? ytTrailers[0])?.key ?? null;
+}
+
 async function tmdbCredits(
   kind: "movie" | "tv",
   id: string,
