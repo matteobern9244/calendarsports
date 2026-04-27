@@ -155,7 +155,7 @@ export default function StreamingPage() {
     : "italy";
   const initialSort: SortId = isSort(params.get("sort"))
     ? (params.get("sort") as SortId)
-    : "release";
+    : "popularity";
   const initialGenreParam = params.get("genre");
   const initialGenre: number | null =
     initialGenreParam && /^\d+$/.test(initialGenreParam)
