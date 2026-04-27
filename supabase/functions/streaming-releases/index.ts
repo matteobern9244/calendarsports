@@ -201,48 +201,6 @@ async function tmdbDiscoverItaly(
   return Array.isArray(json.results) ? json.results : [];
 }
 
-/**
- * Variante "Catalogo per provider" allineata alle pagine TMDB
- * /network/<id> linkate dall'utente. Per le serie usa with_networks,
- * per i film with_companies. NON forza watch_region IT (la disponibilità
- * IT viene poi validata via /watch/providers per ogni titolo).
- * Sort di default: data uscita decrescente. Nessuna soglia voti rigida.
- */
-async function tmdbDiscoverByNetworkOrCompany(
-  kind: "movie" | "tv",
-  ids: { network: number; company: number },
-  apiKey: string,
-  opts: {
-    sortBy?: string;
-    genreId?: number;
-    page?: number;
-    dateFrom?: string;
-    dateTo?: string;
-  } = {},
-): Promise<any[]> {
-  const dateKey = kind === "movie" ? "primary_release_date" : "first_air_date";
-  const url = new URL(`${TMDB_BASE}/discover/${kind}`);
-  url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("language", "it-IT");
-  if (kind === "tv") {
-    url.searchParams.set("with_networks", String(ids.network));
-  } else {
-    url.searchParams.set("with_companies", String(ids.company));
-  }
-  if (opts.genreId) url.searchParams.set("with_genres", String(opts.genreId));
-  if (opts.dateFrom) url.searchParams.set(`${dateKey}.gte`, opts.dateFrom);
-  if (opts.dateTo) url.searchParams.set(`${dateKey}.lte`, opts.dateTo);
-  url.searchParams.set("sort_by", opts.sortBy ?? `${dateKey}.desc`);
-  url.searchParams.set("include_adult", "false");
-  url.searchParams.set("vote_count.gte", "0");
-  url.searchParams.set("page", String(opts.page ?? 1));
-
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`TMDB ${kind} network/company ${res.status}`);
-  const json = await res.json();
-  return Array.isArray(json.results) ? json.results : [];
-}
-
 /** Dettaglio titolo con append_to_response (credits, watch/providers, videos). */
 async function tmdbDetails(kind: "movie" | "tv", id: string, apiKey: string): Promise<any> {
   const url = new URL(`${TMDB_BASE}/${kind}/${id}`);
