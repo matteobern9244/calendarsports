@@ -1,102 +1,112 @@
+## Contesto verificato
 
+**Stato attuale (`supabase/functions/streaming-releases` + `StreamingPage.tsx` tab "Nuove uscite"):**
+- TMDB `/discover/{movie|tv}` con `watch_region=IT`, `with_watch_providers=<id>`, `with_watch_monetization_types=flatrate`, finestra `primary_release_date` / `first_air_date`.
+- Validazione per-item su `/watch/providers` (`results.IT.flatrate` deve contenere il provider).
+- Provider chiusi a 4: Netflix (8), Prime Video (119), Disney+ (337), HBO Max (1899).
+- Card mostra solo poster + titolo + data + voto. **Nessun genere, nessun anno, nessun cast/sinossi in lista.**
+- L'utente è obbligato a scegliere prima un provider, poi vede cosa è uscito → finestre 7-30gg quasi sempre quasi vuote.
 
-## Obiettivo
+**Confronto con starflicks.it (stessa fonte TMDB, region IT):**
+- Vista "New Releases" globale, due sezioni: Film e Serie. Nessuna pre-selezione del provider.
+- Card: poster + titolo + **generi testuali** (es. "Thriller, Action") + **rating** + **anno**.
+- Dettaglio: poster, backdrop, generi, data, runtime, regista, plot, **box "Available on" con loghi provider IT da `/watch/providers` + link JustWatch (`results.IT.link`)**, trailer YouTube, cast top 10.
+- TMDB è la fonte: `release_dates` per `region=IT` (per dettaglio e ordinamento), `discover` con `sort_by=popularity.desc` o `primary_release_date.desc`, `/watch/providers` per la disponibilità Italia.
 
-Rendere visibili in "Stasera in TV" anche i programmi che **iniziano prima delle 21:00** (es. Coppa Italia su Canale 5 alle 20:40, Premier League alle 20:55) ma che **sono ancora in onda durante la prima serata** (21:00-22:59). I programmi che iniziano alle 23:00 o dopo restano esclusi.
+## Cosa cambiare
 
-## Diagnosi
+### 1. Edge function `streaming-releases`: nuova action `new-italy`
 
-L'attuale filtro in `TonightTvList.tsx` (linee 136-142) controlla solo l'**istante di inizio** del programma:
+Aggiungere un'action parallela a `new-today` che restituisce un elenco **globale Italia** non legato a un provider:
 
-```ts
-const minutes = h.hourRome * 60 + h.minuteRome;
-return minutes >= PRIME_TIME_START_MIN && minutes < PRIME_TIME_END_EXCLUSIVE_MIN;
-```
+- TMDB `/discover/movie` e `/discover/tv` con:
+  - `watch_region=IT`
+  - **niente** `with_watch_providers` di default (vista aggregata)
+  - `with_watch_monetization_types=flatrate|free|ads` (escludi solo `rent`/`buy` puri)
+  - `primary_release_date.gte/lte` (film) e `first_air_date.gte/lte` (serie) sulla finestra richiesta
+  - `sort_by=primary_release_date.desc` / `first_air_date.desc` (default) oppure `popularity.desc`
+  - `language=it-IT`, `include_adult=false`, `with_original_language` non vincolato
+- Mappare `genre_ids` → label italiane usando `/genre/{movie|tv}/list?language=it-IT` (cache 24h in memoria)
+- Per ogni item arricchire con `/watch/providers` (region IT) per popolare:
+  - `availableProviders`: array di `{ id, name, logo, type: "flatrate"|"free"|"ads" }`
+  - `justWatchLink`: `results.IT.link` (deep link generale del titolo)
+- Filtri opzionali via querystring:
+  - `provider=netflix|prime|disney|hbo|all` (se `all` o assente: nessun filtro)
+  - `kind=movie|tv|all`
+  - `genreId=<int>` (TMDB genre id)
+  - `dateFrom` / `dateTo` (default: oggi-7 .. oggi+30)
+  - `sort=release|popularity` (default `release`)
+- Mantenere la cache in memoria 1h per chiave (`new-italy:{provider}:{kind}:{from}:{to}:{sort}:{genreId}`).
+- Mantenere `new-today` per retrocompatibilità (la card "Stasera in TV" / Home non è impattata).
 
-Questo esclude erroneamente i kickoff anticipati lunghi (20:40 → 22:50, 20:30 → 23:15) che attraversano completamente la prima serata. La riga di Canale 5 con la Coppa Italia e' sparita per questo motivo.
+### 2. Edge function `streaming-releases`: action `details`
 
-## Algoritmo "intelligente" basato su overlap di intervalli
+Nuova action `details?type=movie|tv&id=<id>` che ritorna in un'unica chiamata ciò che serve al dialog:
+- `/movie/{id}?language=it-IT&append_to_response=credits,watch/providers,videos,release_dates`
+- `/tv/{id}?language=it-IT&append_to_response=credits,watch/providers,videos,content_ratings`
 
-Sostituire il check puntuale con un classico **interval overlap test**: un programma e' rilevante per la prima serata se l'intervallo `[start, end)` interseca la finestra `[21:00, 23:00)`.
+Ritorna payload già normalizzato: titolo, anno, generi (label IT), runtime/episodi, regista (movie) o creators (tv), cast top 10, trailer YouTube key, providers IT (flatrate/free/ads), justWatch link.
 
-Per ogni programma calcoliamo i minuti dalla mezzanotte Europe/Rome di **inizio** e **fine** (clampando l'eventuale wrap dopo mezzanotte a 24:00 = 1440):
+Cache 24h. Sostituisce le due chiamate attuali (releases + credits) con una sola.
 
-```text
-overlaps(prog, window) :=
-  prog.startMin < window.endMin   AND   prog.endMin > window.startMin
-```
+### 3. Frontend `StreamingPage.tsx` — tab "Nuove uscite"
 
-Casi coperti correttamente:
+- Aggiungere un selettore "Vista":
+  - **"Catalogo Italia"** (default, nuova): chiama `new-italy`, mostra tutto quello che è uscito in Italia nella finestra, con filtro provider opzionale come pill (Tutti / Netflix / Prime / Disney+ / HBO Max).
+  - **"Per provider"** (vista attuale): mantiene `new-today` con la logica stretta `flatrate`-validata per chi vuole il taglio rigoroso.
+- Card aggiornata (entrambe le viste):
+  - Poster (già c'è)
+  - Titolo (già c'è)
+  - **Riga generi** sotto al titolo: `Thriller, Action` (max 3 chip testuali)
+  - **Anno** accanto al voto
+  - Voto (già c'è)
+  - Mini-strip con **loghi dei provider IT** dove è disponibile (max 3 + "+N")
+- Filtri esistenti (kind, range, "solo in arrivo") restano.
+- Aggiunto filtro **genere** (dropdown popolato dalla lista TMDB IT).
+- Ordinamento: dropdown "Data uscita" / "Popolarità".
 
-| Inizio | Fine  | Visibile? | Motivo |
-|--------|-------|-----------|--------|
-| 20:40  | 22:50 | si        | Attraversa la finestra (Coppa Italia Canale 5) |
-| 20:30  | 23:15 | si        | Inizia prima ma copre tutta la prima serata |
-| 21:30  | 22:25 | si        | Interamente nella finestra (Le Iene) |
-| 22:55  | 23:50 | si        | Inizia in finestra, finisce dopo |
-| 18:30  | 20:55 | no        | Finisce prima delle 21:00 |
-| 23:00  | 00:30 | no        | Inizia dopo la fine finestra |
-| 19:00  | 20:00 | no        | Completamente fuori |
+### 4. Frontend `ReleaseDetailDialog.tsx`
 
-## Refactor proposto
+- Una sola chiamata a `details` (sostituisce `useReleaseCredits`).
+- Aggiungere: anno, generi (chip), runtime/numero stagioni, regista/creator, **box "Disponibile su" con loghi provider IT + bottone "Apri su JustWatch"**, **trailer YouTube embed** (se presente), cast (già c'è).
 
-Modifica un solo file: `src/components/home/TonightTvList.tsx`.
+### 5. Hook `useStreamingData.ts`
 
-### 1. Estendere `TvHighlight` con i minuti di fine
+- Nuovo hook `useReleasesItaly(opts)` per `new-italy`.
+- Nuovo hook `useReleaseDetails(type, id)` per `details`.
+- Aggiornare i tipi `ReleaseItem` aggiungendo `genres: string[]`, `year: number | null`, `availableProviders: ProviderBadge[]`, `justWatchLink: string | null`.
+- Mantenere `useReleasesByProvider` per la vista "Per provider".
 
-Aggiungere `endHourRome`, `endMinuteRome` (oppure piu' semplicemente `endMinutesFromMidnight`) calcolati con lo stesso `Intl.DateTimeFormat` Europe/Rome usato per `time` (linee 84-89). Per programmi che attraversano la mezzanotte (es. start 23:30, end 01:15), normalizziamo aggiungendo `+ 24*60` se `endMin <= startMin`.
+### 6. `src/lib/api/sportsApi.ts`
 
-### 2. Riscrivere `inPrimeWindow` come `overlapsPrimeWindow`
+Aggiungere endpoint client per `new-italy` e `details` con validazione parametri.
 
-```ts
-const overlapsPrimeWindow = (h: TvHighlight) => {
-  const startMin = h.hourRome * 60 + h.minuteRome;
-  // endMin gia' normalizzato per wrap mezzanotte in step 1
-  return startMin < PRIME_TIME_END_EXCLUSIVE_MIN
-      && h.endMinutesFromMidnight > PRIME_TIME_START_MIN;
-};
-```
+## Cosa NON tocco
 
-### 3. Adeguare la selezione "main program per canale"
+- Tab "TV stasera" e card Home "Stasera in TV": pipeline `streaming-tv` invariata.
+- Provider supportati: invariati (Netflix, Prime, Disney+, HBO Max). Aggiungere altri richiede solo nuovi entry nella mappa `PROVIDERS` ma non è in scope ora.
+- Auth, RLS, secrets: TMDB_API_KEY già configurato.
+- Routing, layout pagine sportive, Juventus, Sinner, F1, MotoGP.
 
-La logica esistente (linee 155-170) sceglie un solo programma per canale preferendo quello "main" (>=40 min) e quello che inizia prima. Va aggiornata per favorire il programma che **massimizza l'overlap con la finestra di prima serata**, in modo che:
+## Rischi e note
 
-- se Canale 5 ha Coppa Italia 20:40-22:50 (overlap 110 min) e un altro programma 22:55-23:30 (overlap 5 min), vince Coppa Italia;
-- se RAI 1 ha TG1 20:30-21:00 (overlap 0 min, escluso) e Affari Tuoi 21:00-21:35 + Le Iene 21:35-23:15, vince quello che copre piu' prima serata.
+- La vista "Catalogo Italia" senza filtro provider è meno "rigorosa": un titolo può essere indicizzato da TMDB con region IT ma non ancora attivo su nessun provider quel giorno. Lo gestiamo mostrando esplicitamente la striscia provider sotto la card (vuota = "in arrivo") e l'utente capisce subito.
+- Il numero di chiamate `/watch/providers` cresce (1 per item). Mitigazione: cache 1h per item-key (`watch-providers:{type}:{id}`) e parallelizzazione `Promise.all` come già facciamo.
+- Genre map TMDB IT: una sola fetch all'avvio + cache 24h.
+- Lingua UI italiana mantenuta: tutte le label nuove ("Catalogo Italia", "Disponibile su", "Apri su JustWatch", "Trailer", "Genere", "Ordina per data uscita", "Ordina per popolarità", ecc.).
+- `npm run check:italian` e `npm run check:tz-juventus` continueranno a girare in CI.
 
-Nuovo criterio di scelta (in ordine di priorita'):
+## File toccati (stima)
 
-1. piu' alto **overlap minutes** con `[21:00, 23:00)`;
-2. tie-break: durata totale piu' alta (preferisce il "main");
-3. tie-break finale: `startMs` piu' basso (stabilita').
+- `supabase/functions/streaming-releases/index.ts` (+~250 righe: action `new-italy`, action `details`, mappa generi)
+- `src/hooks/useStreamingData.ts` (+2 hook, tipi estesi)
+- `src/lib/api/sportsApi.ts` (+2 endpoint client)
+- `src/pages/StreamingPage.tsx` (selettore vista, filtro genere, card arricchita)
+- `src/components/streaming/ReleaseDetailDialog.tsx` (riscrittura per usare `details`, box providers, trailer)
+- `changelog.md` + `README.md` (aggiornamento sezione Streaming + nota fonti)
 
-### 4. UI: aggiornare il sottotitolo
+## Verifica post-modifica
 
-Cambiare la riga 217 da `Prima serata (dalle 21:00) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery` a `Prima serata (21:00 - 23:00) — RAI · Mediaset · Sky Sport · Sky Cinema · Discovery`. Riflette correttamente che ora mostriamo qualunque programma in onda nella fascia, non solo quelli che iniziano alle 21:00 esatte.
-
-### 5. Mostrare l'orario reale di inizio anche se anteriore alle 21:00
-
-Il campo `time` (es. `20:40`) viene gia' renderizzato dal componente. Nessuna modifica necessaria: la cella ora mostrera' correttamente `20:40` per la Coppa Italia, rendendo evidente all'utente che il programma e' iniziato prima ma e' ancora in onda.
-
-### 6. `MIN_DURATION` invariato a 40 min
-
-Resta utile per scartare TG/promo quando ci sono piu' candidati per lo stesso canale. Non serve come filtro hard sul pool.
-
-## Verifica
-
-- Test esistente `TonightTvList.test.tsx` usa RAI 1 con start `21:30` → continua a passare (overlap > 0).
-- Aggiungere mentalmente caso Canale 5 20:40 → 22:50 → deve apparire.
-- Nessun impatto su `StreamingPage`, Edge Functions, hook React Query: cambia solo la logica di presentazione lato Home.
-
-## File modificati
-
-- `src/components/home/TonightTvList.tsx`:
-  - estensione interfaccia `TvHighlight` con minuti di fine normalizzati;
-  - sostituzione `inPrimeWindow` con `overlapsPrimeWindow`;
-  - aggiornamento criterio di scelta "main program per canale" basato su overlap minutes;
-  - aggiornamento commento + sottotitolo card.
-
-## Comandi di verifica post-edit
-
-`npm run lint`, `npm run test`, `npm run build`, `npm run check:italian`.
-
+- `npm run lint`, `npm run build`, `npm run test` (vitest)
+- Test edge function `streaming-releases`: chiamata `new-italy` con/senza provider, finestra 30gg, controllo presenza `genres` e `availableProviders`
+- Smoke manuale tab "Nuove uscite" → vista "Catalogo Italia" → click su un titolo → dialog con providers IT + trailer
