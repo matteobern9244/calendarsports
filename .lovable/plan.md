@@ -1,56 +1,65 @@
+## Obiettivo
 
-## Cosa succede oggi
+Nella sezione **Streaming → Nuove uscite** semplificare l'esperienza in un'unica vista "Catalogo Italia" che mostra solo titoli effettivamente disponibili in Italia, con tutti i filtri davvero funzionanti e default ordinamento per data di uscita.
 
-La edge function `streaming-releases?action=new-italy` risponde 200 con dati reali, ma il catalogo che esce è pieno di titoli di nicchia (es. "Black Holes Suck" su Plex con popolarità 0.15) perché:
+## Problemi attuali
 
-1. La query TMDB Discover usa la finestra `primary_release_date` (prima uscita mondiale) anziché l'ingresso effettivo sulle piattaforme IT, quindi pesca tantissimi titoli marginali con almeno una disponibilità qualunque in Italia.
-2. Manca una soglia di qualità: niente `vote_count.gte`, niente filtro popolarità, niente esclusione di titoli senza poster/overview.
-3. L'ordinamento di default è "data uscita desc": i titoli noti vengono sepolti dietro micro-release recenti.
-4. Il filtro provider include qualsiasi piattaforma (anche Plex/Pluto) e non c'è una whitelist dei provider rilevanti per il pubblico italiano (Netflix, Prime, Disney+, Sky/NOW, Apple TV+, Paramount+, RaiPlay, Mediaset Infinity, Crunchyroll).
+1. Esiste un toggle "Catalogo Italia" / "Per provider" che confonde: la vista "Per provider" usa una query separata (`new-today`) limitata a 4 piattaforme e con logica diversa, sovrapposta a Catalogo Italia.
+2. Default ordinamento è "Popolarità" ma deve essere "Data uscita".
+3. Con range "Prossimi 7 giorni" il Catalogo Italia restituisce 0 risultati: la finestra è troppo stretta per come TMDB indicizza (`primary_release_date` / `first_air_date` ≠ data ingresso piattaforma) e i filtri qualità (`vote_count.gte=20`) tagliano tutto.
+4. La garanzia "solo titoli disponibili in IT" oggi si basa solo sulla whitelist provider mainstream IT, ma manca un fallback automatico server-side che allarghi la finestra quando vuota (esiste solo per `new-today`).
+5. Genere selezionato con `kind=all` deve filtrare entrambi i kind in modo coerente (gli ID generi tra movie e tv non coincidono al 100%, ma quelli usati nella select sì — confermato).
 
-Risultato: l'utente vede quasi sempre poche uscite oscure → percezione "non ci sono risultati".
+## Modifiche
 
-Riferimento: starflicks.it ordina per popolarità, mostra solo titoli con voti reali, e raggruppa per provider mainstream IT.
+### UI `src/pages/StreamingPage.tsx`
 
-## Cosa cambia
+- **Rimuovere il toggle Catalogo Italia / Per provider** e tutto il blocco "Per provider":
+  - Rimuovere stato `view`, `provider`, `onlyUpcoming`, `releasesQuery`, `ProviderSelector`, `ItalyProviderFilter` legato a "all/netflix/...".
+  - Mantenere solo il filtro **provider IT opzionale** con chip "Tutti / Netflix / Prime Video / Disney+ / HBO Max" (già `ItalyProviderFilter`), come unico modo per restringere a un provider.
+  - Rimuovere chip "Solo in arrivo" (esisteva solo nella vista provider; il concetto è già implicito nella finestra date).
+- **Default ordinamento**: `sort` iniziale da `"popularity"` → `"release"`. Aggiornare anche la condizione di sync URL (`if (sort !== "release")` invece di `!== "popularity"`).
+- **Empty state unificato** che cita la finestra effettiva restituita dal server (`effectiveFrom`/`effectiveTo`) quando il backend ha allargato automaticamente.
+- **Header sezione**: sottotitolo passa a "Palinsesto TV serale e nuove uscite in Italia".
+- Pulsante "Allarga finestra" resta come scorciatoia per portare il range a 90d.
 
-### Edge function `streaming-releases` (azione `new-italy`)
+### Hook + tipi `src/hooks/useStreamingData.ts`
 
-- Aggiunta whitelist provider IT rilevanti (`watch_providers` IT principali + RAI/Mediaset/DAZN/Crunchyroll). Quando `provider=all`, passare a TMDB `with_watch_providers` come OR-list di questa whitelist (separatore `|`), così Discover restituisce solo titoli realmente in catalogo sulle piattaforme che contano.
-- Aggiunto `vote_count.gte=20` (movie) e `vote_count.gte=10` (tv) per tagliare i titoli senza riscontro reale del pubblico.
-- Default `sort_by=popularity.desc` (allineato a starflicks.it). L'ordinamento "data uscita" resta opzionale dal client.
-- Allargata la finestra di ricerca lato server quando l'utente non specifica date: `dateFrom = today-30`, `dateTo = today+60`, così "Catalogo Italia" mostra anche le novità recenti già disponibili.
-- Discover paginato fino a 2 pagine (40 titoli per kind) per dare materiale sufficiente al filtro client; cap finale a 60 item ordinati.
-- Esclusione titoli senza poster (poster_path nullo).
-- Arricchimento `/watch/providers` IT invariato, ma scarta gli item che dopo l'arricchimento non hanno alcun provider della whitelist IT (evita "solo Plex").
+- Tipo `ReleasesItalyPayload` aggiunge: `widenedWindow?: boolean`, `effectiveFrom?: string`, `effectiveTo?: string` (allineato a `ReleasesPayload`).
+- Nessuna nuova query: `useReleasesByProvider` resta esportato per non rompere altre eventuali importazioni, ma non viene più usato dalla pagina.
 
-### Client `src/pages/StreamingPage.tsx` + `src/hooks/useStreamingData.ts`
+### Edge function `supabase/functions/streaming-releases/index.ts` — action `new-italy`
 
-- Default `sort = "popularity"` (era `"release"`).
-- Default `range` resta `30d` ma la finestra effettiva è gestita lato server (today-30 … today+60).
-- Empty state differenziato: se l'edge function ritorna `configured: true` ma `items: []`, suggerire allargamento finestra a 90d e reset filtro genere.
-- Mostrare nella card un piccolo badge "Disponibile su" con il logo del primo provider mainstream IT (Netflix/Prime/Disney+ ecc.), non il primo qualsiasi.
-- Nel selettore `ItalyProviderFilter` allineare l'elenco alla nuova whitelist rilevante per IT (rimuovere provider esotici).
+- **Default sort server-side**: cambiare default da `popularity.desc` a `release` (sort_by `primary_release_date.desc` / `first_air_date.desc`) per allinearsi al nuovo default UI. Il client passa comunque `sort` esplicito, ma il default deve essere coerente.
+- **Validazione "in uscita in Italia" rinforzata**: la post-filter già scarta titoli che dopo `/watch/providers` IT non hanno alcun provider whitelist IT. Aggiungere nello stesso step: scartare anche titoli senza `releaseDate` (data nulla = non comparabile come "uscita in IT").
+- **Fallback automatico finestra date** (parità con `new-today`):
+  - Dopo aver costruito `items`, se `items.length === 0` e l'utente ha passato `dateFrom`/`dateTo` espliciti, rifare la query con `widenedFrom = dateFrom - 14gg`, `widenedTo = dateTo + 30gg`.
+  - Restituire nel payload: `widenedWindow: true`, `effectiveFrom`, `effectiveTo` quando il fallback scatta.
+  - Evita lo stato "Nessun titolo" per range stretti (7d) come visto nello screenshot utente.
+- **Soglia voti meno aggressiva sui range stretti**: quando `dateFrom..dateTo` ≤ 14 giorni, abbassare `vote_count.gte` a `5` (movie) / `2` (tv): le novità imminenti spesso non hanno ancora voti accumulati.
+- **Quando un provider singolo è selezionato**: bypassare la whitelist mainstream e usare solo quel provider id (già implementato), ma mantenere comunque il filtro `vote_count` adattivo.
 
-### Documentazione
+### File toccati
 
-- `changelog.md`: voce v2.3.1 "Catalogo Italia: filtro provider mainstream IT, soglia voti, ordinamento per popolarità di default".
-- `README.md`: sezione Streaming aggiornata con lista provider whitelist e logica anti-noise.
-- `src/lib/version.ts`: bump a `2.3.1`.
+- `src/pages/StreamingPage.tsx` (semplificazione vista, rimozione toggle, default sort)
+- `src/hooks/useStreamingData.ts` (tipo payload)
+- `supabase/functions/streaming-releases/index.ts` (default sort, fallback finestra, vote threshold adattivo)
+- `src/lib/version.ts` (bump a `2.3.2`)
+- `changelog.md`, `README.md` (entry "Streaming: vista unificata Catalogo Italia, fallback finestra automatico")
 
-## File toccati
+## Comportamento atteso dopo
 
-- `supabase/functions/streaming-releases/index.ts`
-- `src/pages/StreamingPage.tsx`
-- `src/hooks/useStreamingData.ts`
-- `src/lib/api/sportsApi.ts` (solo se serve esporre `kind`/`sort` default diversi)
-- `src/lib/version.ts`
-- `changelog.md`
-- `README.md`
+- Aprendo `/streaming?tab=releases` si vede una sola vista "Catalogo Italia".
+- I chip provider permettono di restringere a Netflix / Prime / Disney+ / HBO Max o lasciare "Tutti".
+- I select periodo / generi / sort sono visibili sempre e funzionanti.
+- Default sort: "Ordina per data uscita".
+- Con range 7 giorni e nessun risultato esatto, il backend allarga in automatico e restituisce comunque titoli reali in uscita IT, con un'indicazione testuale tipo "Finestra ampliata a {effectiveFrom} → {effectiveTo} per mostrare risultati".
+- Nessun titolo che non è disponibile in IT su provider mainstream comparirà più nelle card.
 
 ## Cosa NON cambia
 
-- Nessuna modifica al workflow Git, nessun push diretto su `main`.
-- Nessuna modifica alle altre azioni dell'edge function (`new-today`, `details`, `credits`).
-- Nessun mock o dato hardcoded: tutto resta TMDB live in regione IT.
-- UI italiano, fuso `Europe/Rome` rispettati.
+- Nessuna modifica al tab "TV stasera".
+- Nessuna modifica alle action `details` / `credits` dell'edge function.
+- Nessuna modifica al workflow Git o a Lovable sync.
+- Nessun mock o dato hardcoded: tutto resta TMDB live region IT.
+- UI italiano e fuso `Europe/Rome` rispettati.
