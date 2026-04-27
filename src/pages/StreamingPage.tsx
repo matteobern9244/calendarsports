@@ -259,6 +259,7 @@ export default function StreamingPage() {
       : "Italia";
 
   const widened = italyQuery.data?.widenedWindow === true;
+  const fallbackRecent = italyQuery.data?.fallbackRecent === true;
   const effectiveFrom = italyQuery.data?.effectiveFrom;
   const effectiveTo = italyQuery.data?.effectiveTo;
 
@@ -462,7 +463,16 @@ export default function StreamingPage() {
             </div>
           </div>
 
-          {widened && effectiveFrom && effectiveTo && filteredItems.length > 0 && (
+          {fallbackRecent && filteredItems.length > 0 && (
+            <p
+              className="text-xs text-muted-foreground italic"
+              aria-live="polite"
+            >
+              Nessuna uscita {providerLabel !== "Italia" ? `su ${providerLabel} ` : ""}nella finestra selezionata: stiamo mostrando le uscite più recenti.
+            </p>
+          )}
+
+          {!fallbackRecent && widened && effectiveFrom && effectiveTo && filteredItems.length > 0 && (
             <p
               className="text-xs text-muted-foreground italic"
               aria-live="polite"
