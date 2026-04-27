@@ -1,10 +1,17 @@
 // Edge function: streaming-releases
-// Restituisce le nuove uscite per provider streaming (Netflix, Prime Video,
-// Disney+, HBO Max) usando TMDB API (region IT).
+// Restituisce le nuove uscite per i provider streaming attivi in Italia
+// (Netflix, Prime Video, Disney+, HBO Max) usando TMDB API (region IT).
 //
 // Actions:
-//  - new-today: lista uscite tra dateFrom..dateTo (default oggi..oggi+7)
-//  - credits:   cast top 10 di un singolo titolo (param type, id)
+//  - new-today: lista uscite per provider tra dateFrom..dateTo, validate
+//               1-a-1 con /watch/providers IT (taglio rigoroso storico).
+//  - new-italy: catalogo aggregato Italia tra dateFrom..dateTo, generi e
+//               loghi provider IT inclusi per ogni titolo. Supporta filtri
+//               provider, kind, genreId, sort.
+//  - details:   payload one-shot per il dialog (overview, generi, runtime,
+//               regista/creators, providers IT + JustWatch link, trailer
+//               YouTube, cast top 10).
+//  - credits:   legacy, cast top 10 di un singolo titolo (param type, id).
 //
 // Richiede secret `TMDB_API_KEY`. Senza chiave, la lista risponde con
 // `data.items=[]` e `configured=false` cosi' il frontend mostra uno
@@ -19,6 +26,7 @@ import {
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
 const TMDB_PROFILE_IMG = "https://image.tmdb.org/t/p/w185";
+const TMDB_PROVIDER_LOGO = "https://image.tmdb.org/t/p/w92";
 
 // TMDB watch_provider IDs (region IT)
 const PROVIDERS: Record<string, { id: number; label: string; homepage: string }> = {
@@ -28,7 +36,17 @@ const PROVIDERS: Record<string, { id: number; label: string; homepage: string }>
   hbo: { id: 1899, label: "HBO Max", homepage: "https://www.max.com" },
 };
 
+// Mappa inversa: TMDB provider_id -> chiave interna (per riconoscere i
+// provider "principali" quando arricchiamo i titoli con /watch/providers).
+const TMDB_PROVIDER_ID_TO_KEY: Record<number, string> = Object.fromEntries(
+  Object.entries(PROVIDERS).map(([key, cfg]) => [cfg.id, key]),
+);
+
 const PROVIDER_KEY_RE = /^(netflix|prime|disney|hbo)$/;
+const PROVIDER_FILTER_RE = /^(netflix|prime|disney|hbo|all)$/;
+const KIND_FILTER_RE = /^(movie|tv|all)$/;
+const SORT_RE = /^(release|popularity)$/;
+const GENRE_RE = /^\d{1,6}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const KIND_RE = /^(movie|tv)$/;
 const ID_RE = /^\d{1,9}$/;
@@ -37,6 +55,21 @@ type CacheEntry = { at: number; payload: unknown };
 const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const CREDITS_TTL_MS = 24 * 60 * 60 * 1000;
+const DETAILS_TTL_MS = 24 * 60 * 60 * 1000;
+const ITEM_PROVIDERS_TTL_MS = 60 * 60 * 1000;
+const GENRE_MAP_TTL_MS = 24 * 60 * 60 * 1000;
+
+// Cache dedicate per arricchimenti per-item (riusati su molte query)
+type ItemProvidersInfo = {
+  flatrate: Array<{ provider_id: number; provider_name: string; logo_path: string | null }>;
+  free: Array<{ provider_id: number; provider_name: string; logo_path: string | null }>;
+  ads: Array<{ provider_id: number; provider_name: string; logo_path: string | null }>;
+  link: string | null;
+};
+const itemProvidersCache = new Map<string, { at: number; payload: ItemProvidersInfo }>();
+
+type GenreMap = Record<number, string>;
+const genreMapCache: { movie?: { at: number; map: GenreMap }; tv?: { at: number; map: GenreMap } } = {};
 
 // Quando la finestra richiesta non produce risultati, ampliamo automaticamente
 // la ricerca di N giorni indietro e M giorni in avanti, mantenendo provider e
@@ -118,22 +151,123 @@ async function tmdbItemProviderInfoIT(
   apiKey: string,
 ): Promise<{ available: boolean; deepLink: string | null }> {
   try {
-    const url = new URL(`${TMDB_BASE}/${kind}/${id}/watch/providers`);
-    url.searchParams.set("api_key", apiKey);
-    const res = await fetch(url.toString());
-    if (!res.ok) return { available: false, deepLink: null };
-    const json = await res.json();
-    const itResults = json?.results?.IT;
-    const flatrate = itResults?.flatrate;
-    if (!Array.isArray(flatrate)) return { available: false, deepLink: null };
-    const available = flatrate.some((p: any) => p?.provider_id === providerId);
-    const deepLink = available && typeof itResults?.link === "string" && itResults.link.length > 0
-      ? itResults.link
-      : null;
+    const info = await tmdbItemProvidersFullIT(kind, id, apiKey);
+    const available = info.flatrate.some((p) => p.provider_id === providerId);
+    const deepLink = available && info.link ? info.link : null;
     return { available, deepLink };
   } catch (_err) {
     return { available: false, deepLink: null };
   }
+}
+
+/**
+ * Recupera l'intero blocco /watch/providers IT per un titolo, con cache di
+ * 1h. Restituisce flatrate/free/ads + link JustWatch generale del titolo.
+ * Usato sia dalla validazione legacy che dall'arricchimento di new-italy
+ * e details.
+ */
+async function tmdbItemProvidersFullIT(
+  kind: "movie" | "tv",
+  id: number,
+  apiKey: string,
+): Promise<ItemProvidersInfo> {
+  const cacheKey = `${kind}:${id}`;
+  const cached = itemProvidersCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < ITEM_PROVIDERS_TTL_MS) {
+    return cached.payload;
+  }
+  const empty: ItemProvidersInfo = { flatrate: [], free: [], ads: [], link: null };
+  try {
+    const url = new URL(`${TMDB_BASE}/${kind}/${id}/watch/providers`);
+    url.searchParams.set("api_key", apiKey);
+    const res = await fetch(url.toString());
+    if (!res.ok) {
+      itemProvidersCache.set(cacheKey, { at: Date.now(), payload: empty });
+      return empty;
+    }
+    const json = await res.json();
+    const itResults = json?.results?.IT;
+    const map = (arr: unknown): ItemProvidersInfo["flatrate"] =>
+      Array.isArray(arr)
+        ? arr.map((p: any) => ({
+            provider_id: p?.provider_id,
+            provider_name: p?.provider_name ?? "",
+            logo_path: typeof p?.logo_path === "string" ? p.logo_path : null,
+          }))
+        : [];
+    const payload: ItemProvidersInfo = {
+      flatrate: map(itResults?.flatrate),
+      free: map(itResults?.free),
+      ads: map(itResults?.ads),
+      link: typeof itResults?.link === "string" && itResults.link.length > 0 ? itResults.link : null,
+    };
+    itemProvidersCache.set(cacheKey, { at: Date.now(), payload });
+    return payload;
+  } catch (_err) {
+    itemProvidersCache.set(cacheKey, { at: Date.now(), payload: empty });
+    return empty;
+  }
+}
+
+/**
+ * Genera la mappa { genreId -> labelItaliana } per movie / tv da TMDB.
+ * Cache 24h. Se TMDB non risponde restituiamo una mappa vuota: il titolo
+ * mostrerà solo i generi che riusciamo a derivare (nessuno, in quel caso),
+ * quindi la riga generi viene semplicemente omessa lato UI.
+ */
+async function tmdbGenreMap(kind: "movie" | "tv", apiKey: string): Promise<GenreMap> {
+  const cached = genreMapCache[kind];
+  if (cached && Date.now() - cached.at < GENRE_MAP_TTL_MS) return cached.map;
+  try {
+    const url = new URL(`${TMDB_BASE}/genre/${kind}/list`);
+    url.searchParams.set("api_key", apiKey);
+    url.searchParams.set("language", "it-IT");
+    const res = await fetch(url.toString());
+    if (!res.ok) return {};
+    const json = await res.json();
+    const map: GenreMap = {};
+    if (Array.isArray(json?.genres)) {
+      for (const g of json.genres) {
+        if (typeof g?.id === "number" && typeof g?.name === "string") {
+          map[g.id] = g.name;
+        }
+      }
+    }
+    genreMapCache[kind] = { at: Date.now(), map };
+    return map;
+  } catch (_err) {
+    return {};
+  }
+}
+
+/** Estrae l'anno YYYY da una stringa data ISO (YYYY-MM-DD). */
+function yearFromDate(date: string | null | undefined): number | null {
+  if (!date || typeof date !== "string") return null;
+  const m = date.match(/^(\d{4})/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+/** Mappa i provider IT (flatrate prioritari) verso il payload compatto UI. */
+function compactProviders(info: ItemProvidersInfo) {
+  const seen = new Set<number>();
+  const out: Array<{ id: number; key: string | null; name: string; logo: string | null; type: "flatrate" | "free" | "ads" }> = [];
+  const push = (type: "flatrate" | "free" | "ads", arr: ItemProvidersInfo["flatrate"]) => {
+    for (const p of arr) {
+      if (!p?.provider_id || seen.has(p.provider_id)) continue;
+      seen.add(p.provider_id);
+      out.push({
+        id: p.provider_id,
+        key: TMDB_PROVIDER_ID_TO_KEY[p.provider_id] ?? null,
+        name: p.provider_name,
+        logo: p.logo_path ? `${TMDB_PROVIDER_LOGO}${p.logo_path}` : null,
+        type,
+      });
+    }
+  };
+  push("flatrate", info.flatrate);
+  push("free", info.free);
+  push("ads", info.ads);
+  return out;
 }
 
 function normalizeItem(raw: any, kind: "movie" | "tv", deepLink: string | null = null) {
@@ -155,6 +289,12 @@ function normalizeItem(raw: any, kind: "movie" | "tv", deepLink: string | null =
     overview: raw.overview ?? "",
     voteAverage: typeof raw.vote_average === "number" ? raw.vote_average : null,
     deepLink,
+    year: yearFromDate(releaseDate),
+    genreIds: Array.isArray(raw.genre_ids) ? raw.genre_ids : [],
+    genres: [] as string[],
+    availableProviders: [] as ReturnType<typeof compactProviders>,
+    justWatchLink: deepLink,
+    popularity: typeof raw.popularity === "number" ? raw.popularity : 0,
   };
 }
 
