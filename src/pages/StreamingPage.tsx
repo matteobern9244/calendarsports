@@ -45,7 +45,7 @@ import type {
   StreamingProviderId,
 } from "@/lib/api/sportsApi";
 import { cn } from "@/lib/utils";
-import { todayRomeISO, addDaysISO } from "@/lib/dateUtils";
+import { todayRomeISO, addDaysISO, formatDateIT } from "@/lib/dateUtils";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -467,7 +467,7 @@ export default function StreamingPage() {
               className="text-xs text-muted-foreground italic"
               aria-live="polite"
             >
-              Nessun titolo nella finestra selezionata: stiamo mostrando le uscite tra {effectiveFrom} e {effectiveTo}.
+              Nessun titolo nella finestra selezionata: stiamo mostrando le uscite tra {formatDateIT(effectiveFrom)} e {formatDateIT(effectiveTo)}.
             </p>
           )}
 
