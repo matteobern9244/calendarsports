@@ -622,7 +622,7 @@ export default function StreamingPage() {
 
       <ReleaseDetailDialog
         item={selected}
-        provider={provider}
+        provider={italyProvider !== "all" ? italyProvider : "netflix"}
         providerLabel={providerLabel}
         onClose={() => setSelected(null)}
       />
