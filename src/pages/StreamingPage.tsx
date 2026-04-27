@@ -155,7 +155,7 @@ export default function StreamingPage() {
     : "italy";
   const initialSort: SortId = isSort(params.get("sort"))
     ? (params.get("sort") as SortId)
-    : "release";
+    : "popularity";
   const initialGenreParam = params.get("genre");
   const initialGenre: number | null =
     initialGenreParam && /^\d+$/.test(initialGenreParam)
@@ -204,7 +204,7 @@ export default function StreamingPage() {
         if (onlyUpcoming) next.set("upcoming", "1");
       } else {
         if (italyProvider !== "all") next.set("itProvider", italyProvider);
-        if (sort !== "release") next.set("sort", sort);
+        if (sort !== "popularity") next.set("sort", sort);
         if (genre !== null) next.set("genre", String(genre));
       }
       if (range !== "30d") next.set("range", range);

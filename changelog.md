@@ -13,6 +13,53 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 _(nessuna voce aperta)_
 
+## [2.3.1] — Catalogo Italia: filtro provider mainstream + soglia voti (2026-04-27)
+
+Bump applicativo `2.3.0` → `2.3.1` esposto da `src/lib/version.ts`. Fix
+funzionale circoscritto alla sezione **Streaming → tab "Nuove uscite" →
+vista "Catalogo Italia"**: i risultati erano dominati da titoli di nicchia
+(es. catalogo Plex con popolarità < 0.2) perché TMDB Discover restituiva
+qualunque titolo con almeno una disponibilità in IT, anche su AVOD
+secondari. Allineato il comportamento al riferimento starflicks.it.
+Nessun cambio di stack, branch policy o policy Lovable. Le altre sezioni
+(Home, Juventus, Sinner, F1, MotoGP, "Stasera in TV", "Per provider") non
+sono toccate.
+
+### Changed
+
+- **Edge function `streaming-releases` — action `new-italy`.** Quando
+  l'utente non specifica un provider, la query TMDB Discover usa una
+  whitelist di `with_watch_providers` IT mainstream (Netflix, Prime,
+  Disney+, Apple TV+, Paramount+, NOW/Sky, Crunchyroll, RaiPlay, Mediaset
+  Infinity, Discovery+) come OR-list, anziché lasciare il filtro vuoto.
+  Aggiunto `vote_count.gte=20` (movie) / `vote_count.gte=10` (tv) per
+  tagliare titoli senza riscontro reale. Esclusi a monte i titoli senza
+  poster (`poster_path` nullo). Default `sort_by` allineato a
+  `popularity.desc`; `release` resta opzionale dal client.
+- **Finestra di default ampliata** lato server quando `dateFrom`/`dateTo`
+  non sono specificati: `today-30 .. today+60` (era `today-7 .. today+30`).
+  Discover indicizza per data di prima uscita mondiale, non per ingresso
+  sulla piattaforma IT, quindi serve una finestra realistica.
+- **Paginazione TMDB**: 2 pagine per kind (~40 candidati per movie/tv) per
+  alimentare i filtri client e il cap finale di 60 item.
+- **Post-filtro mainstream IT**: dopo l'arricchimento `/watch/providers`
+  IT, gli item che non hanno alcun provider della whitelist mainstream
+  vengono scartati (evita il caso "disponibile solo su Plex").
+- **Frontend `StreamingPage`**: default UI per la vista "Catalogo Italia"
+  cambia da "Ordina per data uscita" a "Ordina per popolarità", coerente
+  con starflicks.it. La preferenza viene serializzata in URL solo se
+  diversa dal nuovo default.
+
+### Notes
+
+- Nessuna modifica a `new-today`, `details`, `credits`, all'autenticazione
+  o agli altri provider sportivi.
+- Continua a non esistere alcun mock/placeholder: tutti i titoli mostrati
+  in "Catalogo Italia" provengono da TMDB live in regione IT.
+- L'ordinamento per data uscita resta disponibile dal selettore UI per
+  chi vuole tracciare le uscite più recenti indipendentemente dalla
+  popolarità.
+
 ## [2.3.0] — Streaming "Catalogo Italia" + dettaglio TMDB arricchito (2026-04-27)
 
 Bump applicativo `2.2.0` → `2.3.0` esposto da `src/lib/version.ts` e dal

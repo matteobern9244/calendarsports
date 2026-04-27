@@ -85,13 +85,23 @@ L'app espone sei viste principali:
   "Nuove uscite" propone due viste:
   1. **Catalogo Italia** (default, ispirata a starflicks.it). Edge action
      `streaming-releases?action=new-italy`. TMDB Discover region `IT` con
-     `with_watch_monetization_types=flatrate|free|ads`, senza vincolo
-     provider in upfront. Filtri: provider (Tutti / Netflix / Prime /
-     Disney+ / HBO Max), kind (Film/Serie/Tutti), genere TMDB IT (15
-     generi principali), ordinamento (data uscita / popolarità). Ogni
-     titolo è arricchito con generi italiani (`/genre/{movie|tv}/list`,
-     cache 24h), `availableProviders` con logo (`/watch/providers` IT,
-     cache 1h) e `justWatchLink` (`results.IT.link`).
+     `with_watch_monetization_types=flatrate|free|ads`. Quando l'utente
+     non sceglie un provider specifico, il filtro `with_watch_providers`
+     usa una **whitelist mainstream IT** (Netflix, Prime, Disney+, Apple
+     TV+, Paramount+, NOW/Sky, Crunchyroll, RaiPlay, Mediaset Infinity,
+     Discovery+) per evitare risultati dominati da AVOD secondari
+     (Plex/Pluto). Soglia minima `vote_count.gte=20` (movie) /
+     `vote_count.gte=10` (tv) per tagliare titoli senza riscontro reale.
+     Esclusi a monte i titoli senza `poster_path`. Finestra di default
+     `today-30 .. today+60`, paginazione 2 pagine per kind, cap finale
+     60 item. Filtri UI: provider (Tutti / Netflix / Prime / Disney+ /
+     HBO Max), kind (Film/Serie/Tutti), genere TMDB IT (15 generi
+     principali), ordinamento (popolarità di default / data uscita).
+     Ogni titolo è arricchito con generi italiani
+     (`/genre/{movie|tv}/list`, cache 24h), `availableProviders` con logo
+     (`/watch/providers` IT, cache 1h) e `justWatchLink`
+     (`results.IT.link`). Post-arricchimento, gli item senza alcun
+     provider della whitelist mainstream vengono scartati.
   2. **Per provider**. Edge action `new-today` (logica precedente):
      Discover con `with_watch_providers=<provider>` +
      `with_watch_monetization_types=flatrate`, validato 1-a-1 su

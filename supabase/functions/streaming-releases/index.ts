@@ -42,6 +42,40 @@ const TMDB_PROVIDER_ID_TO_KEY: Record<number, string> = Object.fromEntries(
   Object.entries(PROVIDERS).map(([key, cfg]) => [cfg.id, key]),
 );
 
+// Whitelist provider mainstream IT usata per "Catalogo Italia". Filtra il
+// rumore di Discover (Plex, Pluto TV, micro-AVOD locali) lasciando solo le
+// piattaforme rilevanti per il pubblico italiano. Gli ID corrispondono a
+// TMDB watch_provider region IT.
+//   8   Netflix
+//   119 Amazon Prime Video
+//   337 Disney+
+//   1899 HBO Max (Sky/NOW)
+//   2 Apple iTunes — escluso (TVOD)
+//   350 Apple TV+
+//   531 Paramount+
+//   554 Discovery+
+//   359 Rai Play
+//   484 Mediaset Infinity
+//   283 Crunchyroll
+//   421 RaiPlay
+//   675 NOW
+const ITALY_MAINSTREAM_PROVIDER_IDS: number[] = [
+  8,   // Netflix
+  119, // Amazon Prime Video
+  337, // Disney+
+  350, // Apple TV+
+  531, // Paramount+
+  524, // Discovery+
+  554, // Discovery+ (alias)
+  1899, // HBO Max (in IT esposto via Sky/NOW)
+  39,   // NOW (Sky)
+  283, // Crunchyroll
+  359, // Rai Play
+  484, // Mediaset Infinity
+];
+const ITALY_MAINSTREAM_SET = new Set<number>(ITALY_MAINSTREAM_PROVIDER_IDS);
+const ITALY_MAINSTREAM_OR = ITALY_MAINSTREAM_PROVIDER_IDS.join("|");
+
 const PROVIDER_KEY_RE = /^(netflix|prime|disney|hbo)$/;
 const PROVIDER_FILTER_RE = /^(netflix|prime|disney|hbo|all)$/;
 const KIND_FILTER_RE = /^(movie|tv|all)$/;
@@ -148,8 +182,16 @@ async function tmdbDiscoverItaly(
     "with_watch_monetization_types",
     "flatrate|free|ads",
   );
+  // Provider filter:
+  // - se l'utente ha scelto un provider specifico, lo usiamo.
+  // - altrimenti restringiamo a una whitelist di provider mainstream IT
+  //   (Netflix, Prime, Disney+, Apple TV+, Paramount+, NOW/Sky,
+  //   Crunchyroll, RaiPlay, Mediaset Infinity, Discovery+) per evitare
+  //   risultati dominati da AVOD secondari (Plex/Pluto TV).
   if (opts.providerId) {
     url.searchParams.set("with_watch_providers", String(opts.providerId));
+  } else {
+    url.searchParams.set("with_watch_providers", ITALY_MAINSTREAM_OR);
   }
   if (opts.genreId) {
     url.searchParams.set("with_genres", String(opts.genreId));
@@ -158,6 +200,12 @@ async function tmdbDiscoverItaly(
   url.searchParams.set(`${dateKey}.lte`, dateTo);
   url.searchParams.set("sort_by", opts.sortBy ?? `${dateKey}.desc`);
   url.searchParams.set("include_adult", "false");
+  // Soglia minima di voti per tagliare i titoli senza riscontro reale.
+  // Più alta sui film (catalogo TMDB più rumoroso), più bassa sulle serie.
+  url.searchParams.set(
+    "vote_count.gte",
+    kind === "movie" ? "20" : "10",
+  );
   url.searchParams.set("page", String(opts.page ?? 1));
 
   const res = await fetch(url.toString());
@@ -594,8 +642,12 @@ Deno.serve(async (req) => {
       const today = todayRomeISO();
       const dfParam = url.searchParams.get("dateFrom") ?? "";
       const dtParam = url.searchParams.get("dateTo") ?? "";
-      const dateFrom = DATE_RE.test(dfParam) ? dfParam : addDaysISO(today, -7);
-      const dateTo = DATE_RE.test(dtParam) ? dtParam : addDaysISO(today, 30);
+      // Finestra di default più ampia: today-30 .. today+60.
+      // Discover indicizza sulla data di prima uscita del titolo (non sulla
+      // data di ingresso sulla piattaforma), quindi servono 90 giorni per
+      // intercettare in modo realistico le novità presenti in Italia.
+      const dateFrom = DATE_RE.test(dfParam) ? dfParam : addDaysISO(today, -30);
+      const dateTo = DATE_RE.test(dtParam) ? dtParam : addDaysISO(today, 60);
       const providerKey = providerParam === "all" ? null : providerParam;
       const providerId = providerKey ? PROVIDERS[providerKey]?.id : undefined;
       const genreId = genreIdParam ? parseInt(genreIdParam, 10) : undefined;
@@ -627,26 +679,39 @@ Deno.serve(async (req) => {
         return jsonResponse({ success: true, data: cached.payload }, {}, corsHeaders);
       }
 
-      const sortByMovie = sortParam === "popularity" ? "popularity.desc" : "primary_release_date.desc";
-      const sortByTv = sortParam === "popularity" ? "popularity.desc" : "first_air_date.desc";
+      // Default server-side: popularity.desc (allineato a starflicks.it).
+      // L'utente può richiedere "release" dal client per ordinare per data.
+      const sortByMovie = sortParam === "release" ? "primary_release_date.desc" : "popularity.desc";
+      const sortByTv = sortParam === "release" ? "first_air_date.desc" : "popularity.desc";
 
       const wantMovie = kindParam === "all" || kindParam === "movie";
       const wantTv = kindParam === "all" || kindParam === "tv";
 
+      // Pagina 1+2 per ciascun kind: ~40 candidati per tipo, sufficienti
+      // per coprire i filtri client (kind, upcoming) e per il cap finale.
+      const fetchTwoPages = async (
+        kind: "movie" | "tv",
+        sortBy: string,
+      ): Promise<any[]> => {
+        const [p1, p2] = await Promise.all([
+          tmdbDiscoverItaly(kind, dateFrom, dateTo, apiKey, { providerId, sortBy, genreId, page: 1 }).catch(() => []),
+          tmdbDiscoverItaly(kind, dateFrom, dateTo, apiKey, { providerId, sortBy, genreId, page: 2 }).catch(() => []),
+        ]);
+        return [...p1, ...p2];
+      };
+
       const [movies, tv, movieGenres, tvGenres] = await Promise.all([
-        wantMovie
-          ? tmdbDiscoverItaly("movie", dateFrom, dateTo, apiKey, { providerId, sortBy: sortByMovie, genreId }).catch(() => [])
-          : Promise.resolve([]),
-        wantTv
-          ? tmdbDiscoverItaly("tv", dateFrom, dateTo, apiKey, { providerId, sortBy: sortByTv, genreId }).catch(() => [])
-          : Promise.resolve([]),
+        wantMovie ? fetchTwoPages("movie", sortByMovie) : Promise.resolve([] as any[]),
+        wantTv ? fetchTwoPages("tv", sortByTv) : Promise.resolve([] as any[]),
         tmdbGenreMap("movie", apiKey),
         tmdbGenreMap("tv", apiKey),
       ]);
 
+      // Esclude titoli senza poster (TMDB Discover ne restituisce parecchi
+      // privi di artwork: in UI sarebbero placeholder vuoti).
       const candidates: Array<{ kind: "movie" | "tv"; raw: any }> = [
-        ...movies.map((m) => ({ kind: "movie" as const, raw: m })),
-        ...tv.map((t) => ({ kind: "tv" as const, raw: t })),
+        ...movies.filter((m) => !!m?.poster_path).map((m) => ({ kind: "movie" as const, raw: m })),
+        ...tv.filter((t) => !!t?.poster_path).map((t) => ({ kind: "tv" as const, raw: t })),
       ];
 
       // Arricchimento /watch/providers IT per ogni candidato (cache 1h).
@@ -654,7 +719,7 @@ Deno.serve(async (req) => {
         candidates.map((c) => tmdbItemProvidersFullIT(c.kind, c.raw.id, apiKey)),
       );
 
-      const items = candidates.map((c, i) => {
+      let items = candidates.map((c, i) => {
         const base = normalizeItem(c.raw, c.kind, providersByItem[i].link);
         const map = c.kind === "movie" ? movieGenres : tvGenres;
         base.genres = base.genreIds
@@ -664,6 +729,17 @@ Deno.serve(async (req) => {
         base.justWatchLink = providersByItem[i].link;
         return base;
       });
+
+      // Quando l'utente NON ha scelto un provider specifico, scarta gli item
+      // che dopo l'arricchimento /watch/providers IT non risultano disponibili
+      // su nessuna piattaforma mainstream italiana (whitelist condivisa con
+      // tmdbDiscoverItaly). Questo elimina i casi residui in cui Discover
+      // accetta il titolo per la presenza di un AVOD minore non in whitelist.
+      if (!providerId) {
+        items = items.filter((it) =>
+          (it.availableProviders ?? []).some((p) => ITALY_MAINSTREAM_SET.has(p.id)),
+        );
+      }
 
       // Ordinamento finale stabile lato server: rispetta sort scelto.
       items.sort((a, b) => {
@@ -675,6 +751,11 @@ Deno.serve(async (req) => {
         if (dateCmp !== 0) return dateCmp;
         return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
       });
+
+      // Cap finale: max 60 item, abbastanza per la paginazione client (12/pagina).
+      if (items.length > 60) {
+        items = items.slice(0, 60);
+      }
 
       const payload = {
         region: "IT",
