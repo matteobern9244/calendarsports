@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Sparkles, Tv2, RefreshCw, CalendarClock, Globe2 } from "lucide-react";
+import { Sparkles, Tv2, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -36,7 +36,6 @@ import ReleaseCountdownBadge from "@/components/streaming/ReleaseCountdownBadge"
 import {
   STREAMING_FAMILIES,
   STREAMING_PROVIDERS,
-  useReleasesByProvider,
   useReleasesItaly,
   useTvByFamily,
   type ReleaseItem,
@@ -46,7 +45,7 @@ import type {
   StreamingProviderId,
 } from "@/lib/api/sportsApi";
 import { cn } from "@/lib/utils";
-import { todayRomeISO, addDaysISO, daysUntilRome } from "@/lib/dateUtils";
+import { todayRomeISO, addDaysISO } from "@/lib/dateUtils";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -56,7 +55,6 @@ const RELEASES_PER_PAGE = 8;
 
 type RangeId = "7d" | "30d" | "90d";
 type KindId = "all" | "movie" | "tv";
-type ViewId = "italy" | "provider";
 type SortId = "release" | "popularity";
 
 // Le "Nuove uscite" usano TMDB Discover filtrando per primary_release_date
@@ -122,10 +120,6 @@ function isKind(value: string | null): value is KindId {
   return !!value && KINDS.some((k) => k.id === value);
 }
 
-function isView(value: string | null): value is ViewId {
-  return value === "italy" || value === "provider";
-}
-
 function isSort(value: string | null): value is SortId {
   return value === "release" || value === "popularity";
 }
@@ -139,9 +133,6 @@ export default function StreamingPage() {
   const initialFamily = isFamily(params.get("family"))
     ? (params.get("family") as StreamingFamilyId)
     : "rai";
-  const initialProvider = isProvider(params.get("provider"))
-    ? (params.get("provider") as StreamingProviderId)
-    : "netflix";
   const initialRange = isRange(params.get("range"))
     ? (params.get("range") as RangeId)
     : "7d";
@@ -149,13 +140,9 @@ export default function StreamingPage() {
     ? (params.get("kind") as KindId)
     : "all";
   const initialPage = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
-  const initialOnlyUpcoming = params.get("upcoming") === "1";
-  const initialView: ViewId = isView(params.get("view"))
-    ? (params.get("view") as ViewId)
-    : "italy";
   const initialSort: SortId = isSort(params.get("sort"))
     ? (params.get("sort") as SortId)
-    : "popularity";
+    : "release";
   const initialGenreParam = params.get("genre");
   const initialGenre: number | null =
     initialGenreParam && /^\d+$/.test(initialGenreParam)
@@ -168,13 +155,10 @@ export default function StreamingPage() {
     : "all";
 
   const [family, setFamily] = useState<StreamingFamilyId>(initialFamily);
-  const [provider, setProvider] = useState<StreamingProviderId>(initialProvider);
   const [range, setRange] = useState<RangeId>(initialRange);
   const [kindFilter, setKindFilter] = useState<KindId>(initialKind);
   const [page, setPage] = useState<number>(initialPage);
-  const [onlyUpcoming, setOnlyUpcoming] = useState<boolean>(initialOnlyUpcoming);
   const [selected, setSelected] = useState<ReleaseItem | null>(null);
-  const [view, setView] = useState<ViewId>(initialView);
   const [sort, setSort] = useState<SortId>(initialSort);
   const [genre, setGenre] = useState<number | null>(initialGenre);
   const [italyProvider, setItalyProvider] = useState<StreamingProviderId | "all">(
@@ -198,16 +182,10 @@ export default function StreamingPage() {
     if (tab === "tv") {
       next.set("family", family);
     } else {
-      next.set("view", view);
-      if (view === "provider") {
-        next.set("provider", provider);
-        if (onlyUpcoming) next.set("upcoming", "1");
-      } else {
-        if (italyProvider !== "all") next.set("itProvider", italyProvider);
-        if (sort !== "popularity") next.set("sort", sort);
-        if (genre !== null) next.set("genre", String(genre));
-      }
-      if (range !== "30d") next.set("range", range);
+      if (italyProvider !== "all") next.set("itProvider", italyProvider);
+      if (sort !== "release") next.set("sort", sort);
+      if (genre !== null) next.set("genre", String(genre));
+      if (range !== "7d") next.set("range", range);
       if (kindFilter !== "all") next.set("kind", kindFilter);
     }
     if (page > 1) next.set("page", String(page));
@@ -215,13 +193,10 @@ export default function StreamingPage() {
   }, [
     tab,
     family,
-    provider,
     range,
     kindFilter,
-    onlyUpcoming,
     page,
     setParams,
-    view,
     italyProvider,
     sort,
     genre,
@@ -230,7 +205,7 @@ export default function StreamingPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [family, provider, range, kindFilter, onlyUpcoming, tab, view, italyProvider, sort, genre]);
+  }, [family, range, kindFilter, tab, italyProvider, sort, genre]);
 
   const tvQuery = useTvByFamily(family);
 
@@ -245,7 +220,6 @@ export default function StreamingPage() {
     };
   }, [range]);
 
-  const releasesQuery = useReleasesByProvider(provider, dateFrom, dateTo);
   const italyQuery = useReleasesItaly({
     provider: italyProvider,
     kind: kindFilter,
@@ -266,29 +240,9 @@ export default function StreamingPage() {
     [channels, page],
   );
 
-  // Sorgente attiva per la vista Releases
-  const activeQuery = view === "italy" ? italyQuery : releasesQuery;
-  const allItems: ReleaseItem[] =
-    view === "italy"
-      ? italyQuery.data?.items ?? []
-      : releasesQuery.data?.items ?? [];
-  const filteredItems = useMemo(
-    () => {
-      let items = allItems;
-      // In vista "italy" il kind è già filtrato lato edge function.
-      if (view === "provider" && kindFilter !== "all") {
-        items = items.filter((i) => i.type === kindFilter);
-      }
-      if (onlyUpcoming) {
-        items = items.filter((i) => {
-          const d = daysUntilRome(i.releaseDate);
-          return d !== null && d >= 0;
-        });
-      }
-      return items;
-    },
-    [allItems, kindFilter, onlyUpcoming, view],
-  );
+  // Sorgente unica: Catalogo Italia (filtri server-side).
+  const activeQuery = italyQuery;
+  const filteredItems: ReleaseItem[] = italyQuery.data?.items ?? [];
   const itemsPageCount = Math.max(1, Math.ceil(filteredItems.length / RELEASES_PER_PAGE));
   const visibleItems = useMemo(
     () =>
@@ -300,9 +254,13 @@ export default function StreamingPage() {
   );
 
   const providerLabel =
-    releasesQuery.data?.providerLabel ??
-    STREAMING_PROVIDERS.find((p) => p.id === provider)?.label ??
-    provider;
+    italyProvider !== "all"
+      ? STREAMING_PROVIDERS.find((p) => p.id === italyProvider)?.label ?? italyProvider
+      : "Italia";
+
+  const widened = italyQuery.data?.widenedWindow === true;
+  const effectiveFrom = italyQuery.data?.effectiveFrom;
+  const effectiveTo = italyQuery.data?.effectiveTo;
 
   return (
     <div className="container py-8 space-y-8">
@@ -310,7 +268,7 @@ export default function StreamingPage() {
         <div className="flex flex-col gap-2">
           <SectionHeader
             title="Streaming"
-            subtitle="Palinsesto TV serale e nuove uscite della settimana"
+            subtitle="Palinsesto TV serale e nuove uscite in Italia"
           />
         </div>
         <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
@@ -443,40 +401,8 @@ export default function StreamingPage() {
 
         {/* === TAB RELEASES === */}
         <TabsContent value="releases" className="space-y-5">
-          {/* Selettore vista: Catalogo Italia (default) vs Per provider */}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant={view === "italy" ? "default" : "outline"}
-              onClick={() => setView("italy")}
-              className={cn(
-                "rounded-full font-heading uppercase tracking-wider text-xs gap-1",
-                view === "italy" && "shadow-md",
-              )}
-              aria-pressed={view === "italy"}
-            >
-              <Globe2 className="h-3.5 w-3.5" />
-              Catalogo Italia
-            </Button>
-            <Button
-              size="sm"
-              variant={view === "provider" ? "default" : "outline"}
-              onClick={() => setView("provider")}
-              className={cn(
-                "rounded-full font-heading uppercase tracking-wider text-xs",
-                view === "provider" && "shadow-md",
-              )}
-              aria-pressed={view === "provider"}
-            >
-              Per provider
-            </Button>
-          </div>
-
-          {view === "provider" ? (
-            <ProviderSelector value={provider} onChange={setProvider} />
-          ) : (
-            <ItalyProviderFilter value={italyProvider} onChange={setItalyProvider} />
-          )}
+          {/* Catalogo Italia: vista unica. Filtro provider IT opzionale. */}
+          <ItalyProviderFilter value={italyProvider} onChange={setItalyProvider} />
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
             <Select value={range} onValueChange={(v) => setRange(v as RangeId)}>
@@ -492,35 +418,31 @@ export default function StreamingPage() {
               </SelectContent>
             </Select>
 
-            {view === "italy" && (
-              <Select
-                value={genre === null ? "all" : String(genre)}
-                onValueChange={(v) => setGenre(v === "all" ? null : parseInt(v, 10))}
-              >
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {GENRES.map((g) => (
-                    <SelectItem key={String(g.id ?? "all")} value={g.id === null ? "all" : String(g.id)}>
-                      {g.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select
+              value={genre === null ? "all" : String(genre)}
+              onValueChange={(v) => setGenre(v === "all" ? null : parseInt(v, 10))}
+            >
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GENRES.map((g) => (
+                  <SelectItem key={String(g.id ?? "all")} value={g.id === null ? "all" : String(g.id)}>
+                    {g.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {view === "italy" && (
-              <Select value={sort} onValueChange={(v) => setSort(v as SortId)}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="release">Ordina per data uscita</SelectItem>
-                  <SelectItem value="popularity">Ordina per popolarità</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
+            <Select value={sort} onValueChange={(v) => setSort(v as SortId)}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="release">Ordina per data uscita</SelectItem>
+                <SelectItem value="popularity">Ordina per popolarità</SelectItem>
+              </SelectContent>
+            </Select>
 
             <div className="flex gap-2">
               {KINDS.map((k) => (
@@ -537,23 +459,17 @@ export default function StreamingPage() {
                   {k.label}
                 </Button>
               ))}
-              {view === "provider" && (
-                <Button
-                  size="sm"
-                  variant={onlyUpcoming ? "default" : "outline"}
-                  onClick={() => setOnlyUpcoming((v) => !v)}
-                  aria-pressed={onlyUpcoming}
-                  className={cn(
-                    "rounded-full font-heading uppercase tracking-wider text-xs gap-1",
-                    onlyUpcoming && "shadow-md",
-                  )}
-                >
-                  <CalendarClock className="h-3.5 w-3.5" />
-                  Solo in arrivo
-                </Button>
-              )}
             </div>
           </div>
+
+          {widened && effectiveFrom && effectiveTo && filteredItems.length > 0 && (
+            <p
+              className="text-xs text-muted-foreground italic"
+              aria-live="polite"
+            >
+              Nessun titolo nella finestra selezionata: stiamo mostrando le uscite tra {effectiveFrom} e {effectiveTo}.
+            </p>
+          )}
 
           {activeQuery.isLoading && <LoadingState message="Caricamento uscite..." />}
           {activeQuery.isError && (
@@ -574,11 +490,7 @@ export default function StreamingPage() {
             filteredItems.length === 0 && (
               <div className="flex flex-col items-center gap-3">
                 <EmptyState
-                  message={
-                    view === "provider"
-                      ? `Nessuna uscita catalogata da TMDB per ${providerLabel} nella finestra selezionata. Le uscite si basano sulla data di prima pubblicazione mondiale, non sull'ingresso sulla piattaforma.`
-                      : "Nessun titolo trovato in Italia per i filtri selezionati. Allarga la finestra o cambia genere."
-                  }
+                  message="Nessun titolo trovato in Italia per i filtri selezionati. Allarga la finestra o cambia genere."
                 />
                 {range !== "90d" && (
                   <Button
@@ -710,7 +622,7 @@ export default function StreamingPage() {
 
       <ReleaseDetailDialog
         item={selected}
-        provider={provider}
+        provider={italyProvider !== "all" ? italyProvider : "netflix"}
         providerLabel={providerLabel}
         onClose={() => setSelected(null)}
       />
@@ -740,35 +652,6 @@ function FamilySelector({
             )}
           >
             {f.label}
-          </Button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ProviderSelector({
-  value,
-  onChange,
-}: {
-  value: StreamingProviderId;
-  onChange: (v: StreamingProviderId) => void;
-}) {
-  return (
-    <div className="-mx-4 px-4 overflow-x-auto">
-      <div className="flex gap-2 min-w-max">
-        {STREAMING_PROVIDERS.map((p) => (
-          <Button
-            key={p.id}
-            size="sm"
-            variant={value === p.id ? "default" : "outline"}
-            onClick={() => onChange(p.id)}
-            className={cn(
-              "rounded-full font-heading uppercase tracking-wider text-xs",
-              value === p.id && "shadow-md",
-            )}
-          >
-            {p.label}
           </Button>
         ))}
       </div>

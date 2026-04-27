@@ -91,6 +91,9 @@ export interface ReleasesItalyPayload {
   region: "IT";
   dateFrom: string;
   dateTo: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  widenedWindow?: boolean;
   provider: StreamingProviderId | null;
   kind: "movie" | "tv" | "all";
   sort: "release" | "popularity";
