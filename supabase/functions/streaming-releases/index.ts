@@ -685,88 +685,140 @@ Deno.serve(async (req) => {
         return jsonResponse({ success: true, data: cached.payload }, {}, corsHeaders);
       }
 
-      // Default server-side: popularity.desc (allineato a starflicks.it).
-      // L'utente può richiedere "release" dal client per ordinare per data.
-      const sortByMovie = sortParam === "release" ? "primary_release_date.desc" : "popularity.desc";
-      const sortByTv = sortParam === "release" ? "first_air_date.desc" : "popularity.desc";
+      // Default server-side: data di uscita decrescente (allineato al
+      // default UI). L'utente può richiedere "popularity" dal client.
+      const sortByMovie = sortParam === "popularity" ? "popularity.desc" : "primary_release_date.desc";
+      const sortByTv = sortParam === "popularity" ? "popularity.desc" : "first_air_date.desc";
 
       const wantMovie = kindParam === "all" || kindParam === "movie";
       const wantTv = kindParam === "all" || kindParam === "tv";
 
-      // Pagina 1+2 per ciascun kind: ~40 candidati per tipo, sufficienti
-      // per coprire i filtri client (kind, upcoming) e per il cap finale.
-      const fetchTwoPages = async (
-        kind: "movie" | "tv",
-        sortBy: string,
-      ): Promise<any[]> => {
-        const [p1, p2] = await Promise.all([
-          tmdbDiscoverItaly(kind, dateFrom, dateTo, apiKey, { providerId, sortBy, genreId, page: 1 }).catch(() => []),
-          tmdbDiscoverItaly(kind, dateFrom, dateTo, apiKey, { providerId, sortBy, genreId, page: 2 }).catch(() => []),
-        ]);
-        return [...p1, ...p2];
-      };
-
-      const [movies, tv, movieGenres, tvGenres] = await Promise.all([
-        wantMovie ? fetchTwoPages("movie", sortByMovie) : Promise.resolve([] as any[]),
-        wantTv ? fetchTwoPages("tv", sortByTv) : Promise.resolve([] as any[]),
+      // Pre-carica le mappe generi una sola volta (cache 24h).
+      const [movieGenresMap, tvGenresMap] = await Promise.all([
         tmdbGenreMap("movie", apiKey),
         tmdbGenreMap("tv", apiKey),
       ]);
 
-      // Esclude titoli senza poster (TMDB Discover ne restituisce parecchi
-      // privi di artwork: in UI sarebbero placeholder vuoti).
-      const candidates: Array<{ kind: "movie" | "tv"; raw: any }> = [
-        ...movies.filter((m) => !!m?.poster_path).map((m) => ({ kind: "movie" as const, raw: m })),
-        ...tv.filter((t) => !!t?.poster_path).map((t) => ({ kind: "tv" as const, raw: t })),
-      ];
-
-      // Arricchimento /watch/providers IT per ogni candidato (cache 1h).
-      const providersByItem = await Promise.all(
-        candidates.map((c) => tmdbItemProvidersFullIT(c.kind, c.raw.id, apiKey)),
-      );
-
-      let items = candidates.map((c, i) => {
-        const base = normalizeItem(c.raw, c.kind, providersByItem[i].link);
-        const map = c.kind === "movie" ? movieGenres : tvGenres;
-        base.genres = base.genreIds
-          .map((gid: number) => map[gid])
-          .filter((g: string | undefined): g is string => !!g);
-        base.availableProviders = compactProviders(providersByItem[i]);
-        base.justWatchLink = providersByItem[i].link;
-        return base;
-      });
-
-      // Quando l'utente NON ha scelto un provider specifico, scarta gli item
-      // che dopo l'arricchimento /watch/providers IT non risultano disponibili
-      // su nessuna piattaforma mainstream italiana (whitelist condivisa con
-      // tmdbDiscoverItaly). Questo elimina i casi residui in cui Discover
-      // accetta il titolo per la presenza di un AVOD minore non in whitelist.
-      if (!providerId) {
-        items = items.filter((it) =>
-          (it.availableProviders ?? []).some((p) => ITALY_MAINSTREAM_SET.has(p.id)),
+      // Costruisce gli items per una finestra date arbitraria, applicando
+      // tutti i filtri (whitelist provider IT, soglia voti adattiva, post-
+      // filter su disponibilità reale IT). Restituisce array eventualmente
+      // vuoto: la decisione di allargare è del chiamante.
+      const buildItemsForWindow = async (
+        from: string,
+        to: string,
+      ): Promise<any[]> => {
+        // Soglia voti adattiva: range stretti (≤ 14gg) → soglia bassa
+        // perché le novità imminenti spesso non hanno voti accumulati.
+        const windowDays = Math.max(
+          1,
+          Math.round(
+            (new Date(`${to}T00:00:00Z`).getTime() -
+              new Date(`${from}T00:00:00Z`).getTime()) /
+              86400000,
+          ),
         );
-      }
+        const voteMovie = windowDays <= 14 ? 5 : 20;
+        const voteTv = windowDays <= 14 ? 2 : 10;
 
-      // Ordinamento finale stabile lato server: rispetta sort scelto.
-      items.sort((a, b) => {
-        if (sortParam === "popularity") {
-          return (b.popularity ?? 0) - (a.popularity ?? 0);
+        const fetchTwoPages = async (
+          kind: "movie" | "tv",
+          sortBy: string,
+          voteCountGte: number,
+        ): Promise<any[]> => {
+          const [p1, p2] = await Promise.all([
+            tmdbDiscoverItaly(kind, from, to, apiKey, { providerId, sortBy, genreId, page: 1, voteCountGte }).catch(() => []),
+            tmdbDiscoverItaly(kind, from, to, apiKey, { providerId, sortBy, genreId, page: 2, voteCountGte }).catch(() => []),
+          ]);
+          return [...p1, ...p2];
+        };
+
+        const [movies, tv] = await Promise.all([
+          wantMovie ? fetchTwoPages("movie", sortByMovie, voteMovie) : Promise.resolve([] as any[]),
+          wantTv ? fetchTwoPages("tv", sortByTv, voteTv) : Promise.resolve([] as any[]),
+        ]);
+
+        // Esclude titoli senza poster e senza data di uscita.
+        const candidates: Array<{ kind: "movie" | "tv"; raw: any }> = [
+          ...movies
+            .filter((m) => !!m?.poster_path && !!m?.release_date)
+            .map((m) => ({ kind: "movie" as const, raw: m })),
+          ...tv
+            .filter((t) => !!t?.poster_path && !!t?.first_air_date)
+            .map((t) => ({ kind: "tv" as const, raw: t })),
+        ];
+
+        // Arricchimento /watch/providers IT per ogni candidato (cache 1h).
+        const providersByItem = await Promise.all(
+          candidates.map((c) => tmdbItemProvidersFullIT(c.kind, c.raw.id, apiKey)),
+        );
+
+        let built = candidates.map((c, i) => {
+          const base = normalizeItem(c.raw, c.kind, providersByItem[i].link);
+          const map = c.kind === "movie" ? movieGenresMap : tvGenresMap;
+          base.genres = base.genreIds
+            .map((gid: number) => map[gid])
+            .filter((g: string | undefined): g is string => !!g);
+          base.availableProviders = compactProviders(providersByItem[i]);
+          base.justWatchLink = providersByItem[i].link;
+          return base;
+        });
+
+        // Garanzia "in IT": scarta titoli che dopo /watch/providers IT non
+        // risultano disponibili su alcun provider mainstream italiano.
+        // Quando l'utente ha scelto un provider specifico, richiediamo che
+        // quel provider sia in flatrate IT.
+        if (providerId) {
+          built = built.filter((it) =>
+            (it.availableProviders ?? []).some((p) => p.id === providerId && p.type === "flatrate"),
+          );
+        } else {
+          built = built.filter((it) =>
+            (it.availableProviders ?? []).some((p) => ITALY_MAINSTREAM_SET.has(p.id)),
+          );
         }
-        // release desc + tie-break voto desc
-        const dateCmp = (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "");
-        if (dateCmp !== 0) return dateCmp;
-        return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
-      });
 
-      // Cap finale: max 60 item, abbastanza per la paginazione client (12/pagina).
-      if (items.length > 60) {
-        items = items.slice(0, 60);
+        // Ordinamento finale stabile lato server: rispetta sort scelto.
+        built.sort((a, b) => {
+          if (sortParam === "popularity") {
+            return (b.popularity ?? 0) - (a.popularity ?? 0);
+          }
+          const dateCmp = (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "");
+          if (dateCmp !== 0) return dateCmp;
+          return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
+        });
+
+        // Cap finale: max 60 item.
+        if (built.length > 60) built = built.slice(0, 60);
+        return built;
+      };
+
+      // Prima passata: finestra richiesta dall'utente.
+      let items = await buildItemsForWindow(dateFrom, dateTo);
+      let widenedWindow = false;
+      let effectiveFrom = dateFrom;
+      let effectiveTo = dateTo;
+
+      // Fallback: se vuoto, allarga di 14gg indietro / 30gg avanti.
+      // Evita lo stato "Nessun titolo" su range stretti (es. 7 giorni).
+      if (items.length === 0) {
+        const widenedFrom = addDaysISO(dateFrom, -WIDEN_BACK_DAYS);
+        const widenedTo = addDaysISO(dateTo, WIDEN_FWD_DAYS);
+        const widenedItems = await buildItemsForWindow(widenedFrom, widenedTo);
+        if (widenedItems.length > 0) {
+          items = widenedItems;
+          widenedWindow = true;
+          effectiveFrom = widenedFrom;
+          effectiveTo = widenedTo;
+        }
       }
 
       const payload = {
         region: "IT",
         dateFrom,
         dateTo,
+        effectiveFrom,
+        effectiveTo,
+        widenedWindow,
         provider: providerKey,
         kind: kindParam,
         sort: sortParam,
