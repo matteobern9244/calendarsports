@@ -263,6 +263,11 @@ export default function StreamingPage() {
   const effectiveFrom = italyQuery.data?.effectiveFrom;
   const effectiveTo = italyQuery.data?.effectiveTo;
 
+  const activeRangeLabel = RANGES.find((r) => r.id === range)?.label ?? "";
+  const activeKindLabel = KINDS.find((k) => k.id === kindFilter)?.label ?? "";
+  const activeGenreLabel = GENRES.find((g) => g.id === genre)?.label ?? "Tutti i generi";
+  const activeSortLabel = sort === "popularity" ? "Popolarità" : "Data uscita";
+
   return (
     <div className="container py-8 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
