@@ -762,15 +762,26 @@ Deno.serve(async (req) => {
       // Validazione per-item: tieni solo i titoli effettivamente in
       // abbonamento sul provider richiesto in regione IT, secondo TMDB
       // /watch/providers (results.IT.flatrate include providerId).
-      const checks = await Promise.all(
-        candidates.map((c) =>
-          tmdbItemProviderInfoIT(c.kind, c.raw.id, providerCfg.id, apiKey),
-        ),
+      const fullProviders = await Promise.all(
+        candidates.map((c) => tmdbItemProvidersFullIT(c.kind, c.raw.id, apiKey)),
       );
+      const [movieGenres, tvGenres] = await Promise.all([
+        tmdbGenreMap("movie", apiKey),
+        tmdbGenreMap("tv", apiKey),
+      ]);
       const validated = candidates
-        .map((c, i) => ({ c, info: checks[i] }))
-        .filter(({ info }) => info.available)
-        .map(({ c, info }) => normalizeItem(c.raw, c.kind, info.deepLink));
+        .map((c, i) => ({ c, info: fullProviders[i] }))
+        .filter(({ info }) => info.flatrate.some((p) => p.provider_id === providerCfg.id))
+        .map(({ c, info }) => {
+          const base = normalizeItem(c.raw, c.kind, info.link);
+          const map = c.kind === "movie" ? movieGenres : tvGenres;
+          base.genres = base.genreIds
+            .map((gid: number) => map[gid])
+            .filter((g: string | undefined): g is string => !!g);
+          base.availableProviders = compactProviders(info);
+          base.justWatchLink = info.link;
+          return base;
+        });
       return sortItems(validated);
     };
 
