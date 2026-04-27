@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Sparkles, Tv2, RefreshCw, CalendarClock } from "lucide-react";
+import { Sparkles, Tv2, RefreshCw, CalendarClock, Globe2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -37,6 +37,7 @@ import {
   STREAMING_FAMILIES,
   STREAMING_PROVIDERS,
   useReleasesByProvider,
+  useReleasesItaly,
   useTvByFamily,
   type ReleaseItem,
 } from "@/hooks/useStreamingData";
@@ -55,6 +56,8 @@ const RELEASES_PER_PAGE = 8;
 
 type RangeId = "7d" | "30d" | "90d";
 type KindId = "all" | "movie" | "tv";
+type ViewId = "italy" | "provider";
+type SortId = "release" | "popularity";
 
 // Le "Nuove uscite" usano TMDB Discover filtrando per primary_release_date
 // (film) / first_air_date (serie) e per provider IT. TMDB non espone una data
@@ -71,6 +74,26 @@ const KINDS: { id: KindId; label: string }[] = [
   { id: "all", label: "Tutti" },
   { id: "movie", label: "Film" },
   { id: "tv", label: "Serie" },
+];
+
+// Selezione minima di generi TMDB più richiesti, label IT.
+// L'id segue la mappa ufficiale TMDB (movie + tv condividono molti id base).
+const GENRES: { id: number | null; label: string }[] = [
+  { id: null, label: "Tutti i generi" },
+  { id: 28, label: "Azione" },
+  { id: 12, label: "Avventura" },
+  { id: 16, label: "Animazione" },
+  { id: 35, label: "Commedia" },
+  { id: 80, label: "Crime" },
+  { id: 99, label: "Documentario" },
+  { id: 18, label: "Drammatico" },
+  { id: 10751, label: "Famiglia" },
+  { id: 14, label: "Fantasy" },
+  { id: 27, label: "Horror" },
+  { id: 9648, label: "Mistero" },
+  { id: 10749, label: "Romantico" },
+  { id: 878, label: "Sci-Fi" },
+  { id: 53, label: "Thriller" },
 ];
 
 function formatHour(iso: string): string {
@@ -99,6 +122,14 @@ function isKind(value: string | null): value is KindId {
   return !!value && KINDS.some((k) => k.id === value);
 }
 
+function isView(value: string | null): value is ViewId {
+  return value === "italy" || value === "provider";
+}
+
+function isSort(value: string | null): value is SortId {
+  return value === "release" || value === "popularity";
+}
+
 export default function StreamingPage() {
   const [params, setParams] = useSearchParams();
 
@@ -119,6 +150,22 @@ export default function StreamingPage() {
     : "all";
   const initialPage = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
   const initialOnlyUpcoming = params.get("upcoming") === "1";
+  const initialView: ViewId = isView(params.get("view"))
+    ? (params.get("view") as ViewId)
+    : "italy";
+  const initialSort: SortId = isSort(params.get("sort"))
+    ? (params.get("sort") as SortId)
+    : "release";
+  const initialGenreParam = params.get("genre");
+  const initialGenre: number | null =
+    initialGenreParam && /^\d+$/.test(initialGenreParam)
+      ? parseInt(initialGenreParam, 10)
+      : null;
+  const initialItalyProvider: StreamingProviderId | "all" = isProvider(
+    params.get("itProvider"),
+  )
+    ? (params.get("itProvider") as StreamingProviderId)
+    : "all";
 
   const [family, setFamily] = useState<StreamingFamilyId>(initialFamily);
   const [provider, setProvider] = useState<StreamingProviderId>(initialProvider);
@@ -127,6 +174,12 @@ export default function StreamingPage() {
   const [page, setPage] = useState<number>(initialPage);
   const [onlyUpcoming, setOnlyUpcoming] = useState<boolean>(initialOnlyUpcoming);
   const [selected, setSelected] = useState<ReleaseItem | null>(null);
+  const [view, setView] = useState<ViewId>(initialView);
+  const [sort, setSort] = useState<SortId>(initialSort);
+  const [genre, setGenre] = useState<number | null>(initialGenre);
+  const [italyProvider, setItalyProvider] = useState<StreamingProviderId | "all">(
+    initialItalyProvider,
+  );
   const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
   const lastSyncLabel = useMemo(() => {
     if (!lastSyncAt) return null;
@@ -145,19 +198,39 @@ export default function StreamingPage() {
     if (tab === "tv") {
       next.set("family", family);
     } else {
-      next.set("provider", provider);
+      next.set("view", view);
+      if (view === "provider") {
+        next.set("provider", provider);
+        if (onlyUpcoming) next.set("upcoming", "1");
+      } else {
+        if (italyProvider !== "all") next.set("itProvider", italyProvider);
+        if (sort !== "release") next.set("sort", sort);
+        if (genre !== null) next.set("genre", String(genre));
+      }
       if (range !== "30d") next.set("range", range);
       if (kindFilter !== "all") next.set("kind", kindFilter);
-      if (onlyUpcoming) next.set("upcoming", "1");
     }
     if (page > 1) next.set("page", String(page));
     setParams(next, { replace: true });
-  }, [tab, family, provider, range, kindFilter, onlyUpcoming, page, setParams]);
+  }, [
+    tab,
+    family,
+    provider,
+    range,
+    kindFilter,
+    onlyUpcoming,
+    page,
+    setParams,
+    view,
+    italyProvider,
+    sort,
+    genre,
+  ]);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [family, provider, range, kindFilter, onlyUpcoming, tab]);
+  }, [family, provider, range, kindFilter, onlyUpcoming, tab, view, italyProvider, sort, genre]);
 
   const tvQuery = useTvByFamily(family);
 
@@ -173,6 +246,14 @@ export default function StreamingPage() {
   }, [range]);
 
   const releasesQuery = useReleasesByProvider(provider, dateFrom, dateTo);
+  const italyQuery = useReleasesItaly({
+    provider: italyProvider,
+    kind: kindFilter,
+    dateFrom,
+    dateTo,
+    sort,
+    genreId: genre ?? undefined,
+  });
 
   const channels = tvQuery.data?.channels ?? [];
   const channelsPageCount = Math.max(1, Math.ceil(channels.length / CHANNELS_PER_PAGE));
@@ -185,11 +266,17 @@ export default function StreamingPage() {
     [channels, page],
   );
 
-  const allItems = releasesQuery.data?.items ?? [];
+  // Sorgente attiva per la vista Releases
+  const activeQuery = view === "italy" ? italyQuery : releasesQuery;
+  const allItems: ReleaseItem[] =
+    view === "italy"
+      ? italyQuery.data?.items ?? []
+      : releasesQuery.data?.items ?? [];
   const filteredItems = useMemo(
     () => {
       let items = allItems;
-      if (kindFilter !== "all") {
+      // In vista "italy" il kind è già filtrato lato edge function.
+      if (view === "provider" && kindFilter !== "all") {
         items = items.filter((i) => i.type === kindFilter);
       }
       if (onlyUpcoming) {
@@ -200,7 +287,7 @@ export default function StreamingPage() {
       }
       return items;
     },
-    [allItems, kindFilter, onlyUpcoming],
+    [allItems, kindFilter, onlyUpcoming, view],
   );
   const itemsPageCount = Math.max(1, Math.ceil(filteredItems.length / RELEASES_PER_PAGE));
   const visibleItems = useMemo(
