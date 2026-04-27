@@ -1,102 +1,97 @@
-## Diagnosi precisa
+## Diagnosi corretta
 
-I link TMDB che hai inviato puntano a pagine **per network** TMDB:
+Hai ragione: la modifica precedente è troppo restrittiva.
 
-- `/network/213` → Netflix
-- `/network/1024` → Prime Video
-- `/network/2739` → Disney+
-- `/network/8304` → HBO Max
+Dalla documentazione TMDB, per sapere cosa è disponibile su un provider in una regione bisogna usare:
 
-Questi sono **network IDs** TMDB (chi produce/distribuisce il contenuto). Sono **diversi** dai watch-provider IDs che usiamo oggi (Netflix=8, Prime=119, Disney+=337, HBO Max=1899).
+- `watch_region=IT`
+- `with_watch_providers=<provider_id>`
+- `with_watch_monetization_types=flatrate|free|ads` o `flatrate`
+- validazione finale con `/{movie|tv}/{id}/watch/providers`, leggendo `results.IT`
 
-Le pagine TMDB linkate filtrano internamente con:
-- `with_networks=NNN` per le **serie TV**
-- `with_companies=NNN` per i **film**
+I link `/network/...` che avevi mandato sono utili per capire le pagine TMDB dei network, ma non rappresentano il catalogo disponibile su Disney+/Netflix/Prime/HBO in Italia. Infatti un titolo come **Daredevil** può essere disponibile su Disney+ Italia anche se non appartiene al network Disney+ `2739` o se la sua `first_air_date` è vecchia. Con l’attuale logica `with_networks=2739` + finestra data, titoli così vengono esclusi.
 
-ordinate per `first_air_date.desc` / `primary_release_date.desc` su tutto il catalogo storico, **senza** vincolo `watch_region=IT`. Per questo restituiscono sempre risultati ricchi e ordinati.
+Altro limite importante di TMDB: l’API non espone una vera “data di ingresso su Disney+ Italia”. Le date disponibili sono date del titolo (`first_air_date`, `air_date`, `primary_release_date`, `release_date`), non “aggiunto oggi su piattaforma”. Quindi la vista deve essere onesta: “Catalogo Italia” = titoli attualmente disponibili in Italia, ordinabili/filtrabili con i campi TMDB disponibili.
 
-La nostra implementazione attuale invece:
-1. Usa `with_watch_providers=119|...` + `watch_region=IT` + `with_watch_monetization_types=flatrate`
-2. Filtra per finestra date stretta sulla **prima messa in onda assoluta del titolo** (non sulla data di arrivo IT)
-3. Applica `vote_count.gte` minimi e una post-validazione `/watch/providers IT`
+## Piano di correzione
 
-Risultato: per Prime Video / Disney+ / HBO Max il Catalogo Italia rende spesso vuoto o quasi, perché `first_air_date` di una serie storica non cade mai nei "prossimi 7/30/90 giorni" anche se il titolo è uscito ieri sulla piattaforma in IT.
+### 1. Backend: tornare a una logica provider-first ufficiale TMDB
 
-## Soluzione
+Modifico `supabase/functions/streaming-releases/index.ts` per la action `new-italy`:
 
-Allineare il backend alla **stessa logica TMDB** usata dalle pagine che hai linkato, mantenendo però la garanzia "disponibile in IT" per la coerenza.
+- Provider singolo:
+  - Disney+ → `with_watch_providers=337&watch_region=IT`
+  - Netflix → `8`
+  - Prime Video → `119`
+  - HBO Max → `1899`
+- Provider “Tutti”:
+  - query con whitelist provider mainstream italiani, oppure più query per provider e dedup.
+- Monetizzazione:
+  - per provider singolo: `flatrate` come vincolo principale.
+  - per “Tutti”: `flatrate|free|ads`, mantenendo solo provider mainstream.
+- Post-validazione obbligatoria:
+  - per ogni titolo controllo `results.IT` da `/watch/providers`.
+  - se è selezionato Disney+, il titolo resta solo se `results.IT.flatrate` contiene provider `337`.
 
-### 1. Edge function `streaming-releases` — nuova action `new-italy`
+Questo garantisce che i dati siano realmente per l’Italia.
 
-Aggiungo mapping network/company per ciascun provider:
+### 2. Rimuovere il blocco network/company come filtro principale
 
-```ts
-const PROVIDER_TMDB_IDS = {
-  netflix: { network: 213,  company: 145174 }, // Netflix
-  prime:   { network: 1024, company: 20580 },  // Amazon / Amazon Studios
-  disney:  { network: 2739, company: 2 },      // Disney+ / Walt Disney Pictures
-  hbo:     { network: 8304, company: 174 },    // HBO Max / Warner Bros
-};
-```
+Non userò più `with_networks=2739` / `with_companies=2` per decidere il catalogo Disney+ Italia.
 
-Cambio strategia di Discover quando viene scelto un provider:
+Questi filtri potranno restare solo come eventuale arricchimento/debug interno, ma non devono determinare cosa compare nella UI. Il catalogo deve dipendere dalla disponibilità `watch/providers IT`.
 
-- **TV**: `with_networks=<networkId>` + `sort_by=first_air_date.desc`
-- **Movie**: `with_companies=<companyId>` + `sort_by=primary_release_date.desc`
-- Niente più `with_watch_providers` per queste due chiamate
-- Niente più finestra date obbligatoria: la pagina TMDB non la usa, ordiniamo per data desc e prendiamo le prime N. La finestra date diventa un **filtro opzionale** lato client per la card "Prossimi 7/30 giorni".
+### 3. Gestione corretta del filtro periodo
 
-Quando provider = "all" (Tutti i provider IT): faccio le 4 chiamate per-network in parallelo (Netflix/Prime/Disney/HBO) per le serie + le 4 per-company per i film, dedup per `tmdbId`, e mantengo la whitelist mainstream IT come garanzia di disponibilità.
+Il filtro “Prossimi 7/30 giorni” oggi è fuorviante per lo streaming, perché TMDB non ha la data “aggiunto alla piattaforma”.
 
-### 2. Filtro "disponibile in IT"
+Lo rendo coerente così:
 
-Manteniamo l'arricchimento `/watch/providers/IT` per ogni candidato (cache 1h già presente) e:
+- `Prossimi 7 giorni`, `Prossimi 30 giorni`, `Finestra estesa` filtrano sulle date TMDB del titolo.
+- Se il filtro periodo produce zero o pochissimi risultati, il backend ritorna automaticamente una sezione “catalogo recente/popolare disponibile in Italia” senza far sembrare che sia una “nuova uscita della piattaforma”.
+- Il messaggio UI sarà più chiaro: “TMDB non fornisce la data di ingresso su Disney+ Italia; stiamo mostrando titoli disponibili in Italia ordinati per data/popolarità.”
 
-- Se l'utente ha scelto un provider singolo → richiediamo che il titolo abbia quel provider in `flatrate IT`
-- Se l'utente ha scelto "Tutti" → richiediamo solo che ci sia almeno un provider mainstream IT in `flatrate/free/ads`
+### 4. Ordinamento e pagine più robuste
 
-Questo garantisce: **se un titolo non è in IT, non compare** (rispetta il tuo requisito originale).
+Per evitare che titoli validi come Daredevil non appaiano perché sono più vecchi:
 
-### 3. Filtri (range, kind, genere, sort)
+- recupero più pagine TMDB, non solo pagina 1;
+- dedup per `type:id`;
+- applico i filtri dopo l’arricchimento provider IT;
+- sort default resta “Data uscita”, ma con fallback a risultati popolari quando la finestra data è vuota;
+- sort “Popolarità” usa davvero `popularity.desc` lato TMDB e lato backend.
 
-- **Range periodo (7/30/90 gg)**: applicato come post-filter sulla `releaseDate` del titolo. Se "Prossimi 7 giorni" non ha risultati per il provider selezionato, mostro chiaramente "Nessuna uscita in questa finestra" e in fondo mostro le ultime N uscite del provider come fallback (con label "Uscite recenti").
-- **Kind (Tutti/Film/Serie)**: già funzionante, lo mantengo.
-- **Genere**: passato come `with_genres=<id>` alle Discover (id condivisi tra movie e tv per i generi base TMDB della select attuale).
-- **Sort**: `release` (default) → `*_date.desc` server-side; `popularity` → `popularity.desc`.
+### 5. Verifica mirata su Daredevil e provider italiani
 
-### 4. Soglia `vote_count`
+Dopo la modifica testerò direttamente la funzione backend con chiamate mirate:
 
-La tolgo per la modalità "per network/company" (pagina TMDB ufficiale non la usa). Introduco solo `vote_count.gte=1` minimo per scartare titoli ghost senza alcun riscontro.
+- Disney+ Italia, serie, popolarità: deve includere un risultato Daredevil se TMDB lo espone in `results.IT.flatrate` per Disney+.
+- Disney+ Italia, tutti i tipi, data uscita: deve restituire titoli disponibili in Italia, non solo produzioni Disney+ network 2739.
+- Netflix / Prime / HBO: controllo che ogni item abbia il provider corretto in `availableProviders`.
+- Filtri `kind`, `genre`, `sort`, `range`: controllo che cambino davvero il payload.
 
-### 5. UI `StreamingPage.tsx`
+### 6. UI e documentazione
 
-- Nessun cambiamento ai controlli (chip provider, select range/genere/sort, chip kind).
-- Aggiungo gestione del nuovo flag `fallbackRecent: true` restituito dal backend quando il range stretto è vuoto e mostriamo "uscite recenti" come ripiego, con messaggio dedicato: *"Nessuna uscita su {provider} nei prossimi {N} giorni — mostriamo le uscite più recenti."*
-- Mantengo il `widenedWindow` esistente per il caso "Tutti i provider".
+Aggiorno:
 
-### 6. Verifica reale post-deploy
+- `src/pages/StreamingPage.tsx`
+  - messaggi più precisi sul limite TMDB delle date streaming;
+  - mantenimento di tutti i filtri esistenti;
+  - nessun ritorno della vista “Per provider”.
+- `src/hooks/useStreamingData.ts`
+  - eventuali flag payload più chiari (`fallbackCatalog`, `dateSource`, ecc.).
+- `README.md` e `changelog.md`
+  - documento che la fonte è TMDB + JustWatch via `/watch/providers`;
+  - spiego che TMDB non fornisce la data esatta di ingresso nel catalogo italiano.
+- `src/lib/version.ts`
+  - bump versione a `2.3.4`.
 
-Faccio `curl` mirati con i 4 provider × {movie, tv} e ordinamenti, controllo che:
+## Criterio di accettazione
 
-- Netflix → presenta serie come *Stranger Things*, *Squid Game*, *Wednesday* ordinate per data
-- Prime Video → *The Boys*, *Fallout*, *Reacher*
-- Disney+ → *The Mandalorian*, *Loki*, *Andor*
-- HBO Max → *House of the Dragon*, *The Last of Us*
+La correzione sarà chiusa solo se verifico che:
 
-Se uno di questi non risponde, è anomalia da indagare prima di chiudere.
-
-## File toccati
-
-- `supabase/functions/streaming-releases/index.ts` — nuova logica `new-italy` per-network/company, fallback recent, mapping ID
-- `src/hooks/useStreamingData.ts` — aggiungo `fallbackRecent?: boolean` al tipo `ReleasesItalyPayload`
-- `src/pages/StreamingPage.tsx` — messaggio dedicato per `fallbackRecent`
-- `src/lib/version.ts` — bump a `2.3.3`
-- `changelog.md`, `README.md` — entry "Streaming Catalogo Italia: discovery per-network/company allineato a TMDB"
-
-## Cosa NON cambia
-
-- Nessuna modifica al tab "TV stasera"
-- Nessun cambiamento ai controlli UI (filtri, sort, range, genere, chip kind, chip provider)
-- Nessun mock o dato hardcoded — tutto resta TMDB live
-- Lingua IT e fuso `Europe/Rome` rispettati
-- Workflow Git/Lovable invariato
+- Disney+ Italia non è più filtrato per soli network/company Disney;
+- titoli disponibili su Disney+ Italia ma non prodotti da network Disney possono comparire;
+- ogni risultato Disney+ ha `provider_id=337` in `results.IT.flatrate`;
+- i filtri Tipo, Genere, Periodo e Ordinamento modificano realmente i risultati;
+- non compaiono titoli senza disponibilità Italia.
