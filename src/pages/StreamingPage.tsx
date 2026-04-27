@@ -401,40 +401,8 @@ export default function StreamingPage() {
 
         {/* === TAB RELEASES === */}
         <TabsContent value="releases" className="space-y-5">
-          {/* Selettore vista: Catalogo Italia (default) vs Per provider */}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant={view === "italy" ? "default" : "outline"}
-              onClick={() => setView("italy")}
-              className={cn(
-                "rounded-full font-heading uppercase tracking-wider text-xs gap-1",
-                view === "italy" && "shadow-md",
-              )}
-              aria-pressed={view === "italy"}
-            >
-              <Globe2 className="h-3.5 w-3.5" />
-              Catalogo Italia
-            </Button>
-            <Button
-              size="sm"
-              variant={view === "provider" ? "default" : "outline"}
-              onClick={() => setView("provider")}
-              className={cn(
-                "rounded-full font-heading uppercase tracking-wider text-xs",
-                view === "provider" && "shadow-md",
-              )}
-              aria-pressed={view === "provider"}
-            >
-              Per provider
-            </Button>
-          </div>
-
-          {view === "provider" ? (
-            <ProviderSelector value={provider} onChange={setProvider} />
-          ) : (
-            <ItalyProviderFilter value={italyProvider} onChange={setItalyProvider} />
-          )}
+          {/* Catalogo Italia: vista unica. Filtro provider IT opzionale. */}
+          <ItalyProviderFilter value={italyProvider} onChange={setItalyProvider} />
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
             <Select value={range} onValueChange={(v) => setRange(v as RangeId)}>
@@ -450,35 +418,31 @@ export default function StreamingPage() {
               </SelectContent>
             </Select>
 
-            {view === "italy" && (
-              <Select
-                value={genre === null ? "all" : String(genre)}
-                onValueChange={(v) => setGenre(v === "all" ? null : parseInt(v, 10))}
-              >
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {GENRES.map((g) => (
-                    <SelectItem key={String(g.id ?? "all")} value={g.id === null ? "all" : String(g.id)}>
-                      {g.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select
+              value={genre === null ? "all" : String(genre)}
+              onValueChange={(v) => setGenre(v === "all" ? null : parseInt(v, 10))}
+            >
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GENRES.map((g) => (
+                  <SelectItem key={String(g.id ?? "all")} value={g.id === null ? "all" : String(g.id)}>
+                    {g.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {view === "italy" && (
-              <Select value={sort} onValueChange={(v) => setSort(v as SortId)}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="release">Ordina per data uscita</SelectItem>
-                  <SelectItem value="popularity">Ordina per popolarità</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
+            <Select value={sort} onValueChange={(v) => setSort(v as SortId)}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="release">Ordina per data uscita</SelectItem>
+                <SelectItem value="popularity">Ordina per popolarità</SelectItem>
+              </SelectContent>
+            </Select>
 
             <div className="flex gap-2">
               {KINDS.map((k) => (
@@ -495,23 +459,17 @@ export default function StreamingPage() {
                   {k.label}
                 </Button>
               ))}
-              {view === "provider" && (
-                <Button
-                  size="sm"
-                  variant={onlyUpcoming ? "default" : "outline"}
-                  onClick={() => setOnlyUpcoming((v) => !v)}
-                  aria-pressed={onlyUpcoming}
-                  className={cn(
-                    "rounded-full font-heading uppercase tracking-wider text-xs gap-1",
-                    onlyUpcoming && "shadow-md",
-                  )}
-                >
-                  <CalendarClock className="h-3.5 w-3.5" />
-                  Solo in arrivo
-                </Button>
-              )}
             </div>
           </div>
+
+          {widened && effectiveFrom && effectiveTo && filteredItems.length > 0 && (
+            <p
+              className="text-xs text-muted-foreground italic"
+              aria-live="polite"
+            >
+              Nessun titolo nella finestra selezionata: stiamo mostrando le uscite tra {effectiveFrom} e {effectiveTo}.
+            </p>
+          )}
 
           {activeQuery.isLoading && <LoadingState message="Caricamento uscite..." />}
           {activeQuery.isError && (
@@ -532,11 +490,7 @@ export default function StreamingPage() {
             filteredItems.length === 0 && (
               <div className="flex flex-col items-center gap-3">
                 <EmptyState
-                  message={
-                    view === "provider"
-                      ? `Nessuna uscita catalogata da TMDB per ${providerLabel} nella finestra selezionata. Le uscite si basano sulla data di prima pubblicazione mondiale, non sull'ingresso sulla piattaforma.`
-                      : "Nessun titolo trovato in Italia per i filtri selezionati. Allarga la finestra o cambia genere."
-                  }
+                  message="Nessun titolo trovato in Italia per i filtri selezionati. Allarga la finestra o cambia genere."
                 />
                 {range !== "90d" && (
                   <Button
