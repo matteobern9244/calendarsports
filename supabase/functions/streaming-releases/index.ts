@@ -36,6 +36,24 @@ const PROVIDERS: Record<string, { id: number; label: string; homepage: string }>
   hbo: { id: 1899, label: "HBO Max", homepage: "https://www.max.com" },
 };
 
+// TMDB network IDs (per le serie TV) e company IDs (per i film) usati dalle
+// pagine pubbliche TMDB che alimentano "Catalogo Italia". Allineati a:
+//   /network/213-netflix, /network/1024-prime-video,
+//   /network/2739-disney, /network/8304-hbo-max
+// Per i film usiamo la production company "ombrello" del provider, perchè
+// TMDB non espone un concetto di "movie network": Netflix produce i propri
+// film come company id 145174, Amazon Studios = 20580, Walt Disney Pictures
+// = 2 (con i sub-brand Marvel/Pixar/LucasFilm), Warner Bros = 174.
+const PROVIDER_TMDB_IDS: Record<
+  string,
+  { network: number; company: number }
+> = {
+  netflix: { network: 213, company: 145174 },
+  prime: { network: 1024, company: 20580 },
+  disney: { network: 2739, company: 2 },
+  hbo: { network: 8304, company: 174 },
+};
+
 // Mappa inversa: TMDB provider_id -> chiave interna (per riconoscere i
 // provider "principali" quando arricchiamo i titoli con /watch/providers).
 const TMDB_PROVIDER_ID_TO_KEY: Record<number, string> = Object.fromEntries(
@@ -216,6 +234,48 @@ async function tmdbDiscoverItaly(
 
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`TMDB ${kind} ${res.status}`);
+  const json = await res.json();
+  return Array.isArray(json.results) ? json.results : [];
+}
+
+/**
+ * Variante "Catalogo per provider" allineata alle pagine TMDB
+ * /network/<id> linkate dall'utente. Per le serie usa with_networks,
+ * per i film with_companies. NON forza watch_region IT (la disponibilità
+ * IT viene poi validata via /watch/providers per ogni titolo).
+ * Sort di default: data uscita decrescente. Nessuna soglia voti rigida.
+ */
+async function tmdbDiscoverByNetworkOrCompany(
+  kind: "movie" | "tv",
+  ids: { network: number; company: number },
+  apiKey: string,
+  opts: {
+    sortBy?: string;
+    genreId?: number;
+    page?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  } = {},
+): Promise<any[]> {
+  const dateKey = kind === "movie" ? "primary_release_date" : "first_air_date";
+  const url = new URL(`${TMDB_BASE}/discover/${kind}`);
+  url.searchParams.set("api_key", apiKey);
+  url.searchParams.set("language", "it-IT");
+  if (kind === "tv") {
+    url.searchParams.set("with_networks", String(ids.network));
+  } else {
+    url.searchParams.set("with_companies", String(ids.company));
+  }
+  if (opts.genreId) url.searchParams.set("with_genres", String(opts.genreId));
+  if (opts.dateFrom) url.searchParams.set(`${dateKey}.gte`, opts.dateFrom);
+  if (opts.dateTo) url.searchParams.set(`${dateKey}.lte`, opts.dateTo);
+  url.searchParams.set("sort_by", opts.sortBy ?? `${dateKey}.desc`);
+  url.searchParams.set("include_adult", "false");
+  url.searchParams.set("vote_count.gte", "0");
+  url.searchParams.set("page", String(opts.page ?? 1));
+
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`TMDB ${kind} network/company ${res.status}`);
   const json = await res.json();
   return Array.isArray(json.results) ? json.results : [];
 }
