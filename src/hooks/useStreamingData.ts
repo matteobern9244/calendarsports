@@ -44,6 +44,14 @@ export interface TvFamilyPayload {
   programsAvailable: boolean;
 }
 
+export interface AvailableProvider {
+  id: number;
+  key: StreamingProviderId | string | null;
+  name: string;
+  logo: string | null;
+  type: "flatrate" | "free" | "ads";
+}
+
 export interface ReleaseItem {
   tmdbId: number;
   type: "movie" | "tv";
@@ -53,6 +61,16 @@ export interface ReleaseItem {
   overview: string;
   voteAverage: number | null;
   deepLink: string | null;
+  /** Anno YYYY estratto dalla release date, null se mancante. */
+  year?: number | null;
+  /** Generi TMDB localizzati in italiano (label testuali). */
+  genres?: string[];
+  /** Provider IT disponibili (flatrate/free/ads), max ~5. */
+  availableProviders?: AvailableProvider[];
+  /** Link JustWatch generale del titolo (results.IT.link da TMDB). */
+  justWatchLink?: string | null;
+  /** Popolarità TMDB grezza (per ordinamento client lato vista). */
+  popularity?: number;
 }
 
 export interface ReleasesPayload {
@@ -69,6 +87,18 @@ export interface ReleasesPayload {
   configured: boolean;
 }
 
+export interface ReleasesItalyPayload {
+  region: "IT";
+  dateFrom: string;
+  dateTo: string;
+  provider: StreamingProviderId | null;
+  kind: "movie" | "tv" | "all";
+  sort: "release" | "popularity";
+  genreId: number | null;
+  items: ReleaseItem[];
+  configured: boolean;
+}
+
 export interface CastMember {
   id: number;
   name: string;
@@ -80,6 +110,31 @@ export interface CreditsPayload {
   type: "movie" | "tv";
   id: string;
   cast: CastMember[];
+  configured: boolean;
+}
+
+export interface ReleaseDetailsPayload {
+  type: "movie" | "tv";
+  id: string;
+  title: string;
+  originalTitle: string | null;
+  releaseDate: string;
+  year: number | null;
+  poster: string | null;
+  backdrop: string | null;
+  overview: string;
+  voteAverage: number | null;
+  voteCount: number;
+  runtime: number | null;
+  numberOfSeasons: number | null;
+  numberOfEpisodes: number | null;
+  genres: string[];
+  directors: string[];
+  creators: string[];
+  cast: CastMember[];
+  trailerYouTubeKey: string | null;
+  availableProviders: AvailableProvider[];
+  justWatchLink: string | null;
   configured: boolean;
 }
 
@@ -103,6 +158,31 @@ export function useReleasesByProvider(
   });
 }
 
+export interface UseReleasesItalyOpts {
+  provider?: StreamingProviderId | "all";
+  kind?: "movie" | "tv" | "all";
+  dateFrom?: string;
+  dateTo?: string;
+  sort?: "release" | "popularity";
+  genreId?: number;
+}
+
+export function useReleasesItaly(opts: UseReleasesItalyOpts) {
+  return useQuery<ReleasesItalyPayload>({
+    queryKey: [
+      "streaming-releases-italy",
+      opts.provider ?? "all",
+      opts.kind ?? "all",
+      opts.dateFrom ?? "",
+      opts.dateTo ?? "",
+      opts.sort ?? "release",
+      opts.genreId ?? 0,
+    ],
+    queryFn: () => streamingApi.getReleasesItaly(opts),
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
 export function useReleaseCredits(
   type: "movie" | "tv" | null,
   id: number | null,
@@ -110,6 +190,18 @@ export function useReleaseCredits(
   return useQuery<CreditsPayload>({
     queryKey: ["streaming-credits", type, id],
     queryFn: () => streamingApi.getReleaseCredits(type as "movie" | "tv", id as number),
+    enabled: !!type && !!id,
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+}
+
+export function useReleaseDetails(
+  type: "movie" | "tv" | null,
+  id: number | null,
+) {
+  return useQuery<ReleaseDetailsPayload>({
+    queryKey: ["streaming-release-details", type, id],
+    queryFn: () => streamingApi.getReleaseDetails(type as "movie" | "tv", id as number),
     enabled: !!type && !!id,
     staleTime: 24 * 60 * 60 * 1000,
   });

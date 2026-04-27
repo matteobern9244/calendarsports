@@ -11,10 +11,91 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
-> **Nota**: tutte le voci sotto sono UI/UX only sopra la baseline `2.2.0`.
-> Nessun cambio di stack, fonti dati, schema payload, edge function, branch
-> policy o policy Lovable. La versione applicativa esposta dal footer e da
-> `src/lib/version.ts` è stata bumpata a `2.2.0` con questa release.
+_(nessuna voce aperta)_
+
+## [2.3.0] — Streaming "Catalogo Italia" + dettaglio TMDB arricchito (2026-04-27)
+
+Bump applicativo `2.2.0` → `2.3.0` esposto da `src/lib/version.ts` e dal
+footer (`Calendar Events · v2.3.0`, `v` minuscola). Modifica funzionale
+significativa **solo sulla sezione Streaming → tab "Nuove uscite"**: nuova
+vista aggregata Italia ispirata al modello starflicks.it (anche lui basato
+su TMDB), con generi, providers IT e link JustWatch sul singolo titolo.
+Nessun cambio di stack, branch policy o policy Lovable. Le altre sezioni
+sportive (Home, Juventus, Sinner, F1, MotoGP, "Stasera in TV") non sono
+toccate.
+
+### Added
+
+- **Edge function `streaming-releases` — action `new-italy`.** Catalogo
+  aggregato region IT senza vincolo provider in upfront. TMDB
+  `/discover/{movie|tv}` con `watch_region=IT`,
+  `with_watch_monetization_types=flatrate|free|ads`, finestra
+  `primary_release_date` / `first_air_date`. Filtri opzionali via query:
+  `provider=netflix|prime|disney|hbo|all`, `kind=movie|tv|all`,
+  `genreId=<int TMDB>`, `dateFrom`/`dateTo`, `sort=release|popularity`.
+  Generi mappati in italiano da `/genre/{movie|tv}/list?language=it-IT`
+  (cache 24h). Per ogni titolo: arricchimento `availableProviders`
+  (logo + nome + tipo flatrate/free/ads) e `justWatchLink` da
+  `/watch/providers` IT (cache 1h). Cache risposta 1h per chiave.
+- **Edge function `streaming-releases` — action `details`.** Payload
+  one-shot per il dialog dettaglio: titolo, anno, generi IT, runtime o
+  numero stagioni, regista (movie) o creators (tv), cast top 10,
+  trailer YouTube key, providers IT con logo, link JustWatch del
+  titolo. TMDB con `append_to_response=credits,watch/providers,videos`.
+  Cache 24h.
+- **`StreamingPage.tsx` — vista "Catalogo Italia" (default).** Toggle
+  vista accanto alla precedente "Per provider" (mantenuta come opzione
+  per il taglio rigoroso flatrate). Filtri: provider pill (Tutti +
+  Netflix/Prime/Disney+/HBO Max), kind, genere TMDB IT (15 generi
+  principali), ordinamento (data uscita / popolarità), finestra date.
+- **Card uscita arricchita.** Riga generi sotto al titolo
+  (es. "Thriller · Azione"), anno accanto al badge tipo,
+  mini-strip con loghi dei provider IT disponibili (max 3 + "+N").
+- **Dialog dettaglio uscita.** Box "Disponibile su (Italia)" con loghi
+  e badge "Gratis"/"Con pubblicità" per free/ads, **trailer YouTube
+  embed** (youtube-nocookie) quando presente, regista o creators,
+  runtime o stagioni, generi, CTA principale "Vedi dove è disponibile"
+  che usa il link JustWatch del titolo (deep link IT TMDB).
+
+### Changed
+
+- **Edge function `streaming-releases` — action `new-today`.** Mantiene
+  la validazione rigorosa `flatrate IT` per il provider scelto, ma ora
+  arricchisce ogni item con `genres` (label IT), `availableProviders` e
+  `justWatchLink` per coerenza visiva con la nuova vista. Riusa la
+  cache `/watch/providers` condivisa con `new-italy`.
+- **Hook `useStreamingData.ts`.** Estesi i tipi `ReleaseItem` con
+  `year`, `genres`, `availableProviders`, `justWatchLink`,
+  `popularity`. Aggiunti `useReleasesItaly` e `useReleaseDetails`.
+- **`ReleaseDetailDialog`** ora consuma una sola query `details`
+  invece di `credits` + dati card, riducendo il roundtrip e
+  garantendo dati TMDB freschi anche quando si apre un titolo dalla
+  vista provider.
+- **API client `sportsApi.ts`.** Aggiunti `streamingApi.getReleasesItaly`
+  e `streamingApi.getReleaseDetails`.
+
+### Verified
+
+- `npx tsc --noEmit -p tsconfig.app.json` pulito.
+- `npm run check:italian` 0 violazioni.
+- Edge function deployata e testata via curl: `new-italy` (kind=movie,
+  sort=release) restituisce items con `genres` italiani,
+  `availableProviders` con logo, `justWatchLink` valido. `details` su
+  `movie/1318447` (Apex) restituisce Netflix come flatrate IT, regista
+  "Baltasar Kormákur", trailer YouTube key, generi "Thriller, Azione".
+
+### Note operative
+
+- Le "uscite" restano basate su `primary_release_date` / `first_air_date`
+  TMDB: è la data di prima pubblicazione mondiale, non la data di
+  ingresso sulla singola piattaforma in Italia. La striscia provider
+  sotto la card chiarisce esplicitamente "dove è già disponibile in IT
+  oggi". Stesso compromesso adottato da starflicks.it.
+- Provider IT supportati invariati: Netflix, Prime Video, Disney+, HBO
+  Max. La vista "Catalogo Italia" mostra però **anche** loghi di altri
+  provider (es. Plex, RaiPlay, Mediaset Infinity) quando TMDB li indicizza
+  per il titolo, perché derivano da `/watch/providers` e non da una lista
+  statica.
 
 ## [2.2.0] — UI/UX consolidation (2026-04-21)
 

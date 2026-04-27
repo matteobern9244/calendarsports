@@ -137,6 +137,38 @@ export const streamingApi = {
       type,
       id: String(id),
     }),
+  /**
+   * Catalogo aggregato Italia: tutti i titoli con disponibilità in IT
+   * (flatrate|free|ads) nella finestra date richiesta. Supporta filtro
+   * provider opzionale, kind, sort, genere TMDB.
+   */
+  getReleasesItaly: (opts: {
+    provider?: StreamingProviderId | "all";
+    kind?: "movie" | "tv" | "all";
+    dateFrom?: string;
+    dateTo?: string;
+    sort?: "release" | "popularity";
+    genreId?: number;
+  }) =>
+    callEdgeFunction("streaming-releases", {
+      action: "new-italy",
+      ...(opts.provider ? { provider: opts.provider } : {}),
+      ...(opts.kind ? { kind: opts.kind } : {}),
+      ...(opts.dateFrom ? { dateFrom: opts.dateFrom } : {}),
+      ...(opts.dateTo ? { dateTo: opts.dateTo } : {}),
+      ...(opts.sort ? { sort: opts.sort } : {}),
+      ...(opts.genreId ? { genreId: String(opts.genreId) } : {}),
+    }),
+  /**
+   * Dettaglio titolo one-shot (overview, generi, regista/creators, cast,
+   * trailer YouTube, providers IT, link JustWatch).
+   */
+  getReleaseDetails: (type: "movie" | "tv", id: number | string) =>
+    callEdgeFunction("streaming-releases", {
+      action: "details",
+      type,
+      id: String(id),
+    }),
 };
 
 // === MotoGP API (Official API / scraping) ===

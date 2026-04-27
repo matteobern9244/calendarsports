@@ -80,24 +80,36 @@ L'app espone sei viste principali:
   fascia di **prima serata (dalle 21:00 in poi)** e paginazione interna
   alla scheda (8 canali per pagina).
 - `Streaming` (`/streaming`): tab TV stasera (palinsesto reale per famiglia)
-  + tab Nuove uscite (TMDB con range date e filtro Film/Serie). All'atterraggio
-  sulla pagina la famiglia TV selezionata di default e' **RAI** (override via
-  `?family=...`). Le "Nuove
-  uscite" si basano su TMDB Discover filtrato per `primary_release_date`
-  (film) / `first_air_date` (serie) e `with_watch_providers` regione `IT`:
-  e' la **data di prima pubblicazione mondiale**, non la data di ingresso
-  sulla piattaforma in Italia (TMDB non espone quel campo su Discover). I
-  risultati sono validati su due livelli per garantire disponibilita' reale
-  in Italia: (1) Discover viene chiamato con
-  `with_watch_monetization_types=flatrate`, escludendo titoli a
-  noleggio/acquisto/ads sullo stesso provider; (2) per ogni candidato la
-  edge function chiama `/{type}/{id}/watch/providers` e tiene solo i titoli
-  presenti in `results.IT.flatrate` con il `provider_id` richiesto. I
-  range UI sono "Prossimi 7 giorni", "Prossimi 30 giorni" (default) e
-  "Finestra estesa" (-30 / +60 giorni). Quando la finestra richiesta e'
-  vuota, l'edge function `streaming-releases` allarga automaticamente il
-  range (`-14` / `+30` giorni) ed espone `widenedWindow: true` nel payload,
-  cosi' l'UI puo' segnalarlo all'utente.
+  + tab "Nuove uscite". All'atterraggio sulla pagina la famiglia TV
+  selezionata di default e' **RAI** (override via `?family=...`). La tab
+  "Nuove uscite" propone due viste:
+  1. **Catalogo Italia** (default, ispirata a starflicks.it). Edge action
+     `streaming-releases?action=new-italy`. TMDB Discover region `IT` con
+     `with_watch_monetization_types=flatrate|free|ads`, senza vincolo
+     provider in upfront. Filtri: provider (Tutti / Netflix / Prime /
+     Disney+ / HBO Max), kind (Film/Serie/Tutti), genere TMDB IT (15
+     generi principali), ordinamento (data uscita / popolarità). Ogni
+     titolo è arricchito con generi italiani (`/genre/{movie|tv}/list`,
+     cache 24h), `availableProviders` con logo (`/watch/providers` IT,
+     cache 1h) e `justWatchLink` (`results.IT.link`).
+  2. **Per provider**. Edge action `new-today` (logica precedente):
+     Discover con `with_watch_providers=<provider>` +
+     `with_watch_monetization_types=flatrate`, validato 1-a-1 su
+     `/watch/providers` `results.IT.flatrate`. Mantiene il fallback
+     "widened window" (`-14` / `+30` giorni) e `widenedWindow: true` nel
+     payload.
+
+  Il dialog dettaglio uscita usa la action `details` (one-shot,
+  `append_to_response=credits,watch/providers,videos`) e mostra:
+  generi IT, regista o creators, runtime o stagioni, **box "Disponibile
+  su (Italia)"** con loghi e badge "Gratis"/"Con pubblicità", **trailer
+  YouTube embed** quando presente, cast top 10, CTA "Vedi dove è
+  disponibile" che apre la pagina JustWatch IT del titolo.
+
+  Le uscite restano basate su `primary_release_date` /
+  `first_air_date` TMDB (data di prima pubblicazione mondiale, non
+  ingresso sulla singola piattaforma in IT): la striscia provider sotto
+  la card chiarisce dove il titolo è già disponibile in Italia oggi.
 - `Jannik Sinner`: profilo sintetico, risultati e calendario tornei.
 - `Juventus`: calendario partite e classifica Serie A.
 - `Formula 1`: calendario GP, classifica piloti e costruttori.
