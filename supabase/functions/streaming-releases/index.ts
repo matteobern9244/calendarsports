@@ -759,60 +759,19 @@ Deno.serve(async (req) => {
         tmdbGenreMap("tv", apiKey),
       ]);
 
-      // Costruisce gli items per una finestra date arbitraria, applicando
-      // tutti i filtri (whitelist provider IT, soglia voti adattiva, post-
-      // filter su disponibilità reale IT). Restituisce array eventualmente
-      // vuoto: la decisione di allargare è del chiamante.
-      const buildItemsForWindow = async (
-        from: string,
-        to: string,
-      ): Promise<any[]> => {
-        // Soglia voti adattiva: range stretti (≤ 14gg) → soglia bassa
-        // perché le novità imminenti spesso non hanno voti accumulati.
-        const windowDays = Math.max(
-          1,
-          Math.round(
-            (new Date(`${to}T00:00:00Z`).getTime() -
-              new Date(`${from}T00:00:00Z`).getTime()) /
-              86400000,
+      // Helper: arricchisce + filtra per disponibilità IT.
+      // - se providerKey scelto: il titolo deve essere in flatrate IT su
+      //   quel provider (id watch_provider) — garantisce coerenza.
+      // - se "all": il titolo deve essere su almeno un provider mainstream IT.
+      const enrichAndFilter = async (
+        rawCandidates: Array<{ kind: "movie" | "tv"; raw: any }>,
+      ) => {
+        const providersByItem = await Promise.all(
+          rawCandidates.map((c) =>
+            tmdbItemProvidersFullIT(c.kind, c.raw.id, apiKey),
           ),
         );
-        const voteMovie = windowDays <= 14 ? 5 : 20;
-        const voteTv = windowDays <= 14 ? 2 : 10;
-
-        const fetchTwoPages = async (
-          kind: "movie" | "tv",
-          sortBy: string,
-          voteCountGte: number,
-        ): Promise<any[]> => {
-          const [p1, p2] = await Promise.all([
-            tmdbDiscoverItaly(kind, from, to, apiKey, { providerId, sortBy, genreId, page: 1, voteCountGte }).catch(() => []),
-            tmdbDiscoverItaly(kind, from, to, apiKey, { providerId, sortBy, genreId, page: 2, voteCountGte }).catch(() => []),
-          ]);
-          return [...p1, ...p2];
-        };
-
-        const [movies, tv] = await Promise.all([
-          wantMovie ? fetchTwoPages("movie", sortByMovie, voteMovie) : Promise.resolve([] as any[]),
-          wantTv ? fetchTwoPages("tv", sortByTv, voteTv) : Promise.resolve([] as any[]),
-        ]);
-
-        // Esclude titoli senza poster e senza data di uscita.
-        const candidates: Array<{ kind: "movie" | "tv"; raw: any }> = [
-          ...movies
-            .filter((m) => !!m?.poster_path && !!m?.release_date)
-            .map((m) => ({ kind: "movie" as const, raw: m })),
-          ...tv
-            .filter((t) => !!t?.poster_path && !!t?.first_air_date)
-            .map((t) => ({ kind: "tv" as const, raw: t })),
-        ];
-
-        // Arricchimento /watch/providers IT per ogni candidato (cache 1h).
-        const providersByItem = await Promise.all(
-          candidates.map((c) => tmdbItemProvidersFullIT(c.kind, c.raw.id, apiKey)),
-        );
-
-        let built = candidates.map((c, i) => {
+        let built = rawCandidates.map((c, i) => {
           const base = normalizeItem(c.raw, c.kind, providersByItem[i].link);
           const map = c.kind === "movie" ? movieGenresMap : tvGenresMap;
           base.genres = base.genreIds
@@ -822,53 +781,199 @@ Deno.serve(async (req) => {
           base.justWatchLink = providersByItem[i].link;
           return base;
         });
-
-        // Garanzia "in IT": scarta titoli che dopo /watch/providers IT non
-        // risultano disponibili su alcun provider mainstream italiano.
-        // Quando l'utente ha scelto un provider specifico, richiediamo che
-        // quel provider sia in flatrate IT.
         if (providerId) {
           built = built.filter((it) =>
-            (it.availableProviders ?? []).some((p) => p.id === providerId && p.type === "flatrate"),
+            (it.availableProviders ?? []).some(
+              (p) => p.id === providerId && p.type === "flatrate",
+            ),
           );
         } else {
           built = built.filter((it) =>
-            (it.availableProviders ?? []).some((p) => ITALY_MAINSTREAM_SET.has(p.id)),
+            (it.availableProviders ?? []).some((p) =>
+              ITALY_MAINSTREAM_SET.has(p.id),
+            ),
           );
         }
-
-        // Ordinamento finale stabile lato server: rispetta sort scelto.
-        built.sort((a, b) => {
-          if (sortParam === "popularity") {
-            return (b.popularity ?? 0) - (a.popularity ?? 0);
-          }
-          const dateCmp = (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "");
-          if (dateCmp !== 0) return dateCmp;
-          return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
-        });
-
-        // Cap finale: max 60 item.
-        if (built.length > 60) built = built.slice(0, 60);
         return built;
       };
 
-      // Prima passata: finestra richiesta dall'utente.
-      let items = await buildItemsForWindow(dateFrom, dateTo);
+      const finalSort = (arr: ReturnType<typeof normalizeItem>[]) => {
+        arr.sort((a, b) => {
+          if (sortParam === "popularity") {
+            return (b.popularity ?? 0) - (a.popularity ?? 0);
+          }
+          const dateCmp = (b.releaseDate ?? "").localeCompare(
+            a.releaseDate ?? "",
+          );
+          if (dateCmp !== 0) return dateCmp;
+          return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
+        });
+        return arr.length > 60 ? arr.slice(0, 60) : arr;
+      };
+
+      // Strategia "per network/company": allineata alle pagine TMDB
+      // /network/<id> linkate. Quando un provider è scelto usiamo
+      // with_networks (TV) / with_companies (movie) e facciamo il filtro
+      // disponibilità IT in post.
+      const buildByNetworkOrCompany = async (opts: {
+        applyDateWindow: boolean;
+      }) => {
+        const tmdbIdsList = providerKey
+          ? [{ key: providerKey, ids: PROVIDER_TMDB_IDS[providerKey] }]
+          : (Object.keys(PROVIDER_TMDB_IDS) as (keyof typeof PROVIDER_TMDB_IDS)[])
+              .map((k) => ({ key: k as string, ids: PROVIDER_TMDB_IDS[k] }));
+
+        const dateOpts = opts.applyDateWindow
+          ? { dateFrom, dateTo }
+          : {};
+
+        const tasks: Promise<any[]>[] = [];
+        for (const { ids } of tmdbIdsList) {
+          if (wantMovie) {
+            tasks.push(
+              tmdbDiscoverByNetworkOrCompany("movie", ids, apiKey, {
+                sortBy: sortByMovie,
+                genreId,
+                page: 1,
+                ...dateOpts,
+              }).catch(() => []),
+            );
+          }
+          if (wantTv) {
+            tasks.push(
+              tmdbDiscoverByNetworkOrCompany("tv", ids, apiKey, {
+                sortBy: sortByTv,
+                genreId,
+                page: 1,
+                ...dateOpts,
+              }).catch(() => []),
+            );
+          }
+        }
+        const results = await Promise.all(tasks);
+
+        // Marca ogni risultato col suo kind in base all'ordine di accodamento.
+        const candidates: Array<{ kind: "movie" | "tv"; raw: any }> = [];
+        let idx = 0;
+        for (const _ of tmdbIdsList) {
+          if (wantMovie) {
+            for (const m of results[idx]) {
+              if (m?.poster_path && m?.release_date) {
+                candidates.push({ kind: "movie", raw: m });
+              }
+            }
+            idx++;
+          }
+          if (wantTv) {
+            for (const t of results[idx]) {
+              if (t?.poster_path && t?.first_air_date) {
+                candidates.push({ kind: "tv", raw: t });
+              }
+            }
+            idx++;
+          }
+        }
+
+        // Dedup per (kind, tmdbId): un titolo può comparire da più network.
+        const seen = new Set<string>();
+        const dedup: typeof candidates = [];
+        for (const c of candidates) {
+          const key = `${c.kind}:${c.raw.id}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          dedup.push(c);
+        }
+
+        const built = await enrichAndFilter(dedup);
+        return finalSort(built);
+      };
+
+      // 1) Tentativo principale: per network/company, applicando finestra
+      //    date come filtro stretto (rispetta "Prossimi 7/30/90 giorni").
+      let items = await buildByNetworkOrCompany({ applyDateWindow: true });
       let widenedWindow = false;
+      let fallbackRecent = false;
       let effectiveFrom = dateFrom;
       let effectiveTo = dateTo;
 
-      // Fallback: se vuoto, allarga di 14gg indietro / 30gg avanti.
-      // Evita lo stato "Nessun titolo" su range stretti (es. 7 giorni).
+      // 2) Fallback A: se vuoto, allarga la finestra (-14gg / +30gg).
       if (items.length === 0) {
         const widenedFrom = addDaysISO(dateFrom, -WIDEN_BACK_DAYS);
         const widenedTo = addDaysISO(dateTo, WIDEN_FWD_DAYS);
-        const widenedItems = await buildItemsForWindow(widenedFrom, widenedTo);
+        const widenedItems = await (async () => {
+          // Riusa la stessa pipeline ma con date allargate.
+          const tmdbIdsList = providerKey
+            ? [PROVIDER_TMDB_IDS[providerKey]]
+            : Object.values(PROVIDER_TMDB_IDS);
+          const tasks: Promise<any[]>[] = [];
+          for (const ids of tmdbIdsList) {
+            if (wantMovie) {
+              tasks.push(
+                tmdbDiscoverByNetworkOrCompany("movie", ids, apiKey, {
+                  sortBy: sortByMovie,
+                  genreId,
+                  page: 1,
+                  dateFrom: widenedFrom,
+                  dateTo: widenedTo,
+                }).catch(() => []),
+              );
+            }
+            if (wantTv) {
+              tasks.push(
+                tmdbDiscoverByNetworkOrCompany("tv", ids, apiKey, {
+                  sortBy: sortByTv,
+                  genreId,
+                  page: 1,
+                  dateFrom: widenedFrom,
+                  dateTo: widenedTo,
+                }).catch(() => []),
+              );
+            }
+          }
+          const results = await Promise.all(tasks);
+          const cand: Array<{ kind: "movie" | "tv"; raw: any }> = [];
+          let i = 0;
+          for (const _ of tmdbIdsList) {
+            if (wantMovie) {
+              for (const m of results[i])
+                if (m?.poster_path && m?.release_date)
+                  cand.push({ kind: "movie", raw: m });
+              i++;
+            }
+            if (wantTv) {
+              for (const t of results[i])
+                if (t?.poster_path && t?.first_air_date)
+                  cand.push({ kind: "tv", raw: t });
+              i++;
+            }
+          }
+          const dedupSet = new Set<string>();
+          const dedup: typeof cand = [];
+          for (const c of cand) {
+            const k = `${c.kind}:${c.raw.id}`;
+            if (dedupSet.has(k)) continue;
+            dedupSet.add(k);
+            dedup.push(c);
+          }
+          const built = await enrichAndFilter(dedup);
+          return finalSort(built);
+        })();
         if (widenedItems.length > 0) {
           items = widenedItems;
           widenedWindow = true;
           effectiveFrom = widenedFrom;
           effectiveTo = widenedTo;
+        }
+      }
+
+      // 3) Fallback B: ancora vuoto → mostra le uscite più recenti del/dei
+      //    network senza vincolo data. Garantisce che il provider scelto
+      //    abbia comunque una vista popolata (es. Disney+ 7gg).
+      if (items.length === 0) {
+        const recent = await buildByNetworkOrCompany({ applyDateWindow: false });
+        if (recent.length > 0) {
+          items = recent;
+          fallbackRecent = true;
         }
       }
 
@@ -879,6 +984,7 @@ Deno.serve(async (req) => {
         effectiveFrom,
         effectiveTo,
         widenedWindow,
+        fallbackRecent,
         provider: providerKey,
         kind: kindParam,
         sort: sortParam,
