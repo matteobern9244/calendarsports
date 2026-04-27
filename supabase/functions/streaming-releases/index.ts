@@ -195,6 +195,10 @@ async function tmdbDiscoverItaly(
     genreId?: number;
     page?: number;
     voteCountGte?: number;
+    /** Quando true, omette il filtro date per il fallback "catalogo recente". */
+    skipDateWindow?: boolean;
+    /** Monetizzazione: default flatrate per provider singolo, "flatrate|free|ads" per "all". */
+    monetization?: string;
   } = {},
 ): Promise<any[]> {
   const dateKey = kind === "movie" ? "primary_release_date" : "first_air_date";
@@ -204,14 +208,8 @@ async function tmdbDiscoverItaly(
   url.searchParams.set("watch_region", "IT");
   url.searchParams.set(
     "with_watch_monetization_types",
-    "flatrate|free|ads",
+    opts.monetization ?? (opts.providerId ? "flatrate" : "flatrate|free|ads"),
   );
-  // Provider filter:
-  // - se l'utente ha scelto un provider specifico, lo usiamo.
-  // - altrimenti restringiamo a una whitelist di provider mainstream IT
-  //   (Netflix, Prime, Disney+, Apple TV+, Paramount+, NOW/Sky,
-  //   Crunchyroll, RaiPlay, Mediaset Infinity, Discovery+) per evitare
-  //   risultati dominati da AVOD secondari (Plex/Pluto TV).
   if (opts.providerId) {
     url.searchParams.set("with_watch_providers", String(opts.providerId));
   } else {
@@ -220,16 +218,19 @@ async function tmdbDiscoverItaly(
   if (opts.genreId) {
     url.searchParams.set("with_genres", String(opts.genreId));
   }
-  url.searchParams.set(`${dateKey}.gte`, dateFrom);
-  url.searchParams.set(`${dateKey}.lte`, dateTo);
+  if (!opts.skipDateWindow) {
+    url.searchParams.set(`${dateKey}.gte`, dateFrom);
+    url.searchParams.set(`${dateKey}.lte`, dateTo);
+  }
   url.searchParams.set("sort_by", opts.sortBy ?? `${dateKey}.desc`);
   url.searchParams.set("include_adult", "false");
-  // Soglia minima di voti per tagliare i titoli senza riscontro reale.
-  // Adattiva: più bassa sui range stretti (novità imminenti senza voti
-  // ancora accumulati), più alta sui range larghi per ridurre il rumore.
-  const defaultVote = kind === "movie" ? 20 : 10;
-  const voteGte = typeof opts.voteCountGte === "number" ? opts.voteCountGte : defaultVote;
-  url.searchParams.set("vote_count.gte", String(voteGte));
+  // Nessuna soglia voti rigida: TMDB Discover su `watch_region=IT` +
+  // `with_watch_providers` è già la fonte ufficiale del catalogo IT,
+  // tagliarla per `vote_count` esclude novità reali con pochi voti
+  // (es. nuove stagioni, titoli appena entrati nel catalogo).
+  if (typeof opts.voteCountGte === "number" && opts.voteCountGte > 0) {
+    url.searchParams.set("vote_count.gte", String(opts.voteCountGte));
+  }
   url.searchParams.set("page", String(opts.page ?? 1));
 
   const res = await fetch(url.toString());
