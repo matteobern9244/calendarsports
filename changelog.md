@@ -13,6 +13,61 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 _(nessuna voce aperta)_
 
+## [2.3.2] — Streaming: vista unificata Catalogo Italia (2026-04-27)
+
+Bump applicativo `2.3.1` → `2.3.2` esposto da `src/lib/version.ts`.
+Riorganizzazione della sezione **Streaming → tab "Nuove uscite"**: rimossa
+la vista alternativa "Per provider", che generava confusione e duplicava
+la logica del Catalogo Italia. Ora esiste una sola vista, sempre
+filtrata su titoli realmente disponibili in Italia su provider
+mainstream. Default ordinamento allineato alla richiesta utente: "data
+uscita" (era "popolarità"). Aggiunto fallback automatico finestra date
+lato edge function quando il range richiesto è vuoto, per evitare lo
+stato "nessun risultato" sui range stretti (7 giorni). Nessun cambio di
+stack, branch policy o policy Lovable. Le altre sezioni (Home, Juventus,
+Sinner, F1, MotoGP, tab "TV stasera") non sono toccate.
+
+### Changed
+
+- **UI `src/pages/StreamingPage.tsx`.** Rimosso il toggle "Catalogo
+  Italia" / "Per provider" e tutta la logica della vista alternativa
+  (stato `view`, `provider`, `onlyUpcoming`, hook
+  `useReleasesByProvider`, componente `ProviderSelector`). Il filtro
+  provider IT (Tutti / Netflix / Prime Video / Disney+ / HBO Max) resta
+  come unico modo per restringere a una piattaforma. Default ordinamento
+  passa da `popularity` a `release` (data uscita) e l'URL viene
+  serializzato con `release` come default implicito. Default range resta
+  `7d` (Prossimi 7 giorni). Empty state semplificato; quando il backend
+  ha allargato la finestra in automatico viene mostrato un messaggio
+  "Stiamo mostrando le uscite tra {effectiveFrom} e {effectiveTo}".
+- **Edge function `streaming-releases` — action `new-italy`.** Default
+  `sort_by` lato server passa a data uscita (`primary_release_date.desc` /
+  `first_air_date.desc`) per allinearsi al nuovo default UI.
+  Implementato fallback automatico finestra date a parità di logica con
+  `new-today`: se `items.length === 0` viene rifatta la query con
+  `dateFrom-14d .. dateTo+30d` e il payload espone
+  `widenedWindow=true`, `effectiveFrom`, `effectiveTo`. Soglia
+  `vote_count.gte` resa adattiva: range ≤ 14 giorni usa `5` (movie) /
+  `2` (tv) anziché `20`/`10`, perché le novità imminenti spesso non
+  hanno ancora voti accumulati su TMDB. Quando un provider IT specifico
+  è selezionato, la post-filter richiede esplicitamente quel provider in
+  `flatrate` IT (non solo "qualsiasi mainstream"). Esclusi anche i
+  titoli senza data di uscita (`release_date` / `first_air_date` nulla).
+- **Hook `src/hooks/useStreamingData.ts`.** `ReleasesItalyPayload`
+  espone i campi opzionali `widenedWindow`, `effectiveFrom`,
+  `effectiveTo` per supportare il messaggio di finestra ampliata in UI.
+
+### Verifica
+
+- `bunx tsc --noEmit -p tsconfig.app.json` → ok.
+- Edge function deployata e testata via `curl` con
+  `dateFrom=2026-04-27&dateTo=2026-05-04`: la finestra 7gg è vuota, il
+  fallback porta automaticamente a `2026-04-13 .. 2026-06-03` e
+  restituisce titoli reali (Apex/Netflix, Stranger Things/Netflix,
+  Girigo/Netflix) tutti con `availableProviders` mainstream IT.
+- Test funzionale UI a carico dell'utente: i filtri periodo, generi,
+  ordinamento e Tutti/Film/Serie producono ora liste coerenti.
+
 ## [2.3.1] — Catalogo Italia: filtro provider mainstream + soglia voti (2026-04-27)
 
 Bump applicativo `2.3.0` → `2.3.1` esposto da `src/lib/version.ts`. Fix
