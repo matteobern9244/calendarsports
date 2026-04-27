@@ -94,6 +94,9 @@ export interface ReleasesItalyPayload {
   effectiveFrom?: string;
   effectiveTo?: string;
   widenedWindow?: boolean;
+  /** True quando la finestra date non ha prodotto risultati e il backend
+   *  ripiega sulle uscite più recenti del provider (senza vincolo data). */
+  fallbackRecent?: boolean;
   provider: StreamingProviderId | null;
   kind: "movie" | "tv" | "all";
   sort: "release" | "popularity";

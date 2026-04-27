@@ -1,65 +1,102 @@
-## Obiettivo
+## Diagnosi precisa
 
-Nella sezione **Streaming → Nuove uscite** semplificare l'esperienza in un'unica vista "Catalogo Italia" che mostra solo titoli effettivamente disponibili in Italia, con tutti i filtri davvero funzionanti e default ordinamento per data di uscita.
+I link TMDB che hai inviato puntano a pagine **per network** TMDB:
 
-## Problemi attuali
+- `/network/213` → Netflix
+- `/network/1024` → Prime Video
+- `/network/2739` → Disney+
+- `/network/8304` → HBO Max
 
-1. Esiste un toggle "Catalogo Italia" / "Per provider" che confonde: la vista "Per provider" usa una query separata (`new-today`) limitata a 4 piattaforme e con logica diversa, sovrapposta a Catalogo Italia.
-2. Default ordinamento è "Popolarità" ma deve essere "Data uscita".
-3. Con range "Prossimi 7 giorni" il Catalogo Italia restituisce 0 risultati: la finestra è troppo stretta per come TMDB indicizza (`primary_release_date` / `first_air_date` ≠ data ingresso piattaforma) e i filtri qualità (`vote_count.gte=20`) tagliano tutto.
-4. La garanzia "solo titoli disponibili in IT" oggi si basa solo sulla whitelist provider mainstream IT, ma manca un fallback automatico server-side che allarghi la finestra quando vuota (esiste solo per `new-today`).
-5. Genere selezionato con `kind=all` deve filtrare entrambi i kind in modo coerente (gli ID generi tra movie e tv non coincidono al 100%, ma quelli usati nella select sì — confermato).
+Questi sono **network IDs** TMDB (chi produce/distribuisce il contenuto). Sono **diversi** dai watch-provider IDs che usiamo oggi (Netflix=8, Prime=119, Disney+=337, HBO Max=1899).
 
-## Modifiche
+Le pagine TMDB linkate filtrano internamente con:
+- `with_networks=NNN` per le **serie TV**
+- `with_companies=NNN` per i **film**
 
-### UI `src/pages/StreamingPage.tsx`
+ordinate per `first_air_date.desc` / `primary_release_date.desc` su tutto il catalogo storico, **senza** vincolo `watch_region=IT`. Per questo restituiscono sempre risultati ricchi e ordinati.
 
-- **Rimuovere il toggle Catalogo Italia / Per provider** e tutto il blocco "Per provider":
-  - Rimuovere stato `view`, `provider`, `onlyUpcoming`, `releasesQuery`, `ProviderSelector`, `ItalyProviderFilter` legato a "all/netflix/...".
-  - Mantenere solo il filtro **provider IT opzionale** con chip "Tutti / Netflix / Prime Video / Disney+ / HBO Max" (già `ItalyProviderFilter`), come unico modo per restringere a un provider.
-  - Rimuovere chip "Solo in arrivo" (esisteva solo nella vista provider; il concetto è già implicito nella finestra date).
-- **Default ordinamento**: `sort` iniziale da `"popularity"` → `"release"`. Aggiornare anche la condizione di sync URL (`if (sort !== "release")` invece di `!== "popularity"`).
-- **Empty state unificato** che cita la finestra effettiva restituita dal server (`effectiveFrom`/`effectiveTo`) quando il backend ha allargato automaticamente.
-- **Header sezione**: sottotitolo passa a "Palinsesto TV serale e nuove uscite in Italia".
-- Pulsante "Allarga finestra" resta come scorciatoia per portare il range a 90d.
+La nostra implementazione attuale invece:
+1. Usa `with_watch_providers=119|...` + `watch_region=IT` + `with_watch_monetization_types=flatrate`
+2. Filtra per finestra date stretta sulla **prima messa in onda assoluta del titolo** (non sulla data di arrivo IT)
+3. Applica `vote_count.gte` minimi e una post-validazione `/watch/providers IT`
 
-### Hook + tipi `src/hooks/useStreamingData.ts`
+Risultato: per Prime Video / Disney+ / HBO Max il Catalogo Italia rende spesso vuoto o quasi, perché `first_air_date` di una serie storica non cade mai nei "prossimi 7/30/90 giorni" anche se il titolo è uscito ieri sulla piattaforma in IT.
 
-- Tipo `ReleasesItalyPayload` aggiunge: `widenedWindow?: boolean`, `effectiveFrom?: string`, `effectiveTo?: string` (allineato a `ReleasesPayload`).
-- Nessuna nuova query: `useReleasesByProvider` resta esportato per non rompere altre eventuali importazioni, ma non viene più usato dalla pagina.
+## Soluzione
 
-### Edge function `supabase/functions/streaming-releases/index.ts` — action `new-italy`
+Allineare il backend alla **stessa logica TMDB** usata dalle pagine che hai linkato, mantenendo però la garanzia "disponibile in IT" per la coerenza.
 
-- **Default sort server-side**: cambiare default da `popularity.desc` a `release` (sort_by `primary_release_date.desc` / `first_air_date.desc`) per allinearsi al nuovo default UI. Il client passa comunque `sort` esplicito, ma il default deve essere coerente.
-- **Validazione "in uscita in Italia" rinforzata**: la post-filter già scarta titoli che dopo `/watch/providers` IT non hanno alcun provider whitelist IT. Aggiungere nello stesso step: scartare anche titoli senza `releaseDate` (data nulla = non comparabile come "uscita in IT").
-- **Fallback automatico finestra date** (parità con `new-today`):
-  - Dopo aver costruito `items`, se `items.length === 0` e l'utente ha passato `dateFrom`/`dateTo` espliciti, rifare la query con `widenedFrom = dateFrom - 14gg`, `widenedTo = dateTo + 30gg`.
-  - Restituire nel payload: `widenedWindow: true`, `effectiveFrom`, `effectiveTo` quando il fallback scatta.
-  - Evita lo stato "Nessun titolo" per range stretti (7d) come visto nello screenshot utente.
-- **Soglia voti meno aggressiva sui range stretti**: quando `dateFrom..dateTo` ≤ 14 giorni, abbassare `vote_count.gte` a `5` (movie) / `2` (tv): le novità imminenti spesso non hanno ancora voti accumulati.
-- **Quando un provider singolo è selezionato**: bypassare la whitelist mainstream e usare solo quel provider id (già implementato), ma mantenere comunque il filtro `vote_count` adattivo.
+### 1. Edge function `streaming-releases` — nuova action `new-italy`
 
-### File toccati
+Aggiungo mapping network/company per ciascun provider:
 
-- `src/pages/StreamingPage.tsx` (semplificazione vista, rimozione toggle, default sort)
-- `src/hooks/useStreamingData.ts` (tipo payload)
-- `supabase/functions/streaming-releases/index.ts` (default sort, fallback finestra, vote threshold adattivo)
-- `src/lib/version.ts` (bump a `2.3.2`)
-- `changelog.md`, `README.md` (entry "Streaming: vista unificata Catalogo Italia, fallback finestra automatico")
+```ts
+const PROVIDER_TMDB_IDS = {
+  netflix: { network: 213,  company: 145174 }, // Netflix
+  prime:   { network: 1024, company: 20580 },  // Amazon / Amazon Studios
+  disney:  { network: 2739, company: 2 },      // Disney+ / Walt Disney Pictures
+  hbo:     { network: 8304, company: 174 },    // HBO Max / Warner Bros
+};
+```
 
-## Comportamento atteso dopo
+Cambio strategia di Discover quando viene scelto un provider:
 
-- Aprendo `/streaming?tab=releases` si vede una sola vista "Catalogo Italia".
-- I chip provider permettono di restringere a Netflix / Prime / Disney+ / HBO Max o lasciare "Tutti".
-- I select periodo / generi / sort sono visibili sempre e funzionanti.
-- Default sort: "Ordina per data uscita".
-- Con range 7 giorni e nessun risultato esatto, il backend allarga in automatico e restituisce comunque titoli reali in uscita IT, con un'indicazione testuale tipo "Finestra ampliata a {effectiveFrom} → {effectiveTo} per mostrare risultati".
-- Nessun titolo che non è disponibile in IT su provider mainstream comparirà più nelle card.
+- **TV**: `with_networks=<networkId>` + `sort_by=first_air_date.desc`
+- **Movie**: `with_companies=<companyId>` + `sort_by=primary_release_date.desc`
+- Niente più `with_watch_providers` per queste due chiamate
+- Niente più finestra date obbligatoria: la pagina TMDB non la usa, ordiniamo per data desc e prendiamo le prime N. La finestra date diventa un **filtro opzionale** lato client per la card "Prossimi 7/30 giorni".
+
+Quando provider = "all" (Tutti i provider IT): faccio le 4 chiamate per-network in parallelo (Netflix/Prime/Disney/HBO) per le serie + le 4 per-company per i film, dedup per `tmdbId`, e mantengo la whitelist mainstream IT come garanzia di disponibilità.
+
+### 2. Filtro "disponibile in IT"
+
+Manteniamo l'arricchimento `/watch/providers/IT` per ogni candidato (cache 1h già presente) e:
+
+- Se l'utente ha scelto un provider singolo → richiediamo che il titolo abbia quel provider in `flatrate IT`
+- Se l'utente ha scelto "Tutti" → richiediamo solo che ci sia almeno un provider mainstream IT in `flatrate/free/ads`
+
+Questo garantisce: **se un titolo non è in IT, non compare** (rispetta il tuo requisito originale).
+
+### 3. Filtri (range, kind, genere, sort)
+
+- **Range periodo (7/30/90 gg)**: applicato come post-filter sulla `releaseDate` del titolo. Se "Prossimi 7 giorni" non ha risultati per il provider selezionato, mostro chiaramente "Nessuna uscita in questa finestra" e in fondo mostro le ultime N uscite del provider come fallback (con label "Uscite recenti").
+- **Kind (Tutti/Film/Serie)**: già funzionante, lo mantengo.
+- **Genere**: passato come `with_genres=<id>` alle Discover (id condivisi tra movie e tv per i generi base TMDB della select attuale).
+- **Sort**: `release` (default) → `*_date.desc` server-side; `popularity` → `popularity.desc`.
+
+### 4. Soglia `vote_count`
+
+La tolgo per la modalità "per network/company" (pagina TMDB ufficiale non la usa). Introduco solo `vote_count.gte=1` minimo per scartare titoli ghost senza alcun riscontro.
+
+### 5. UI `StreamingPage.tsx`
+
+- Nessun cambiamento ai controlli (chip provider, select range/genere/sort, chip kind).
+- Aggiungo gestione del nuovo flag `fallbackRecent: true` restituito dal backend quando il range stretto è vuoto e mostriamo "uscite recenti" come ripiego, con messaggio dedicato: *"Nessuna uscita su {provider} nei prossimi {N} giorni — mostriamo le uscite più recenti."*
+- Mantengo il `widenedWindow` esistente per il caso "Tutti i provider".
+
+### 6. Verifica reale post-deploy
+
+Faccio `curl` mirati con i 4 provider × {movie, tv} e ordinamenti, controllo che:
+
+- Netflix → presenta serie come *Stranger Things*, *Squid Game*, *Wednesday* ordinate per data
+- Prime Video → *The Boys*, *Fallout*, *Reacher*
+- Disney+ → *The Mandalorian*, *Loki*, *Andor*
+- HBO Max → *House of the Dragon*, *The Last of Us*
+
+Se uno di questi non risponde, è anomalia da indagare prima di chiudere.
+
+## File toccati
+
+- `supabase/functions/streaming-releases/index.ts` — nuova logica `new-italy` per-network/company, fallback recent, mapping ID
+- `src/hooks/useStreamingData.ts` — aggiungo `fallbackRecent?: boolean` al tipo `ReleasesItalyPayload`
+- `src/pages/StreamingPage.tsx` — messaggio dedicato per `fallbackRecent`
+- `src/lib/version.ts` — bump a `2.3.3`
+- `changelog.md`, `README.md` — entry "Streaming Catalogo Italia: discovery per-network/company allineato a TMDB"
 
 ## Cosa NON cambia
 
-- Nessuna modifica al tab "TV stasera".
-- Nessuna modifica alle action `details` / `credits` dell'edge function.
-- Nessuna modifica al workflow Git o a Lovable sync.
-- Nessun mock o dato hardcoded: tutto resta TMDB live region IT.
-- UI italiano e fuso `Europe/Rome` rispettati.
+- Nessuna modifica al tab "TV stasera"
+- Nessun cambiamento ai controlli UI (filtri, sort, range, genere, chip kind, chip provider)
+- Nessun mock o dato hardcoded — tutto resta TMDB live
+- Lingua IT e fuso `Europe/Rome` rispettati
+- Workflow Git/Lovable invariato
