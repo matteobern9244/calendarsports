@@ -13,6 +13,37 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 _(nessuna voce aperta)_
 
+## [2.3.4] — Streaming Catalogo Italia: discovery provider-first IT (2026-04-27)
+
+Bump applicativo `2.3.3` → `2.3.4` esposto da `src/lib/version.ts`.
+Correzione mirata della sezione **Streaming → Nuove uscite (Catalogo
+Italia)**. La precedente strategia per `with_networks`/`with_companies`
+era allineata alle pagine TMDB `/network/<id>` ma NON al catalogo
+effettivamente disponibile in Italia: titoli come *Daredevil: Born
+Again* su Disney+ Italia venivano esclusi perché non appartenenti al
+network Disney+ TMDB `2739` o con `first_air_date` storica fuori
+finestra.
+
+- `supabase/functions/streaming-releases/index.ts`: `new-italy` torna a
+  una logica provider-first ufficiale TMDB Discover con
+  `watch_region=IT` + `with_watch_providers=<id>`. Monetizzazione
+  `flatrate` quando un provider è scelto, `flatrate|free|ads` quando
+  Tutti (con whitelist mainstream IT). Validazione finale per ogni
+  titolo via `/{type}/{id}/watch/providers` su `results.IT.flatrate`.
+- Recupero multi-pagina TMDB (1..3) con dedup `(kind,id)` per intercettare
+  catalogo storico (Daredevil, House of the Dragon, ecc.) anche con
+  finestre date strette.
+- Soglia `vote_count.gte` rimossa di default: TMDB Discover su
+  `watch_region=IT` è già fonte ufficiale del catalogo, tagliarla per
+  voti escludeva nuove stagioni e novità appena entrate.
+- Fallback a tre livelli: (1) finestra date stretta, (2) finestra
+  allargata ±14/+30gg, (3) catalogo IT senza vincolo data ordinato per
+  popolarità. Mantengo flag `widenedWindow` e `fallbackRecent` per i
+  messaggi UI in italiano già esistenti.
+
+File toccati: `supabase/functions/streaming-releases/index.ts`,
+`src/lib/version.ts`, `changelog.md`.
+
 ## [2.3.3] — Streaming Catalogo Italia: discovery per network/company TMDB (2026-04-27)
 
 Bump applicativo `2.3.2` → `2.3.3` esposto da `src/lib/version.ts`.
