@@ -13,6 +13,88 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 _(nessuna voce aperta)_
 
+## [2.3.6] — Streaming Catalogo Italia: filtro "Tutti" ai 4 provider mainstream + UI trasparente (2026-04-27)
+
+Bump applicativo `2.3.5` → `2.3.6` esposto da `src/lib/version.ts`.
+Refactor mirato della sezione **Streaming → tab "Nuove uscite"** per
+rendere coerente l'opzione "Tutti" con i 4 provider effettivamente
+filtrabili dalla UI (Netflix, Prime Video, Disney+, HBO Max). In
+precedenza `provider=all` usava la whitelist mainstream IT estesa
+(Apple TV+, Paramount+, NOW/Sky, Crunchyroll, RaiPlay, Mediaset
+Infinity, Discovery+, Plex, Pluto): risultava un mix non
+confrontabile con i pulsanti provider della UI. Nessun cambio di
+stack, branch policy o policy Lovable. Le altre sezioni (Home,
+Juventus, Sinner, F1, MotoGP, "TV stasera") non sono toccate.
+
+### Changed
+
+- **Edge function `streaming-releases` — action `new-italy`.** Quando
+  `provider=all`, la `with_watch_providers` ora usa esclusivamente la
+  whitelist `[8, 119, 337, 1899]` (Netflix, Amazon Prime Video,
+  Disney+, HBO Max). Il post-filter mainstream IT è stato ristretto
+  alla stessa lista. Rimosso il codice legacy
+  `tmdbDiscoverByNetworkOrCompany` e la mappa `PROVIDER_TMDB_IDS`
+  basata su `with_networks`/`with_companies`: la sezione resta su una
+  sola sorgente logica (provider TMDB IT con validazione `flatrate`).
+- **`useSyncAll` (`src/hooks/useSyncAll.ts`).** Il prefetch della
+  sincronizzazione globale ora chiama `streamingApi.getReleasesItaly`
+  con la stessa `queryKey` usata da `StreamingPage` (`["streaming-releases-italy", pid, "all", today, dateTo7, "release", 0]`)
+  per ciascuno dei 4 provider IT più "Tutti". In precedenza prefetchava
+  l'azione obsoleta `new-today`, scaldando una cache mai consumata
+  dalla UI.
+- **UI `src/pages/StreamingPage.tsx`.** Aggiunto un riepilogo dei
+  filtri attivi (provider, kind, genere, ordinamento, finestra
+  effettiva, contatore titoli) sotto la barra controlli, in modo che
+  l'utente veda subito perché una lista è vuota o ridotta. Quando il
+  backend ha applicato il fallback automatico finestra (`widenedWindow=true`)
+  o il fallback popolarità (`fallbackRecent=true`), il messaggio in
+  italiano espone `effectiveFrom` e `effectiveTo`.
+
+### Verified
+
+- `bunx tsc --noEmit -p tsconfig.app.json` pulito.
+- `npm run check:italian` 0 violazioni.
+- Edge function deployata e testata via `curl` per
+  `provider=all|netflix|prime|disney|hbo`: nessun titolo da provider
+  fuori dai 4 mainstream, validazione `flatrate IT` confermata su
+  ogni item del payload.
+
+File toccati: `supabase/functions/streaming-releases/index.ts`,
+`src/pages/StreamingPage.tsx`, `src/hooks/useSyncAll.ts`,
+`src/lib/version.ts`, `changelog.md`.
+
+## [2.3.5] — Streaming Catalogo Italia: queryKey time-aware + bundle refresh (2026-04-27)
+
+Bump applicativo `2.3.4` → `2.3.5` esposto da `src/lib/version.ts`.
+Fix di consistenza React Query nella sezione **Streaming → tab
+"Nuove uscite"**: il `queryKey` di `useReleasesItaly` non includeva
+esplicitamente `dateFrom`/`dateTo`, quindi cambiando rapidamente
+filtri provider o periodo l'UI poteva mostrare temporaneamente la
+lista relativa al fetch precedente prima di rifrescare. Bump versione
+anche per forzare il refresh del bundle client e ripulire eventuali
+chunk cache obsoleti dopo gli interventi backend di `2.3.3`/`2.3.4`.
+Nessun cambio di stack, fonti dati o branch policy.
+
+### Changed
+
+- **`src/hooks/useStreamingData.ts`.** `useReleasesItaly` ora
+  serializza `dateFrom`, `dateTo`, `sort` e `page` dentro la
+  `queryKey`, garantendo invalidazione precisa al cambio filtri e
+  evitando flicker tra liste eterogenee. `staleTime` e `gcTime`
+  invariati.
+- **`src/lib/version.ts`.** Bump a `2.3.5` per invalidare la cache
+  bundle client e propagare la nuova logica edge.
+
+### Verified
+
+- Smoke test manuale via `curl` su edge function `new-italy` per i 4
+  provider IT con finestra 7 giorni: payload reale, niente
+  duplicati, `dataSource: 'tmdb'`.
+- Build dev verificato senza warning aggiuntivi.
+
+File toccati: `src/hooks/useStreamingData.ts`, `src/lib/version.ts`,
+`changelog.md`.
+
 ## [2.3.4] — Streaming Catalogo Italia: discovery provider-first IT (2026-04-27)
 
 Bump applicativo `2.3.3` → `2.3.4` esposto da `src/lib/version.ts`.

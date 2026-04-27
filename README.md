@@ -5,10 +5,11 @@ consultare eventi imminenti, calendari e classifiche di Jannik Sinner,
 Juventus, Formula 1 e MotoGP, oltre a palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `2.2.0` (consolidamento UI/UX sopra la
-baseline di rebrand `2.1.0`). Il footer dell'app mostra la versione
-corrente leggendola da `src/lib/version.ts` nel formato `Calendar Events
-· v2.2.0` (con `v` minuscola).
+Versione repository corrente: `2.3.6` (consolidamento Streaming →
+Catalogo Italia sopra la baseline UI/UX `2.2.0` e il rebrand `2.1.0`).
+Il footer dell'app mostra la versione corrente leggendola da
+`src/lib/version.ts` nel formato `Calendar Events · v2.3.6` (con `v`
+minuscola).
 
 ## Origine del progetto
 
@@ -31,9 +32,22 @@ incoraggino push automatici o superficiali su `main`.
 
 ## Release baseline
 
-La baseline documentata del repository e' la release `2.2.0`, costruita
-sopra la release di rebrand `2.1.0`. Le release storiche `2.0.0`, `2.0.1`,
-`2.0.2` restano archiviate nel `changelog.md`.
+La baseline corrente del repository e' la release `2.3.6`, costruita
+sopra la baseline UI/UX `2.2.0` e il rebrand `2.1.0`. Le release
+storiche `2.0.0`, `2.0.1`, `2.0.2`, `2.1.0`, `2.2.0` e l'intera serie
+`2.3.x` (`2.3.0` → `2.3.6`) restano archiviate nel `changelog.md`.
+
+La serie `2.3.x` ha riscritto la sezione **Streaming → tab "Nuove
+uscite"** come vista unificata "Catalogo Italia" basata su TMDB
+Discover region IT, con dialog dettaglio arricchito (regista/creators,
+cast top 10, trailer YouTube, providers IT con logo, link JustWatch).
+L'ultima release `2.3.6` allinea l'opzione "Tutti" ai soli 4 provider
+filtrabili dalla UI (Netflix, Prime Video, Disney+, HBO Max), rimuove
+il codice legacy basato su network/company TMDB e aggiunge un
+riepilogo dei filtri attivi e della finestra effettiva (anche quando
+il backend applica il fallback automatico finestra/popolarità). Tutte
+le altre sezioni (Home, Juventus, Sinner, F1, MotoGP, "TV stasera")
+non sono state toccate dalla serie `2.3.x`.
 
 La release `2.2.0` introduce solo miglioramenti UI/UX e helper di
 presentazione: niente cambi di stack, fonti dati, schema payload edge
@@ -79,33 +93,37 @@ L'app espone sei viste principali:
   per famiglia (`ToggleGroup` responsive), un programma per canale nella
   fascia di **prima serata (dalle 21:00 in poi)** e paginazione interna
   alla scheda (8 canali per pagina).
-- `Streaming` (`/streaming`): tab TV stasera (palinsesto reale per famiglia)
-  + tab "Nuove uscite". All'atterraggio sulla pagina la famiglia TV
-  selezionata di default e' **RAI** (override via `?family=...`). La tab
-  "Nuove uscite" è **vista unica "Catalogo Italia"** (ispirata a
-  starflicks.it): mostra esclusivamente titoli realmente disponibili in
-  Italia su provider mainstream. Edge action
-  `streaming-releases?action=new-italy`. TMDB Discover region `IT` con
-  `with_watch_monetization_types=flatrate|free|ads`. Quando l'utente
-  non sceglie un provider specifico, il filtro `with_watch_providers`
-  usa una **whitelist mainstream IT** (Netflix, Prime, Disney+, Apple
-  TV+, Paramount+, NOW/Sky, Crunchyroll, RaiPlay, Mediaset Infinity,
-  Discovery+) per evitare risultati dominati da AVOD secondari
-  (Plex/Pluto). Soglia `vote_count.gte` **adattiva**: range ≤ 14 giorni
-  usa `5` (movie) / `2` (tv); range più ampi `20` / `10`. Esclusi a
-  monte i titoli senza `poster_path` o senza data di uscita. Finestra
-  di default `today-30 .. today+60`, paginazione 2 pagine per kind, cap
-  finale 60 item. Quando la finestra richiesta è vuota viene applicato
-  un **fallback automatico** (`-14` / `+30` giorni) e il payload
-  espone `widenedWindow=true`, `effectiveFrom`, `effectiveTo`. Filtri
-  UI: provider IT (Tutti / Netflix / Prime / Disney+ / HBO Max), kind
+- `Streaming` (`/streaming`): tab TV stasera (palinsesto reale per
+  famiglia) + tab "Nuove uscite". All'atterraggio sulla pagina la
+  famiglia TV selezionata di default e' **RAI** (override via
+  `?family=...`). La tab "Nuove uscite" è **vista unica "Catalogo
+  Italia"** basata su TMDB Discover region `IT` con
+  `with_watch_monetization_types=flatrate|free|ads`. Edge action
+  `streaming-releases?action=new-italy`. **Provider supportati dalla
+  UI: Tutti / Netflix / Prime Video / Disney+ / HBO Max**. Quando
+  `provider=all` la `with_watch_providers` lato edge è ristretta alla
+  stessa whitelist `[8, 119, 337, 1899]` (Netflix, Amazon Prime
+  Video, Disney+, HBO Max), così "Tutti" è davvero la somma dei 4
+  pulsanti provider e non un mix di altre piattaforme (Apple TV+,
+  Paramount+, RaiPlay, Plex, ecc.). Quando l'utente seleziona un
+  provider specifico, la `with_watch_providers` passa a quel singolo
+  ID e la validazione finale richiede esplicitamente quel provider in
+  `flatrate IT` su `/watch/providers`. Filtri UI aggiuntivi: kind
   (Film/Serie/Tutti), genere TMDB IT (15 generi principali),
-  ordinamento (**data uscita di default** / popolarità). Ogni titolo è
-  arricchito con generi italiani (`/genre/{movie|tv}/list`, cache 24h),
+  ordinamento (**data uscita di default** / popolarità), finestra
+  date. Recupero multi-pagina TMDB (1..3) con dedup `(kind,id)` per
+  intercettare catalogo storico anche con finestre strette. Fallback
+  automatico a tre livelli quando il payload risulta vuoto: (1)
+  finestra richiesta, (2) finestra allargata `-14 / +30gg`
+  (`widenedWindow=true`, `effectiveFrom`/`effectiveTo` esposti), (3)
+  catalogo IT senza vincolo data ordinato per popolarità
+  (`fallbackRecent=true`). Ogni titolo è arricchito con generi
+  italiani (`/genre/{movie|tv}/list`, cache 24h),
   `availableProviders` con logo (`/watch/providers` IT, cache 1h) e
-  `justWatchLink` (`results.IT.link`). Post-arricchimento, gli item
-  senza alcun provider mainstream IT (o senza il provider richiesto in
-  flatrate, se selezionato) vengono scartati.
+  `justWatchLink` (`results.IT.link`). La pagina espone un
+  **riepilogo filtri attivi** (provider, kind, genere, ordinamento,
+  finestra effettiva, contatore titoli) per rendere trasparente
+  perché una lista è vuota o ridotta.
 
   Il dialog dettaglio uscita usa la action `details` (one-shot,
   `append_to_response=credits,watch/providers,videos`) e mostra:
