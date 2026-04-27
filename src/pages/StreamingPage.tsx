@@ -443,7 +443,40 @@ export default function StreamingPage() {
 
         {/* === TAB RELEASES === */}
         <TabsContent value="releases" className="space-y-5">
-          <ProviderSelector value={provider} onChange={setProvider} />
+          {/* Selettore vista: Catalogo Italia (default) vs Per provider */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={view === "italy" ? "default" : "outline"}
+              onClick={() => setView("italy")}
+              className={cn(
+                "rounded-full font-heading uppercase tracking-wider text-xs gap-1",
+                view === "italy" && "shadow-md",
+              )}
+              aria-pressed={view === "italy"}
+            >
+              <Globe2 className="h-3.5 w-3.5" />
+              Catalogo Italia
+            </Button>
+            <Button
+              size="sm"
+              variant={view === "provider" ? "default" : "outline"}
+              onClick={() => setView("provider")}
+              className={cn(
+                "rounded-full font-heading uppercase tracking-wider text-xs",
+                view === "provider" && "shadow-md",
+              )}
+              aria-pressed={view === "provider"}
+            >
+              Per provider
+            </Button>
+          </div>
+
+          {view === "provider" ? (
+            <ProviderSelector value={provider} onChange={setProvider} />
+          ) : (
+            <ItalyProviderFilter value={italyProvider} onChange={setItalyProvider} />
+          )}
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
             <Select value={range} onValueChange={(v) => setRange(v as RangeId)}>
@@ -458,6 +491,36 @@ export default function StreamingPage() {
                 ))}
               </SelectContent>
             </Select>
+
+            {view === "italy" && (
+              <Select
+                value={genre === null ? "all" : String(genre)}
+                onValueChange={(v) => setGenre(v === "all" ? null : parseInt(v, 10))}
+              >
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GENRES.map((g) => (
+                    <SelectItem key={String(g.id ?? "all")} value={g.id === null ? "all" : String(g.id)}>
+                      {g.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {view === "italy" && (
+              <Select value={sort} onValueChange={(v) => setSort(v as SortId)}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="release">Ordina per data uscita</SelectItem>
+                  <SelectItem value="popularity">Ordina per popolarità</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
 
             <div className="flex gap-2">
               {KINDS.map((k) => (
@@ -474,42 +537,48 @@ export default function StreamingPage() {
                   {k.label}
                 </Button>
               ))}
-              <Button
-                size="sm"
-                variant={onlyUpcoming ? "default" : "outline"}
-                onClick={() => setOnlyUpcoming((v) => !v)}
-                aria-pressed={onlyUpcoming}
-                className={cn(
-                  "rounded-full font-heading uppercase tracking-wider text-xs gap-1",
-                  onlyUpcoming && "shadow-md",
-                )}
-              >
-                <CalendarClock className="h-3.5 w-3.5" />
-                Solo in arrivo
-              </Button>
+              {view === "provider" && (
+                <Button
+                  size="sm"
+                  variant={onlyUpcoming ? "default" : "outline"}
+                  onClick={() => setOnlyUpcoming((v) => !v)}
+                  aria-pressed={onlyUpcoming}
+                  className={cn(
+                    "rounded-full font-heading uppercase tracking-wider text-xs gap-1",
+                    onlyUpcoming && "shadow-md",
+                  )}
+                >
+                  <CalendarClock className="h-3.5 w-3.5" />
+                  Solo in arrivo
+                </Button>
+              )}
             </div>
           </div>
 
-          {releasesQuery.isLoading && <LoadingState message="Caricamento uscite..." />}
-          {releasesQuery.isError && (
+          {activeQuery.isLoading && <LoadingState message="Caricamento uscite..." />}
+          {activeQuery.isError && (
             <ErrorState
               message="Nuove uscite non disponibili"
               detail="Il catalogo TMDB non risponde in questo momento. Riprova oppure consulta direttamente il sito di TMDB per scoprire le ultime uscite."
-              onRetry={() => releasesQuery.refetch()}
+              onRetry={() => activeQuery.refetch()}
               externalLink="https://www.themoviedb.org/movie/upcoming"
               externalLabel="Vedi nuove uscite su TMDB"
               ctaHint="Tocca qui per il catalogo TMDB ufficiale"
             />
           )}
-          {releasesQuery.isSuccess && !releasesQuery.data?.configured && (
+          {activeQuery.isSuccess && !activeQuery.data?.configured && (
             <EmptyState message="Configura la chiave TMDB_API_KEY per visualizzare le nuove uscite." />
           )}
-          {releasesQuery.isSuccess &&
-            releasesQuery.data?.configured &&
+          {activeQuery.isSuccess &&
+            activeQuery.data?.configured &&
             filteredItems.length === 0 && (
               <div className="flex flex-col items-center gap-3">
                 <EmptyState
-                  message={`Nessuna uscita catalogata da TMDB per ${providerLabel} nella finestra selezionata. Le uscite si basano sulla data di prima pubblicazione mondiale, non sull'ingresso sulla piattaforma.`}
+                  message={
+                    view === "provider"
+                      ? `Nessuna uscita catalogata da TMDB per ${providerLabel} nella finestra selezionata. Le uscite si basano sulla data di prima pubblicazione mondiale, non sull'ingresso sulla piattaforma.`
+                      : "Nessun titolo trovato in Italia per i filtri selezionati. Allarga la finestra o cambia genere."
+                  }
                 />
                 {range !== "90d" && (
                   <Button
@@ -524,7 +593,7 @@ export default function StreamingPage() {
               </div>
             )}
 
-          {releasesQuery.isSuccess && filteredItems.length > 0 && (
+          {activeQuery.isSuccess && filteredItems.length > 0 && (
             <>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -567,7 +636,7 @@ export default function StreamingPage() {
                           <Sparkles className="h-8 w-8 text-muted-foreground" />
                         </div>
                       )}
-                      <div className="p-3 space-y-1">
+                      <div className="p-3 space-y-1.5">
                         <div className="flex items-start justify-between gap-2 flex-wrap">
                           <p className="font-heading text-sm font-semibold leading-tight line-clamp-2 min-w-0 flex-1">
                             {item.title}
@@ -577,9 +646,15 @@ export default function StreamingPage() {
                             className="shrink-0"
                           />
                         </div>
+                        {item.genres && item.genres.length > 0 && (
+                          <p className="text-[11px] text-muted-foreground line-clamp-1">
+                            {item.genres.slice(0, 3).join(" · ")}
+                          </p>
+                        )}
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <Badge variant="outline" className="text-[10px]">
                             {item.type === "movie" ? "Film" : "Serie"}
+                            {item.year ? ` · ${item.year}` : ""}
                           </Badge>
                           {item.voteAverage !== null && item.voteAverage > 0 && (
                             <span className="font-mono">
@@ -587,6 +662,34 @@ export default function StreamingPage() {
                             </span>
                           )}
                         </div>
+                        {item.availableProviders && item.availableProviders.length > 0 && (
+                          <div className="flex items-center gap-1 pt-0.5">
+                            {item.availableProviders.slice(0, 3).map((p) => (
+                              <span
+                                key={p.id}
+                                title={p.name}
+                                className="inline-flex h-5 w-5 rounded-sm overflow-hidden bg-muted border border-border/40"
+                              >
+                                {p.logo ? (
+                                  <img
+                                    src={p.logo}
+                                    alt={p.name}
+                                    width={20}
+                                    height={20}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="h-full w-full object-contain"
+                                  />
+                                ) : null}
+                              </span>
+                            ))}
+                            {item.availableProviders.length > 3 && (
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                +{item.availableProviders.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   </button>
