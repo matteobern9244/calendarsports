@@ -5,10 +5,11 @@ consultare eventi imminenti, calendari e classifiche di Jannik Sinner,
 Juventus, Formula 1 e MotoGP, oltre a palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `2.2.0` (consolidamento UI/UX sopra la
-baseline di rebrand `2.1.0`). Il footer dell'app mostra la versione
-corrente leggendola da `src/lib/version.ts` nel formato `Calendar Events
-· v2.2.0` (con `v` minuscola).
+Versione repository corrente: `2.3.6` (consolidamento Streaming →
+Catalogo Italia sopra la baseline UI/UX `2.2.0` e il rebrand `2.1.0`).
+Il footer dell'app mostra la versione corrente leggendola da
+`src/lib/version.ts` nel formato `Calendar Events · v2.3.6` (con `v`
+minuscola).
 
 ## Origine del progetto
 
@@ -31,9 +32,22 @@ incoraggino push automatici o superficiali su `main`.
 
 ## Release baseline
 
-La baseline documentata del repository e' la release `2.2.0`, costruita
-sopra la release di rebrand `2.1.0`. Le release storiche `2.0.0`, `2.0.1`,
-`2.0.2` restano archiviate nel `changelog.md`.
+La baseline corrente del repository e' la release `2.3.6`, costruita
+sopra la baseline UI/UX `2.2.0` e il rebrand `2.1.0`. Le release
+storiche `2.0.0`, `2.0.1`, `2.0.2`, `2.1.0`, `2.2.0` e l'intera serie
+`2.3.x` (`2.3.0` → `2.3.6`) restano archiviate nel `changelog.md`.
+
+La serie `2.3.x` ha riscritto la sezione **Streaming → tab "Nuove
+uscite"** come vista unificata "Catalogo Italia" basata su TMDB
+Discover region IT, con dialog dettaglio arricchito (regista/creators,
+cast top 10, trailer YouTube, providers IT con logo, link JustWatch).
+L'ultima release `2.3.6` allinea l'opzione "Tutti" ai soli 4 provider
+filtrabili dalla UI (Netflix, Prime Video, Disney+, HBO Max), rimuove
+il codice legacy basato su network/company TMDB e aggiunge un
+riepilogo dei filtri attivi e della finestra effettiva (anche quando
+il backend applica il fallback automatico finestra/popolarità). Tutte
+le altre sezioni (Home, Juventus, Sinner, F1, MotoGP, "TV stasera")
+non sono state toccate dalla serie `2.3.x`.
 
 La release `2.2.0` introduce solo miglioramenti UI/UX e helper di
 presentazione: niente cambi di stack, fonti dati, schema payload edge
