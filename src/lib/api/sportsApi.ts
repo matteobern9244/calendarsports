@@ -1,14 +1,44 @@
 import { SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY } from "@/lib/supabaseClient";
 
+/**
+ * Esegue una fetch verso una edge function con retry automatico per errori
+ * transitori del runtime Supabase (503/502/504, tipicamente cold start o
+ * `SUPABASE_EDGE_RUNTIME_ERROR`). Usa backoff esponenziale con jitter.
+ */
+const TRANSIENT_STATUSES = new Set([502, 503, 504]);
+const MAX_RETRIES = 3;
+
+async function fetchEdgeWithRetry(url: string): Promise<Response> {
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "apikey": SUPABASE_ANON_KEY,
+        },
+      });
+      if (response.ok) return response;
+      // Retry solo su errori transitori del runtime
+      if (!TRANSIENT_STATUSES.has(response.status) || attempt === MAX_RETRIES) {
+        return response;
+      }
+      lastError = new Error(`Edge runtime ${response.status}`);
+    } catch (err) {
+      lastError = err;
+      if (attempt === MAX_RETRIES) throw err;
+    }
+    // Backoff: 300ms, 700ms, 1500ms (+ jitter)
+    const delay = 300 * Math.pow(2, attempt) + Math.random() * 200;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+  throw lastError ?? new Error("Edge function unreachable");
+}
+
 async function callEdgeFunction(functionName: string, params: Record<string, string>) {
   const queryString = new URLSearchParams(params).toString();
   const url = `${SUPABASE_PROJECT_URL}/functions/v1/${functionName}?${queryString}`;
-  const response = await fetch(url, {
-    headers: {
-      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      "apikey": SUPABASE_ANON_KEY,
-    },
-  });
+  const response = await fetchEdgeWithRetry(url);
 
   if (!response.ok) {
     throw new Error(`Errore API: ${response.status}`);
@@ -41,12 +71,7 @@ export async function callEdgeFunctionWithMeta<T = unknown>(
 ): Promise<{ data: T; meta: EdgeMeta }> {
   const queryString = new URLSearchParams(params).toString();
   const url = `${SUPABASE_PROJECT_URL}/functions/v1/${functionName}?${queryString}`;
-  const response = await fetch(url, {
-    headers: {
-      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      "apikey": SUPABASE_ANON_KEY,
-    },
-  });
+  const response = await fetchEdgeWithRetry(url);
   if (!response.ok) throw new Error(`Errore API: ${response.status}`);
   const json = await response.json();
   if (!json.success) throw new Error(json.error || "Errore sconosciuto");
