@@ -42,6 +42,40 @@ const TMDB_PROVIDER_ID_TO_KEY: Record<number, string> = Object.fromEntries(
   Object.entries(PROVIDERS).map(([key, cfg]) => [cfg.id, key]),
 );
 
+// Whitelist provider mainstream IT usata per "Catalogo Italia". Filtra il
+// rumore di Discover (Plex, Pluto TV, micro-AVOD locali) lasciando solo le
+// piattaforme rilevanti per il pubblico italiano. Gli ID corrispondono a
+// TMDB watch_provider region IT.
+//   8   Netflix
+//   119 Amazon Prime Video
+//   337 Disney+
+//   1899 HBO Max (Sky/NOW)
+//   2 Apple iTunes — escluso (TVOD)
+//   350 Apple TV+
+//   531 Paramount+
+//   554 Discovery+
+//   359 Rai Play
+//   484 Mediaset Infinity
+//   283 Crunchyroll
+//   421 RaiPlay
+//   675 NOW
+const ITALY_MAINSTREAM_PROVIDER_IDS: number[] = [
+  8,   // Netflix
+  119, // Amazon Prime Video
+  337, // Disney+
+  350, // Apple TV+
+  531, // Paramount+
+  524, // Discovery+
+  554, // Discovery+ (alias)
+  1899, // HBO Max (in IT esposto via Sky/NOW)
+  39,   // NOW (Sky)
+  283, // Crunchyroll
+  359, // Rai Play
+  484, // Mediaset Infinity
+];
+const ITALY_MAINSTREAM_SET = new Set<number>(ITALY_MAINSTREAM_PROVIDER_IDS);
+const ITALY_MAINSTREAM_OR = ITALY_MAINSTREAM_PROVIDER_IDS.join("|");
+
 const PROVIDER_KEY_RE = /^(netflix|prime|disney|hbo)$/;
 const PROVIDER_FILTER_RE = /^(netflix|prime|disney|hbo|all)$/;
 const KIND_FILTER_RE = /^(movie|tv|all)$/;
@@ -148,8 +182,16 @@ async function tmdbDiscoverItaly(
     "with_watch_monetization_types",
     "flatrate|free|ads",
   );
+  // Provider filter:
+  // - se l'utente ha scelto un provider specifico, lo usiamo.
+  // - altrimenti restringiamo a una whitelist di provider mainstream IT
+  //   (Netflix, Prime, Disney+, Apple TV+, Paramount+, NOW/Sky,
+  //   Crunchyroll, RaiPlay, Mediaset Infinity, Discovery+) per evitare
+  //   risultati dominati da AVOD secondari (Plex/Pluto TV).
   if (opts.providerId) {
     url.searchParams.set("with_watch_providers", String(opts.providerId));
+  } else {
+    url.searchParams.set("with_watch_providers", ITALY_MAINSTREAM_OR);
   }
   if (opts.genreId) {
     url.searchParams.set("with_genres", String(opts.genreId));
@@ -158,6 +200,12 @@ async function tmdbDiscoverItaly(
   url.searchParams.set(`${dateKey}.lte`, dateTo);
   url.searchParams.set("sort_by", opts.sortBy ?? `${dateKey}.desc`);
   url.searchParams.set("include_adult", "false");
+  // Soglia minima di voti per tagliare i titoli senza riscontro reale.
+  // Più alta sui film (catalogo TMDB più rumoroso), più bassa sulle serie.
+  url.searchParams.set(
+    "vote_count.gte",
+    kind === "movie" ? "20" : "10",
+  );
   url.searchParams.set("page", String(opts.page ?? 1));
 
   const res = await fetch(url.toString());
