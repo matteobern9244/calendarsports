@@ -268,7 +268,7 @@ export default function StreamingPage() {
         <div className="flex flex-col gap-2">
           <SectionHeader
             title="Streaming"
-            subtitle="Palinsesto TV serale e nuove uscite della settimana"
+            subtitle="Palinsesto TV serale e nuove uscite in Italia"
           />
         </div>
         <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
