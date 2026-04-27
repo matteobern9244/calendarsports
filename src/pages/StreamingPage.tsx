@@ -486,6 +486,38 @@ export default function StreamingPage() {
             </p>
           )}
 
+          {activeQuery.isSuccess && activeQuery.data?.configured && (
+            <div
+              className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"
+              aria-live="polite"
+            >
+              <Badge variant="secondary" className="font-normal">
+                Provider: <span className="ml-1 font-semibold text-foreground">{providerLabel}</span>
+              </Badge>
+              <Badge variant="secondary" className="font-normal">
+                Tipo: <span className="ml-1 font-semibold text-foreground">{activeKindLabel}</span>
+              </Badge>
+              <Badge variant="secondary" className="font-normal">
+                Genere: <span className="ml-1 font-semibold text-foreground">{activeGenreLabel}</span>
+              </Badge>
+              <Badge variant="secondary" className="font-normal">
+                Ordina: <span className="ml-1 font-semibold text-foreground">{activeSortLabel}</span>
+              </Badge>
+              <Badge variant="secondary" className="font-normal">
+                Finestra:{" "}
+                <span className="ml-1 font-semibold text-foreground">
+                  {activeRangeLabel}
+                  {(widened || fallbackRecent) && effectiveFrom && effectiveTo
+                    ? ` (effettiva ${formatDateIT(effectiveFrom)} – ${formatDateIT(effectiveTo)})`
+                    : ""}
+                </span>
+              </Badge>
+              <Badge variant="outline" className="font-mono">
+                {filteredItems.length} titoli
+              </Badge>
+            </div>
+          )}
+
           {activeQuery.isLoading && <LoadingState message="Caricamento uscite..." />}
           {activeQuery.isError && (
             <ErrorState
