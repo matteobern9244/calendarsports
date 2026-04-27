@@ -82,32 +82,30 @@ L'app espone sei viste principali:
 - `Streaming` (`/streaming`): tab TV stasera (palinsesto reale per famiglia)
   + tab "Nuove uscite". All'atterraggio sulla pagina la famiglia TV
   selezionata di default e' **RAI** (override via `?family=...`). La tab
-  "Nuove uscite" propone due viste:
-  1. **Catalogo Italia** (default, ispirata a starflicks.it). Edge action
-     `streaming-releases?action=new-italy`. TMDB Discover region `IT` con
-     `with_watch_monetization_types=flatrate|free|ads`. Quando l'utente
-     non sceglie un provider specifico, il filtro `with_watch_providers`
-     usa una **whitelist mainstream IT** (Netflix, Prime, Disney+, Apple
-     TV+, Paramount+, NOW/Sky, Crunchyroll, RaiPlay, Mediaset Infinity,
-     Discovery+) per evitare risultati dominati da AVOD secondari
-     (Plex/Pluto). Soglia minima `vote_count.gte=20` (movie) /
-     `vote_count.gte=10` (tv) per tagliare titoli senza riscontro reale.
-     Esclusi a monte i titoli senza `poster_path`. Finestra di default
-     `today-30 .. today+60`, paginazione 2 pagine per kind, cap finale
-     60 item. Filtri UI: provider (Tutti / Netflix / Prime / Disney+ /
-     HBO Max), kind (Film/Serie/Tutti), genere TMDB IT (15 generi
-     principali), ordinamento (popolarità di default / data uscita).
-     Ogni titolo è arricchito con generi italiani
-     (`/genre/{movie|tv}/list`, cache 24h), `availableProviders` con logo
-     (`/watch/providers` IT, cache 1h) e `justWatchLink`
-     (`results.IT.link`). Post-arricchimento, gli item senza alcun
-     provider della whitelist mainstream vengono scartati.
-  2. **Per provider**. Edge action `new-today` (logica precedente):
-     Discover con `with_watch_providers=<provider>` +
-     `with_watch_monetization_types=flatrate`, validato 1-a-1 su
-     `/watch/providers` `results.IT.flatrate`. Mantiene il fallback
-     "widened window" (`-14` / `+30` giorni) e `widenedWindow: true` nel
-     payload.
+  "Nuove uscite" è **vista unica "Catalogo Italia"** (ispirata a
+  starflicks.it): mostra esclusivamente titoli realmente disponibili in
+  Italia su provider mainstream. Edge action
+  `streaming-releases?action=new-italy`. TMDB Discover region `IT` con
+  `with_watch_monetization_types=flatrate|free|ads`. Quando l'utente
+  non sceglie un provider specifico, il filtro `with_watch_providers`
+  usa una **whitelist mainstream IT** (Netflix, Prime, Disney+, Apple
+  TV+, Paramount+, NOW/Sky, Crunchyroll, RaiPlay, Mediaset Infinity,
+  Discovery+) per evitare risultati dominati da AVOD secondari
+  (Plex/Pluto). Soglia `vote_count.gte` **adattiva**: range ≤ 14 giorni
+  usa `5` (movie) / `2` (tv); range più ampi `20` / `10`. Esclusi a
+  monte i titoli senza `poster_path` o senza data di uscita. Finestra
+  di default `today-30 .. today+60`, paginazione 2 pagine per kind, cap
+  finale 60 item. Quando la finestra richiesta è vuota viene applicato
+  un **fallback automatico** (`-14` / `+30` giorni) e il payload
+  espone `widenedWindow=true`, `effectiveFrom`, `effectiveTo`. Filtri
+  UI: provider IT (Tutti / Netflix / Prime / Disney+ / HBO Max), kind
+  (Film/Serie/Tutti), genere TMDB IT (15 generi principali),
+  ordinamento (**data uscita di default** / popolarità). Ogni titolo è
+  arricchito con generi italiani (`/genre/{movie|tv}/list`, cache 24h),
+  `availableProviders` con logo (`/watch/providers` IT, cache 1h) e
+  `justWatchLink` (`results.IT.link`). Post-arricchimento, gli item
+  senza alcun provider mainstream IT (o senza il provider richiesto in
+  flatrate, se selezionato) vengono scartati.
 
   Il dialog dettaglio uscita usa la action `details` (one-shot,
   `append_to_response=credits,watch/providers,videos`) e mostra:
