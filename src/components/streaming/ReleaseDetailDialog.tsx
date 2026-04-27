@@ -1,4 +1,4 @@
-import { ExternalLink, Sparkles, Film, Clapperboard, Play } from "lucide-react";
+import { ExternalLink, Sparkles, Film, Play } from "lucide-react";
 import {
   Dialog,
   DialogContent,
