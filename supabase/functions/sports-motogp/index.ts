@@ -86,7 +86,93 @@ type MotoGPCalendarEvent = {
   date_start: string;
   date_end: string;
   country: string;
+  sessions?: MotoGPSession[];
 };
+
+/**
+ * Sessione singola della classe MotoGP™ in un weekend di GP.
+ * `type` è il codice originale Pulselive (FP|PR|Q|SPR|WUP|RAC),
+ * `label` è la label italiana già pronta per la UI.
+ * `date` è ISO con offset esplicito (Pulselive ritorna sempre UTC).
+ */
+export type MotoGPSession = {
+  type: string;
+  number: number | null;
+  label: string;
+  date: string;
+};
+
+const MOTOGP_SESSION_LABEL_IT = (type: string, number: number | null): string => {
+  switch (type) {
+    case 'FP':
+      return number ? `Prove libere ${number}` : 'Prove libere';
+    case 'PR':
+      // "Practice" del venerdì pomeriggio (introdotta nel format 2023+)
+      return 'Prove libere';
+    case 'Q':
+      return number ? `Qualifiche ${number}` : 'Qualifiche';
+    case 'SPR':
+      return 'Sprint';
+    case 'WUP':
+      return 'Warmup';
+    case 'RAC':
+      return 'Gara';
+    default:
+      return type;
+  }
+};
+
+// Cache categoria MotoGP™ (id stagione-indipendente lato Pulselive ma per sicurezza
+// ricalcolato da `categories?eventUuid=...` se cache miss). TTL 24h.
+let _motogpCategoryCache: { at: number; id: string } | null = null;
+const CATEGORY_TTL_MS = 24 * 60 * 60 * 1000;
+
+async function fetchMotoGPCategoryId(sampleEventId: string): Promise<string | null> {
+  const now = Date.now();
+  if (_motogpCategoryCache && now - _motogpCategoryCache.at < CATEGORY_TTL_MS) {
+    return _motogpCategoryCache.id;
+  }
+  try {
+    const res = await fetch(
+      `${MOTOGP_PULSELIVE_BASE}/categories?eventUuid=${sampleEventId}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CalendarSports/1.0)' } },
+    );
+    if (!res.ok) return null;
+    const cats = await res.json() as Array<{ id: string; name: string; legacy_id?: number }>;
+    const motogp = cats.find(c => c.legacy_id === 3 || /motogp/i.test(c.name));
+    if (!motogp) return null;
+    _motogpCategoryCache = { at: now, id: motogp.id };
+    return motogp.id;
+  } catch (e) {
+    console.warn('Pulselive categories fetch failed:', e);
+    return null;
+  }
+}
+
+async function fetchMotoGPSessions(eventId: string, categoryId: string): Promise<MotoGPSession[]> {
+  const res = await fetch(
+    `${MOTOGP_PULSELIVE_BASE}/sessions?eventUuid=${eventId}&categoryUuid=${categoryId}`,
+    { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CalendarSports/1.0)' } },
+  );
+  if (!res.ok) throw new Error(`Pulselive sessions returned ${res.status}`);
+  const arr = await res.json() as Array<Record<string, unknown>>;
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map(s => {
+      const type = String(s.type ?? '');
+      const number = s.number === null || s.number === undefined ? null : Number(s.number);
+      const date = String(s.date ?? '');
+      if (!type || !date) return null;
+      return {
+        type,
+        number,
+        label: MOTOGP_SESSION_LABEL_IT(type, number),
+        date,
+      } satisfies MotoGPSession;
+    })
+    .filter((s): s is MotoGPSession => s !== null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
 
 async function fetchMotoGPCalendar(year: number): Promise<MotoGPCalendarEvent[]> {
   const seasonId = await fetchMotoGPSeasonId(year);
