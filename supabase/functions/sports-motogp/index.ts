@@ -658,18 +658,18 @@ Deno.serve(async (req) => {
         try {
           const events = await fetchMotoGPCalendar(seasonYear);
           const now = new Date();
-          // Arricchimento sessioni MotoGP™: chiamiamo Pulselive per ogni
-          // evento. Promise.allSettled garantisce che un round con
-          // sessioni mancanti non blocchi l'intero calendario; in tal
-          // caso `sessions` resta undefined (il client mostrerà solo
-          // date_start/date_end). Mai dati statici/sintetici.
-          const sampleEventId = events[0] ? `${(await fetchMotoGPEventIds(seasonYear))[0] ?? ''}` : '';
-          const eventIds = await fetchMotoGPEventIds(seasonYear);
-          const categoryId = eventIds[0] ? await fetchMotoGPCategoryId(eventIds[0]) : null;
+          // Arricchimento sessioni MotoGP™ per ogni round via Pulselive.
+          // Promise.allSettled: un singolo round senza sessioni non
+          // blocca il calendario, sessions resta undefined. Mai dati
+          // sintetici.
+          const firstId = events.find(e => e.id)?.id ?? '';
+          const categoryId = firstId ? await fetchMotoGPCategoryId(firstId) : null;
           let sessionsByRound: Array<MotoGPSession[] | undefined> = [];
-          if (categoryId && eventIds.length === events.length) {
+          if (categoryId) {
             const results = await Promise.allSettled(
-              eventIds.map(id => fetchMotoGPSessions(id, categoryId)),
+              events.map(e =>
+                e.id ? fetchMotoGPSessions(e.id, categoryId) : Promise.resolve([] as MotoGPSession[]),
+              ),
             );
             sessionsByRound = results.map(r =>
               r.status === 'fulfilled' && r.value.length > 0 ? r.value : undefined,
