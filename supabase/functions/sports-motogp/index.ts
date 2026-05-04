@@ -656,8 +656,26 @@ Deno.serve(async (req) => {
         try {
           const events = await fetchMotoGPCalendar(seasonYear);
           const now = new Date();
-          data = events.map(e => ({
+          // Arricchimento sessioni MotoGP™: chiamiamo Pulselive per ogni
+          // evento. Promise.allSettled garantisce che un round con
+          // sessioni mancanti non blocchi l'intero calendario; in tal
+          // caso `sessions` resta undefined (il client mostrerà solo
+          // date_start/date_end). Mai dati statici/sintetici.
+          const sampleEventId = events[0] ? `${(await fetchMotoGPEventIds(seasonYear))[0] ?? ''}` : '';
+          const eventIds = await fetchMotoGPEventIds(seasonYear);
+          const categoryId = eventIds[0] ? await fetchMotoGPCategoryId(eventIds[0]) : null;
+          let sessionsByRound: Array<MotoGPSession[] | undefined> = [];
+          if (categoryId && eventIds.length === events.length) {
+            const results = await Promise.allSettled(
+              eventIds.map(id => fetchMotoGPSessions(id, categoryId)),
+            );
+            sessionsByRound = results.map(r =>
+              r.status === 'fulfilled' && r.value.length > 0 ? r.value : undefined,
+            );
+          }
+          data = events.map((e, i) => ({
             ...e,
+            sessions: sessionsByRound[i],
             status: new Date(e.date_end) < now ? 'finished' : 'upcoming',
           }));
           dataSource = 'live';
