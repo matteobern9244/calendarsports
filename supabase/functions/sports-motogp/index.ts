@@ -79,6 +79,7 @@ async function fetchMotoGPSeasonId(year: number): Promise<string | null> {
 }
 
 type MotoGPCalendarEvent = {
+  id: string;
   round: number;
   name: string;
   location: string;
@@ -189,6 +190,7 @@ async function fetchMotoGPCalendar(year: number): Promise<MotoGPCalendarEvent[]>
       const circuit = (e.circuit ?? {}) as Record<string, unknown>;
       const country = (e.country ?? {}) as Record<string, unknown>;
       return {
+        id: String(e.id ?? ''),
         date_start: String(e.date_start ?? ''),
         date_end: String(e.date_end ?? ''),
         name: italianizeGpName(String(e.name ?? ''), String(country.name ?? '')),
