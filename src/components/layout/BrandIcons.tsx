@@ -14,6 +14,17 @@ export const HomeBrandIcon = (props: IconProps) => (
   </svg>
 );
 
+/** Calendario — griglia mese con marker eventi */
+export const CalendarBrandIcon = (props: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="3" y="4.5" width="18" height="16.5" rx="2.5" />
+    <path d="M3 9h18" />
+    <path d="M8 2.5v4M16 2.5v4" />
+    <path d="M7 12.5h2M11 12.5h2M15 12.5h2" strokeWidth="1.5" />
+    <path d="M7 16h2M11 16h2M15 16h2" strokeWidth="1.5" />
+  </svg>
+);
+
 /** Streaming — play dentro a uno schermo */
 export const StreamingBrandIcon = (props: IconProps) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
