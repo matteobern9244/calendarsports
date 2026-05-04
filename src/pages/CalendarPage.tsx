@@ -405,12 +405,17 @@ export default function CalendarPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-0.5 overflow-hidden">
-                  {visible.map((ev) => (
+                  {visible.map((ev) => {
+                    const past = isPast(ev.date);
+                    return (
                     <button
                       key={ev.id}
                       onClick={() => setSelectedEvent(ev)}
-                      className="group flex items-start gap-1 text-left text-[11px] leading-tight px-1 py-0.5 rounded hover:bg-muted/50 transition-colors"
-                      title={`${romeHHMM(ev.date)} ${ev.title}`}
+                      className={cn(
+                        "group flex items-start gap-1 text-left text-[11px] leading-tight px-1 py-0.5 rounded hover:bg-muted/50 transition-colors",
+                        past && "opacity-50 grayscale line-through",
+                      )}
+                      title={`${romeHHMM(ev.date)} ${ev.title}${past ? " (concluso)" : ""}`}
                     >
                       <span className={cn("mt-1 h-1.5 w-1.5 rounded-full shrink-0", SPORT_DOT[ev.sport])} />
                       <span className="truncate">
@@ -422,7 +427,8 @@ export default function CalendarPage() {
                         <span className="text-muted-foreground">({ev.context})</span>
                       </span>
                     </button>
-                  ))}
+                    );
+                  })}
                   {hidden > 0 && (
                     <button
                       onClick={() => setSelectedEvent(dayEvents[4])}
@@ -459,14 +465,19 @@ export default function CalendarPage() {
                   <span>{dayEvents.length} eventi</span>
                 </div>
                 <ul className="divide-y divide-border/40">
-                  {dayEvents.map((ev) => (
+                  {dayEvents.map((ev) => {
+                    const past = isPast(ev.date);
+                    return (
                     <li key={ev.id}>
                       <button
                         onClick={() => setSelectedEvent(ev)}
-                        className="w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-muted/40"
+                        className={cn(
+                          "w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-muted/40",
+                          past && "opacity-50 grayscale",
+                        )}
                       >
                         <span className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", SPORT_DOT[ev.sport])} />
-                        <span className="flex-1 min-w-0">
+                        <span className={cn("flex-1 min-w-0", past && "line-through")}>
                           <span className="block text-sm font-semibold truncate">
                             {ev.shortLabel} <span className="text-muted-foreground font-normal">· {ev.context}</span>
                           </span>
