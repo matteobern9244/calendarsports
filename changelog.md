@@ -13,6 +13,36 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 _(nessuna voce aperta)_
 
+## [2.5.0] — Calendario: vista Agenda + filtri sport (2026-05-04)
+
+Bump applicativo `2.4.0` → `2.5.0` esposto da `src/lib/version.ts` e
+`package.json`.
+
+### Aggiunto
+
+- Nuova **vista Agenda** in `/calendario`: elenco cronologico raggruppato
+  per giorno (header data lunga IT, ora `Europe/Rome`, badge sport,
+  contesto e broadcaster quando disponibile). Coesiste con la vista
+  Mese tramite un toggle segmentato `Mese` / `Agenda` in toolbar,
+  persistito in `localStorage` (`calendar.view`).
+- **Filtri sport cliccabili**: la legenda è ora una serie di toggle
+  (`Juventus`, `F1`, `MotoGP`) con stato `aria-pressed`, più bottone
+  `Tutti` per il reset. Si applicano sia alla vista Mese sia alla
+  vista Agenda. Persistenza in `localStorage` (`calendar.filters`).
+
+### Modificato
+
+- `src/pages/CalendarPage.tsx`: introdotti `viewMode`, `enabled`,
+  `filteredEvents` e `agendaDays`; legenda statica sostituita da
+  pulsanti toggle; aggiunta sezione Agenda; nessuna modifica all'hook
+  `useCalendarEvents` né alle Edge Functions.
+
+### Verificato
+
+- Tutti i formatter UI continuano a usare `timeZone: "Europe/Rome"`
+  (conforme a `npm run check:tz-juventus`).
+- Lingua UI invariata in italiano (conforme a `npm run check:italian`).
+
 ## [2.4.0] — Pagina Calendario aggregato Juventus + F1 + MotoGP (2026-05-04)
 
 Bump applicativo `2.3.6` → `2.4.0` esposto da `src/lib/version.ts` e

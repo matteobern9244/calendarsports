@@ -140,6 +140,11 @@ L'app espone sei viste principali:
 - `Juventus`: calendario partite e classifica Serie A.
 - `Formula 1`: calendario GP, classifica piloti e costruttori.
 - `MotoGP`: calendario weekend, classifica piloti e costruttori.
+- `Calendario`: vista aggregata Juventus + F1 + MotoGP con due modalità
+  selezionabili (`Mese` stile Google Calendar e `Agenda` cronologica
+  raggruppata per giorno) e **filtri sport cliccabili** (Juventus, F1,
+  MotoGP) con stato persistito in `localStorage`. Si aggiorna in real
+  time tramite il pulsante "Sincronizza" condiviso con la Home.
 
 Funzionalita' trasversali:
 
