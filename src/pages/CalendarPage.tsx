@@ -487,7 +487,8 @@ export default function CalendarPage() {
                         </span>
                       </button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </div>
             );
