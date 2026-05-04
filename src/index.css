@@ -146,6 +146,11 @@
     --brand-tv8: 24 100% 62%;
     --brand-discovery: 201 90% 62%;
     --brand-eurosport: 145 70% 55%;
+
+    /* Sport tokens (dark) */
+    --sport-juventus: 43 96% 60%;
+    --sport-f1: 0 84% 60%;
+    --sport-motogp: 270 80% 70%;
   }
 }
 
