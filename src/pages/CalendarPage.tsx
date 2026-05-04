@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ChevronLeft,
@@ -18,7 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import LoadingState from "@/components/common/LoadingState";
 import { useSyncAll } from "@/hooks/useSyncAll";
-import { useCalendarEvents, type CalendarItem } from "@/hooks/useCalendarEvents";
+import { useCalendarEvents, type CalendarItem, type CalendarSport } from "@/hooks/useCalendarEvents";
 import { toRomeDate, formatDateTimeIT } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 
@@ -112,18 +112,70 @@ const SPORT_BADGE: Record<CalendarItem["sport"], string> = {
   motogp: "border-[hsl(var(--sport-motogp))]/40 text-[hsl(var(--sport-motogp))] bg-[hsl(var(--sport-motogp))]/10",
 };
 
+const SPORTS: ReadonlyArray<CalendarSport> = ["juventus", "f1", "motogp"];
+const FILTERS_KEY = "calendar.filters";
+const VIEW_KEY = "calendar.view";
+
+type ViewMode = "month" | "agenda";
+
+function loadFilters(): Record<CalendarSport, boolean> {
+  const def = { juventus: true, f1: true, motogp: true };
+  if (typeof window === "undefined") return def;
+  try {
+    const raw = window.localStorage.getItem(FILTERS_KEY);
+    if (!raw) return def;
+    const parsed = JSON.parse(raw) as Partial<Record<CalendarSport, boolean>>;
+    return { ...def, ...parsed };
+  } catch {
+    return def;
+  }
+}
+
+function loadView(): ViewMode {
+  if (typeof window === "undefined") return "month";
+  const v = window.localStorage.getItem(VIEW_KEY);
+  return v === "agenda" ? "agenda" : "month";
+}
+
+/** Header giorno IT lungo, capitalizzato (es. "Sabato 7 Giugno"). */
+function formatDayHeaderIT(c: RomeYMD): string {
+  // Costruiamo una data UTC a mezzogiorno per evitare drift cross-DST
+  const d = new Date(Date.UTC(c.y, c.m - 1, c.d, 12, 0, 0));
+  const s = new Intl.DateTimeFormat("it-IT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/Rome",
+  }).format(d);
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export default function CalendarPage() {
   const today = useMemo(() => toRomeYMD(new Date()), []);
   const [view, setView] = useState<RomeYMD>(today);
   const [selectedEvent, setSelectedEvent] = useState<CalendarItem | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => loadView());
+  const [enabled, setEnabled] = useState<Record<CalendarSport, boolean>>(() => loadFilters());
+
+  useEffect(() => {
+    try { window.localStorage.setItem(FILTERS_KEY, JSON.stringify(enabled)); } catch { /* noop */ }
+  }, [enabled]);
+  useEffect(() => {
+    try { window.localStorage.setItem(VIEW_KEY, viewMode); } catch { /* noop */ }
+  }, [viewMode]);
 
   const { events, isLoading, refetchAll } = useCalendarEvents();
   const { sync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
 
+  const filteredEvents = useMemo(
+    () => events.filter((e) => enabled[e.sport]),
+    [events, enabled],
+  );
+
   // Indice eventi per giorno (chiave Rome YYYY-MM-DD)
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();
-    for (const ev of events) {
+    for (const ev of filteredEvents) {
       const key = romeDayKey(ev.date);
       if (!key) continue;
       const arr = map.get(key);
@@ -135,10 +187,19 @@ export default function CalendarPage() {
       arr.sort((a, b) => a.date.localeCompare(b.date));
     }
     return map;
-  }, [events]);
+  }, [filteredEvents]);
 
   const grid = useMemo(() => buildMonthGrid(view.y, view.m - 1), [view]);
   const monthLabel = `${MONTH_LABELS[view.m - 1]} ${view.y}`;
+
+  // Lista giorni del mese visualizzato che hanno almeno un evento (post-filtri)
+  const agendaDays = useMemo(() => {
+    return grid
+      .flat()
+      .filter((c) => c.m === view.m)
+      .map((c) => ({ ymd: c, key: ymdKey(c), events: eventsByDay.get(ymdKey(c)) ?? [] }))
+      .filter((g) => g.events.length > 0);
+  }, [grid, view.m, eventsByDay]);
 
   const goPrev = () => {
     const m = view.m - 1;
@@ -228,18 +289,68 @@ export default function CalendarPage() {
       </div>
 
       {/* Legenda */}
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        {(["juventus", "f1", "motogp"] as const).map((s) => (
-          <span key={s} className="inline-flex items-center gap-1.5">
-            <span className={cn("inline-block h-2.5 w-2.5 rounded-full", SPORT_DOT[s])} />
-            <span className="font-heading uppercase tracking-wider">{SPORT_LABEL[s]}</span>
-          </span>
-        ))}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        {SPORTS.map((s) => {
+          const on = enabled[s];
+          return (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={on}
+              title={on ? `Nascondi ${SPORT_LABEL[s]}` : `Mostra ${SPORT_LABEL[s]}`}
+              onClick={() => setEnabled((prev) => ({ ...prev, [s]: !prev[s] }))}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors",
+                "font-heading uppercase tracking-wider",
+                on
+                  ? SPORT_BADGE[s]
+                  : "border-border/50 text-muted-foreground/60 bg-transparent line-through",
+              )}
+            >
+              <span className={cn("inline-block h-2 w-2 rounded-full", SPORT_DOT[s], !on && "opacity-40")} />
+              <span>{SPORT_LABEL[s]}</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setEnabled({ juventus: true, f1: true, motogp: true })}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 font-heading uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-[hsl(var(--gold))]/40 transition-colors"
+          title="Mostra tutti gli sport"
+        >
+          Tutti
+        </button>
+
+        {/* Toggle vista Mese / Agenda */}
+        <div className="ml-auto inline-flex rounded-full border border-border/60 overflow-hidden" role="tablist" aria-label="Vista calendario">
+          {(["month", "agenda"] as const).map((m) => {
+            const active = viewMode === m;
+            const label = m === "month" ? "Mese" : "Agenda";
+            return (
+              <button
+                key={m}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setViewMode(m)}
+                className={cn(
+                  "px-3 py-1 font-heading uppercase tracking-wider text-xs transition-colors",
+                  active
+                    ? "bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))]"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {isLoading && events.length === 0 && <LoadingState message="Caricamento calendario..." />}
 
       {/* Vista mese (>= md) */}
+      {viewMode === "month" && (
       <div className="hidden md:block rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
         {/* Header settimana */}
         <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30">
@@ -314,8 +425,10 @@ export default function CalendarPage() {
           })}
         </div>
       </div>
+      )}
 
-      {/* Vista lista (mobile) */}
+      {/* Vista lista (mobile) — solo in modalità mese */}
+      {viewMode === "month" && (
       <div className="md:hidden space-y-3">
         {grid.flat()
           .filter((c) => c.m === view.m)
@@ -360,6 +473,61 @@ export default function CalendarPage() {
           <p className="text-center text-muted-foreground py-12">Nessun evento in {monthLabel}</p>
         )}
       </div>
+      )}
+
+      {/* Vista Agenda */}
+      {viewMode === "agenda" && (
+        <div className="space-y-3">
+          {agendaDays.length === 0 && !isLoading && (
+            <p className="text-center text-muted-foreground py-12">Nessun evento in {monthLabel}</p>
+          )}
+          {agendaDays.map(({ ymd, key, events: dayEvents }) => {
+            const isToday = ymd.y === today.y && ymd.m === today.m && ymd.d === today.d;
+            return (
+              <section key={key} className="rounded-lg border border-border/50 bg-card/60 overflow-hidden">
+                <header className={cn(
+                  "sticky top-0 z-10 px-3 py-2 flex items-center justify-between text-xs font-heading uppercase tracking-widest border-b border-border/40 backdrop-blur",
+                  isToday
+                    ? "bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))]"
+                    : "bg-muted/40 text-muted-foreground",
+                )}>
+                  <span>{formatDayHeaderIT(ymd)}</span>
+                  <span>{dayEvents.length} {dayEvents.length === 1 ? "evento" : "eventi"}</span>
+                </header>
+                <ul className="divide-y divide-border/40">
+                  {dayEvents.map((ev) => (
+                    <li key={ev.id}>
+                      <button
+                        onClick={() => setSelectedEvent(ev)}
+                        className="w-full text-left px-3 py-2.5 flex items-start gap-3 hover:bg-muted/40 transition-colors"
+                      >
+                        <span className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", SPORT_DOT[ev.sport])} />
+                        <span className="font-mono text-xs text-muted-foreground w-12 shrink-0 mt-0.5">
+                          {romeHHMM(ev.date)}
+                        </span>
+                        <Badge variant="outline" className={cn("text-[10px] font-heading uppercase tracking-widest shrink-0 mt-0.5", SPORT_BADGE[ev.sport])}>
+                          {SPORT_LABEL[ev.sport]}
+                        </Badge>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm font-semibold truncate">
+                            {ev.shortLabel}
+                            <span className="text-muted-foreground font-normal"> · {ev.context}</span>
+                          </span>
+                          {ev.broadcaster && (
+                            <span className="block text-xs text-muted-foreground mt-0.5">
+                              In TV: <span className="text-foreground/80">{ev.broadcaster}</span>
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       {/* Dialog dettaglio evento */}
       <Dialog open={!!selectedEvent} onOpenChange={(o) => !o && setSelectedEvent(null)}>
