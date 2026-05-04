@@ -519,11 +519,16 @@ export default function CalendarPage() {
                   <span>{dayEvents.length} {dayEvents.length === 1 ? "evento" : "eventi"}</span>
                 </header>
                 <ul className="divide-y divide-border/40">
-                  {dayEvents.map((ev) => (
+                  {dayEvents.map((ev) => {
+                    const past = isPast(ev.date);
+                    return (
                     <li key={ev.id}>
                       <button
                         onClick={() => setSelectedEvent(ev)}
-                        className="w-full text-left px-3 py-2.5 flex items-start gap-3 hover:bg-muted/40 transition-colors"
+                        className={cn(
+                          "w-full text-left px-3 py-2.5 flex items-start gap-3 hover:bg-muted/40 transition-colors",
+                          past && "opacity-50 grayscale",
+                        )}
                       >
                         <span className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", SPORT_DOT[ev.sport])} />
                         <span className="font-mono text-xs text-muted-foreground w-12 shrink-0 mt-0.5">
@@ -532,7 +537,7 @@ export default function CalendarPage() {
                         <Badge variant="outline" className={cn("text-[10px] font-heading uppercase tracking-widest shrink-0 mt-0.5", SPORT_BADGE[ev.sport])}>
                           {SPORT_LABEL[ev.sport]}
                         </Badge>
-                        <span className="flex-1 min-w-0">
+                        <span className={cn("flex-1 min-w-0", past && "line-through")}>
                           <span className="block text-sm font-semibold truncate">
                             {ev.shortLabel}
                             <span className="text-muted-foreground font-normal"> · {ev.context}</span>
@@ -545,7 +550,8 @@ export default function CalendarPage() {
                         </span>
                       </button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </section>
             );
