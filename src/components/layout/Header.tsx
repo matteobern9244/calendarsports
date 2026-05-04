@@ -11,6 +11,7 @@ import {
   JuveBrandIcon,
   F1BrandIcon,
   MotoGPBrandIcon,
+  CalendarBrandIcon,
 } from "./BrandIcons";
 import { SparkleLoop } from "./SparkleLoop";
 import { usePreferencesPanel } from "@/contexts/PreferencesPanelContext";
@@ -19,6 +20,7 @@ import { usePreferencesPanel } from "@/contexts/PreferencesPanelContext";
 
 const navItems = [
   { label: "HOME", shortLabel: "HOME", path: "/", Icon: HomeBrandIcon },
+  { label: "CALENDARIO", shortLabel: "AGENDA", path: "/calendario", Icon: CalendarBrandIcon },
   { label: "STREAMING", shortLabel: "STREAMING", path: "/streaming", Icon: StreamingBrandIcon },
   { label: "JANNIK SINNER", shortLabel: "SINNER", path: "/sinner", Icon: TennisBrandIcon },
   { label: "JUVENTUS", shortLabel: "JUVE", path: "/juventus", Icon: JuveBrandIcon },

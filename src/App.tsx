@@ -13,6 +13,7 @@ import JuventusMatchPage from "./pages/JuventusMatchPage";
 import Formula1Page from "./pages/Formula1Page";
 import MotoGPPage from "./pages/MotoGPPage";
 import PreferencesPage from "./pages/PreferencesPage";
+import CalendarPage from "./pages/CalendarPage";
 import NotFound from "./pages/NotFound";
 
 const disableQueryRetries = import.meta.env.VITE_DISABLE_QUERY_RETRIES === "true";
@@ -35,6 +36,7 @@ const App = () => (
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
+            <Route path="/calendario" element={<CalendarPage />} />
               <Route path="/streaming" element={<StreamingPage />} />
               <Route path="/sinner" element={<SinnerPage />} />
               <Route path="/juventus" element={<JuventusPage />} />

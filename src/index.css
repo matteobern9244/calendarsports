@@ -73,6 +73,11 @@
     --brand-tv8: 24 100% 42%;
     --brand-discovery: 201 100% 36%;
     --brand-eurosport: 145 90% 28%;
+
+    /* Sport tokens — usati dal calendario aggregato (/calendario) */
+    --sport-juventus: 43 96% 56%;
+    --sport-f1: 0 84% 55%;
+    --sport-motogp: 270 75% 60%;
   }
 
   .dark {
@@ -141,6 +146,11 @@
     --brand-tv8: 24 100% 62%;
     --brand-discovery: 201 90% 62%;
     --brand-eurosport: 145 70% 55%;
+
+    /* Sport tokens (dark) */
+    --sport-juventus: 43 96% 60%;
+    --sport-f1: 0 84% 60%;
+    --sport-motogp: 270 80% 70%;
   }
 }
 
