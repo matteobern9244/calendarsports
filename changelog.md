@@ -13,6 +13,63 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 _(nessuna voce aperta)_
 
+## [2.4.0] — Pagina Calendario aggregato Juventus + F1 + MotoGP (2026-05-04)
+
+Bump applicativo `2.3.6` → `2.4.0` esposto da `src/lib/version.ts` e
+`package.json`.
+
+### Aggiunto
+
+- Nuova pagina `/calendario` (vista mese stile Google Calendar) con tutti gli
+  eventi reali di Juventus, Formula 1 e MotoGP nel mese corrente.
+  Voce di menu **CALENDARIO** inserita tra Home e Streaming
+  (`src/components/layout/Header.tsx`, nuova `CalendarBrandIcon` in
+  `BrandIcons.tsx`).
+- Hook aggregato `src/hooks/useCalendarEvents.ts` che riusa le stesse
+  `queryKey` delle pagine sport (`["f1","calendar",season]`,
+  `["motogp","calendar",season]`, `["juventus","calendar",season,page,12]`).
+  Significa che il pulsante **Sincronizza** (Home + nuova pagina) aggiorna
+  automaticamente anche il Calendario in tempo reale.
+- Espansione delle sessioni: F1 mostra FP1/FP2/FP3/Sprint Quali/Sprint/
+  Qualifiche/Gara (campi già forniti da Jolpica). Juventus mostra ogni
+  partita (Serie A + coppe).
+- **Vista responsive**: griglia 7×6 desktop, lista per giorno su mobile.
+- Dialog dettaglio evento con orario `Europe/Rome`, contesto, broadcaster
+  (Juventus) e link alla pagina sport corrispondente.
+
+### Backend (verificato live)
+
+- `supabase/functions/sports-motogp` — l'azione `calendar` è stata estesa
+  per arricchire ogni round con il campo `sessions[]` reale, recuperato
+  via Pulselive
+  `GET /motogp/v1/results/sessions?eventUuid=&categoryUuid=` (categoria
+  MotoGP™ risolta una sola volta via `categories?eventUuid=`, cache 24h).
+  Mapping IT dei tipi sessione (`FP/PR → Prove libere`, `Q → Qualifiche`,
+  `SPR → Sprint`, `WUP → Warmup`, `RAC → Gara`).
+- Strategia di errore "graceful": `Promise.allSettled` per le N chiamate
+  sessione, se una fallisce il round mantiene solo `date_start/date_end`
+  (mai dati sintetici, coerente con la policy "no fake data").
+- Edge function deploy verificato (`curl` su season 2025): payload
+  contiene per ogni GP la lista completa di sessioni con datetime ISO
+  in UTC.
+
+### Design system
+
+- Aggiunti 3 token sport in `src/index.css` (light + dark):
+  `--sport-juventus`, `--sport-f1`, `--sport-motogp`. Usati come pallini
+  colorati nelle celle e badge nel dialog. Nessun colore hardcoded nei
+  componenti.
+
+### Note operative
+
+- Tutta la formattazione data/ora passa per `toRomeDate` /
+  `formatDateTimeIT` (`src/lib/dateUtils.ts`) → fuso `Europe/Rome`
+  garantito anche per i client fuori Italia.
+- UI 100% italiana (LUN/MAR/…, "Oggi", "Mese precedente/successivo",
+  label sessioni in italiano), conforme a `npm run check:italian`.
+- Nessun cambio di shape per i consumer esistenti di MotoGP calendar:
+  `sessions` è opzionale.
+
 ## [2.3.6] — Streaming Catalogo Italia: filtro "Tutti" ai 4 provider mainstream + UI trasparente (2026-04-27)
 
 Bump applicativo `2.3.5` → `2.3.6` esposto da `src/lib/version.ts`.
