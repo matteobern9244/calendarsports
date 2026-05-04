@@ -167,6 +167,18 @@ export default function CalendarPage() {
   const { events, isLoading, refetchAll } = useCalendarEvents();
   const { sync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
 
+  // "Passato" = orario di inizio < ora corrente. Refresh ogni 60s per
+  // ingrigire automaticamente gli eventi appena conclusi.
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const isPast = (iso: string): boolean => {
+    const d = toRomeDate(iso);
+    return d ? d.getTime() < nowMs : false;
+  };
+
   const filteredEvents = useMemo(
     () => events.filter((e) => enabled[e.sport]),
     [events, enabled],
