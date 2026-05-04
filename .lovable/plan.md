@@ -1,50 +1,107 @@
-Ho ricontrollato frontend, hook, chiamate di rete e funzione `streaming-releases`. Ci sono due problemi concreti da correggere:
+## Obiettivo
 
-1. Il frontend sta usando correttamente `new-italy`, ma la vista mostra solo una selezione a pagina e non espone abbastanza chiaramente la finestra effettiva usata dal backend quando TMDB non trova risultati nella finestra richiesta.
-2. Nel backend restano ancora codice e commenti legacy basati su Network/Company TMDB, mentre la logica attiva usa i Watch Provider. Questo crea ambiguità e aumenta il rischio che i risultati non siano coerenti con ciò che ci aspettiamo dai filtri provider.
+Aggiungere una pagina **Calendario** (vista mese tipo Google Calendar) con tutti gli eventi di **Juventus**, **F1** (FP1, FP2, FP3, Qualifiche, Sprint, Gara) e **MotoGP** (FP, Qualifiche, Sprint, Warmup, Gara), aggiornati in tempo reale e riallineati al click su **Sincronizza**.
 
-Piano di intervento:
+## Architettura
 
-1. Pulizia e riallineamento backend TMDB
-   - Rimuovere o isolare il codice legacy non usato basato su `with_networks` / `with_companies` per Netflix, Prime Video, Disney+ e HBO Max.
-   - Mantenere una sola sorgente logica per i filtri provider: `watch_region=IT` + `with_watch_providers` + validazione finale su `/watch/providers` in `results.IT.flatrate`.
-   - Per `provider=all`, limitare i risultati ai quattro provider selezionabili in UI quando l’utente sta nella sezione “Nuove uscite” principale, evitando che Apple TV+, Paramount+, RaiPlay, Mediaset Infinity, ecc. entrino nel risultato “Tutti” se l’intento è confrontare solo Netflix/Prime/Disney+/HBO Max.
-   - Aumentare il numero di pagine TMDB lette dove serve, così i provider con pochi titoli recenti non risultano artificialmente vuoti.
+```text
+┌─────────────────┐   useCalendarEvents() ┌──────────────────────────┐
+│  /calendario    │ ─────────────────────▶ │ React Query già esistenti│
+│  CalendarPage   │                        │ - juventus calendar      │
+│  (vista mese)   │                        │ - f1 calendar            │
+└─────────────────┘                        │ - motogp calendar (esteso)│
+        │                                  └──────────────────────────┘
+        │                                                │
+        └──── Sincronizza (useSyncAll) ──────────────────┘
+```
 
-2. Correzione frontend dei filtri
-   - Verificare che ogni click su Netflix, Prime Video, Disney+ e HBO Max produca una query distinta con `provider=<id>` e reset pagina a 1.
-   - Rendere visibile nella UI il riepilogo attivo: provider, tipo, genere, ordinamento e finestra effettiva usata (`dateFrom/dateTo` oppure `effectiveFrom/effectiveTo`).
-   - Correggere il testo informativo: oggi “Prossimi 7 giorni” può mostrare una finestra allargata senza che sia evidente; renderlo esplicito.
-   - Assicurare che la lista mostrata corrisponda sempre ai provider presenti in `availableProviders` del payload.
+Riuso degli **stessi `queryKey`** già usati dalle pagine sport: il click su "Sincronizza" già esistente in Home invalida e ripopola le stesse cache che la pagina Calendario consuma → real-time + sync coerente, zero duplicazione.
 
-3. Aggiornamento sincronizzazione/cache frontend
-   - Aggiornare `useSyncAll` perché prefetchi la stessa query usata dalla pagina (`new-italy`) invece della vecchia `new-today`, così “Sincronizza” non scalda cache obsolete.
-   - Valutare se ridurre o invalidare lo `staleTime` per le nuove uscite durante il cambio filtri, evitando che l’utente veda risultati precedenti.
+## Cosa cambia, in dettaglio
 
-4. Verifica reale dei quattro provider
-   - Testare direttamente la funzione dati per:
-     - `provider=netflix`
-     - `provider=prime`
-     - `provider=disney`
-     - `provider=hbo`
-     - `provider=all`
-   - Controllare che ogni item restituito includa nel payload `availableProviders` il provider selezionato con tipo `flatrate`.
-   - Verificare un caso specifico come Disney+ e titoli Marvel/Daredevil tramite disponibilità italiana TMDB, tenendo chiaro che TMDB non espone la “data ingresso in piattaforma”, ma la data uscita/first air date.
+### 1. Backend: arricchire `sports-motogp` calendar con sessioni reali
 
-5. Versione e changelog
-   - Aggiornare `APP_VERSION` a una nuova patch per forzare il bundle aggiornato.
-   - Aggiornare `changelog.md` spiegando che la sezione streaming è ora allineata ai Watch Provider italiani TMDB e che “Tutti” considera solo i quattro provider selezionabili.
+Solo `sports-motogp/index.ts` viene esteso (F1 e Juventus già contengono il dato).
 
-File previsti:
-- `supabase/functions/streaming-releases/index.ts`
-- `src/pages/StreamingPage.tsx`
-- `src/hooks/useStreamingData.ts` se serve rifinire chiavi/cache
-- `src/hooks/useSyncAll.ts`
-- `src/lib/version.ts`
-- `changelog.md`
+- Nuova funzione `fetchMotoGPSessions(eventId)` che chiama `https://api.motogp.pulselive.com/motogp/v1/results/events/{eventId}/sessions?categoryUuid=<MotoGP>` (categoria MotoGP). Pulselive espone per ogni evento la lista delle sessioni (FP1, P2, Q1, Q2, SPR, WUP, RAC) con `date` ISO e `type`.
+- `fetchMotoGPCalendar` ora popola anche `sessions: MotoGPSession[]` per ciascun round, con tipo + datetime (lasciamo solo le sessioni della classe regina MotoGP, niente Moto2/Moto3).
+- Mapping italiano per `type` → label UI: `FP1 → Prove libere 1`, `P2 → Prove libere 2`, `Q1 → Qualifiche 1`, `Q2 → Qualifiche 2`, `SPR → Sprint`, `WUP → Warmup`, `RAC → Gara`.
+- Le chiamate sessioni sono parallelizzate (`Promise.all`) ma con cap (es. `Promise.allSettled` su tutti gli eventi della stagione, ~22 round). Se l'endpoint sessioni fallisce per un round, fallback "graceful": evento mantiene solo data_start/date_end senza sessioni (mai dati finti).
+- Niente cambio shape per i consumer esistenti (campo `sessions` opzionale).
 
-Verifiche previste:
-- Test diretto della backend function per tutti e quattro i provider.
-- Controllo delle query frontend dai network logs.
-- Build/lint se disponibili in modalità implementazione.
-- Nessuna modifica a workflow Git, segreti, file `.env` o client backend auto-generati.
+### 2. Hook aggregato: `useCalendarEvents()`
+
+`src/hooks/useCalendarEvents.ts`:
+
+- Compone `useF1Calendar(seasonF1)`, `useJuventusCalendar(seasonJ, page=1, pageSize=200)` (o tutte le pagine), `useMotoGPCalendar(seasonM)`.
+- Per Juventus, prefetch di tutte le pagine come fa già `useSyncAll` (riusiamo la stessa logica `totalPages`).
+- Normalizza in un tipo unificato:
+
+```ts
+type CalendarItem = {
+  id: string;          // sport-roundOrId-sessionType
+  sport: "juventus" | "f1" | "motogp";
+  date: string;        // ISO datetime in TZ Europe/Rome
+  endDate?: string;
+  title: string;       // es. "F1: Qualifiche (Gran Premio del Canada)"
+  shortTitle: string;  // es. "Qualifiche"
+  context: string;     // es. "Gran Premio del Canada"
+  color: "juventus" | "f1" | "motogp"; // → semantic token
+};
+```
+
+- Espande F1 in N item per round (FP1/FP2/FP3/Sprint/Qualifying/Race) e MotoGP in N item da `sessions`.
+- Juventus: 1 item per partita.
+
+### 3. Pagina `/calendario` — vista mese
+
+`src/pages/CalendarPage.tsx`:
+
+- Header con: titolo mese (es. "Maggio 2026"), pulsanti Oggi / ◀ / ▶, già nello stile gold/navy.
+- Griglia 7 colonne × 5–6 righe usando `date-fns` (già in deps tramite shadcn) per `startOfMonth`, `endOfMonth`, `eachDayOfInterval`, `startOfWeek({ weekStartsOn: 1 })`. **Niente shadcn `Calendar`** (DayPicker non supporta eventi multipli per cella in modo elegante): griglia custom Tailwind con celle scrollabili.
+- Per ogni cella: numero giorno + lista compatta di max ~4 eventi (es. `● 15:00 MOTOGP: Sprint (Italy)`), restanti collassati come `+N altri`. Pallino colorato per sport (oro Juve, rosso F1, viola MotoGP via semantic tokens già nel design system).
+- Click su un evento → Popover/Dialog con dettaglio (titolo completo, orario Rome, link alla pagina sport corrispondente).
+- Tutte le date convertite con `Europe/Rome` (regola di progetto).
+- Responsive: su mobile (md-) la vista mese diventa una **vista lista per giorno scrollabile** con sticky header data, perché la griglia 7 colonne non sta. Toggle non necessario ora.
+- Pulsante **Sincronizza** in alto a destra (stesso `useSyncAll` della Home) con badge "Ultimo aggiornamento" + Progress, identico alla Home → real-time refresh dell'intero calendario.
+
+### 4. Routing + menu
+
+- `src/App.tsx`: aggiungere `<Route path="/calendario" element={<CalendarPage />} />`.
+- `src/components/layout/Header.tsx`: nuova voce nav `{ label: "CALENDARIO", shortLabel: "AGENDA", path: "/calendario", Icon: CalendarBrandIcon }` inserita **tra HOME e STREAMING**.
+- `src/components/layout/BrandIcons.tsx`: nuova icona `CalendarBrandIcon` (riuso stile delle altre, basata su lucide `CalendarDays` con gradient gold).
+
+### 5. Sync allineato
+
+`useSyncAll` già aggiorna F1/Juve/MotoGP calendar per la stagione corrente. Aggiungiamo:
+
+- Estensione del prefetch Juventus a **tutte le pagine** (è già fatto, OK).
+- Nessuna modifica al flusso: la nuova pagina consuma le stesse `queryKey`, quindi "Sincronizza" la aggiorna automaticamente.
+
+### 6. Documentazione + versione
+
+- `changelog.md`: nuova voce **v2.4.0** con la feature.
+- `README.md`: aggiunta sezione "Calendario" alla mappa funzionale.
+- `package.json` + `src/lib/version.ts`: bump a **v2.4.0**.
+- `AGENTS.md` mappa funzionale: aggiunta `src/pages/CalendarPage.tsx`.
+- `mem://features/structure`: aggiornata da 5 a 6 sezioni.
+
+## Rischi e note
+
+- **Endpoint sessioni Pulselive**: schema confermato in uso da motogp.com ma non documentato pubblicamente. Implementiamo con `Promise.allSettled` + fallback per round mancanti, mai dati statici.
+- **Performance pagina**: ~22 GP × ~7 sessioni MotoGP + ~24 GP × 6 sessioni F1 + ~50 partite Juve = ~400 item/anno. Pre-filtraggio per mese visualizzato, render OK.
+- **Lingua UI 100% italiana**: rispettato (header colonne LUN/MAR/…, "Oggi", "Mese", labels sessioni in italiano).
+- **TZ Europe/Rome**: tutti i `date-fns` con `formatInTimeZone` o utility da `dateUtils.ts`.
+
+## File toccati
+
+- `supabase/functions/sports-motogp/index.ts` (estensione sessioni)
+- `src/hooks/useCalendarEvents.ts` (nuovo)
+- `src/pages/CalendarPage.tsx` (nuovo)
+- `src/components/calendar/MonthGrid.tsx` (nuovo)
+- `src/components/calendar/CalendarEventChip.tsx` (nuovo)
+- `src/components/calendar/EventDetailPopover.tsx` (nuovo)
+- `src/components/layout/Header.tsx`
+- `src/components/layout/BrandIcons.tsx`
+- `src/App.tsx`
+- `src/lib/version.ts`, `package.json`, `changelog.md`, `README.md`
