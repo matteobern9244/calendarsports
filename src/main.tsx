@@ -14,3 +14,21 @@ try {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+// Registrazione service worker per notifiche push.
+// Solo in produzione fuori dall'iframe Lovable e dagli host di preview.
+(() => {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+  let inIframe = false;
+  try { inIframe = window.self !== window.top; } catch { inIframe = true; }
+  const host = window.location.hostname;
+  const isPreview = host.includes("id-preview--") || host.includes("lovableproject.com");
+  if (inIframe || isPreview) {
+    // Pulizia difensiva: niente SW in preview/iframe
+    navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+    return;
+  }
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+})();

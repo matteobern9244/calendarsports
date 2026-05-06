@@ -1,4 +1,4 @@
-import { Sun, Moon, Palette, Zap, BatteryLow, Timer } from "lucide-react";
+import { Sun, Moon, Palette, Zap, BatteryLow, Timer, Bell, BellOff } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -7,17 +7,62 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { usePreferencesPanel } from "@/contexts/PreferencesPanelContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { useCountdownMode } from "@/hooks/useCountdownMode";
+import { usePushNotifications, type LeadTime } from "@/hooks/usePushNotifications";
 
 export default function PreferencesPanel() {
   const { open, setOpen } = usePreferencesPanel();
   const isMobile = useIsMobile();
   const { theme, setTheme } = useTheme();
   const { mode: countdownMode, setMode: setCountdownMode } = useCountdownMode();
+  const push = usePushNotifications();
+
+  const LEAD_OPTIONS: Array<{ value: LeadTime; label: string }> = [
+    { value: 15, label: "15 minuti prima" },
+    { value: 60, label: "1 ora prima" },
+    { value: 1440, label: "1 giorno prima" },
+  ];
+
+  const togglePush = async (next: boolean) => {
+    if (next) {
+      const res = await push.enable(push.leadTimes);
+      if (res.ok) {
+        toast.success("Notifiche attivate", {
+          description: "Riceverai un avviso prima di ogni evento Juventus, F1 e MotoGP.",
+        });
+      } else if (res.reason === "denied") {
+        toast.error("Permesso negato", {
+          description: "Abilita le notifiche dalle impostazioni del browser e riprova.",
+        });
+      } else if (res.reason === "unsupported") {
+        toast.error("Notifiche non supportate", {
+          description: "Su iPhone installa l'app sulla schermata Home (richiede iOS 16.4 o successivo).",
+        });
+      } else {
+        toast.error("Impossibile attivare le notifiche");
+      }
+    } else {
+      await push.disable();
+      toast.success("Notifiche disattivate");
+    }
+  };
+
+  const toggleLead = async (value: LeadTime) => {
+    const set = new Set(push.leadTimes);
+    if (set.has(value)) set.delete(value);
+    else set.add(value);
+    const arr = Array.from(set).sort((a, b) => a - b) as LeadTime[];
+    if (arr.length === 0) {
+      toast.error("Seleziona almeno un anticipo");
+      return;
+    }
+    await push.setLeadTimes(arr);
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -183,6 +228,77 @@ export default function PreferencesPanel() {
                   })}
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* Notifiche push */}
+          <section aria-labelledby="pref-push">
+            <h3
+              id="pref-push"
+              className="flex items-center gap-2 text-xs font-heading uppercase tracking-widest text-muted-foreground mb-3"
+            >
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))]">
+                <Bell className="h-3.5 w-3.5" />
+              </span>
+              Notifiche
+            </h3>
+            <div className="rounded-xl border border-border/60 bg-background/40 p-4 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-heading uppercase tracking-wider text-foreground">
+                    Notifiche push eventi sportivi
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Ricevi un avviso prima di ogni partita Juventus, sessione F1 e sessione MotoGP.
+                    {!push.supported && " Funzione non disponibile in anteprima."}
+                  </p>
+                </div>
+                <Switch
+                  checked={push.enabled}
+                  disabled={!push.supported || push.busy}
+                  onCheckedChange={togglePush}
+                  aria-label="Attiva notifiche push"
+                />
+              </div>
+
+              {push.enabled && push.supported && (
+                <div>
+                  <p className="text-xs font-heading uppercase tracking-widest text-muted-foreground mb-2">
+                    Anticipo notifica
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {LEAD_OPTIONS.map((opt) => {
+                      const active = push.leadTimes.includes(opt.value);
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          aria-pressed={active}
+                          disabled={push.busy}
+                          onClick={() => toggleLead(opt.value)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5",
+                            "text-xs font-heading font-semibold uppercase tracking-wider",
+                            "border transition-colors",
+                            active
+                              ? "border-transparent bg-gradient-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
+                              : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {push.permission === "denied" && (
+                <p className="flex items-start gap-2 text-xs text-destructive">
+                  <BellOff className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  Hai negato il permesso. Sblocca le notifiche dalle impostazioni del browser per questo sito.
+                </p>
+              )}
             </div>
           </section>
         </div>

@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      push_sent_log: {
+        Row: {
+          event_id: string
+          id: string
+          lead_time: number
+          sent_at: string
+          subscription_id: string
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          lead_time: number
+          sent_at?: string
+          subscription_id: string
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          lead_time?: number
+          sent_at?: string
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_sent_log_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "push_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          enabled: boolean
+          endpoint: string
+          id: string
+          last_seen_at: string
+          lead_times: number[]
+          p256dh: string
+          user_agent: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          enabled?: boolean
+          endpoint: string
+          id?: string
+          last_seen_at?: string
+          lead_times?: number[]
+          p256dh: string
+          user_agent?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          enabled?: boolean
+          endpoint?: string
+          id?: string
+          last_seen_at?: string
+          lead_times?: number[]
+          p256dh?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
