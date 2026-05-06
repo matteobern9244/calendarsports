@@ -24,7 +24,10 @@ async function fetchFn(name: string, qs = ''): Promise<any> {
   const url = `${SUPABASE_URL}/functions/v1/${name}${qs ? '?' + qs : ''}`;
   const r = await fetch(url, { headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` } });
   if (!r.ok) return null;
-  try { return await r.json(); } catch { return null; }
+  try {
+    const j = await r.json();
+    return j?.success ? j.data : j;
+  } catch { return null; }
 }
 
 function f1Season() { return new Date().getUTCFullYear(); }
@@ -43,8 +46,8 @@ function shortGp(name: string): string {
 }
 
 async function loadF1(): Promise<EventItem[]> {
-  const data = await fetchFn('sports-f1', `endpoint=calendar&season=${f1Season()}`);
-  const rounds = Array.isArray(data) ? data : (data?.data ?? []);
+  const data = await fetchFn('sports-f1', `action=calendar&season=${f1Season()}`);
+  const rounds = Array.isArray(data) ? data : [];
   const out: EventItem[] = [];
   for (const r of rounds) {
     const round = Number(r.round) || 0;
@@ -76,8 +79,8 @@ async function loadF1(): Promise<EventItem[]> {
 }
 
 async function loadMotoGP(): Promise<EventItem[]> {
-  const data = await fetchFn('sports-motogp', `endpoint=calendar&season=${motogpSeason()}`);
-  const rounds = Array.isArray(data) ? data : (data?.data ?? []);
+  const data = await fetchFn('sports-motogp', `action=calendar&season=${motogpSeason()}`);
+  const rounds = Array.isArray(data) ? data : [];
   const out: EventItem[] = [];
   for (const r of rounds) {
     const round = Number(r.round) || 0;
@@ -105,14 +108,14 @@ async function loadMotoGP(): Promise<EventItem[]> {
 async function loadJuventus(): Promise<EventItem[]> {
   const season = juveSeason();
   const out: EventItem[] = [];
-  const first = await fetchFn('sports-football', `endpoint=calendar&season=${season}&page=1&pageSize=12`);
+  const first = await fetchFn('sports-football', `action=calendar&season=${season}&page=1&pageSize=12`);
   const items: any[] = Array.isArray(first?.items) ? [...first.items] : [];
   const total = Number(first?.totalPages ?? 1);
   const cap = Math.min(total, 30);
   if (cap > 1) {
     const rest = await Promise.all(
       Array.from({ length: cap - 1 }, (_, i) => i + 2).map((p) =>
-        fetchFn('sports-football', `endpoint=calendar&season=${season}&page=${p}&pageSize=12`)
+        fetchFn('sports-football', `action=calendar&season=${season}&page=${p}&pageSize=12`)
       )
     );
     for (const r of rest) {
