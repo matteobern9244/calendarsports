@@ -60,9 +60,23 @@ function unescapeHtml(text: string): string {
 }
 
 function extractWidgetModel(html: string): any {
+  // Nuovo formato Sky (2026): JSON in <script type="application/json" data-props="true">...</script>
+  const scriptMatch = html.match(
+    /<script[^>]*type=["']application\/json["'][^>]*data-props=["']true["'][^>]*>([\s\S]*?)<\/script>/i,
+  ) || html.match(
+    /<script[^>]*data-props=["']true["'][^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/i,
+  );
+  if (scriptMatch) {
+    try {
+      return JSON.parse(scriptMatch[1]);
+    } catch (e) {
+      console.error('Failed to parse data-props JSON:', e);
+    }
+  }
+  // Vecchio formato Sky: attributo model='...'/model="..."
   const modelMatch = html.match(/model='([^']*)'/) || html.match(/model="([^"]*)"/);
   if (!modelMatch) {
-    console.error('No model attribute found. HTML length:', html.length, 'First 500 chars:', html.substring(0, 500));
+    console.error('No model/data-props found. HTML length:', html.length, 'First 500 chars:', html.substring(0, 500));
     return null;
   }
   try {
