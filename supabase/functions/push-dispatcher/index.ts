@@ -1,40 +1,44 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import webpush from 'https://esm.sh/web-push@3.6.7';
+import { dispatcherConfig } from './env.ts';
+import {
+  ROME_TIME_ZONE,
+  formatRomeEventDateTime,
+  formatRomeEventTime,
+  getF1Season,
+  getJuventusSeason,
+  getMotoGPSeason,
+  toEventTimestampMs,
+} from './timezone.ts';
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY')!;
-const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY')!;
-const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:admin@example.com';
+const {
+  supabaseUrl,
+  serviceRoleKey,
+  anonKey,
+  vapidPublicKey,
+  vapidPrivateKey,
+  vapidSubject,
+} = dispatcherConfig;
 
-webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
+webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
 type EventItem = {
   id: string;
   sport: 'juventus' | 'f1' | 'motogp';
-  date: string;       // ISO
+  date: string;
   title: string;
   body: string;
   url: string;
 };
 
-const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-
 async function fetchFn(name: string, qs = ''): Promise<any> {
-  const url = `${SUPABASE_URL}/functions/v1/${name}${qs ? '?' + qs : ''}`;
-  const r = await fetch(url, { headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` } });
+  const url = `${supabaseUrl}/functions/v1/${name}${qs ? '?' + qs : ''}`;
+  const r = await fetch(url, { headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` } });
   if (!r.ok) return null;
   try {
     const j = await r.json();
     return j?.success ? j.data : j;
   } catch { return null; }
-}
-
-function f1Season() { return new Date().getUTCFullYear(); }
-function motogpSeason() { return new Date().getUTCFullYear(); }
-function juveSeason() {
-  const d = new Date();
-  return d.getUTCMonth() >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1;
 }
 
 function shortGp(name: string): string {
@@ -46,7 +50,7 @@ function shortGp(name: string): string {
 }
 
 async function loadF1(): Promise<EventItem[]> {
-  const data = await fetchFn('sports-f1', `action=calendar&season=${f1Season()}`);
+  const data = await fetchFn('sports-f1', `action=calendar&season=${getF1Season()}`);
   const rounds = Array.isArray(data) ? data : [];
   const out: EventItem[] = [];
   for (const r of rounds) {
@@ -64,13 +68,13 @@ async function loadF1(): Promise<EventItem[]> {
     ];
     for (const x of sessions) {
       if (!x.s?.date) continue;
-      const iso = x.s.time ? `${x.s.date}T${String(x.s.time).replace(/Z$/i,'')}Z` : `${x.s.date}T00:00:00Z`;
+      const iso = x.s.time ? `${x.s.date}T${String(x.s.time).replace(/Z$/i, '')}Z` : `${x.s.date}T00:00:00Z`;
       out.push({ id: `${baseId}-${x.k}`, sport: 'f1', date: iso,
         title: `F1 · ${ctx}`, body: `${x.l} sta per iniziare`, url: '/formula1' });
     }
     if (r.date) {
       const time = String(r.time ?? '00:00:00Z');
-      const iso = `${r.date}T${time.replace(/Z$/i,'')}Z`;
+      const iso = `${r.date}T${time.replace(/Z$/i, '')}Z`;
       out.push({ id: `${baseId}-race`, sport: 'f1', date: iso,
         title: `F1 · ${ctx}`, body: 'La gara sta per iniziare', url: '/formula1' });
     }
@@ -79,7 +83,7 @@ async function loadF1(): Promise<EventItem[]> {
 }
 
 async function loadMotoGP(): Promise<EventItem[]> {
-  const data = await fetchFn('sports-motogp', `action=calendar&season=${motogpSeason()}`);
+  const data = await fetchFn('sports-motogp', `action=calendar&season=${getMotoGPSeason()}`);
   const rounds = Array.isArray(data) ? data : [];
   const out: EventItem[] = [];
   for (const r of rounds) {
@@ -106,7 +110,7 @@ async function loadMotoGP(): Promise<EventItem[]> {
 }
 
 async function loadJuventus(): Promise<EventItem[]> {
-  const season = juveSeason();
+  const season = getJuventusSeason();
   const out: EventItem[] = [];
   const first = await fetchFn('sports-football', `action=calendar&season=${season}&page=1&pageSize=12`);
   const items: any[] = Array.isArray(first?.items) ? [...first.items] : [];
@@ -139,11 +143,11 @@ async function loadJuventus(): Promise<EventItem[]> {
 }
 
 Deno.serve(async () => {
-  const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
+  const sb = createClient(supabaseUrl, serviceRoleKey);
 
   const [f1, motogp, juve] = await Promise.all([loadF1(), loadMotoGP(), loadJuventus()]);
   const events: EventItem[] = [...f1, ...motogp, ...juve]
-    .filter((e) => !Number.isNaN(Date.parse(e.date)));
+    .filter((e) => toEventTimestampMs(e.date) !== null);
 
   const { data: subs, error } = await sb.from('push_subscriptions')
     .select('id,endpoint,p256dh,auth,lead_times')
@@ -153,7 +157,7 @@ Deno.serve(async () => {
   }
 
   const now = Date.now();
-  const WINDOW_MS = 6 * 60 * 1000; // dispatcher gira ogni 5 min, finestra 6 min
+  const WINDOW_MS = 6 * 60 * 1000;
 
   let sent = 0, skipped = 0, removed = 0, errors = 0;
 
@@ -161,11 +165,10 @@ Deno.serve(async () => {
     for (const leadMin of (sub.lead_times as number[]) ?? []) {
       const targetMs = now + leadMin * 60 * 1000;
       const due = events.filter((e) => {
-        const t = Date.parse(e.date);
-        return t >= targetMs - WINDOW_MS && t <= targetMs;
+        const t = toEventTimestampMs(e.date);
+        return t !== null && t >= targetMs - WINDOW_MS && t <= targetMs;
       });
       for (const ev of due) {
-        // idempotenza
         const { data: existing } = await sb.from('push_sent_log')
           .select('id')
           .eq('subscription_id', sub.id)
@@ -176,11 +179,16 @@ Deno.serve(async () => {
 
         const minutesLabel = leadMin === 1440 ? 'tra 24 ore' :
           leadMin === 60 ? 'tra 1 ora' : `tra ${leadMin} minuti`;
+        const eventTime = formatRomeEventTime(ev.date);
+        const eventDateTime = formatRomeEventDateTime(ev.date);
+        const timeLabel = eventTime ? ` alle ${eventTime}` : '';
         const payload = JSON.stringify({
           title: ev.title,
-          body: `${ev.body} (${minutesLabel})`,
+          body: `${ev.body}${timeLabel} (${minutesLabel})`,
           url: ev.url,
           tag: `${ev.id}-${leadMin}`,
+          eventDateTime,
+          eventTimeZone: ROME_TIME_ZONE,
         });
         try {
           await webpush.sendNotification({
