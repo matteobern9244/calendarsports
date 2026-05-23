@@ -617,7 +617,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('Tennis API error:', error);
-    return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Errore sconosciuto' }), {
+    return new Response(JSON.stringify({ success: false, error: 'Errore interno del server' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

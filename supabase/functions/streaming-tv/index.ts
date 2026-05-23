@@ -712,7 +712,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("[streaming-tv]", err);
     return new Response(
-      JSON.stringify({ success: false, error: (err as Error).message }),
+      JSON.stringify({ success: false, error: 'Errore interno del server' }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

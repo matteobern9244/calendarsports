@@ -1094,7 +1094,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("[streaming-releases]", err);
     return jsonResponse(
-      { success: false, error: (err as Error).message },
+      { success: false, error: 'Errore interno del server' },
       { status: 500 },
       corsHeaders,
     );
