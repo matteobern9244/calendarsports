@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
   }, { onConflict: 'endpoint' });
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('[push-subscribe] upsert failed', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
     });
   }
