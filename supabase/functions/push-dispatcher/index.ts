@@ -142,7 +142,18 @@ async function loadJuventus(): Promise<EventItem[]> {
   return out;
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const expected = Deno.env.get('DISPATCH_SECRET');
+  if (!expected) {
+    console.error('[push-dispatcher] DISPATCH_SECRET not configured');
+    return new Response(JSON.stringify({ error: 'Server misconfigured' }), { status: 500 });
+  }
+  const provided = req.headers.get('x-dispatch-secret') ??
+    (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (provided !== expected) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+  }
+
   const sb = createClient(supabaseUrl, serviceRoleKey);
 
   const [f1, motogp, juve] = await Promise.all([loadF1(), loadMotoGP(), loadJuventus()]);
@@ -153,7 +164,8 @@ Deno.serve(async () => {
     .select('id,endpoint,p256dh,auth,lead_times')
     .eq('enabled', true);
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    console.error('[push-dispatcher] subscriptions query failed', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
   }
 
   const now = Date.now();
