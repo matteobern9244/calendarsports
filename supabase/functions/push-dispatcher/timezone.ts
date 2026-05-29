@@ -27,6 +27,13 @@ const ROME_PARTS_FORMATTER = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
 });
 
+const ROME_DAY_LABEL_FORMATTER = new Intl.DateTimeFormat('it-IT', {
+  timeZone: ROME_TIME_ZONE,
+  weekday: 'long',
+  day: '2-digit',
+  month: 'long',
+});
+
 /**
  * Normalizza le date evento del dispatcher con la stessa policy della UI:
  * le stringhe ISO con orario ma senza offset esplicito vengono trattate come
@@ -62,6 +69,28 @@ export function formatRomeEventTime(input: string | Date | null | undefined): st
 export function formatRomeEventDateTime(input: string | Date | null | undefined): string {
   const date = toEventDate(input);
   return date ? ROME_DATE_TIME_FORMATTER.format(date) : '';
+}
+
+/**
+ * Restituisce un'etichetta giorno relativa in fuso Europe/Rome:
+ * "oggi", "domani", "dopodomani" oppure "lunedì 30 maggio".
+ * Confronta i giorni calendariali italiani per evitare drift mezzanotte.
+ */
+export function formatRomeDayLabel(
+  input: string | Date | null | undefined,
+  now: Date = new Date(),
+): string {
+  const date = toEventDate(input);
+  if (!date) return '';
+  const today = getRomeCalendarParts(now);
+  const target = getRomeCalendarParts(date);
+  const todayUtc = Date.UTC(today.year, today.month - 1, today.day);
+  const targetUtc = Date.UTC(target.year, target.month - 1, target.day);
+  const diffDays = Math.round((targetUtc - todayUtc) / 86_400_000);
+  if (diffDays === 0) return 'oggi';
+  if (diffDays === 1) return 'domani';
+  if (diffDays === 2) return 'dopodomani';
+  return ROME_DAY_LABEL_FORMATTER.format(date);
 }
 
 export function getRomeCalendarParts(input: Date = new Date()): { year: number; month: number; day: number } {
