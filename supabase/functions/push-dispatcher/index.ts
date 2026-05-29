@@ -5,6 +5,7 @@ import {
   ROME_TIME_ZONE,
   formatRomeEventDateTime,
   formatRomeEventTime,
+  formatRomeDayLabel,
   getF1Season,
   getJuventusSeason,
   getMotoGPSeason,
@@ -189,14 +190,27 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (existing) { skipped++; continue; }
 
-        const minutesLabel = leadMin === 1440 ? 'tra 24 ore' :
-          leadMin === 60 ? 'tra 1 ora' : `tra ${leadMin} minuti`;
         const eventTime = formatRomeEventTime(ev.date);
         const eventDateTime = formatRomeEventDateTime(ev.date);
-        const timeLabel = eventTime ? ` alle ${eventTime}` : '';
+        const dayLabel = formatRomeDayLabel(ev.date);
+        // Per preavvisi >= 24h diciamo esplicitamente "domani" / data,
+        // così l'utente non legge "alle 12:10" pensando sia per oggi.
+        // Per preavvisi brevi manteniamo "(tra X)" che dà urgenza.
+        let when: string;
+        if (leadMin >= 1440) {
+          when = eventTime ? `${dayLabel} alle ${eventTime}` : dayLabel;
+        } else {
+          const minutesLabel = leadMin === 60 ? 'tra 1 ora' : `tra ${leadMin} minuti`;
+          const timeLabel = eventTime ? ` alle ${eventTime}` : '';
+          when = `${timeLabel} (${minutesLabel})`.trimStart();
+          when = ` ${when}`;
+        }
+        const body = leadMin >= 1440
+          ? `${ev.body} ${when}`
+          : `${ev.body}${when}`;
         const payload = JSON.stringify({
           title: ev.title,
-          body: `${ev.body}${timeLabel} (${minutesLabel})`,
+          body,
           url: ev.url,
           tag: `${ev.id}-${leadMin}`,
           eventDateTime,
