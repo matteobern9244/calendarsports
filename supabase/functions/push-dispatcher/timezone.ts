@@ -27,6 +27,13 @@ const ROME_PARTS_FORMATTER = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
 });
 
+const ROME_DAY_LABEL_FORMATTER = new Intl.DateTimeFormat('it-IT', {
+  timeZone: ROME_TIME_ZONE,
+  weekday: 'long',
+  day: '2-digit',
+  month: 'long',
+});
+
 /**
  * Normalizza le date evento del dispatcher con la stessa policy della UI:
  * le stringhe ISO con orario ma senza offset esplicito vengono trattate come
