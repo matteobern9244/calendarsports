@@ -28,6 +28,11 @@ interface EventCardProps {
    * `startDate` non e' parsabile.
    */
   onRetry?: () => void;
+  /**
+   * Quando definito la card diventa interattiva (button + tastiera) e
+   * apre il dettaglio evento al click.
+   */
+  onClick?: () => void;
 }
 
 export default function EventCard({
@@ -43,6 +48,7 @@ export default function EventCard({
   children,
   className,
   onRetry,
+  onClick,
 }: EventCardProps) {
   // Stato live derivato in tempo reale dal countdown: appena l'evento
   // entra nella finestra "in corso" (in base a startDate/endDate reali) il
@@ -61,11 +67,25 @@ export default function EventCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
       whileHover={{ y: -4 }}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       className={cn(
         "group relative rounded-2xl border bg-card p-5",
         "transition-[box-shadow,border-color,transform] duration-300 ease-out",
         "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
         "hover:shadow-[0_18px_40px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
+        onClick && "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         highlight
           ? "border-[hsl(var(--gold))]/60 ring-1 ring-[hsl(var(--gold))]/25 hover:border-[hsl(var(--gold))]/80"
           : "border-[hsl(var(--gold))]/20 hover:border-[hsl(var(--gold))]/55",
