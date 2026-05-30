@@ -128,6 +128,63 @@ const MOTOGP_SESSION_LABEL_IT = (type: string, number: number | null): string =>
 let _motogpCategoryCache: { at: number; id: string } | null = null;
 const CATEGORY_TTL_MS = 24 * 60 * 60 * 1000;
 
+const MOTOGP_EVENT_TIMEZONE_BY_COUNTRY: Record<string, string> = {
+  AR: 'America/Argentina/Buenos_Aires',
+  AT: 'Europe/Vienna',
+  AU: 'Australia/Melbourne',
+  BR: 'America/Sao_Paulo',
+  CZ: 'Europe/Prague',
+  DE: 'Europe/Berlin',
+  ES: 'Europe/Madrid',
+  FR: 'Europe/Paris',
+  GB: 'Europe/London',
+  HU: 'Europe/Budapest',
+  ID: 'Asia/Makassar',
+  IN: 'Asia/Kolkata',
+  IT: 'Europe/Rome',
+  JP: 'Asia/Tokyo',
+  MY: 'Asia/Kuala_Lumpur',
+  NL: 'Europe/Amsterdam',
+  PT: 'Europe/Lisbon',
+  QA: 'Asia/Qatar',
+  SM: 'Europe/Rome',
+  TH: 'Asia/Bangkok',
+  US: 'America/Chicago',
+};
+
+function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const zonedAsUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second),
+  );
+  return zonedAsUtc - date.getTime();
+}
+
+function localWallTimeToUtcIso(dateStr: string, timeZone: string): string {
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!match) return dateStr;
+  const [, y, mo, d, h, mi, s = '00'] = match;
+  const wallAsUtc = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s));
+  let utcMs = wallAsUtc - getTimeZoneOffsetMs(new Date(wallAsUtc), timeZone);
+  utcMs = wallAsUtc - getTimeZoneOffsetMs(new Date(utcMs), timeZone);
+  return new Date(utcMs).toISOString();
+}
+
 async function fetchMotoGPCategoryId(sampleEventId: string): Promise<string | null> {
   const now = Date.now();
   if (_motogpCategoryCache && now - _motogpCategoryCache.at < CATEGORY_TTL_MS) {
@@ -150,7 +207,7 @@ async function fetchMotoGPCategoryId(sampleEventId: string): Promise<string | nu
   }
 }
 
-async function fetchMotoGPSessions(eventId: string, categoryId: string): Promise<MotoGPSession[]> {
+async function fetchMotoGPSessions(eventId: string, categoryId: string, eventTimeZone: string): Promise<MotoGPSession[]> {
   const res = await fetch(
     `${MOTOGP_PULSELIVE_BASE}/sessions?eventUuid=${eventId}&categoryUuid=${categoryId}`,
     { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CalendarSports/1.0)' } },
@@ -162,7 +219,7 @@ async function fetchMotoGPSessions(eventId: string, categoryId: string): Promise
     .map(s => {
       const type = String(s.type ?? '');
       const number = s.number === null || s.number === undefined ? null : Number(s.number);
-      const date = String(s.date ?? '');
+      const date = localWallTimeToUtcIso(String(s.date ?? ''), eventTimeZone);
       if (!type || !date) return null;
       return {
         type,
@@ -667,9 +724,12 @@ Deno.serve(async (req) => {
           let sessionsByRound: Array<MotoGPSession[] | undefined> = [];
           if (categoryId) {
             const results = await Promise.allSettled(
-              events.map(e =>
-                e.id ? fetchMotoGPSessions(e.id, categoryId) : Promise.resolve([] as MotoGPSession[]),
-              ),
+              events.map(e => {
+                const eventTimeZone = MOTOGP_EVENT_TIMEZONE_BY_COUNTRY[e.country] ?? 'UTC';
+                return e.id
+                  ? fetchMotoGPSessions(e.id, categoryId, eventTimeZone)
+                  : Promise.resolve([] as MotoGPSession[]);
+              }),
             );
             sessionsByRound = results.map(r =>
               r.status === 'fulfilled' && r.value.length > 0 ? r.value : undefined,

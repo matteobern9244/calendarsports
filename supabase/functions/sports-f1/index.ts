@@ -111,6 +111,7 @@ Deno.serve(async (req) => {
           secondPractice: r.SecondPractice || null,
           thirdPractice: r.ThirdPractice || null,
           qualifying: r.Qualifying || null,
+          sprintQualifying: r.SprintQualifying || null,
           sprint: r.Sprint || null,
         }));
         break;
@@ -217,6 +218,7 @@ Deno.serve(async (req) => {
             secondPractice: race.SecondPractice || null,
             thirdPractice: race.ThirdPractice || null,
             qualifying: race.Qualifying || null,
+            sprintQualifying: race.SprintQualifying || null,
             sprint: race.Sprint || null,
           };
         } else {
