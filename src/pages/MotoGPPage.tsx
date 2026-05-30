@@ -19,6 +19,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import TeamLogo from "@/components/common/TeamLogo";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
+import RaceDetailsDialog, { type RaceSession } from "@/components/common/RaceDetailsDialog";
+import { useState } from "react";
 
 const MOTOGP_CONSTRUCTOR_COLORS: Record<string, { border: string; bg: string }> = {
   ducati:  { border: 'hsl(var(--brand-ducati))',  bg: 'hsl(var(--brand-ducati) / 0.08)' },
@@ -34,6 +36,7 @@ export default function MotoGPPage() {
   const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useMotoGPStandings(season);
   const { data: constructors, isLoading: csLoading, error: csError, refetch: csRefetch } = useMotoGPConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
 
   if (!isOnline && calError && !calendar && stError && !standings && csError && !constructors) {
     return (
@@ -132,6 +135,7 @@ export default function MotoGPPage() {
                   status={status}
                   highlight={i === highlightIndex}
                   onRetry={() => calRefetch()}
+                  onClick={() => setSelectedEvent(e)}
                 >
                   {endDate && startDate !== endDate && (
                     <p className="text-sm text-muted-foreground">Weekend di gara fino al {formatDateIT(endDate)}</p>
