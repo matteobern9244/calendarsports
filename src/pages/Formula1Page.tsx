@@ -273,6 +273,53 @@ export default function Formula1Page() {
           <HighlightsSection sport="f1" accentVar="gold" />
         </TabsContent>
       </Tabs>
+
+      <RaceDetailsDialog
+        open={!!selectedRace}
+        onOpenChange={(o) => !o && setSelectedRace(null)}
+        sport={selectedRace ? `Formula 1 · Round ${selectedRace.round}` : "Formula 1"}
+        title={selectedRace?.raceName ?? ""}
+        subtitle={
+          selectedRace
+            ? `${selectedRace.circuit} · ${selectedRace.locality}, ${selectedRace.country}`
+            : undefined
+        }
+        sessions={
+          selectedRace
+            ? ([
+                selectedRace.firstPractice && {
+                  label: "Prove libere 1",
+                  date: `${selectedRace.firstPractice.date}T${selectedRace.firstPractice.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.secondPractice && {
+                  label: "Prove libere 2",
+                  date: `${selectedRace.secondPractice.date}T${selectedRace.secondPractice.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.thirdPractice && {
+                  label: "Prove libere 3",
+                  date: `${selectedRace.thirdPractice.date}T${selectedRace.thirdPractice.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.sprintQualifying && {
+                  label: "Sprint Qualifying",
+                  date: `${selectedRace.sprintQualifying.date}T${selectedRace.sprintQualifying.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.sprint && {
+                  label: "Sprint",
+                  date: `${selectedRace.sprint.date}T${selectedRace.sprint.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.qualifying && {
+                  label: "Qualifiche",
+                  date: `${selectedRace.qualifying.date}T${selectedRace.qualifying.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.time && {
+                  label: "Gara",
+                  date: `${selectedRace.date}T${selectedRace.time}`,
+                  primary: true,
+                },
+              ].filter(Boolean) as RaceSession[])
+            : []
+        }
+      />
     </div>
   );
 }
