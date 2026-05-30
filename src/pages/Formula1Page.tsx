@@ -15,6 +15,8 @@ import { User } from "lucide-react";
 import { f1NationalityToIso } from "@/lib/f1Utils";
 import TeamLogo from "@/components/common/TeamLogo";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
+import RaceDetailsDialog, { type RaceSession } from "@/components/common/RaceDetailsDialog";
+import { useState } from "react";
 
 export default function Formula1Page() {
   const season = getCurrentF1Season();
@@ -22,6 +24,7 @@ export default function Formula1Page() {
   const { data: drivers, isLoading: drvLoading, error: drvError, refetch: drvRefetch } = useF1DriverStandings(season);
   const { data: constructors, isLoading: conLoading, error: conError } = useF1ConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
+  const [selectedRace, setSelectedRace] = useState<any | null>(null);
 
   // Fallback offline: nessuna sezione ha dati in cache e siamo offline
   if (!isOnline && calError && !calendar && drvError && !drivers && conError && !constructors) {
@@ -89,6 +92,7 @@ export default function Formula1Page() {
                   status={getEventStatus(r.date)}
                   highlight={idx === highlightIndex}
                   onRetry={() => calRefetch()}
+                  onClick={() => setSelectedRace(r)}
                 >
                   <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
                     {r.firstPractice && <span>PL1: {formatTimeIT(r.firstPractice.time, r.firstPractice.date)}</span>}
