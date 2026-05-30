@@ -19,6 +19,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import TeamLogo from "@/components/common/TeamLogo";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
+import RaceDetailsDialog, { type RaceSession } from "@/components/common/RaceDetailsDialog";
+import { useState } from "react";
 
 const MOTOGP_CONSTRUCTOR_COLORS: Record<string, { border: string; bg: string }> = {
   ducati:  { border: 'hsl(var(--brand-ducati))',  bg: 'hsl(var(--brand-ducati) / 0.08)' },
@@ -34,6 +36,7 @@ export default function MotoGPPage() {
   const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useMotoGPStandings(season);
   const { data: constructors, isLoading: csLoading, error: csError, refetch: csRefetch } = useMotoGPConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
 
   if (!isOnline && calError && !calendar && stError && !standings && csError && !constructors) {
     return (
@@ -132,6 +135,7 @@ export default function MotoGPPage() {
                   status={status}
                   highlight={i === highlightIndex}
                   onRetry={() => calRefetch()}
+                  onClick={() => setSelectedEvent(e)}
                 >
                   {endDate && startDate !== endDate && (
                     <p className="text-sm text-muted-foreground">Weekend di gara fino al {formatDateIT(endDate)}</p>
@@ -321,6 +325,41 @@ export default function MotoGPPage() {
           <HighlightsSection sport="motogp" accentVar="gold" />
         </TabsContent>
       </Tabs>
+
+      <RaceDetailsDialog
+        open={!!selectedEvent}
+        onOpenChange={(o) => !o && setSelectedEvent(null)}
+        sport={selectedEvent?.round ? `MotoGP · Round ${selectedEvent.round}` : "MotoGP"}
+        title={selectedEvent?.name ?? ""}
+        subtitle={
+          selectedEvent
+            ? [selectedEvent.circuit, selectedEvent.location || selectedEvent.venue, selectedEvent.city, selectedEvent.country]
+                .filter(Boolean)
+                .join(" · ")
+            : undefined
+        }
+        sessions={
+          selectedEvent?.sessions?.length
+            ? selectedEvent.sessions.map((s: any) => ({
+                label: s.label,
+                date: s.date,
+                primary: s.type === "RAC",
+              }))
+            : selectedEvent
+              ? [
+                  selectedEvent.date_start && {
+                    label: "Inizio weekend",
+                    date: selectedEvent.date_start,
+                  },
+                  selectedEvent.date_end && {
+                    label: "Gara",
+                    date: selectedEvent.date_end,
+                    primary: true,
+                  },
+                ].filter(Boolean) as RaceSession[]
+              : []
+        }
+      />
     </div>
   );
 }

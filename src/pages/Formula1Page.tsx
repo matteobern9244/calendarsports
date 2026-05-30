@@ -15,6 +15,8 @@ import { User } from "lucide-react";
 import { f1NationalityToIso } from "@/lib/f1Utils";
 import TeamLogo from "@/components/common/TeamLogo";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
+import RaceDetailsDialog, { type RaceSession } from "@/components/common/RaceDetailsDialog";
+import { useState } from "react";
 
 export default function Formula1Page() {
   const season = getCurrentF1Season();
@@ -22,6 +24,7 @@ export default function Formula1Page() {
   const { data: drivers, isLoading: drvLoading, error: drvError, refetch: drvRefetch } = useF1DriverStandings(season);
   const { data: constructors, isLoading: conLoading, error: conError } = useF1ConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
+  const [selectedRace, setSelectedRace] = useState<any | null>(null);
 
   // Fallback offline: nessuna sezione ha dati in cache e siamo offline
   if (!isOnline && calError && !calendar && drvError && !drivers && conError && !constructors) {
@@ -89,6 +92,7 @@ export default function Formula1Page() {
                   status={getEventStatus(r.date)}
                   highlight={idx === highlightIndex}
                   onRetry={() => calRefetch()}
+                  onClick={() => setSelectedRace(r)}
                 >
                   <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
                     {r.firstPractice && <span>PL1: {formatTimeIT(r.firstPractice.time, r.firstPractice.date)}</span>}
@@ -269,6 +273,53 @@ export default function Formula1Page() {
           <HighlightsSection sport="f1" accentVar="gold" />
         </TabsContent>
       </Tabs>
+
+      <RaceDetailsDialog
+        open={!!selectedRace}
+        onOpenChange={(o) => !o && setSelectedRace(null)}
+        sport={selectedRace ? `Formula 1 · Round ${selectedRace.round}` : "Formula 1"}
+        title={selectedRace?.raceName ?? ""}
+        subtitle={
+          selectedRace
+            ? `${selectedRace.circuit} · ${selectedRace.locality}, ${selectedRace.country}`
+            : undefined
+        }
+        sessions={
+          selectedRace
+            ? ([
+                selectedRace.firstPractice && {
+                  label: "Prove libere 1",
+                  date: `${selectedRace.firstPractice.date}T${selectedRace.firstPractice.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.secondPractice && {
+                  label: "Prove libere 2",
+                  date: `${selectedRace.secondPractice.date}T${selectedRace.secondPractice.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.thirdPractice && {
+                  label: "Prove libere 3",
+                  date: `${selectedRace.thirdPractice.date}T${selectedRace.thirdPractice.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.sprintQualifying && {
+                  label: "Sprint Qualifying",
+                  date: `${selectedRace.sprintQualifying.date}T${selectedRace.sprintQualifying.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.sprint && {
+                  label: "Sprint",
+                  date: `${selectedRace.sprint.date}T${selectedRace.sprint.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.qualifying && {
+                  label: "Qualifiche",
+                  date: `${selectedRace.qualifying.date}T${selectedRace.qualifying.time ?? "00:00:00Z"}`,
+                },
+                selectedRace.time && {
+                  label: "Gara",
+                  date: `${selectedRace.date}T${selectedRace.time}`,
+                  primary: true,
+                },
+              ].filter(Boolean) as RaceSession[])
+            : []
+        }
+      />
     </div>
   );
 }
