@@ -193,21 +193,20 @@ Deno.serve(async (req) => {
         const eventTime = formatRomeEventTime(ev.date);
         const eventDateTime = formatRomeEventDateTime(ev.date);
         const dayLabel = formatRomeDayLabel(ev.date);
-        // Per preavvisi >= 24h diciamo esplicitamente "domani" / data,
-        // così l'utente non legge "alle 12:10" pensando sia per oggi.
-        // Per preavvisi brevi manteniamo "(tra X)" che dà urgenza.
+        // Indichiamo sempre il giorno se l'evento NON e' oggi (es. notifica
+        // di sera per evento dopo mezzanotte), così "alle 00:30" non viene
+        // letto come oggi. Per preavvisi brevi aggiungiamo anche "(tra X)"
+        // per dare urgenza.
+        const dayPrefix = dayLabel && dayLabel !== 'oggi' ? `${dayLabel} ` : '';
+        const timeLabel = eventTime ? `${dayPrefix}alle ${eventTime}` : dayLabel;
         let when: string;
         if (leadMin >= 1440) {
-          when = eventTime ? `${dayLabel} alle ${eventTime}` : dayLabel;
+          when = timeLabel;
         } else {
           const minutesLabel = leadMin === 60 ? 'tra 1 ora' : `tra ${leadMin} minuti`;
-          const timeLabel = eventTime ? ` alle ${eventTime}` : '';
-          when = `${timeLabel} (${minutesLabel})`.trimStart();
-          when = ` ${when}`;
+          when = timeLabel ? `${timeLabel} (${minutesLabel})` : minutesLabel;
         }
-        const body = leadMin >= 1440
-          ? `${ev.body} ${when}`
-          : `${ev.body}${when}`;
+        const body = when ? `${ev.body} ${when}` : ev.body;
         const payload = JSON.stringify({
           title: ev.title,
           body,
