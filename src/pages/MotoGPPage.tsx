@@ -90,7 +90,12 @@ export default function MotoGPPage() {
           {calendar && calendar.length > 0 && (() => {
             const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
               calendar,
-              (event: any) => event.date || event.date_start
+              (event: any) => event.date || event.date_start,
+              undefined,
+              (event: any) =>
+                event.date_end
+                  ? `${event.date_end}T23:59:59Z`
+                  : event.date || event.date_start
             );
             return (
             <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
