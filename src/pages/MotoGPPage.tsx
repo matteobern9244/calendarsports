@@ -325,6 +325,41 @@ export default function MotoGPPage() {
           <HighlightsSection sport="motogp" accentVar="gold" />
         </TabsContent>
       </Tabs>
+
+      <RaceDetailsDialog
+        open={!!selectedEvent}
+        onOpenChange={(o) => !o && setSelectedEvent(null)}
+        sport={selectedEvent?.round ? `MotoGP · Round ${selectedEvent.round}` : "MotoGP"}
+        title={selectedEvent?.name ?? ""}
+        subtitle={
+          selectedEvent
+            ? [selectedEvent.circuit, selectedEvent.location || selectedEvent.venue, selectedEvent.city, selectedEvent.country]
+                .filter(Boolean)
+                .join(" · ")
+            : undefined
+        }
+        sessions={
+          selectedEvent?.sessions?.length
+            ? selectedEvent.sessions.map((s: any) => ({
+                label: s.label,
+                date: s.date,
+                primary: s.type === "RAC",
+              }))
+            : selectedEvent
+              ? [
+                  selectedEvent.date_start && {
+                    label: "Inizio weekend",
+                    date: selectedEvent.date_start,
+                  },
+                  selectedEvent.date_end && {
+                    label: "Gara",
+                    date: selectedEvent.date_end,
+                    primary: true,
+                  },
+                ].filter(Boolean) as RaceSession[]
+              : []
+        }
+      />
     </div>
   );
 }
