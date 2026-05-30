@@ -103,8 +103,15 @@ async function loadMotoGP(): Promise<EventItem[]> {
           title: `MotoGP · ${ctx}`, body: `${label} sta per iniziare`, url: '/motogp' });
       }
     } else if (r.date_end) {
-      out.push({ id: `${baseId}-race`, sport: 'motogp', date: `${r.date_end}T13:00:00Z`,
-        title: `MotoGP · ${ctx}`, body: 'La gara sta per iniziare', url: '/motogp' });
+      // Fallback senza sessions: usiamo solo se conosciamo un orario reale.
+      // Evitiamo orari inventati (es. 13:00 UTC) che generano notifiche errate.
+      const raceIso = r.time
+        ? `${r.date_end}T${String(r.time).replace(/Z$/i, '')}Z`
+        : null;
+      if (raceIso) {
+        out.push({ id: `${baseId}-race`, sport: 'motogp', date: raceIso,
+          title: `MotoGP · ${ctx}`, body: 'La gara sta per iniziare', url: '/motogp' });
+      }
     }
   }
   return out;
