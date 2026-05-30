@@ -724,9 +724,12 @@ Deno.serve(async (req) => {
           let sessionsByRound: Array<MotoGPSession[] | undefined> = [];
           if (categoryId) {
             const results = await Promise.allSettled(
-              events.map(e =>
-                e.id ? fetchMotoGPSessions(e.id, categoryId) : Promise.resolve([] as MotoGPSession[]),
-              ),
+              events.map(e => {
+                const eventTimeZone = MOTOGP_EVENT_TIMEZONE_BY_COUNTRY[e.country] ?? 'UTC';
+                return e.id
+                  ? fetchMotoGPSessions(e.id, categoryId, eventTimeZone)
+                  : Promise.resolve([] as MotoGPSession[]);
+              }),
             );
             sessionsByRound = results.map(r =>
               r.status === 'fulfilled' && r.value.length > 0 ? r.value : undefined,
