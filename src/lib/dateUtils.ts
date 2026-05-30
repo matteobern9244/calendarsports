@@ -75,10 +75,35 @@ function getDateTimestamp(dateStr?: string | null): number {
 export function prioritizeNextUpcoming<T>(
   items: T[],
   getDate: (item: T) => string | undefined | null,
-  isUpcomingCandidate: (item: T) => boolean = () => true
+  isUpcomingCandidate: (item: T) => boolean = () => true,
+  getEndDate?: (item: T) => string | undefined | null
 ): { items: T[]; highlightIndex: number } {
   const sorted = [...items].sort((a, b) => getDateTimestamp(getDate(a)) - getDateTimestamp(getDate(b)));
   const now = Date.now();
+
+  // Un evento "in corso" (start <= now <= end) ha priorita' assoluta
+  // e viene spostato in cima alla lista. Quando termina, torna nella
+  // sua posizione cronologica naturale.
+  const inProgressIndex = sorted.findIndex((item) => {
+    const startTs = getDateTimestamp(getDate(item));
+    if (!Number.isFinite(startTs) || startTs > now) return false;
+    const endRaw = getEndDate?.(item);
+    const endTs = endRaw
+      ? getDateTimestamp(endRaw)
+      : startTs + 3 * 60 * 60 * 1000; // fallback: finestra di 3h per eventi single-day
+    return Number.isFinite(endTs) && now <= endTs;
+  });
+
+  if (inProgressIndex >= 0) {
+    return {
+      items: [
+        sorted[inProgressIndex],
+        ...sorted.slice(0, inProgressIndex),
+        ...sorted.slice(inProgressIndex + 1),
+      ],
+      highlightIndex: 0,
+    };
+  }
 
   const nextIndex = sorted.findIndex((item) => {
     const timestamp = getDateTimestamp(getDate(item));
