@@ -69,6 +69,35 @@ function getConstructorLogo(name: string): string | null {
   return F1_CONSTRUCTOR_LOGOS[key] || null;
 }
 
+// Jolpica applica rate limit aggressivi (HTTP 429) sulle IP condivise delle
+// edge function. Cache in-memory (per isolate) + retry con backoff per
+// assorbire i 429 transitori invece di propagare un 500 al client.
+const jolpicaCache = new Map<string, { at: number; json: any }>();
+const JOLPICA_TTL_MS = 5 * 60 * 1000;
+
+async function fetchJolpica(path: string): Promise<any> {
+  const url = `${JOLPICA_BASE}/${path}`;
+  const cached = jolpicaCache.get(url);
+  if (cached && Date.now() - cached.at < JOLPICA_TTL_MS) return cached.json;
+
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url);
+    if (res.ok) {
+      const json = await res.json();
+      jolpicaCache.set(url, { at: Date.now(), json });
+      return json;
+    }
+    lastStatus = res.status;
+    if (res.status !== 429 && res.status < 500) break;
+    await new Promise((r) => setTimeout(r, 400 * Math.pow(2, attempt)));
+  }
+
+  // Ultimo fallback: serviamo la cache scaduta se disponibile, meglio di un 500.
+  if (cached) return cached.json;
+  throw new Error(`Jolpica API error: ${lastStatus}`);
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
   if (req.method === 'OPTIONS') {
