@@ -69,6 +69,35 @@ function getConstructorLogo(name: string): string | null {
   return F1_CONSTRUCTOR_LOGOS[key] || null;
 }
 
+// Jolpica applica rate limit aggressivi (HTTP 429) sulle IP condivise delle
+// edge function. Cache in-memory (per isolate) + retry con backoff per
+// assorbire i 429 transitori invece di propagare un 500 al client.
+const jolpicaCache = new Map<string, { at: number; json: any }>();
+const JOLPICA_TTL_MS = 5 * 60 * 1000;
+
+async function fetchJolpica(path: string): Promise<any> {
+  const url = `${JOLPICA_BASE}/${path}`;
+  const cached = jolpicaCache.get(url);
+  if (cached && Date.now() - cached.at < JOLPICA_TTL_MS) return cached.json;
+
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url);
+    if (res.ok) {
+      const json = await res.json();
+      jolpicaCache.set(url, { at: Date.now(), json });
+      return json;
+    }
+    lastStatus = res.status;
+    if (res.status !== 429 && res.status < 500) break;
+    await new Promise((r) => setTimeout(r, 400 * Math.pow(2, attempt)));
+  }
+
+  // Ultimo fallback: serviamo la cache scaduta se disponibile, meglio di un 500.
+  if (cached) return cached.json;
+  throw new Error(`Jolpica API error: ${lastStatus}`);
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
   if (req.method === 'OPTIONS') {
@@ -95,9 +124,7 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'calendar': {
-        const res = await fetch(`${JOLPICA_BASE}/${season}.json`);
-        if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
-        const json = await res.json();
+        const json = await fetchJolpica(`${season}.json`);
         const races = json.MRData?.RaceTable?.Races || [];
         data = races.map((r: any) => ({
           round: parseInt(r.round),
@@ -118,9 +145,7 @@ Deno.serve(async (req) => {
       }
 
       case 'driver-standings': {
-        const res = await fetch(`${JOLPICA_BASE}/${season}/driverStandings.json`);
-        if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
-        const json = await res.json();
+        const json = await fetchJolpica(`${season}/driverStandings.json`);
         const standings = json.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
 
         // Fetch driver headshots from OpenF1
@@ -160,9 +185,7 @@ Deno.serve(async (req) => {
       }
 
       case 'constructor-standings': {
-        const res = await fetch(`${JOLPICA_BASE}/${season}/constructorStandings.json`);
-        if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
-        const json = await res.json();
+        const json = await fetchJolpica(`${season}/constructorStandings.json`);
         const standings = json.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings || [];
         data = standings.map((s: any) => ({
           position: parseInt(s.position),
@@ -176,9 +199,7 @@ Deno.serve(async (req) => {
       }
 
       case 'last-result': {
-        const res = await fetch(`${JOLPICA_BASE}/${season}/last/results.json`);
-        if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
-        const json = await res.json();
+        const json = await fetchJolpica(`${season}/last/results.json`);
         const race = json.MRData?.RaceTable?.Races?.[0];
         if (race) {
           data = {
@@ -201,9 +222,7 @@ Deno.serve(async (req) => {
       }
 
       case 'next-race': {
-        const res = await fetch(`${JOLPICA_BASE}/current/next.json`);
-        if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
-        const json = await res.json();
+        const json = await fetchJolpica('current/next.json');
         const race = json.MRData?.RaceTable?.Races?.[0];
         if (race) {
           data = {
