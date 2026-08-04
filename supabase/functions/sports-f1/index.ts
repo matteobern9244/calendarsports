@@ -124,9 +124,7 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'calendar': {
-        const res = await fetch(`${JOLPICA_BASE}/${season}.json`);
-        if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
-        const json = await res.json();
+        const json = await fetchJolpica(`${season}.json`);
         const races = json.MRData?.RaceTable?.Races || [];
         data = races.map((r: any) => ({
           round: parseInt(r.round),
@@ -147,9 +145,7 @@ Deno.serve(async (req) => {
       }
 
       case 'driver-standings': {
-        const res = await fetch(`${JOLPICA_BASE}/${season}/driverStandings.json`);
-        if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
-        const json = await res.json();
+        const json = await fetchJolpica(`${season}/driverStandings.json`);
         const standings = json.MRData?.StandingsTable?.StandingsLists?.[0]?.DriverStandings || [];
 
         // Fetch driver headshots from OpenF1
@@ -189,9 +185,7 @@ Deno.serve(async (req) => {
       }
 
       case 'constructor-standings': {
-        const res = await fetch(`${JOLPICA_BASE}/${season}/constructorStandings.json`);
-        if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
-        const json = await res.json();
+        const json = await fetchJolpica(`${season}/constructorStandings.json`);
         const standings = json.MRData?.StandingsTable?.StandingsLists?.[0]?.ConstructorStandings || [];
         data = standings.map((s: any) => ({
           position: parseInt(s.position),
@@ -205,9 +199,7 @@ Deno.serve(async (req) => {
       }
 
       case 'last-result': {
-        const res = await fetch(`${JOLPICA_BASE}/${season}/last/results.json`);
-        if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
-        const json = await res.json();
+        const json = await fetchJolpica(`${season}/last/results.json`);
         const race = json.MRData?.RaceTable?.Races?.[0];
         if (race) {
           data = {
@@ -230,9 +222,7 @@ Deno.serve(async (req) => {
       }
 
       case 'next-race': {
-        const res = await fetch(`${JOLPICA_BASE}/current/next.json`);
-        if (!res.ok) throw new Error(`Jolpica API error: ${res.status}`);
-        const json = await res.json();
+        const json = await fetchJolpica('current/next.json');
         const race = json.MRData?.RaceTable?.Races?.[0];
         if (race) {
           data = {
