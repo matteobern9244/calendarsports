@@ -67,10 +67,17 @@ export default function JuventusPage() {
   const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useSerieAStandings(season);
   const [page, setPage] = useState(1);
   const [userInteracted, setUserInteracted] = useState(false);
+  // "Prossime" (default) nasconde le partite gia' giocate della stagione
+  // in corso; "Tutte" mostra anche i risultati. Preferenza persistita.
+  const [upcomingOnly, setUpcomingOnly] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("juventus-calendar-filter") !== "all";
+  });
   const { data: calendarData, isLoading: calLoading, error: calError, refetch: calRefetch } = useJuventusCalendar(
     season,
     page,
     PAGE_SIZE,
+    upcomingOnly,
   );
   const { isOnline } = useOnlineStatus();
 
@@ -89,6 +96,7 @@ export default function JuventusPage() {
     season,
     nextOnCurrentPage || nextMatchPage === null ? undefined : nextMatchPage,
     nextOnCurrentPage || nextMatchPage === null ? undefined : PAGE_SIZE,
+    upcomingOnly,
   );
   const nextMatchCalendar = nextMatchData as PaginatedCalendar | undefined;
   const nextMatch: any = (() => {
@@ -132,8 +140,8 @@ export default function JuventusPage() {
     if (totalPages > 0 && currentPage + 1 <= totalPages) {
       const next = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["juventus", "calendar", season, next, PAGE_SIZE],
-        queryFn: () => footballApi.getCalendar(season, next, PAGE_SIZE),
+        queryKey: ["juventus", "calendar", season, next, PAGE_SIZE, upcomingOnly],
+        queryFn: () => footballApi.getCalendar(season, next, PAGE_SIZE, upcomingOnly),
         staleTime: 5 * 60 * 1000,
       });
     }
@@ -148,12 +156,21 @@ export default function JuventusPage() {
       (totalPages === 0 || nextMatchPage <= totalPages)
     ) {
       queryClient.prefetchQuery({
-        queryKey: ["juventus", "calendar", season, nextMatchPage, PAGE_SIZE],
-        queryFn: () => footballApi.getCalendar(season, nextMatchPage, PAGE_SIZE),
+        queryKey: ["juventus", "calendar", season, nextMatchPage, PAGE_SIZE, upcomingOnly],
+        queryFn: () => footballApi.getCalendar(season, nextMatchPage, PAGE_SIZE, upcomingOnly),
         staleTime: 5 * 60 * 1000,
       });
     }
-  }, [queryClient, season, calendar, nextMatchPage, page]);
+  }, [queryClient, season, calendar, nextMatchPage, page, upcomingOnly]);
+
+  const changeFilter = (onlyUpcoming: boolean) => {
+    setUpcomingOnly(onlyUpcoming);
+    setUserInteracted(false);
+    setPage(1);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("juventus-calendar-filter", onlyUpcoming ? "upcoming" : "all");
+    }
+  };
 
   const goToPage = (p: number) => {
     setUserInteracted(true);
@@ -429,7 +446,27 @@ export default function JuventusPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between text-xs text-muted-foreground font-heading uppercase tracking-wider">
                 <span>Partite {rangeStart}–{rangeEnd} di {calendar.total}</span>
-                <span className="hidden sm:inline">Pagina {calendar.page} / {calendar.totalPages}</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 rounded-full border border-border p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => changeFilter(true)}
+                      aria-pressed={upcomingOnly}
+                      className={`rounded-full px-2.5 py-1 transition-colors ${upcomingOnly ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Prossime
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeFilter(false)}
+                      aria-pressed={!upcomingOnly}
+                      className={`rounded-full px-2.5 py-1 transition-colors ${!upcomingOnly ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Tutte
+                    </button>
+                  </div>
+                  <span className="hidden sm:inline">Pagina {calendar.page} / {calendar.totalPages}</span>
+                </div>
               </div>
             <motion.div className="grid gap-3 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
               {orderedCalendar.map((m: any, i: number) => {

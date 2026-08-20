@@ -43,10 +43,15 @@ export function useSerieAStandings(season: number) {
   });
 }
 
-export function useJuventusCalendar(season: number, page?: number, pageSize?: number) {
+export function useJuventusCalendar(
+  season: number,
+  page?: number,
+  pageSize?: number,
+  upcomingOnly = false,
+) {
   return useQuery({
-    queryKey: ["juventus", "calendar", season, page ?? null, pageSize ?? null],
-    queryFn: () => footballApi.getCalendar(season, page, pageSize),
+    queryKey: ["juventus", "calendar", season, page ?? null, pageSize ?? null, upcomingOnly],
+    queryFn: () => footballApi.getCalendar(season, page, pageSize, upcomingOnly),
     staleTime: 5 * 60 * 1000,
     placeholderData: (prev) => prev,
   });

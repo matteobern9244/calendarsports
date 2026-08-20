@@ -101,10 +101,11 @@ export const f1Api = {
 export const footballApi = {
   getStandings: (season: number) =>
     callEdgeFunction("sports-football", { action: "standings", season: String(season) }),
-  getCalendar: (season: number, page?: number, pageSize?: number) => {
+  getCalendar: (season: number, page?: number, pageSize?: number, upcomingOnly?: boolean) => {
     const params: Record<string, string> = { action: "calendar", season: String(season) };
     if (page !== undefined) params.page = String(page);
     if (pageSize !== undefined) params.pageSize = String(pageSize);
+    if (upcomingOnly) params.upcoming = "1";
     return callEdgeFunction("sports-football", params);
   },
   getJuventusInfo: (season: number) =>

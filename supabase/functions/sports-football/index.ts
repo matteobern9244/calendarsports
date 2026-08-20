@@ -6,6 +6,24 @@ const UCL_COMP_ID = '5';
 const COPPA_ITALIA_COMP_ID = '259';
 const LEGA_API = 'https://api-sdp.legaseriea.it/v1/serie-a/football';
 
+/**
+ * Competizioni interrogate per costruire il calendario Juventus.
+ *
+ * Sky non espone un widget "squadra": ogni torneo ha un id numerico e va
+ * letto separatamente. Oltre ai tre tornei principali proviamo una lista di
+ * id candidati (competizioni realmente pubblicate da Sky o adiacenti a
+ * quelle note) per intercettare automaticamente Supercoppa Italiana,
+ * Mondiale per Club, amichevoli e qualunque altro torneo in cui la Juventus
+ * venga inserita. Gli id non disponibili rispondono 404 e vengono ignorati.
+ */
+const CORE_COMPETITION_IDS = [SERIE_A_COMP_ID, UCL_COMP_ID, COPPA_ITALIA_COMP_ID];
+const EXTRA_COMPETITION_IDS = [
+  '4', '6', '7', '8', '9', '10', '11', '12', '13',
+  '20', '22', '23', '24', '25', '26', '27', '28', '29', '30',
+  '105', '106', '107', '260', '261',
+];
+const ALL_COMPETITION_IDS = [...CORE_COMPETITION_IDS, ...EXTRA_COMPETITION_IDS];
+
 const LEGA_SEASON_IDS: Record<string, string> = {
   '2026': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a',
   '2025': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a',
@@ -91,9 +109,12 @@ function extractWidgetModel(html: string): any {
 async function fetchSkyWidget(
   buildUrl: (season: string) => string,
   requestedSeason: string,
+  allowPreviousSeason = true,
 ): Promise<SkyWidgetResponse> {
   const parsedSeason = Number.parseInt(requestedSeason, 10);
-  const fallbackSeason = Number.isFinite(parsedSeason) ? String(parsedSeason - 1) : null;
+  const fallbackSeason = allowPreviousSeason && Number.isFinite(parsedSeason)
+    ? String(parsedSeason - 1)
+    : null;
   const seasonsToTry = [...new Set([requestedSeason, fallbackSeason].filter(Boolean) as string[])];
 
   let lastStatus: number | null = null;
@@ -216,10 +237,35 @@ function buildMatchId(match: any, competitionName: string): string {
   return `${comp}-${dateKey}-${home}-vs-${away}`;
 }
 
+/**
+ * Ricava il nome competizione dallo slug presente nei link partita Sky
+ * (es. ".../calcio/supercoppa-italiana/partite/..." -> "Supercoppa Italiana").
+ * Serve per i tornei non presenti nella mappa statica.
+ */
+function competitionNameFromMatches(rounds: any[]): string | null {
+  for (const round of rounds || []) {
+    for (const matchDay of round?.matchDayList || []) {
+      for (const match of matchDay?.matchList || []) {
+        const link = String(match?.link || '');
+        const m = link.match(/\/calcio\/([^/]+)\/partite\//i);
+        if (m) {
+          return m[1]
+            .split('-')
+            .filter(Boolean)
+            .map((w) => (w.length <= 2 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+            .join(' ');
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function extractJuventusMatches(model: any, competitionId: string, broadcasterMap: Record<string, string>): any[] {
   const rounds = model.competitionMatchList || [];
   const matches: any[] = [];
-  const competitionName = COMPETITION_NAMES[competitionId] || 'Altro';
+  const competitionName =
+    COMPETITION_NAMES[competitionId] || competitionNameFromMatches(rounds) || 'Altro';
 
   for (const round of rounds) {
     const roundNum = round.round;
@@ -289,6 +335,7 @@ Deno.serve(async (req) => {
 
     let data: any;
     let seasonUsed = season;
+    let calendarMeta: { competitionsIncluded: string[]; competitionsUnavailable: string[] } | null = null;
 
     switch (action) {
       case 'standings': {
@@ -327,8 +374,11 @@ Deno.serve(async (req) => {
       }
 
       case 'calendar': {
-        // Fetch Serie A, UCL, Coppa Italia calendars + broadcaster map in parallel
-        const competitionIds = [SERIE_A_COMP_ID, UCL_COMP_ID, COPPA_ITALIA_COMP_ID];
+        // Tutte le competizioni Juventus della stagione richiesta.
+        // IMPORTANTE: nessun fallback alla stagione precedente, altrimenti i
+        // tornei non ancora pubblicati (es. Champions a inizio stagione)
+        // riempirebbero il calendario con partite dell'anno scorso.
+        const competitionIds = ALL_COMPETITION_IDS;
 
         const [broadcasterMap, ...skyResponses] = await Promise.all([
           fetchBroadcasterMap(season),
@@ -336,23 +386,49 @@ Deno.serve(async (req) => {
             fetchSkyWidget(
               (s) => `${SKY_BASE}/football/competition-calendar-results/${s}/${compId}/widget.html`,
               season,
+              false,
             ).catch(err => {
-              console.warn(`Failed to fetch competition ${compId}:`, err.message);
+              console.warn(`Failed to fetch competition ${compId}:`, err?.message ?? err);
               return null;
             })
           ),
         ]);
 
         const allMatches: any[] = [];
+        const competitionsIncluded: string[] = [];
+        const competitionsUnavailable: string[] = [];
 
         for (let i = 0; i < competitionIds.length; i++) {
+          const compId = competitionIds[i];
           const skyResponse = skyResponses[i];
-          if (!skyResponse) continue;
-          if (i === 0) seasonUsed = skyResponse.seasonUsed;
+          if (!skyResponse) {
+            if (CORE_COMPETITION_IDS.includes(compId)) {
+              competitionsUnavailable.push(COMPETITION_NAMES[compId] || compId);
+            }
+            continue;
+          }
           const model = extractWidgetModel(skyResponse.html);
           if (!model) continue;
-          allMatches.push(...extractJuventusMatches(model, competitionIds[i], broadcasterMap));
+          const compMatches = extractJuventusMatches(model, compId, broadcasterMap);
+          if (compMatches.length === 0) {
+            if (CORE_COMPETITION_IDS.includes(compId)) {
+              competitionsUnavailable.push(COMPETITION_NAMES[compId] || compId);
+            }
+            continue;
+          }
+          competitionsIncluded.push(compMatches[0].competition);
+          allMatches.push(...compMatches);
         }
+
+        // Deduplica per id partita (competizioni sovrapposte / id duplicati).
+        const seenIds = new Set<string>();
+        for (let i = allMatches.length - 1; i >= 0; i--) {
+          const id = String(allMatches[i]?.id ?? '');
+          if (id && seenIds.has(id)) allMatches.splice(i, 1);
+          else if (id) seenIds.add(id);
+        }
+
+        calendarMeta = { competitionsIncluded, competitionsUnavailable };
 
         // Sort by date
         allMatches.sort((a, b) => {
@@ -361,6 +437,20 @@ Deno.serve(async (req) => {
           if (!b.date) return -1;
           return new Date(a.date).getTime() - new Date(b.date).getTime();
         });
+
+        // Filtro opzionale "solo prossime": esclude le partite gia' giocate
+        // della stagione in corso (restano consultabili senza il parametro).
+        if (url.searchParams.get('upcoming') === '1') {
+          const now = Date.now();
+          const upcoming = allMatches.filter((m) => {
+            if (m.status === 'FullTime') return false;
+            if (!m.date) return true;
+            const t = new Date(m.date).getTime();
+            return Number.isNaN(t) ? true : t >= now - 3 * 60 * 60 * 1000;
+          });
+          allMatches.length = 0;
+          allMatches.push(...upcoming);
+        }
 
         // Optional pagination (backward compatible: when neither page nor pageSize is
         // provided, return the flat array as before).
@@ -441,6 +531,7 @@ Deno.serve(async (req) => {
       season: /^\d{4}$/.test(season) ? parseInt(season, 10) : season,
       seasonUsed: /^\d{4}$/.test(seasonUsed) ? parseInt(seasonUsed, 10) : seasonUsed,
       source: 'Sky Sport Italia + Lega Serie A',
+      ...(calendarMeta ?? {}),
     };
     return new Response(JSON.stringify({ success: true, data, meta, source: meta.source, requestedSeason: season, seasonUsed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
