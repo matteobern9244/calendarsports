@@ -373,8 +373,11 @@ Deno.serve(async (req) => {
       }
 
       case 'calendar': {
-        // Fetch Serie A, UCL, Coppa Italia calendars + broadcaster map in parallel
-        const competitionIds = [SERIE_A_COMP_ID, UCL_COMP_ID, COPPA_ITALIA_COMP_ID];
+        // Tutte le competizioni Juventus della stagione richiesta.
+        // IMPORTANTE: nessun fallback alla stagione precedente, altrimenti i
+        // tornei non ancora pubblicati (es. Champions a inizio stagione)
+        // riempirebbero il calendario con partite dell'anno scorso.
+        const competitionIds = ALL_COMPETITION_IDS;
 
         const [broadcasterMap, ...skyResponses] = await Promise.all([
           fetchBroadcasterMap(season),
@@ -382,23 +385,49 @@ Deno.serve(async (req) => {
             fetchSkyWidget(
               (s) => `${SKY_BASE}/football/competition-calendar-results/${s}/${compId}/widget.html`,
               season,
+              false,
             ).catch(err => {
-              console.warn(`Failed to fetch competition ${compId}:`, err.message);
+              console.warn(`Failed to fetch competition ${compId}:`, err?.message ?? err);
               return null;
             })
           ),
         ]);
 
         const allMatches: any[] = [];
+        const competitionsIncluded: string[] = [];
+        const competitionsUnavailable: string[] = [];
 
         for (let i = 0; i < competitionIds.length; i++) {
+          const compId = competitionIds[i];
           const skyResponse = skyResponses[i];
-          if (!skyResponse) continue;
-          if (i === 0) seasonUsed = skyResponse.seasonUsed;
+          if (!skyResponse) {
+            if (CORE_COMPETITION_IDS.includes(compId)) {
+              competitionsUnavailable.push(COMPETITION_NAMES[compId] || compId);
+            }
+            continue;
+          }
           const model = extractWidgetModel(skyResponse.html);
           if (!model) continue;
-          allMatches.push(...extractJuventusMatches(model, competitionIds[i], broadcasterMap));
+          const compMatches = extractJuventusMatches(model, compId, broadcasterMap);
+          if (compMatches.length === 0) {
+            if (CORE_COMPETITION_IDS.includes(compId)) {
+              competitionsUnavailable.push(COMPETITION_NAMES[compId] || compId);
+            }
+            continue;
+          }
+          competitionsIncluded.push(compMatches[0].competition);
+          allMatches.push(...compMatches);
         }
+
+        // Deduplica per id partita (competizioni sovrapposte / id duplicati).
+        const seenIds = new Set<string>();
+        for (let i = allMatches.length - 1; i >= 0; i--) {
+          const id = String(allMatches[i]?.id ?? '');
+          if (id && seenIds.has(id)) allMatches.splice(i, 1);
+          else if (id) seenIds.add(id);
+        }
+
+        calendarMeta = { competitionsIncluded, competitionsUnavailable };
 
         // Sort by date
         allMatches.sort((a, b) => {
