@@ -335,6 +335,7 @@ Deno.serve(async (req) => {
 
     let data: any;
     let seasonUsed = season;
+    let calendarMeta: { competitionsIncluded: string[]; competitionsUnavailable: string[] } | null = null;
 
     switch (action) {
       case 'standings': {
@@ -516,6 +517,7 @@ Deno.serve(async (req) => {
       season: /^\d{4}$/.test(season) ? parseInt(season, 10) : season,
       seasonUsed: /^\d{4}$/.test(seasonUsed) ? parseInt(seasonUsed, 10) : seasonUsed,
       source: 'Sky Sport Italia + Lega Serie A',
+      ...(calendarMeta ?? {}),
     };
     return new Response(JSON.stringify({ success: true, data, meta, source: meta.source, requestedSeason: season, seasonUsed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
