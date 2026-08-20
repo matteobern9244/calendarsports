@@ -80,7 +80,8 @@ export function useSyncAll() {
       { sport: "f1", label: `F1 ${seasonF1}`, queryKey: ["f1", "next-race"], fn: "sports-f1", params: { action: "next-race" }, staleTime: 60 * 1000 },
       // Juventus
       { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: ["juventus", "standings", seasonJ], fn: "sports-football", params: { action: "standings", season: String(seasonJ) }, staleTime: 5 * 60 * 1000 },
-      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: ["juventus", "calendar", seasonJ, 1, 12], fn: "sports-football", params: { action: "calendar", season: String(seasonJ), page: "1", pageSize: "12" }, staleTime: 5 * 60 * 1000 },
+      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: ["juventus", "calendar", seasonJ, 1, 12, false], fn: "sports-football", params: { action: "calendar", season: String(seasonJ), page: "1", pageSize: "12" }, staleTime: 5 * 60 * 1000 },
+      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: ["juventus", "calendar", seasonJ, 1, 12, true], fn: "sports-football", params: { action: "calendar", season: String(seasonJ), page: "1", pageSize: "12", upcoming: "1" }, staleTime: 5 * 60 * 1000 },
       { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: ["juventus", "info", seasonJ], fn: "sports-football", params: { action: "next-match", season: String(seasonJ) }, staleTime: 60 * 1000 },
       // Sinner
       { sport: "sinner", label: `Sinner ${seasonS}`, queryKey: ["sinner", "info"], fn: "sports-tennis", params: { action: "player-info" }, staleTime: 30 * 60 * 1000 },
@@ -179,20 +180,30 @@ export function useSyncAll() {
       setSyncStep("Aggiornamento calendario Juventus completo...");
       toast.loading("Aggiornamento calendario Juventus completo...", { id: toastId });
       const firstPage = queryClient.getQueryData<{ totalPages?: number }>(
-        ["juventus", "calendar", seasonJ, 1, 12],
+        ["juventus", "calendar", seasonJ, 1, 12, false],
       );
       const totalPages = Math.min(10, firstPage?.totalPages ?? 1);
       if (totalPages > 1) {
         await Promise.all(
           Array.from({ length: totalPages - 1 }, (_, i) => i + 2).map(async (p) => {
             try {
-              const { data } = await callEdgeFunctionWithMeta("sports-football", {
-                action: "calendar",
-                season: String(seasonJ),
-                page: String(p),
-                pageSize: "12",
-              });
-              queryClient.setQueryData(["juventus", "calendar", seasonJ, p, 12], data);
+              const [all, upcoming] = await Promise.all([
+                callEdgeFunctionWithMeta("sports-football", {
+                  action: "calendar",
+                  season: String(seasonJ),
+                  page: String(p),
+                  pageSize: "12",
+                }),
+                callEdgeFunctionWithMeta("sports-football", {
+                  action: "calendar",
+                  season: String(seasonJ),
+                  page: String(p),
+                  pageSize: "12",
+                  upcoming: "1",
+                }),
+              ]);
+              queryClient.setQueryData(["juventus", "calendar", seasonJ, p, 12, false], all.data);
+              queryClient.setQueryData(["juventus", "calendar", seasonJ, p, 12, true], upcoming.data);
             } catch (err) {
               console.warn(`Sync juventus calendar page ${p} failed:`, err);
             }
