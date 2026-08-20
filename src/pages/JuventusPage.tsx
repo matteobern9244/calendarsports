@@ -446,7 +446,27 @@ export default function JuventusPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between text-xs text-muted-foreground font-heading uppercase tracking-wider">
                 <span>Partite {rangeStart}–{rangeEnd} di {calendar.total}</span>
-                <span className="hidden sm:inline">Pagina {calendar.page} / {calendar.totalPages}</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 rounded-full border border-border p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => changeFilter(true)}
+                      aria-pressed={upcomingOnly}
+                      className={`rounded-full px-2.5 py-1 transition-colors ${upcomingOnly ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Prossime
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeFilter(false)}
+                      aria-pressed={!upcomingOnly}
+                      className={`rounded-full px-2.5 py-1 transition-colors ${!upcomingOnly ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Tutte
+                    </button>
+                  </div>
+                  <span className="hidden sm:inline">Pagina {calendar.page} / {calendar.totalPages}</span>
+                </div>
               </div>
             <motion.div className="grid gap-3 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
               {orderedCalendar.map((m: any, i: number) => {
