@@ -109,9 +109,12 @@ function extractWidgetModel(html: string): any {
 async function fetchSkyWidget(
   buildUrl: (season: string) => string,
   requestedSeason: string,
+  allowPreviousSeason = true,
 ): Promise<SkyWidgetResponse> {
   const parsedSeason = Number.parseInt(requestedSeason, 10);
-  const fallbackSeason = Number.isFinite(parsedSeason) ? String(parsedSeason - 1) : null;
+  const fallbackSeason = allowPreviousSeason && Number.isFinite(parsedSeason)
+    ? String(parsedSeason - 1)
+    : null;
   const seasonsToTry = [...new Set([requestedSeason, fallbackSeason].filter(Boolean) as string[])];
 
   let lastStatus: number | null = null;
