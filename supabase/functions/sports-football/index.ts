@@ -438,6 +438,20 @@ Deno.serve(async (req) => {
           return new Date(a.date).getTime() - new Date(b.date).getTime();
         });
 
+        // Filtro opzionale "solo prossime": esclude le partite gia' giocate
+        // della stagione in corso (restano consultabili senza il parametro).
+        if (url.searchParams.get('upcoming') === '1') {
+          const now = Date.now();
+          const upcoming = allMatches.filter((m) => {
+            if (m.status === 'FullTime') return false;
+            if (!m.date) return true;
+            const t = new Date(m.date).getTime();
+            return Number.isNaN(t) ? true : t >= now - 3 * 60 * 60 * 1000;
+          });
+          allMatches.length = 0;
+          allMatches.push(...upcoming);
+        }
+
         // Optional pagination (backward compatible: when neither page nor pageSize is
         // provided, return the flat array as before).
         const pageParam = url.searchParams.get('page');
