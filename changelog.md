@@ -13,6 +13,35 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 _(nessuna voce aperta)_
 
+## [2.7.0] — Juventus: tutte le competizioni, niente stagioni passate (2026-08-18)
+
+Bump applicativo `2.6.2` → `2.7.0` esposto da `src/lib/version.ts` e
+`package.json`.
+
+### Fixed
+
+- `sports-football` (action `calendar`) non ripiega piu' sulla stagione
+  precedente: se il widget Sky della stagione richiesta non esiste (es.
+  Champions League non ancora pubblicata) la competizione viene semplicemente
+  saltata, invece di inserire partite dell'anno passato.
+
+### Added
+
+- Discovery competizioni: oltre a Serie A, Champions League e Coppa Italia la
+  funzione interroga una lista di id candidati Sky per intercettare
+  Supercoppa, Mondiale per Club, amichevoli e altri tornei. Gli id non
+  pubblicati rispondono 404 e vengono ignorati. Il nome competizione, quando
+  non presente nella mappa statica, viene dedotto dallo slug dei link Sky.
+- Meta di risposta `competitionsIncluded` / `competitionsUnavailable`.
+- Parametro `upcoming=1` che esclude le partite gia' giocate.
+- Pagina Juventus: toggle "Prossime / Tutte" (default "Prossime", preferenza
+  persistita in `localStorage`).
+- `useSyncAll` sincronizza entrambe le varianti (con e senza filtro) di tutte
+  le pagine del calendario Juventus.
+
+Nota: la sezione dipende da scraping Sky Sport; struttura e disponibilita' dei
+widget possono cambiare senza preavviso.
+
 ## [2.5.0] — Calendario: vista Agenda + filtri sport (2026-05-04)
 
 Bump applicativo `2.4.0` → `2.5.0` esposto da `src/lib/version.ts` e
