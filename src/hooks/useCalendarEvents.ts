@@ -202,7 +202,7 @@ export function useCalendarEvents() {
 
   // Juventus: pagina 1 per scoprire totalPages; poi tutte le pagine
   const juveFirst = useQuery({
-    queryKey: ["juventus", "calendar", seasonJ, 1, 12],
+    queryKey: ["juventus", "calendar", seasonJ, 1, 12, false],
     queryFn: () => footballApi.getCalendar(seasonJ, 1, 12),
     staleTime: 5 * 60 * 1000,
   });
