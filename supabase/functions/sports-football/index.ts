@@ -6,6 +6,24 @@ const UCL_COMP_ID = '5';
 const COPPA_ITALIA_COMP_ID = '259';
 const LEGA_API = 'https://api-sdp.legaseriea.it/v1/serie-a/football';
 
+/**
+ * Competizioni interrogate per costruire il calendario Juventus.
+ *
+ * Sky non espone un widget "squadra": ogni torneo ha un id numerico e va
+ * letto separatamente. Oltre ai tre tornei principali proviamo una lista di
+ * id candidati (competizioni realmente pubblicate da Sky o adiacenti a
+ * quelle note) per intercettare automaticamente Supercoppa Italiana,
+ * Mondiale per Club, amichevoli e qualunque altro torneo in cui la Juventus
+ * venga inserita. Gli id non disponibili rispondono 404 e vengono ignorati.
+ */
+const CORE_COMPETITION_IDS = [SERIE_A_COMP_ID, UCL_COMP_ID, COPPA_ITALIA_COMP_ID];
+const EXTRA_COMPETITION_IDS = [
+  '4', '6', '7', '8', '9', '10', '11', '12', '13',
+  '20', '22', '23', '24', '25', '26', '27', '28', '29', '30',
+  '105', '106', '107', '260', '261',
+];
+const ALL_COMPETITION_IDS = [...CORE_COMPETITION_IDS, ...EXTRA_COMPETITION_IDS];
+
 const LEGA_SEASON_IDS: Record<string, string> = {
   '2026': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a',
   '2025': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a',
