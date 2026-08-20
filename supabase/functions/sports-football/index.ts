@@ -237,10 +237,35 @@ function buildMatchId(match: any, competitionName: string): string {
   return `${comp}-${dateKey}-${home}-vs-${away}`;
 }
 
+/**
+ * Ricava il nome competizione dallo slug presente nei link partita Sky
+ * (es. ".../calcio/supercoppa-italiana/partite/..." -> "Supercoppa Italiana").
+ * Serve per i tornei non presenti nella mappa statica.
+ */
+function competitionNameFromMatches(rounds: any[]): string | null {
+  for (const round of rounds || []) {
+    for (const matchDay of round?.matchDayList || []) {
+      for (const match of matchDay?.matchList || []) {
+        const link = String(match?.link || '');
+        const m = link.match(/\/calcio\/([^/]+)\/partite\//i);
+        if (m) {
+          return m[1]
+            .split('-')
+            .filter(Boolean)
+            .map((w) => (w.length <= 2 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+            .join(' ');
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function extractJuventusMatches(model: any, competitionId: string, broadcasterMap: Record<string, string>): any[] {
   const rounds = model.competitionMatchList || [];
   const matches: any[] = [];
-  const competitionName = COMPETITION_NAMES[competitionId] || 'Altro';
+  const competitionName =
+    COMPETITION_NAMES[competitionId] || competitionNameFromMatches(rounds) || 'Altro';
 
   for (const round of rounds) {
     const roundNum = round.round;
