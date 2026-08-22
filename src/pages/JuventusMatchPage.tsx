@@ -82,6 +82,9 @@ export default function JuventusMatchPage() {
 
   useEffect(() => {
     if (foundMatch || !searchData) return;
+    // `placeholderData` può restituire i dati della pagina precedente mentre
+    // la nuova è in fetch: avanzare in quel caso salterebbe pagine mai lette.
+    if (searchData.page !== searchPage) return;
     const m = findMatch(searchData, decodedMatchId);
     if (m) {
       setFoundMatch(m);
@@ -95,7 +98,9 @@ export default function JuventusMatchPage() {
   }, [searchData, decodedMatchId, foundMatch, searchPage]);
 
   const isLoading =
-    !foundMatch && !exhausted && (firstPageQuery.isLoading || searchQuery.isLoading);
+    !foundMatch &&
+    !exhausted &&
+    (firstPageQuery.isLoading || searchQuery.isLoading || searchQuery.isFetching);
   const error = firstPageQuery.error ?? searchQuery.error;
 
   if (isLoading) {
