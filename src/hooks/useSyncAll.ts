@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import { STREAMING_PROVIDERS, STREAMING_FAMILIES } from "@/hooks/useStreamingData";
 import {
@@ -74,25 +75,25 @@ export function useSyncAll() {
     // Lista prefetch allineata agli hook in src/hooks/useSportsData.ts
     const tasks: PrefetchTask[] = [
       // F1
-      { sport: "f1", label: `F1 ${seasonF1}`, queryKey: ["f1", "calendar", seasonF1], fn: "sports-f1", params: { action: "calendar", season: String(seasonF1) }, staleTime: 5 * 60 * 1000 },
-      { sport: "f1", label: `F1 ${seasonF1}`, queryKey: ["f1", "driver-standings", seasonF1], fn: "sports-f1", params: { action: "driver-standings", season: String(seasonF1) }, staleTime: 5 * 60 * 1000 },
-      { sport: "f1", label: `F1 ${seasonF1}`, queryKey: ["f1", "constructor-standings", seasonF1], fn: "sports-f1", params: { action: "constructor-standings", season: String(seasonF1) }, staleTime: 5 * 60 * 1000 },
-      { sport: "f1", label: `F1 ${seasonF1}`, queryKey: ["f1", "next-race"], fn: "sports-f1", params: { action: "next-race" }, staleTime: 60 * 1000 },
+      { sport: "f1", label: `F1 ${seasonF1}`, queryKey: queryKeys.f1.calendar(seasonF1), fn: "sports-f1", params: { action: "calendar", season: String(seasonF1) }, staleTime: 5 * 60 * 1000 },
+      { sport: "f1", label: `F1 ${seasonF1}`, queryKey: queryKeys.f1.driverStandings(seasonF1), fn: "sports-f1", params: { action: "driver-standings", season: String(seasonF1) }, staleTime: 5 * 60 * 1000 },
+      { sport: "f1", label: `F1 ${seasonF1}`, queryKey: queryKeys.f1.constructorStandings(seasonF1), fn: "sports-f1", params: { action: "constructor-standings", season: String(seasonF1) }, staleTime: 5 * 60 * 1000 },
+      { sport: "f1", label: `F1 ${seasonF1}`, queryKey: queryKeys.f1.nextRace(), fn: "sports-f1", params: { action: "next-race" }, staleTime: 60 * 1000 },
       // Juventus
-      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: ["juventus", "standings", seasonJ], fn: "sports-football", params: { action: "standings", season: String(seasonJ) }, staleTime: 5 * 60 * 1000 },
-      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: ["juventus", "calendar", seasonJ, 1, 12, false], fn: "sports-football", params: { action: "calendar", season: String(seasonJ), page: "1", pageSize: "12" }, staleTime: 5 * 60 * 1000 },
-      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: ["juventus", "calendar", seasonJ, 1, 12, true], fn: "sports-football", params: { action: "calendar", season: String(seasonJ), page: "1", pageSize: "12", upcoming: "1" }, staleTime: 5 * 60 * 1000 },
-      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: ["juventus", "info", seasonJ], fn: "sports-football", params: { action: "next-match", season: String(seasonJ) }, staleTime: 60 * 1000 },
+      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: queryKeys.juventus.standings(seasonJ), fn: "sports-football", params: { action: "standings", season: String(seasonJ) }, staleTime: 5 * 60 * 1000 },
+      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: queryKeys.juventus.calendar(seasonJ, 1, 12, false), fn: "sports-football", params: { action: "calendar", season: String(seasonJ), page: "1", pageSize: "12" }, staleTime: 5 * 60 * 1000 },
+      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: queryKeys.juventus.calendar(seasonJ, 1, 12, true), fn: "sports-football", params: { action: "calendar", season: String(seasonJ), page: "1", pageSize: "12", upcoming: "1" }, staleTime: 5 * 60 * 1000 },
+      { sport: "juventus", label: `Juventus ${seasonJLabel}`, queryKey: queryKeys.juventus.info(seasonJ), fn: "sports-football", params: { action: "next-match", season: String(seasonJ) }, staleTime: 60 * 1000 },
       // Sinner
-      { sport: "sinner", label: `Sinner ${seasonS}`, queryKey: ["sinner", "info"], fn: "sports-tennis", params: { action: "player-info" }, staleTime: 30 * 60 * 1000 },
-      { sport: "sinner", label: `Sinner ${seasonS}`, queryKey: ["sinner", "next-event"], fn: "sports-tennis", params: { action: "next-event", season: String(seasonS) }, staleTime: 60 * 1000 },
-      { sport: "sinner", label: `Sinner ${seasonS}`, queryKey: ["sinner", "schedule", seasonS], fn: "sports-tennis", params: { action: "schedule", season: String(seasonS) }, staleTime: 5 * 60 * 1000 },
-      { sport: "sinner", label: `Sinner ${seasonS}`, queryKey: ["sinner", "results", seasonS], fn: "sports-tennis", params: { action: "results", season: String(seasonS) }, staleTime: 5 * 60 * 1000 },
+      { sport: "sinner", label: `Sinner ${seasonS}`, queryKey: queryKeys.sinner.info(), fn: "sports-tennis", params: { action: "player-info" }, staleTime: 30 * 60 * 1000 },
+      { sport: "sinner", label: `Sinner ${seasonS}`, queryKey: queryKeys.sinner.nextEvent(), fn: "sports-tennis", params: { action: "next-event", season: String(seasonS) }, staleTime: 60 * 1000 },
+      { sport: "sinner", label: `Sinner ${seasonS}`, queryKey: queryKeys.sinner.schedule(seasonS), fn: "sports-tennis", params: { action: "schedule", season: String(seasonS) }, staleTime: 5 * 60 * 1000 },
+      { sport: "sinner", label: `Sinner ${seasonS}`, queryKey: queryKeys.sinner.results(seasonS, 1, 12), fn: "sports-tennis", params: { action: "results", season: String(seasonS) }, staleTime: 5 * 60 * 1000 },
       // MotoGP
-      { sport: "motogp", label: `MotoGP ${seasonM}`, queryKey: ["motogp", "calendar", seasonM], fn: "sports-motogp", params: { action: "calendar", season: String(seasonM) }, staleTime: 5 * 60 * 1000 },
-      { sport: "motogp", label: `MotoGP ${seasonM}`, queryKey: ["motogp", "next-event"], fn: "sports-motogp", params: { action: "next-event", season: String(seasonM) }, staleTime: 60 * 1000 },
-      { sport: "motogp", label: `MotoGP ${seasonM}`, queryKey: ["motogp", "standings", seasonM], fn: "sports-motogp", params: { action: "standings", season: String(seasonM) }, staleTime: 5 * 60 * 1000 },
-      { sport: "motogp", label: `MotoGP ${seasonM}`, queryKey: ["motogp", "constructor-standings", seasonM], fn: "sports-motogp", params: { action: "constructor-standings", season: String(seasonM) }, staleTime: 5 * 60 * 1000 },
+      { sport: "motogp", label: `MotoGP ${seasonM}`, queryKey: queryKeys.motogp.calendar(seasonM), fn: "sports-motogp", params: { action: "calendar", season: String(seasonM) }, staleTime: 5 * 60 * 1000 },
+      { sport: "motogp", label: `MotoGP ${seasonM}`, queryKey: queryKeys.motogp.nextEvent(), fn: "sports-motogp", params: { action: "next-event", season: String(seasonM) }, staleTime: 60 * 1000 },
+      { sport: "motogp", label: `MotoGP ${seasonM}`, queryKey: queryKeys.motogp.standings(seasonM), fn: "sports-motogp", params: { action: "standings", season: String(seasonM) }, staleTime: 5 * 60 * 1000 },
+      { sport: "motogp", label: `MotoGP ${seasonM}`, queryKey: queryKeys.motogp.constructorStandings(seasonM), fn: "sports-motogp", params: { action: "constructor-standings", season: String(seasonM) }, staleTime: 5 * 60 * 1000 },
     ];
 
     const sportLabel: Record<SportKey, string> = {
@@ -164,7 +165,7 @@ export function useSyncAll() {
               "highlights-youtube",
               { sport, limit: "12" },
             );
-            queryClient.setQueryData(["highlights", sport, 12], data);
+            queryClient.setQueryData(queryKeys.highlights(sport, 12), data);
             if (requiresWarning(meta)) {
               fallbackBySport[sport].add(meta?.dataSource ?? "unknown");
             }
@@ -180,7 +181,7 @@ export function useSyncAll() {
       setSyncStep("Aggiornamento calendario Juventus completo...");
       toast.loading("Aggiornamento calendario Juventus completo...", { id: toastId });
       const firstPage = queryClient.getQueryData<{ totalPages?: number }>(
-        ["juventus", "calendar", seasonJ, 1, 12, false],
+        queryKeys.juventus.calendar(seasonJ, 1, 12, false),
       );
       const totalPages = Math.min(10, firstPage?.totalPages ?? 1);
       if (totalPages > 1) {
@@ -202,8 +203,8 @@ export function useSyncAll() {
                   upcoming: "1",
                 }),
               ]);
-              queryClient.setQueryData(["juventus", "calendar", seasonJ, p, 12, false], all.data);
-              queryClient.setQueryData(["juventus", "calendar", seasonJ, p, 12, true], upcoming.data);
+              queryClient.setQueryData(queryKeys.juventus.calendar(seasonJ, p, 12, false), all.data);
+              queryClient.setQueryData(queryKeys.juventus.calendar(seasonJ, p, 12, true), upcoming.data);
             } catch (err) {
               console.warn(`Sync juventus calendar page ${p} failed:`, err);
             }
@@ -218,7 +219,7 @@ export function useSyncAll() {
       await Promise.all(
         STREAMING_FAMILIES.map((f) =>
           queryClient.prefetchQuery({
-            queryKey: ["streaming-tv", f.id],
+            queryKey: queryKeys.streaming.tv(f.id),
             queryFn: () => streamingApi.getTvByFamily(f.id),
             staleTime: 0,
           }),
@@ -242,15 +243,14 @@ export function useSyncAll() {
       await Promise.all(
         italyProviderIds.map((pid) =>
           queryClient.prefetchQuery({
-            queryKey: [
-              "streaming-releases-italy",
+            queryKey: queryKeys.streaming.releasesItaly(
               pid,
               "all",
               today,
               dateTo7,
               "release",
               0,
-            ],
+            ),
             queryFn: () =>
               streamingApi.getReleasesItaly({
                 provider: pid,

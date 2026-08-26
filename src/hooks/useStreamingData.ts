@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import {
   streamingApi,
   type StreamingFamilyId,
@@ -146,7 +147,7 @@ export interface ReleaseDetailsPayload {
 
 export function useTvByFamily(family: StreamingFamilyId) {
   return useQuery<TvFamilyPayload>({
-    queryKey: ["streaming-tv", family],
+    queryKey: queryKeys.streaming.tv(family),
     queryFn: () => streamingApi.getTvByFamily(family),
     staleTime: 15 * 60 * 1000,
   });
@@ -158,7 +159,7 @@ export function useReleasesByProvider(
   dateTo?: string,
 ) {
   return useQuery<ReleasesPayload>({
-    queryKey: ["streaming-releases", provider, dateFrom ?? "", dateTo ?? ""],
+    queryKey: queryKeys.streaming.releases(provider, dateFrom, dateTo),
     queryFn: () => streamingApi.getReleasesByProvider(provider, dateFrom, dateTo),
     staleTime: 60 * 60 * 1000,
   });
@@ -175,15 +176,14 @@ export interface UseReleasesItalyOpts {
 
 export function useReleasesItaly(opts: UseReleasesItalyOpts) {
   return useQuery<ReleasesItalyPayload>({
-    queryKey: [
-      "streaming-releases-italy",
-      opts.provider ?? "all",
-      opts.kind ?? "all",
-      opts.dateFrom ?? "",
-      opts.dateTo ?? "",
-      opts.sort ?? "release",
-      opts.genreId ?? 0,
-    ],
+    queryKey: queryKeys.streaming.releasesItaly(
+      opts.provider,
+      opts.kind,
+      opts.dateFrom,
+      opts.dateTo,
+      opts.sort,
+      opts.genreId,
+    ),
     queryFn: () => streamingApi.getReleasesItaly(opts),
     staleTime: 60 * 60 * 1000,
   });
@@ -194,7 +194,7 @@ export function useReleaseCredits(
   id: number | null,
 ) {
   return useQuery<CreditsPayload>({
-    queryKey: ["streaming-credits", type, id],
+    queryKey: queryKeys.streaming.credits(type, id),
     queryFn: () => streamingApi.getReleaseCredits(type as "movie" | "tv", id as number),
     enabled: !!type && !!id,
     staleTime: 24 * 60 * 60 * 1000,
@@ -206,7 +206,7 @@ export function useReleaseDetails(
   id: number | null,
 ) {
   return useQuery<ReleaseDetailsPayload>({
-    queryKey: ["streaming-release-details", type, id],
+    queryKey: queryKeys.streaming.details(type, id),
     queryFn: () => streamingApi.getReleaseDetails(type as "movie" | "tv", id as number),
     enabled: !!type && !!id,
     staleTime: 24 * 60 * 60 * 1000,
