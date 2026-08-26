@@ -54,6 +54,17 @@ export default tseslint.config(
     },
   },
   {
+    // I file in `src/components/ui/` sono generati dalla CLI shadcn e vengono
+    // ri-sincronizzati da upstream. Esportano di proposito anche varianti e
+    // hook accanto al componente (`buttonVariants`, `useFormField`,
+    // `navigationMenuTriggerStyle`, ...): separarli romperebbe il
+    // ri-allineamento con la CLI. La regola resta attiva su tutto il resto.
+    files: ["src/components/ui/**"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
+  {
     // Il wrapper sicuro e' l'unico punto autorizzato a creare il client.
     // Il divieto sopra resta anche se Lovable rigenera
     // `src/integrations/supabase/client.ts`: e' proprio quel file a non
