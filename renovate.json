@@ -1,0 +1,65 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "timezone": "Europe/Rome",
+  "description": "baseBranches: mai main. Quel branch e' sincronizzato con Lovable e non riceve PR: si passa sempre da develop.",
+  "baseBranches": ["develop"],
+  "labels": ["dipendenze"],
+  "assignees": ["matteobern9244"],
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "schedule": ["* 0-6 * * 1"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* 0-6 1 * *"],
+    "description": "La lockfile rimasta indietro inchiodava i pacchetti transitivi a versioni vecchie: 29 vulnerabilita' sparite con una rigenerazione."
+  },
+  "packageRules": [
+    {
+      "description": "Minor e patch in un gruppo solo: separati sarebbero una decina di PR a settimana che nessuno guarda.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "aggiornamenti minori",
+      "groupSlug": "minori"
+    },
+    {
+      "description": "I major passano dalla dashboard e si leggono uno alla volta.",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "TypeScript resta sulla 5.9: typescript-eslint dichiara typescript <6.1.0 e la 7 spegnerebbe il linting type-aware.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<6.0.0"
+    },
+    {
+      "description": "React e i suoi tipi si muovono insieme.",
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "groupName": "React"
+    },
+    {
+      "description": "Vite, il suo plugin React e Vitest hanno peer incrociati: separarli produce PR che non installano.",
+      "matchPackageNames": ["vite", "vitest", "@vitejs/plugin-react", "@vitest/**"],
+      "groupName": "Vite e Vitest"
+    },
+    {
+      "description": "Tailwind e il suo plugin Vite vanno alla stessa versione.",
+      "matchPackageNames": ["tailwindcss", "@tailwindcss/**"],
+      "groupName": "Tailwind"
+    },
+    {
+      "description": "ESLint e i plugin dichiarano peer sulla major di eslint.",
+      "matchPackageNames": ["eslint", "@eslint/**", "typescript-eslint", "eslint-plugin-**"],
+      "groupName": "ESLint"
+    },
+    {
+      "description": "Radix si muove a blocchi.",
+      "matchPackageNames": ["@radix-ui/**"],
+      "groupName": "Radix UI"
+    },
+    {
+      "description": "lovable-tagger e' legato all'editor Lovable: si aggiorna solo con una decisione esplicita.",
+      "matchPackageNames": ["lovable-tagger"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}

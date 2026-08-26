@@ -1,39 +1,8 @@
 version: 2
+# Gli aggiornamenti npm sono passati a Renovate (renovate.json): raggruppa i
+# minori in una PR sola, manda i major dalla dependency dashboard e sa tenere
+# ferma la versione di TypeScript. Qui resta solo l'ecosistema delle Actions.
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "08:00"
-      timezone: "Europe/Rome"
-    cooldown:
-      semver-major-days: 30
-    target-branch: "develop"
-    open-pull-requests-limit: 3
-    assignees:
-      - "matteobern9244"
-    commit-message:
-      prefix: "chore"
-      prefix-development: "chore"
-      include: "scope"
-    groups:
-      npm-production:
-        dependency-type: "production"
-        update-types:
-          - "minor"
-          - "patch"
-      npm-development:
-        dependency-type: "development"
-        update-types:
-          - "minor"
-          - "patch"
-      npm-majors:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
-
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
