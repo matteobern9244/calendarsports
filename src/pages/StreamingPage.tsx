@@ -46,7 +46,7 @@ import type {
   StreamingProviderId,
 } from "@/lib/api/sportsApi";
 import { cn } from "@/lib/utils";
-import { todayRomeISO, addDaysISO, formatDateIT } from "@/lib/dateUtils";
+import { todayRomeISO, addDaysISO, formatDateIT, toRomeDate } from "@/lib/dateUtils";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -101,12 +101,14 @@ const GENRES: { id: number | null; label: string }[] = [
 ];
 
 function formatHour(iso: string): string {
+  const d = toRomeDate(iso);
+  if (!d) return "—";
   return new Intl.DateTimeFormat("it-IT", {
     timeZone: "Europe/Rome",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(new Date(iso));
+  }).format(d);
 }
 
 

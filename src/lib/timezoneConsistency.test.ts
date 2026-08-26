@@ -6,6 +6,8 @@ import {
   formatDateTimeIT,
   formatJuventusDateTime,
   getEventStatus,
+  getDateTimestamp,
+  prioritizeNextUpcoming,
 } from "./dateUtils";
 
 /**
@@ -91,5 +93,40 @@ describe("Coerenza timezone Europe/Rome tra gli helper", () => {
     expect(formatJuventusDateTime("")).toEqual({ date: "—", time: "", full: "—" });
     expect(formatTimeIT("")).toBe("");
     expect(formatTimeIT(null)).toBe("");
+  });
+});
+
+/**
+ * La policy "naive = UTC" vale per la formattazione ma finora non per i
+ * CONFRONTI: ordinamento, selezione del prossimo evento e conto alla
+ * rovescia usavano `new Date(...)` diretto, che interpreta la stringa come
+ * ora locale del client. Su un'app di countdown questo significa che
+ * l'orario mostrato e quello usato per contare divergono: due ore di
+ * scarto per un utente italiano d'estate.
+ */
+describe("Coerenza timezone nei confronti, non solo nella formattazione", () => {
+  const naive = "2026-06-21T19:45:00";
+  const withZ = "2026-06-21T19:45:00Z";
+
+  it("getDateTimestamp tratta naive come UTC, come toRomeDate", () => {
+    expect(getDateTimestamp(naive)).toBe(getDateTimestamp(withZ));
+  });
+
+  it("getDateTimestamp concorda con l'istante usato per formattare", () => {
+    expect(getDateTimestamp(naive)).toBe(toRomeDate(naive)!.getTime());
+  });
+
+  it("prioritizeNextUpcoming usa la stessa lettura degli helper di formato", () => {
+    // Un evento con ISO naive e lo stesso evento con la Z esplicita devono
+    // ricevere lo stesso trattamento: se differissero, la card evidenziata
+    // come "prossima" potrebbe non essere quella mostrata come prossima.
+    const naiveItems = [{ d: "2026-06-21T19:45:00" }, { d: "2026-06-22T19:45:00" }];
+    const zItems = [{ d: "2026-06-21T19:45:00Z" }, { d: "2026-06-22T19:45:00Z" }];
+    const a = prioritizeNextUpcoming(naiveItems, (i) => i.d);
+    const b = prioritizeNextUpcoming(zItems, (i) => i.d);
+    expect(a.highlightIndex).toBe(b.highlightIndex);
+    expect(a.items.map((i) => i.d.replace("Z", ""))).toEqual(
+      b.items.map((i) => i.d.replace("Z", "")),
+    );
   });
 });

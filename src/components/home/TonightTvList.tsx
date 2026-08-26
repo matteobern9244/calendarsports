@@ -168,6 +168,9 @@ export default function TonightTvList() {
           const durationMin = endDate
             ? Math.max(0, Math.round((endMs - d.getTime()) / 60000))
             : 0;
+          // endMs e' un timestamp in millisecondi, non una stringa ISO: qui non
+          // c'e' nessuna interpretazione di fuso da sbagliare.
+          // @tz-ignore
           const endHHMM = timeFmt.format(new Date(endMs));
           const [endHStr, endMStr] = endHHMM.split(":");
           const startMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);

@@ -65,11 +65,19 @@ export function formatJuventusDateTime(
   return { date: dateStr, time, full: `${dateStr} ${time}` };
 }
 
-function getDateTimestamp(dateStr?: string | null): number {
-  if (!dateStr) return Number.POSITIVE_INFINITY;
-
-  const timestamp = new Date(dateStr).getTime();
-  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+/**
+ * Istante di un evento in millisecondi, letto con la stessa policy
+ * "naive = UTC" usata dagli helper di formattazione.
+ *
+ * Passare per `toRomeDate` invece che per `new Date(...)` non e' un
+ * dettaglio: `new Date("2026-06-21T19:45:00")` interpreta la stringa come
+ * ora locale del client, quindi in Italia d'estate vale due ore prima di
+ * quello che l'app mostra a schermo. Ordinamenti e conti alla rovescia
+ * finirebbero per non essere d'accordo con l'orario stampato accanto.
+ */
+export function getDateTimestamp(dateStr?: string | null): number {
+  const d = toRomeDate(dateStr);
+  return d ? d.getTime() : Number.POSITIVE_INFINITY;
 }
 
 export function prioritizeNextUpcoming<T>(

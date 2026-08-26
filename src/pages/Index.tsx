@@ -6,7 +6,7 @@ import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
 import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
-import { formatDateIT, formatTimeIT, formatJuventusDateTime } from "@/lib/dateUtils";
+import { formatDateIT, formatTimeIT, formatJuventusDateTime, getDateTimestamp } from "@/lib/dateUtils";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -72,8 +72,8 @@ export default function HomePage() {
 
     if (juveCalendar && Array.isArray(juveCalendar)) {
       const nextMatch = [...juveCalendar]
-        .filter((m: any) => m.status !== "FullTime" && m.date && new Date(m.date).getTime() > now)
-        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+        .filter((m: any) => m.status !== "FullTime" && m.date && getDateTimestamp(m.date) > now)
+        .sort((a: any, b: any) => getDateTimestamp(a.date) - getDateTimestamp(b.date))[0];
       if (nextMatch) {
         const isHome = nextMatch.homeTeam?.toLowerCase().includes("juventus");
         const opponent = isHome ? nextMatch.awayTeam : nextMatch.homeTeam;
@@ -113,7 +113,7 @@ export default function HomePage() {
       }
     }
 
-    return upcoming.sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
+    return upcoming.sort((a, b) => getDateTimestamp(a.rawDate) - getDateTimestamp(b.rawDate));
   }, [f1Data, juveCalendar, sinnerNext, motogpNext, now]);
 
   // Fallback offline: nessun dato in cache da nessuna fonte e siamo offline

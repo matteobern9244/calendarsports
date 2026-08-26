@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { AlertCircle, RefreshCw, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNowSecond, subscribeCountdown } from "@/lib/countdownClock";
+import { getDateTimestamp } from "@/lib/dateUtils";
 
 export type CountdownStatus = "upcoming" | "live" | "ended";
 
@@ -60,11 +61,11 @@ export default function EventCountdown({
   onStatusChange,
   onRetry,
 }: EventCountdownProps) {
-  const target = useMemo(() => new Date(startDate).getTime(), [startDate]);
+  const target = useMemo(() => getDateTimestamp(startDate), [startDate]);
   const valid = Number.isFinite(target);
   const endTarget = useMemo(() => {
     if (endDate) {
-      const t = new Date(endDate).getTime();
+      const t = getDateTimestamp(endDate);
       if (Number.isFinite(t)) return t;
     }
     // Fallback storico: finestra live = start + 3h.
