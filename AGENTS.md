@@ -1,302 +1,115 @@
 # AGENTS
 
-## Scopo
+## Scopo e fonte di verità
 
-Questo documento e' un playbook operativo per agenti AI che lavorano su questo
-repository. Vale in modo generale per qualunque agente, con attenzione pratica
-particolare a **Codex** e **GitHub Copilot**.
+Questo file è il contratto comune per ogni agente che lavora su questo
+repository, non solo per Claude Code, e si legge nell'ordine in cui è scritto:
+**scopo → regole sempre valide → quale guida leggere → metodo → file intoccabili
+→ verifica e consegna**.
 
-L'obiettivo non e' spiegare il prodotto in astratto, ma ridurre il rischio di
-modifiche errate, regressioni funzionali e regressioni nel workflow **GitHub <->
-Lovable**.
+L'obiettivo non è descrivere il prodotto: è ridurre il rischio di regressioni,
+di dati falsi presentati come veri e di modifiche che rompono la
+sincronizzazione con Lovable. Privilegia cambiamenti piccoli, verificabili e
+sicuri in produzione.
 
-## Contesto del progetto
+**Il dettaglio operativo vive nelle guide** in `docs/agent-playbook/`: la tabella
+«Come scegliere la guida» dice quali sono obbligatorie per l'area toccata, e
+quelle guide sono vincolanti quanto questo file.
 
-- Applicazione web di eventi sportivi e streaming sviluppata come SPA React.
-- Progetto nato inizialmente su **Lovable** e poi evoluto in GitHub e
-  localmente.
-- Stack reale: React, Vite, TypeScript, Tailwind, shadcn/ui, Radix, React Query,
-  React Router, Supabase Edge Functions.
-- Routing lato client con `BrowserRouter`.
-- Backend applicativo distribuito in `supabase/functions/*`.
-- Dati ottenuti tramite mix di API pubbliche, scraping di provider esterni,
-  fallback statici e dataset stagionali codificati manualmente.
+Se codice, schema o configurazione divergono dalla prosa, **vale il contratto
+reale**: verificalo e correggi la documentazione nello stesso cambiamento.
 
-## Regole di sicurezza operativa
+## Regole sempre valide
 
-- Non assumere che i dati esterni siano stabili o affidabili.
-- Non cambiare workflow Git, branch policy, integrazione GitHub o relazione con
-  Lovable senza istruzioni esplicite.
-- Non trattare `main` come branch di lavoro ordinario.
-- Non introdurre modifiche che possano causare sync indesiderati verso Lovable.
-- Non cambiare segreti, file env, chiavi, progetto Supabase o modalita' di
-  deploy senza richiesta esplicita.
-- Non dichiarare come "fonte reale" cio' che nel codice e' in realta' statico o
-  hardcoded.
-- Quando una feature dipende da scraping, esplicitarlo sempre.
-- Non dichiarare mai "fatto", "scritto", "risolto" o equivalenti senza verifica
-  reale del risultato.
-- Nessun falso positivo: distinguere sempre tra azione tentata, azione riuscita
-  e risultato verificato.
+**Lingua e formato.** L'interfaccia è in italiano, con le sole eccezioni
+`STREAMING` e `CALENDAR EVENTS`. Date e orari sono sempre in `Europe/Rome`. I
+nomi propri e gli acronimi tecnici restano nella loro forma.
 
-## Workflow Git richiesto
+**Branch e workflow.** `main` è sincronizzato con Lovable e non riceve push
+diretti: si lavora su `develop` o su un branch che nasce da `develop`. Il deploy
+in produzione è manuale dentro Lovable. **Non fare commit, push, merge o PR se
+non ti è stato chiesto.**
 
-Assunzione operativa del repository:
+**Configurazione e segreti.** Nessuna modifica a workflow, deploy, segreti,
+progetto Supabase, RLS, cron o service worker senza richiesta esplicita e senza
+un piano di verifica. `.env` è tracciato di proposito e contiene solo valori
+pubblici; i segreti veri stanno nei secrets di Supabase, quelli personali in
+`.env.local`.
 
-- `main` e' il branch di default collegato al sync bidirezionale GitHub <->
-  Lovable.
-- Lovable scrive automaticamente su `main` ad ogni modifica fatta dall'editor
-  Lovable. Questo e' il canale ufficiale di scrittura su `main`.
-- Gli sviluppatori umani **non** pushano direttamente su `main`. Lavorano su
-  `develop` (o su feature branch derivati da `develop`) e arrivano su `main`
-  solo via pull request.
-- Il deploy in produzione resta manuale su Lovable (Publish -> Update).
+**Onestà sulle fonti.** Questa app non possiede i dati che mostra: li prende da
+API, da scraping HTML e da dataset statici scritti nel codice. **Non presentare
+mai come fonte ufficiale ciò che è statico o scrapato**, e dichiara sempre quando
+una sezione dipende da scraping.
 
-Regole per agenti AI che operano fuori da Lovable (es. Codex, Copilot in IDE):
+**Onestà del resoconto.** Distingui sempre azione tentata, azione riuscita e
+risultato verificato; separa fatti, ipotesi e raccomandazioni. Non dichiarare
+"fatto" o "risolto" senza una verifica reale.
 
-- Non pushare mai direttamente su `main`.
-- Lavorare su `develop` o su feature branch derivati da `develop` e proporre
-  PR verso `develop`.
-- L'arrivo su `main` deve avvenire solo con una PR separata `develop` ->
-  `main`.
-- Quando apri una PR, assegna sempre la PR a `@matteobern9244` e applica
-  sempre le label gia' esistenti piu' adatte al change set reale.
-- Se devi proporre merge, dichiara sempre l'impatto potenziale sul sync
-  Lovable e sulla versione live.
-- Non cambiare il branch di default o la struttura dei remote senza richiesta
-  esplicita.
+## Come scegliere la guida
 
-Regole per Lovable (questo agente, in-editor):
+Leggi la guida indicata **prima** di modificare l'area. Più righe possono
+applicarsi allo stesso intervento.
 
-- E' l'unico canale autorizzato a scrivere direttamente su `main`.
-- Ogni modifica fatta in chat Lovable produce un commit automatico su `main`
-  via sync GitHub <-> Lovable.
-- Le branch protection rules su GitHub devono consentire push solo all'app
-  GitHub di Lovable (`lovable-dev[bot]` o equivalente) e bloccare push diretti
-  da utenti umani.
+| Area o tipo di modifica                                               | Guida obbligatoria                                          |
+| --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Git, Lovable, CI, dipendenze, release, ambiente                       | `docs/agent-playbook/repository-operations.md`              |
+| Route, pagine, componenti, hook, client Supabase, struttura di `src/` | `docs/agent-playbook/architecture-and-boundaries.md`        |
+| Edge function, fonti dati, orari, stagioni, lingua della UI           | `docs/agent-playbook/data-sources-and-time.md`              |
+| Test, guardiani, file generati, changelog, checklist di consegna      | `docs/agent-playbook/verification-and-change-management.md` |
+| Per trovare pagina, hook, helper e test pertinenti al dominio         | `docs/agent-playbook/area-entrypoints.md`                   |
 
-Configurazione GitHub finale richiesta.
+Documentazione tecnica di approfondimento: [`README.md`](README.md),
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md),
+[`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md),
+[`docs/SECURITY.md`](docs/SECURITY.md),
+[`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md).
 
-**IMPORTANTE**: usa **una sola** fonte di protezione per `main`.
+## Metodo di lavoro
 
-- Tenere attiva solo la Ruleset moderna repository-level che matcha
-  esattamente `refs/heads/main`.
-- Tenere assente o disattivata la Branch protection rule classica su `main`.
-- Consentire bypass solo all'app GitHub di Lovable (`lovable-dev`) con
-  `bypass_mode = always`.
-- Attivare nella Ruleset solo queste branch rules:
-  - `deletion`
-  - `non_fast_forward`
-- Non attivare `required_linear_history`, `required_signatures`,
-  `required_deployments`, `code_scanning` o flag equivalenti a
-  `Do not allow bypassing` / `Enforce for admins`.
+1. **Identifica dominio e rischio.** Una modifica alla formattazione di una data
+   e una modifica a una edge function non hanno lo stesso raggio.
+2. **Verifica il contratto reale** prima di scrivere: la forma del payload, i
+   parametri della route, la chiave di cache dell'hook. Non fidarti della prosa,
+   nemmeno di questa.
+3. **TDD per ogni modifica non puramente documentale.** Il test che descrive il
+   difetto si scrive prima e si guarda fallire. Non rimuovere né indebolire test
+   esistenti per ottenere il verde.
+4. **TypeScript rigoroso.** `strict` è attivo. Niente `any` senza una ragione
+   scritta accanto. Nessuna dipendenza nuova se lo stack presente basta.
+5. **Verifica su mobile e su desktop.** L'app è mobile-first ed è installabile:
+   diverse viste hanno due alberi di render distinti.
+6. **Zero avvisi.** Se il lavoro produce avvisi di qualunque strumento,
+   sistemarli fa parte del lavoro: non è un follow-up e non è debito.
 
-Con questa configurazione:
+## File generati e delicati
 
-- Lovable continua a poter pushare direttamente su `main` per il sync.
-- Gli umani lavorano su feature branch -> `develop`.
-- L'arrivo umano su `main` avviene solo con PR `develop` -> `main`.
-- Le PR verso `develop` e `main` devono avere `auto-merge` attivo con metodo
-  `squash` dopo esito positivo dei workflow PR richiesti dal flusso umano.
-- Il vincolo umano su `main` resta di processo e di workflow, non di branch
-  rule incompatibile con il sync automatico di Lovable.
-- Il workflow `guard-main-source.yml` blocca le PR verso `main` che non
-  provengono da `develop`, ma non interferisce con i push automatici di
-  Lovable su `main`.
+- `src/integrations/supabase/types.ts` — generato dalla CLI Supabase.
+- `src/components/ui/**` — generati dalla CLI shadcn; si rigenerano, non si
+  editano.
+- `.lovable/` — stato dell'editor Lovable, sincronizzato con `main`.
+- `bun.lock` — si rigenera con `bun install`.
+- `supabase/migrations/*` — le migration applicate non si riscrivono: se ne
+  aggiunge una correttiva.
+- `supabase/functions/_shared/security.ts` — CORS e rate limit di tutte le
+  funzioni pubbliche.
+- `supabase/functions/push-dispatcher/*` — gira con la service role key ed è
+  protetto da un segreto condiviso.
+- `.github/workflows/guard-main-source.yml` e `enable-pr-automerge.yml` —
+  proteggono la policy su `main`.
+- L'allowlist di `scripts/check-italian-ui.mjs` — allargarla va motivato nel
+  changelog.
 
-### Sintomo tipico di mis-configurazione
+## Verifica e consegna
 
-Lovable mostra: `Push was rejected by branch protection rules. Please
-disable required status checks or allow the GitHub app to bypass branch
-protections.` In questo caso:
+Il gate locale è **`bun run verify`**: typecheck, lint a zero avvisi, guardiano
+lingua, guardiano fuso, test unitari, build. Le end-to-end si lanciano a parte
+con `bun run test:e2e`. Non cambiare la composizione di `verify` senza allineare
+i workflow in `.github/workflows/`.
 
-1. Branch protection classica ancora attiva oltre alla Ruleset su `main`.
-2. Nella Ruleset di `main` sono rimasti `pull_request` o
-  `required_status_checks`, incompatibili con il push diretto di Lovable.
-3. Flag `Do not allow bypassing` / `Enforce for admins` attivo.
+Prima di consegnare, ispeziona `git status --short`. Aggiorna
+[`changelog.md`](changelog.md) per ogni cambiamento percepibile, e la nota in
+`docs/releases/` quando cambia la versione.
 
-## Mappa minima del codice da leggere prima di intervenire
-
-Leggere sempre prima questi file o directory:
-
-- `src/App.tsx`
-- `src/pages/*`
-- `src/hooks/useSportsData.ts`
-- `src/lib/api/sportsApi.ts`
-- `supabase/functions/*`
-
-Leggere inoltre, se l'intervento tocca documentazione o setup:
-
-- `README.md`
-- `.env.example`
-- `.gitignore`
-- `package.json`
-
-## Mappa funzionale rapida
-
-- `src/pages/Index.tsx`: home con aggregazione prossimi eventi.
-- `src/pages/SinnerPage.tsx`: profilo, risultati e tornei di Sinner.
-- `src/pages/JuventusPage.tsx`: calendario Juventus e classifica Serie A.
-- `src/pages/Formula1Page.tsx`: calendario F1, piloti, costruttori.
-- `src/pages/MotoGPPage.tsx`: calendario MotoGP, piloti, costruttori.
-- `src/lib/api/sportsApi.ts`: adapter client verso le Edge Functions.
-- `src/lib/supabaseClient.ts`: client Supabase sicuro con fallback hardcoded
-  per URL e anon key (entrambi pubblici), usato in produzione quando le
-  variabili Vite non vengono iniettate nel bundle.
-- `src/hooks/useSportsData.ts`: query React Query usate dalle pagine.
-- `supabase/functions/sports-f1`: Jolpica/OpenF1 + fallback statici.
-- `supabase/functions/sports-football`: Sky Sport + Lega Serie A. Il payload
-  del calendario include un campo `id` slug deterministico per ogni partita,
-  derivato dall'URL Sky quando disponibile (es.
-  `2025-giornata-1-juventus-parma`) o composto da
-  `competizione-data-home-vs-away` come fallback. Necessario per il routing
-  della pagina dettaglio `/juventus/partite/:matchId`.
-- `supabase/functions/sports-tennis`: dataset statico Sinner 2026.
-- `supabase/functions/sports-motogp`: API ufficiale motogp.com (Pulselive)
-  per calendario e next-event, Sky Sport per le classifiche, mapping statici
-  solo per enrichment piloti (foto, numeri, nazionalità) e loghi costruttori.
-
-## Import del client Supabase
-
-**Regola**: per qualunque uso del client Supabase JS SDK (auth, realtime,
-`functions.invoke`, storage, query DB) importa sempre da
-`@/lib/supabaseClient`, **non** da `@/integrations/supabase/client`.
-
-Motivo: il file `src/integrations/supabase/client.ts` e' auto-generato e
-read-only, e legge `import.meta.env.VITE_SUPABASE_URL` /
-`VITE_SUPABASE_PUBLISHABLE_KEY` direttamente. In alcuni build di produzione
-queste variabili non vengono iniettate nel bundle e il client viene creato
-con `URL = undefined`, causando richieste rotte verso
-`https://<host>/undefined/functions/v1/...` (fallback HTML 200, mai JSON,
-React Query in loading infinito).
-
-`src/lib/supabaseClient.ts` ricrea il client usando le stesse env var con
-fallback hardcoded sui valori pubblici (project URL + anon key), garantendo
-che il client funzioni in qualunque build. Esporta anche
-`SUPABASE_PROJECT_URL` e `SUPABASE_ANON_KEY` per chiamate `fetch` manuali
-verso le edge functions.
-
-Esempio:
-
-```ts
-// OK
-import { supabase } from "@/lib/supabaseClient";
-
-// Da evitare nei nuovi import
-import { supabase } from "@/integrations/supabase/client";
-```
-
-## Regole di modifica
-
-- Preservare UI, nomenclatura e struttura delle route salvo richiesta contraria.
-- **Fuso orario UI: `Europe/Rome` obbligatorio.** Tutte le date/ore
-  mostrate nelle pagine sportive devono essere convertite esplicitamente
-  nel fuso italiano. Per Juventus usa `formatJuventusDateTime` /
-  `toRomeDate` da `src/lib/dateUtils.ts` (centralizzano la policy
-  "stringa naive = UTC" e l'opzione `timeZone: "Europe/Rome"`). Vietato
-  chiamare `new Date(x).toLocaleTimeString(...)` o
-  `toLocaleDateString(...)` senza `timeZone: "Europe/Rome"` nelle
-  pagine Juventus / Home. Il workflow CI esegue `bun run check:tz-juventus`
-  (`scripts/check-rome-tz.mjs`) e fallisce in presenza di violazioni.
-- **Lingua UI: italiano obbligatorio.** Tutta l'UI dell'app e' in italiano.
-  Le uniche eccezioni autorizzate sono i token `STREAMING` (nome sezione) e
-  `CALENDAR EVENTS` (nome app). Nomi propri di squadre, atleti, competizioni,
-  broadcaster e provider restano nella loro forma ufficiale. Sigle tecniche
-  (ATP, WTA, GP, TMDB, RAI, Pos, Pts, ecc.) non sono considerate "inglese".
-  Vietato introdurre testo inglese in stringhe utente, placeholder,
-  `aria-label`, `sr-only`, toast, error message o titoli pagina.
-- Il workflow CI esegue `bun run check:italian` (script
-  `scripts/check-italian-ui.mjs`). Se devi introdurre intenzionalmente
-  una stringa non italiana (es. brand non in allowlist), aggiorna
-  l'allowlist nello stesso PR e dichiara il motivo nel changelog.
-- Non migrare lo stack verso framework diversi.
-- Non sostituire `BrowserRouter`, React Query o integrazione Supabase senza
-  motivo forte e spiegato.
-- Trattare scraping, parsing HTML e mapping statici come aree ad alta
-  fragilita'.
-- Qualunque nuova dipendenza deve essere motivata e documentata.
-- Qualunque nuova fonte dati deve essere documentata in `README.md`.
-- Ogni file Markdown creato o modificato deve rispettare sempre i vincoli di
-  `markdownlint`.
-- Se tocchi una sezione sportiva, considera sempre l'impatto sulla Home.
-- Se tocchi shape dei payload backend, verifica frontend e hook correlati.
-
-## Checklist pre-edit
-
-- Capire quale sezione sportiva o area cross-cutting viene toccata.
-- Identificare la fonte dati reale: API, scraping, fallback o hardcoded.
-- Verificare se la modifica impatta Home aggregata, hook React Query, Edge
-  Function corrispondente, variabili ambiente o branch policy.
-- Distinguere fatti verificati da inferenze.
-- Se la modifica puo' avere effetti su `main` o Lovable, dichiararlo prima.
-
-## Checklist post-edit
-
-- Eseguire i controlli pertinenti: `bun run lint`, `bun run build`,
-  `bun run test`.
-- Se vengono creati o modificati file Markdown, eseguire un controllo
-  `markdownlint` sui file `.md` del progetto.
-- Se il cambiamento e' UI o data-shape, verificare almeno le pagine principali
-  coinvolte.
-- Controllare che la documentazione sia aggiornata se cambiano architettura,
-  env, fonti dati o workflow Git e Lovable.
-- Verificare che nessuna istruzione finale incentivi push accidentali su `main`.
-- Dichiarare eventuali limiti di verifica se test o build non coprono davvero la
-  modifica.
-
-## Convenzioni di risposta per agenti
-
-- Separare chiaramente fatti verificati nel repository, ipotesi e
-  raccomandazioni.
-- Se una sezione usa dati fragili, dirlo esplicitamente.
-- Se una modifica e' sicura o rischiosa rispetto a Lovable, esplicitarlo.
-- Non presentare come "risolto" cio' che non e' stato verificato con build o
-  test adeguati.
-- In caso di dubbio su branch, sync o deploy, essere conservativi.
-- Se un file viene creato, modificato o rimosso, confermarlo solo dopo verifica
-  diretta con filesystem, output di comando o stato Git.
-- Se un tentativo fallisce, dirlo esplicitamente invece di riportarlo come
-  completato.
-
-## Limiti noti del progetto
-
-- Copertura test minima.
-- Presenza storica di `.env` reale nel repo.
-- Dipendenze da scraping di provider terzi.
-- Contenuti stagionali statici residui: dataset Sinner 2026 in
-  `sports-tennis` e mapping enrichment MotoGP (foto piloti, numeri,
-  nazionalita', loghi costruttori). Calendari F1 e MotoGP sono live
-  (Jolpica/Ergast e Pulselive rispettivamente).
-- Possibile divergenza tra repository GitHub, progetto Supabase collegato e
-  versione live gestita in Lovable.
-
-## Linee guida specifiche per Codex e GitHub Copilot
-
-Queste note non rendono il documento vendor-specific, ma coprono i due strumenti
-piu' probabili.
-
-### Per Codex
-
-- Prima di modificare file, leggere effettivamente i punti d'ingresso e la
-  funzione edge coinvolta.
-- Se si interviene su documentazione o setup, verificare lo stato reale del repo
-  prima di scrivere istruzioni.
-- Non proporre workflow di commit o push su `main` come default.
-
-### Per GitHub Copilot
-
-- Non accettare suggerimenti che cambiano stack, rimuovono fallback senza capire
-  il provider o sostituiscono parsing e mapping statici senza verificare il
-  formato reale dei dati.
-- Rivedere sempre manualmente il codice generato su parsing HTML,
-  normalizzazione nomi e mapping loghi o foto.
-
-## Criterio di sicurezza finale
-
-Una modifica e' accettabile solo se:
-
-- non rompe il funzionamento corrente atteso della sezione coinvolta;
-- non introduce comportamento ambiguo verso Lovable;
-- non maschera la natura reale delle fonti dati;
-- non spinge implicitamente il team a usare `main` come branch di
-  sperimentazione.
+Il riepilogo finale deve indicare i file modificati, le verifiche eseguite e il
+loro esito, **i limiti della verifica**, i rischi residui e gli eventuali
+follow-up.

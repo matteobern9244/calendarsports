@@ -241,19 +241,19 @@ Il frontend e' una SPA Vite servita staticamente.
 
 File di riferimento:
 
-- [src/App.tsx](/Users/matteobernardini/code/calendarsports/src/App.tsx)
-- [src/pages/Index.tsx](/Users/matteobernardini/code/calendarsports/src/pages/Index.tsx)
-- [src/pages/SinnerPage.tsx](/Users/matteobernardini/code/calendarsports/src/pages/SinnerPage.tsx)
-- [src/pages/JuventusPage.tsx](/Users/matteobernardini/code/calendarsports/src/pages/JuventusPage.tsx)
-- [src/pages/Formula1Page.tsx](/Users/matteobernardini/code/calendarsports/src/pages/Formula1Page.tsx)
-- [src/pages/MotoGPPage.tsx](/Users/matteobernardini/code/calendarsports/src/pages/MotoGPPage.tsx)
+- [src/App.tsx](./src/App.tsx)
+- [src/pages/Index.tsx](./src/pages/Index.tsx)
+- [src/pages/SinnerPage.tsx](./src/pages/SinnerPage.tsx)
+- [src/pages/JuventusPage.tsx](./src/pages/JuventusPage.tsx)
+- [src/pages/Formula1Page.tsx](./src/pages/Formula1Page.tsx)
+- [src/pages/MotoGPPage.tsx](./src/pages/MotoGPPage.tsx)
 
 ### Accesso ai dati lato client
 
 Il frontend non chiama direttamente le fonti esterne. Passa da:
 
-- [src/lib/api/sportsApi.ts](/Users/matteobernardini/code/calendarsports/src/lib/api/sportsApi.ts)
-- [src/hooks/useSportsData.ts](/Users/matteobernardini/code/calendarsports/src/hooks/useSportsData.ts)
+- [src/lib/api/sportsApi.ts](./src/lib/api/sportsApi.ts)
+- [src/hooks/useSportsData.ts](./src/hooks/useSportsData.ts)
 
 Le richieste browser puntano alle Edge Functions Supabase via:
 
@@ -263,7 +263,7 @@ Le richieste browser puntano alle Edge Functions Supabase via:
 ### Backend leggero
 
 Le integrazioni esterne stanno nelle funzioni dentro
-[supabase/functions](/Users/matteobernardini/code/calendarsports/supabase/functions):
+[supabase/functions](./supabase/functions):
 
 - `sports-f1`
 - `sports-football`
@@ -440,7 +440,7 @@ VITE_SUPABASE_PROJECT_ID=
 Nel repository era presente anche una `.env` reale con chiavi di progetto.
 Trattala come materiale da rimuovere dal versionamento e ruotare se necessario.
 Usa invece `.env.local` o `.env` locale non tracciata e prendi come base
-[.env.example](/Users/matteobernardini/code/calendarsports/.env.example).
+[.env.example](./.env.example).
 
 Variabili aggiuntive non-Vite:
 
@@ -548,7 +548,7 @@ bun run test:watch
 ## Supabase e funzioni edge
 
 Le funzioni edge sono sotto
-[supabase/functions](/Users/matteobernardini/code/calendarsports/supabase/functions).
+[supabase/functions](./supabase/functions).
 
 Punti chiave:
 
@@ -780,14 +780,34 @@ JPEG quality 85 progressive con strip metadata, PNG con palette adattiva +
 - Documentare meglio il flusso di deploy reale e lo stato delle Edge Functions
   deployate.
 
+## Documentazione
+
+- [`AGENTS.md`](./AGENTS.md) — il contratto per chi lavora al repository, con la
+  tabella che indica quale guida leggere per ogni area.
+- [`docs/agent-playbook/`](./docs/agent-playbook/) — le cinque guide operative:
+  architettura e confini, fonti dati e tempo, operativita' del repository,
+  verifica e guardiani, mappa per area.
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — route, hook, chiavi di
+  cache, schema del database, PWA.
+- [`docs/DATA_SOURCES.md`](./docs/DATA_SOURCES.md) — da dove viene ogni dato,
+  funzione per funzione, e quali sono API reali, scraping o dataset statici.
+- [`docs/SECURITY.md`](./docs/SECURITY.md) — RLS, CORS, rate limit, segreti e i
+  punti aperti dichiarati.
+- [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md) — comandi, convenzioni e
+  regole obbligatorie.
+- [`docs/ROADMAP.md`](./docs/ROADMAP.md) — cosa non esiste ancora e perche'.
+- [`changelog.md`](./changelog.md) e [`docs/releases/`](./docs/releases/) —
+  storia delle versioni.
+
 ## File da leggere per orientarsi
 
-- [src/App.tsx](/Users/matteobernardini/code/calendarsports/src/App.tsx)
-- [src/lib/api/sportsApi.ts](/Users/matteobernardini/code/calendarsports/src/lib/api/sportsApi.ts)
-- [src/hooks/useSportsData.ts](/Users/matteobernardini/code/calendarsports/src/hooks/useSportsData.ts)
-- [supabase/functions/sports-f1/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-f1/index.ts)
-- [supabase/functions/sports-football/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-football/index.ts)
-- [supabase/functions/sports-tennis/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-tennis/index.ts)
-- [supabase/functions/sports-motogp/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/sports-motogp/index.ts)
-- [supabase/functions/streaming-tv/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/streaming-tv/index.ts) (FRAGILE: scraping `staseraintv.com`, parser regex)
-- [supabase/functions/streaming-releases/index.ts](/Users/matteobernardini/code/calendarsports/supabase/functions/streaming-releases/index.ts) (richiede secret `TMDB_API_KEY`)
+- [`src/App.tsx`](./src/App.tsx) — route e albero dei provider.
+- [`src/lib/api/sportsApi.ts`](./src/lib/api/sportsApi.ts) — trasporto verso le
+  edge function.
+- [`src/hooks/useSportsData.ts`](./src/hooks/useSportsData.ts) — chiavi di cache
+  e azioni chiamate.
+- [`src/lib/dateUtils.ts`](./src/lib/dateUtils.ts) — la policy sul fuso orario.
+- [`supabase/functions/`](./supabase/functions/) — gli adattatori verso le fonti
+  esterne. Prima di toccarli, leggi
+  [`docs/DATA_SOURCES.md`](./docs/DATA_SOURCES.md): non tutte le sezioni sono
+  alimentate da API reali.
