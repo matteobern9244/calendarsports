@@ -14,9 +14,12 @@ playwright-report
 test-results
 .playwright-cli/
 *.local
-.env
-.env.*
-!.env.example
+# `.env` e' tracciato di proposito: serve a Lovable per il build e contiene
+# solo valori pubblici (URL del progetto Supabase e anon key, gia' presenti
+# nel bundle client). I segreti veri non ci vanno mai: quelli delle edge
+# function stanno nei secrets di Supabase, quelli personali in `.env.local`.
+.env.local
+.env.*.local
 
 # Editor directories and files
 .vscode/*
