@@ -31,7 +31,6 @@ export default defineConfig({
     command: [
       `VITE_SUPABASE_URL=${mockSupabaseUrl}`,
       "VITE_SUPABASE_PUBLISHABLE_KEY=test-anon-key",
-      "VITE_DISABLE_QUERY_RETRIES=true",
       "bun run build",
       `bun run preview -- --host ${previewHost} --port ${previewPort} --strictPort`,
     ].join(" && "),
