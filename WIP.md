@@ -4,8 +4,11 @@ Lavoro in corso sul branch `develop`, interrotto la sera del **26 agosto 2026**.
 Questo file esiste per poter riprendere a freddo: dice cosa è stato fatto, cosa
 resta, e dove ricominciare esattamente.
 
-Il piano completo da cui nasce il lavoro è in
-`~/.claude/plans/fai-un-audit-completo-splendid-rainbow.md`.
+Il piano completo da cui nasce il lavoro si chiama **«Audit completo
+calendarsports — Piano di implementazione»** e vive fuori dal repository, in
+`~/.claude/plans/fai-un-audit-completo-splendid-rainbow.md`. Contiene le sette
+fasi con i task numerati citati qui sotto, la matrice delle dipendenze verificate
+sul registro npm e la tabella dei rischi per ogni cluster di aggiornamento.
 
 ## Stato verificato al momento dell'interruzione
 
