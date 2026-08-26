@@ -54,11 +54,11 @@ export default tseslint.config(
     },
   },
   {
-    // Il wrapper sicuro e il file auto-generato possono restare liberi dalla regola.
-    files: [
-      "src/lib/supabaseClient.ts",
-      "src/integrations/supabase/client.ts",
-    ],
+    // Il wrapper sicuro e' l'unico punto autorizzato a creare il client.
+    // Il divieto sopra resta anche se Lovable rigenera
+    // `src/integrations/supabase/client.ts`: e' proprio quel file a non
+    // dover essere importato da nessuno.
+    files: ["src/lib/supabaseClient.ts"],
     rules: {
       "no-restricted-imports": "off",
     },
