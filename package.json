@@ -11,7 +11,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc -b",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -19,7 +20,8 @@
     "test:e2e:headed": "playwright test --headed",
     "check:italian": "node scripts/check-italian-ui.mjs",
     "check:tz-juventus": "node scripts/check-rome-tz.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "verify": "bun run typecheck && bun run lint && bun run check:italian && bun run check:tz-juventus && bun run test && bun run build"
   },
   "lint-staged": {
     "*.{ts,tsx}": "eslint --max-warnings=0 --no-warn-ignored"

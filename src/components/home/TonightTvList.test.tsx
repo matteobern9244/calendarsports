@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { TvFamilyPayload } from "@/hooks/useStreamingData";
 
 // Mock di @tanstack/react-query: forniamo un useQueries che restituisce

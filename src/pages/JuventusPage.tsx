@@ -116,13 +116,9 @@ export default function JuventusPage() {
   // contiene la prossima partita. Fatto in render invece che in un effect:
   // l'atterraggio avviene nello stesso passaggio in cui arrivano i dati,
   // senza far vedere prima la pagina 1 e poi saltare.
-  const landingPage =
-    calendar && typeof calendar.nextUpcomingIndex === "number" && calendar.nextUpcomingIndex >= 0
-      ? Math.floor(calendar.nextUpcomingIndex / PAGE_SIZE) + 1
-      : null;
-  if (!userInteracted && landingPage !== null) {
+  if (!userInteracted && calendar && nextMatchPage !== null) {
     setUserInteracted(true);
-    if (landingPage !== calendar.page) setPage(landingPage);
+    if (nextMatchPage !== calendar.page) setPage(nextMatchPage);
   }
 
   // Prefetch della pagina successiva del calendario Juventus quando la

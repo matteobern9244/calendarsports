@@ -140,7 +140,6 @@ export default function JuventusMatchPage() {
 function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
   const isFinished = match.status === "FullTime";
   const isJuveHome = match.homeTeam?.toLowerCase().includes("juventus");
-  const opponent = isJuveHome ? match.awayTeam : match.homeTeam;
   const { date: dateStr, time: timeStr, full: fullStr } = formatJuventusDateTime(match.date);
   const compColor = COMPETITION_COLORS[match.competition] || "";
 

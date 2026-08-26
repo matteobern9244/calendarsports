@@ -171,6 +171,7 @@ export default function StreamingPage() {
     initialItalyProvider,
   );
   const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
+  const { isOnline } = useOnlineStatus();
   const lastSyncLabel = useMemo(() => {
     if (!lastSyncAt) return null;
     return new Intl.DateTimeFormat("it-IT", {
@@ -283,6 +284,23 @@ export default function StreamingPage() {
   const activeKindLabel = KINDS.find((k) => k.id === kindFilter)?.label ?? "";
   const activeGenreLabel = GENRES.find((g) => g.id === genre)?.label ?? "Tutti i generi";
   const activeSortLabel = sort === "popularity" ? "Popolarità" : "Data uscita";
+
+  // Stesso comportamento delle pagine sport: se siamo offline e non c'e'
+  // nulla in cache da nessuna delle due fonti, si mostra il fallback invece
+  // di una pagina vuota. I componenti erano gia' importati qui ma non erano
+  // mai stati collegati.
+  if (!isOnline && tvQuery.error && !tvQuery.data && italyQuery.error && !italyQuery.data) {
+    return (
+      <div className="container py-8 sm:py-12">
+        <OfflineFallback
+          onRetry={() => {
+            tvQuery.refetch();
+            italyQuery.refetch();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 space-y-8">
@@ -471,7 +489,7 @@ export default function StreamingPage() {
                 <Button
                   key={k.id}
                   size="sm"
-                  variant={kindFilter === k.id ? "default" : "outline-solid"}
+                  variant={kindFilter === k.id ? "default" : "outline"}
                   onClick={() => setKindFilter(k.id)}
                   className={cn(
                     "rounded-full font-heading uppercase tracking-wider text-xs",
@@ -707,7 +725,7 @@ function FamilySelector({
           <Button
             key={f.id}
             size="sm"
-            variant={value === f.id ? "default" : "outline-solid"}
+            variant={value === f.id ? "default" : "outline"}
             onClick={() => onChange(f.id)}
             className={cn(
               "rounded-full font-heading uppercase tracking-wider text-xs",
@@ -740,7 +758,7 @@ function ItalyProviderFilter({
           <Button
             key={p.id}
             size="sm"
-            variant={value === p.id ? "default" : "outline-solid"}
+            variant={value === p.id ? "default" : "outline"}
             onClick={() => onChange(p.id)}
             className={cn(
               "rounded-full font-heading uppercase tracking-wider text-xs",

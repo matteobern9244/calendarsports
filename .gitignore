@@ -9,6 +9,8 @@ lerna-debug.log*
 
 node_modules
 dist
+# Cache incrementale di `tsc -b`
+*.tsbuildinfo
 dist-ssr
 playwright-report
 test-results
