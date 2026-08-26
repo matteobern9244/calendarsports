@@ -112,17 +112,18 @@ export default function JuventusPage() {
     return null;
   })();
 
-  // Smart landing: jump to the page containing the next upcoming match on first load
-  useEffect(() => {
-    if (userInteracted) return;
-    if (!calendar || typeof calendar.nextUpcomingIndex !== "number") return;
-    if (calendar.nextUpcomingIndex < 0) return;
-    const targetPage = Math.floor(calendar.nextUpcomingIndex / PAGE_SIZE) + 1;
-    if (targetPage !== calendar.page) {
-      setPage(targetPage);
-    }
+  // Smart landing: al primo caricamento ci si posiziona sulla pagina che
+  // contiene la prossima partita. Fatto in render invece che in un effect:
+  // l'atterraggio avviene nello stesso passaggio in cui arrivano i dati,
+  // senza far vedere prima la pagina 1 e poi saltare.
+  const landingPage =
+    calendar && typeof calendar.nextUpcomingIndex === "number" && calendar.nextUpcomingIndex >= 0
+      ? Math.floor(calendar.nextUpcomingIndex / PAGE_SIZE) + 1
+      : null;
+  if (!userInteracted && landingPage !== null) {
     setUserInteracted(true);
-  }, [calendar, userInteracted]);
+    if (landingPage !== calendar.page) setPage(landingPage);
+  }
 
   // Prefetch della pagina successiva del calendario Juventus quando la
   // pagina corrente e' stabile, cosi' lo scorrimento "Successiva" e'

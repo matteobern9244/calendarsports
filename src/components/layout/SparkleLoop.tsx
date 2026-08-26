@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 interface SparkleLoopProps {
@@ -22,6 +22,26 @@ interface Spark {
   scale: number;
 }
 
+/** Un ciclo di scintille: `id` cambia a ogni burst e fa da chiave di animazione. */
+interface Burst {
+  id: number;
+  sparks: Spark[];
+}
+
+function buildSparks(count: number, radius: number): Spark[] {
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.6;
+    const dist = radius * (0.7 + Math.random() * 0.5);
+    return {
+      id: i,
+      dx: Math.cos(angle) * dist,
+      dy: Math.sin(angle) * dist,
+      delay: Math.random() * 0.25,
+      scale: 0.7 + Math.random() * 0.6,
+    };
+  });
+}
+
 /**
  * Loop ambient di scintille gold che si irradiano dal centro del genitore
  * (tipicamente l'icona della voce attiva del menu). Rispetta
@@ -38,38 +58,27 @@ export function SparkleLoop({
   glow = false,
 }: SparkleLoopProps) {
   const reduce = useReducedMotion();
-  const [tick, setTick] = useState(0);
+  // Le scintille sono generate a caso, quindi non possono nascere durante il
+  // render: un valore impuro non e' ricalcolabile in sicurezza da React.
+  // Vengono prodotte nell'effect che scandisce i burst e conservate in stato
+  // insieme all'id del burst, che serve come `key` per far ripartire
+  // l'animazione a ogni ciclo.
+  const [burst, setBurst] = useState<Burst>({ id: 0, sparks: [] });
 
   useEffect(() => {
     if (reduce) return;
+    const nextBurst = () =>
+      setBurst((b) => ({ id: b.id + 1, sparks: buildSparks(count, radius) }));
     // Primo burst leggermente ritardato per non partire subito al mount
-    const initial = window.setTimeout(() => setTick((t) => t + 1), 800);
-    const id = window.setInterval(
-      () => setTick((t) => t + 1),
-      intervalMs + Math.random() * 800
-    );
+    const initial = window.setTimeout(nextBurst, 800);
+    const id = window.setInterval(nextBurst, intervalMs + Math.random() * 800);
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(id);
     };
-  }, [intervalMs, reduce]);
+  }, [intervalMs, reduce, count, radius]);
 
-  const sparks = useMemo<Spark[]>(() => {
-    const arr: Spark[] = [];
-    const n = count;
-    for (let i = 0; i < n; i++) {
-      const angle = (i / n) * Math.PI * 2 + Math.random() * 0.6;
-      const dist = radius * (0.7 + Math.random() * 0.5);
-      arr.push({
-        id: i,
-        dx: Math.cos(angle) * dist,
-        dy: Math.sin(angle) * dist,
-        delay: Math.random() * 0.25,
-        scale: 0.7 + Math.random() * 0.6,
-      });
-    }
-    return arr;
-  }, [count, radius, tick]);
+  const { id: tick, sparks } = burst;
 
   if (reduce) return null;
 

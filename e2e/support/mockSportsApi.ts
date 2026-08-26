@@ -81,6 +81,9 @@ const payloads: Record<EndpointName, unknown> = {
   },
   "sports-football:calendar": [
     {
+      // Stesso formato prodotto da `buildMatchId` nell'edge function:
+      // competizione-dataRoma-casa-vs-trasferta.
+      id: "serie-a-2099-04-26-juventus-vs-milan",
       matchday: 34,
       homeTeam: "Juventus",
       awayTeam: "Milan",
@@ -95,6 +98,7 @@ const payloads: Record<EndpointName, unknown> = {
       broadcaster: "DAZN | Sky Sport",
     },
     {
+      id: "champions-league-2099-05-03-inter-vs-juventus",
       matchday: 35,
       homeTeam: "Inter",
       awayTeam: "Juventus",

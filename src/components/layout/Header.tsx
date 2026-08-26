@@ -14,7 +14,7 @@ import {
   CalendarBrandIcon,
 } from "./BrandIcons";
 import { SparkleLoop } from "./SparkleLoop";
-import { usePreferencesPanel } from "@/contexts/PreferencesPanelContext";
+import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 
 // Header non riceve piu' props: tema e preferenze sono in /preferenze.
 

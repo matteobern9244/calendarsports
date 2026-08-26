@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface TeamLogoProps {
@@ -36,12 +36,11 @@ export default function TeamLogo({
   initials,
   alt,
 }: TeamLogoProps) {
-  const [failed, setFailed] = useState(false);
-
-  // Reset failure state if src changes
-  useEffect(() => {
-    setFailed(false);
-  }, [src]);
+  // Memorizziamo *quale* src ha fallito invece di un booleano: quando la prop
+  // cambia, `failed` torna falso da solo. Cosi' non serve un effect di reset,
+  // che costringerebbe a un secondo render dopo ogni cambio di logo.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const failed = failedSrc !== null && failedSrc === src;
 
   const shapeClass = shape === "circle" ? "rounded-full" : "rounded-md";
   const dimensions = { width: size, height: size };
@@ -72,7 +71,7 @@ export default function TeamLogo({
       loading="lazy"
       decoding="async"
       referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
       className={cn("object-contain flex-shrink-0 bg-background/40", shapeClass, className)}
     />
   );

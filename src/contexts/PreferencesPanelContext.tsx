@@ -1,12 +1,8 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-
-interface PreferencesPanelContextValue {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  toggle: () => void;
-}
-
-const PreferencesPanelContext = createContext<PreferencesPanelContextValue | null>(null);
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  PreferencesPanelContext,
+  type PreferencesPanelContextValue,
+} from "./usePreferencesPanel";
 
 export function PreferencesPanelProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -22,12 +18,4 @@ export function PreferencesPanelProvider({ children }: { children: ReactNode }) 
       {children}
     </PreferencesPanelContext.Provider>
   );
-}
-
-export function usePreferencesPanel() {
-  const ctx = useContext(PreferencesPanelContext);
-  if (!ctx) {
-    throw new Error("usePreferencesPanel deve essere usato dentro PreferencesPanelProvider");
-  }
-  return ctx;
 }

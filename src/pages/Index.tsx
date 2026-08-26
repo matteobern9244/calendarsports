@@ -16,6 +16,7 @@ import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { cn } from "@/lib/utils";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useNowMinute } from "@/hooks/useNow";
 
 interface UpcomingEvent {
   sport: string;
@@ -53,9 +54,10 @@ export default function HomePage() {
 
   const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
 
+  const now = useNowMinute();
+
   const events = useMemo(() => {
     const upcoming: UpcomingEvent[] = [];
-    const now = Date.now();
 
     if (f1Data?.date) {
       upcoming.push({
@@ -112,7 +114,7 @@ export default function HomePage() {
     }
 
     return upcoming.sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime());
-  }, [f1Data, juveCalendar, sinnerNext, motogpNext]);
+  }, [f1Data, juveCalendar, sinnerNext, motogpNext, now]);
 
   // Fallback offline: nessun dato in cache da nessuna fonte e siamo offline
   if (

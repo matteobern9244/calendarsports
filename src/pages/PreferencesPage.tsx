@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { usePreferencesPanel } from "@/contexts/PreferencesPanelContext";
+import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 
 /**
  * La pagina /preferenze non renderizza più una vista a sé:

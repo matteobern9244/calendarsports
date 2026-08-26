@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import { isPreviewOrIframe } from "@/lib/pushClient";
 import "./index.css";
 
 // Cleanup one-shot: rimuove la chiave delle preferenze stagione obsolete.
@@ -19,16 +20,17 @@ createRoot(document.getElementById("root")!).render(<App />);
 // Solo in produzione fuori dall'iframe Lovable e dagli host di preview.
 (() => {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-  let inIframe = false;
-  try { inIframe = window.self !== window.top; } catch { inIframe = true; }
-  const host = window.location.hostname;
-  const isPreview = host.includes("id-preview--") || host.includes("lovableproject.com");
-  if (inIframe || isPreview) {
+  if (isPreviewOrIframe()) {
     // Pulizia difensiva: niente SW in preview/iframe
-    navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((rs) => rs.forEach((r) => r.unregister()))
+      .catch((err) => console.warn("[sw] rimozione registrazioni fallita", err));
     return;
   }
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    navigator.serviceWorker
+      .register("/sw.js")
+      .catch((err) => console.warn("[sw] registrazione fallita", err));
   });
 })();

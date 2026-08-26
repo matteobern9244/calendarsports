@@ -307,10 +307,14 @@ export default function TonightTvList() {
     ? familyLabelMap[familyFilter]
     : null;
 
-  // Reset paginazione quando cambia il filtro famiglia
-  useEffect(() => {
+  // Reset paginazione quando cambia il filtro famiglia. Confrontato con il
+  // render precedente invece che in un effect: cosi' non scatta al mount e
+  // non costa un secondo render a ogni cambio.
+  const [prevFamilyFilter, setPrevFamilyFilter] = useState(familyFilter);
+  if (prevFamilyFilter !== familyFilter) {
+    setPrevFamilyFilter(familyFilter);
     setTvPage(0);
-  }, [familyFilter]);
+  }
 
   const totalTvPages = Math.max(1, Math.ceil(tonightHighlights.length / TV_PAGE_SIZE));
   const safePage = Math.min(tvPage, totalTvPages - 1);

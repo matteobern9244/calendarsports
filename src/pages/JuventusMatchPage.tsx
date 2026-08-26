@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
@@ -18,17 +18,6 @@ import { getCurrentJuventusSeason } from "@/lib/currentSeason";
 import { formatJuventusDateTime } from "@/lib/dateUtils";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 
-const PAGE_SIZE = 12;
-
-type PaginatedCalendar = {
-  items: any[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  nextUpcomingIndex: number;
-};
-
 const COMPETITION_COLORS: Record<string, string> = {
   "Serie A":
     "bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] border-[hsl(var(--gold))]/40",
@@ -38,11 +27,20 @@ const COMPETITION_COLORS: Record<string, string> = {
     "bg-[hsl(var(--secondary))]/15 text-[hsl(var(--secondary))] dark:text-[hsl(var(--gold))] border-[hsl(var(--secondary))]/40",
 };
 
-function findMatch(calendar: PaginatedCalendar | undefined, matchId: string) {
-  if (!calendar) return null;
-  if (!Array.isArray(calendar.items)) return null;
+/**
+ * Estrae l'elenco partite accettando entrambe le forme che l'edge function
+ * puo' restituire: array nudo (richiesta senza paginazione) o inviluppo
+ * `{ items }` (richiesta con `page`/`pageSize`, o cache di una vista paginata).
+ */
+function matchesOf(calendar: unknown): any[] {
+  if (Array.isArray(calendar)) return calendar;
+  const items = (calendar as { items?: unknown } | undefined)?.items;
+  return Array.isArray(items) ? items : [];
+}
+
+function findMatch(calendar: unknown, matchId: string) {
   return (
-    calendar.items.find((m: any) => {
+    matchesOf(calendar).find((m: any) => {
       if (m?.id == null) return false;
       const id = String(m.id);
       if (id === '' || id === 'undefined' || id === 'null') return false;
@@ -62,46 +60,21 @@ export default function JuventusMatchPage() {
   }, [matchId]);
   const season = getCurrentJuventusSeason();
 
-  // First page: discover total/totalPages and try to find the match here
-  const firstPageQuery = useJuventusCalendar(season, 1, PAGE_SIZE);
-  const firstPage = firstPageQuery.data as PaginatedCalendar | undefined;
+  // Senza parametri di pagina l'edge function restituisce il calendario
+  // completo della stagione: una manciata di decine di partite. Cercare la
+  // partita in memoria costa una query sola, mentre camminare le pagine una
+  // alla volta costava fino a `totalPages` round-trip in sequenza, ognuno in
+  // attesa del precedente. E' anche la stessa chiave di cache che usa la Home,
+  // quindi arrivando da li' il dato e' gia' pronto.
+  const calendarQuery = useJuventusCalendar(season);
 
-  // Search across all pages until we find the match
-  const [searchPage, setSearchPage] = useState(1);
-  const searchQuery = useJuventusCalendar(season, searchPage, PAGE_SIZE);
-  const searchData = searchQuery.data as PaginatedCalendar | undefined;
+  const foundMatch = useMemo(
+    () => findMatch(calendarQuery.data, decodedMatchId),
+    [calendarQuery.data, decodedMatchId],
+  );
 
-  const [foundMatch, setFoundMatch] = useState<any | null>(null);
-  const [exhausted, setExhausted] = useState(false);
-
-  useEffect(() => {
-    setFoundMatch(null);
-    setExhausted(false);
-    setSearchPage(1);
-  }, [decodedMatchId, season]);
-
-  useEffect(() => {
-    if (foundMatch || !searchData) return;
-    // `placeholderData` può restituire i dati della pagina precedente mentre
-    // la nuova è in fetch: avanzare in quel caso salterebbe pagine mai lette.
-    if (searchData.page !== searchPage) return;
-    const m = findMatch(searchData, decodedMatchId);
-    if (m) {
-      setFoundMatch(m);
-      return;
-    }
-    if (searchPage >= searchData.totalPages) {
-      setExhausted(true);
-      return;
-    }
-    setSearchPage((p) => p + 1);
-  }, [searchData, decodedMatchId, foundMatch, searchPage]);
-
-  const isLoading =
-    !foundMatch &&
-    !exhausted &&
-    (firstPageQuery.isLoading || searchQuery.isLoading || searchQuery.isFetching);
-  const error = firstPageQuery.error ?? searchQuery.error;
+  const isLoading = calendarQuery.isLoading;
+  const error = calendarQuery.error;
 
   if (isLoading) {
     return (
@@ -117,12 +90,7 @@ export default function JuventusMatchPage() {
         <ErrorState
           message="Dettaglio partita non disponibile"
           detail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la pagina ufficiale Juventus su Sky Sport."
-          onRetry={() => {
-            setFoundMatch(null);
-            setExhausted(false);
-            setSearchPage(1);
-            firstPageQuery.refetch();
-          }}
+          onRetry={() => calendarQuery.refetch()}
           externalLink="https://sport.sky.it/calcio/serie-a/squadre/juventus"
           externalLabel="Vedi calendario su Sky Sport"
           ctaHint="Tocca qui per le info ufficiali della partita"
@@ -139,7 +107,7 @@ export default function JuventusMatchPage() {
     );
   }
 
-  if (exhausted && !foundMatch) {
+  if (!foundMatch) {
     return (
       <div className="container py-8 sm:py-12">
         <ErrorState
@@ -161,23 +129,10 @@ export default function JuventusMatchPage() {
     );
   }
 
-  if (!foundMatch) {
-    return (
-      <div className="container py-8 sm:py-12">
-        <LoadingState message="Caricamento dettaglio partita..." />
-      </div>
-    );
-  }
-
   return (
     <MatchDetail
       match={foundMatch}
-      onRetry={() => {
-        setFoundMatch(null);
-        setExhausted(false);
-        setSearchPage(1);
-        firstPageQuery.refetch();
-      }}
+      onRetry={() => calendarQuery.refetch()}
     />
   );
 }

@@ -46,10 +46,13 @@ export default function SinnerPage() {
   const { isOnline } = useOnlineStatus();
 
   // Reset paginazione quando cambia la stagione: pagine alte di una
-  // stagione precedente non hanno senso per la nuova.
-  useEffect(() => {
+  // stagione precedente non hanno senso per la nuova. Confrontato con il
+  // render precedente invece che in un effect, che scatterebbe anche al mount.
+  const [prevSeason, setPrevSeason] = useState(season);
+  if (prevSeason !== season) {
+    setPrevSeason(season);
     setResultsPage(1);
-  }, [season]);
+  }
 
   // Compatibilita' di forma: il backend ora restituisce
   // `{ items, pagination }`, ma per sicurezza accettiamo anche il

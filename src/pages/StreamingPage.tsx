@@ -39,6 +39,7 @@ import {
   useReleasesItaly,
   useTvByFamily,
   type ReleaseItem,
+  type TvChannel,
 } from "@/hooks/useStreamingData";
 import type {
   StreamingFamilyId,
@@ -49,6 +50,11 @@ import { todayRomeISO, addDaysISO, formatDateIT } from "@/lib/dateUtils";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+
+// `?? []` creerebbe un array nuovo a ogni render, invalidando le `useMemo`
+// che lo ricevono come dipendenza. Un vuoto condiviso ha identita' stabile.
+const NO_CHANNELS: TvChannel[] = [];
+const NO_ITEMS: ReleaseItem[] = [];
 
 const CHANNELS_PER_PAGE = 6;
 const RELEASES_PER_PAGE = 8;
@@ -202,10 +208,20 @@ export default function StreamingPage() {
     genre,
   ]);
 
-  // Reset page when filters change
-  useEffect(() => {
+  // Reset della pagina quando cambiano i filtri.
+  //
+  // Come effect questo era un bug: gli effect girano anche al mount, quindi la
+  // pagina arrivata da `?page=` veniva subito riscritta a 1 e il deep-link
+  // andava perso. Confrontando i filtri con quelli del render precedente il
+  // reset scatta solo quando cambiano davvero. E' il pattern React di
+  // "aggiustare lo stato quando cambiano le props": React riesegue subito il
+  // render senza mostrare quello intermedio.
+  const filtersKey = [family, range, kindFilter, tab, italyProvider, sort, genre].join("|");
+  const [prevFiltersKey, setPrevFiltersKey] = useState(filtersKey);
+  if (prevFiltersKey !== filtersKey) {
+    setPrevFiltersKey(filtersKey);
     setPage(1);
-  }, [family, range, kindFilter, tab, italyProvider, sort, genre]);
+  }
 
   const tvQuery = useTvByFamily(family);
 
@@ -229,7 +245,7 @@ export default function StreamingPage() {
     genreId: genre ?? undefined,
   });
 
-  const channels = tvQuery.data?.channels ?? [];
+  const channels = tvQuery.data?.channels ?? NO_CHANNELS;
   const channelsPageCount = Math.max(1, Math.ceil(channels.length / CHANNELS_PER_PAGE));
   const visibleChannels = useMemo(
     () =>
@@ -242,7 +258,7 @@ export default function StreamingPage() {
 
   // Sorgente unica: Catalogo Italia (filtri server-side).
   const activeQuery = italyQuery;
-  const filteredItems: ReleaseItem[] = italyQuery.data?.items ?? [];
+  const filteredItems: ReleaseItem[] = italyQuery.data?.items ?? NO_ITEMS;
   const itemsPageCount = Math.max(1, Math.ceil(filteredItems.length / RELEASES_PER_PAGE));
   const visibleItems = useMemo(
     () =>

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { usePreferencesPanel } from "@/contexts/PreferencesPanelContext";
+import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { useCountdownMode } from "@/hooks/useCountdownMode";

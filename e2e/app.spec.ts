@@ -95,3 +95,24 @@ test("Stasera in TV: separatore oro tra famiglie e etichette mobile visibili", a
   await expect(mobileLabels.nth(1)).toContainText("Mediaset");
   await expect(mobileLabels.nth(1)).toBeVisible();
 });
+
+test("dettaglio partita Juventus: raggiungibile dal calendario e con id diretto", async ({
+  page,
+}) => {
+  await installSportsApiMocks(page);
+
+  // Percorso reale dell'utente: dal calendario si apre la scheda partita.
+  await page.goto("/juventus");
+  await page.getByRole("link", { name: /vs Milan/ }).first().click();
+  await expect(page).toHaveURL(/\/juventus\/partite\//);
+  await expect(page.getByRole("heading", { name: /Juventus – Milan/ })).toBeVisible();
+  await expect(page.getByText("DAZN").first()).toBeVisible();
+
+  // Deep-link diretto: la partita si trova anche senza passare dal calendario.
+  await page.goto("/juventus/partite/champions-league-2099-05-03-inter-vs-juventus");
+  await expect(page.getByRole("heading", { name: /Inter – Juventus/ })).toBeVisible();
+
+  // Un id inesistente non deve dare pagina bianca ne' caricamento infinito.
+  await page.goto("/juventus/partite/partita-che-non-esiste");
+  await expect(page.getByText("Partita non trovata nel calendario")).toBeVisible();
+});
