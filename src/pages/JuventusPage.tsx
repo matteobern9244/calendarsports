@@ -24,7 +24,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { footballApi } from "@/lib/api/sportsApi";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";

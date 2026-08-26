@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet } from "react-router";
 import Header from "./Header";
 import { APP_NAME, APP_VERSION } from "@/lib/version";
 import OfflineIndicator from "@/components/common/OfflineIndicator";
