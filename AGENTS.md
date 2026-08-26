@@ -196,7 +196,7 @@ import { supabase } from "@/integrations/supabase/client";
   "stringa naive = UTC" e l'opzione `timeZone: "Europe/Rome"`). Vietato
   chiamare `new Date(x).toLocaleTimeString(...)` o
   `toLocaleDateString(...)` senza `timeZone: "Europe/Rome"` nelle
-  pagine Juventus / Home. Il workflow CI esegue `npm run check:tz-juventus`
+  pagine Juventus / Home. Il workflow CI esegue `bun run check:tz-juventus`
   (`scripts/check-rome-tz.mjs`) e fallisce in presenza di violazioni.
 - **Lingua UI: italiano obbligatorio.** Tutta l'UI dell'app e' in italiano.
   Le uniche eccezioni autorizzate sono i token `STREAMING` (nome sezione) e
@@ -205,7 +205,7 @@ import { supabase } from "@/integrations/supabase/client";
   (ATP, WTA, GP, TMDB, RAI, Pos, Pts, ecc.) non sono considerate "inglese".
   Vietato introdurre testo inglese in stringhe utente, placeholder,
   `aria-label`, `sr-only`, toast, error message o titoli pagina.
-- Il workflow CI esegue `npm run check:italian` (script
+- Il workflow CI esegue `bun run check:italian` (script
   `scripts/check-italian-ui.mjs`). Se devi introdurre intenzionalmente
   una stringa non italiana (es. brand non in allowlist), aggiorna
   l'allowlist nello stesso PR e dichiara il motivo nel changelog.
@@ -232,8 +232,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 ## Checklist post-edit
 
-- Eseguire i controlli pertinenti: `npm run lint`, `npm run build`,
-  `npm run test`.
+- Eseguire i controlli pertinenti: `bun run lint`, `bun run build`,
+  `bun run test`.
 - Se vengono creati o modificati file Markdown, eseguire un controllo
   `markdownlint` sui file `.md` del progetto.
 - Se il cambiamento e' UI o data-shape, verificare almeno le pagine principali

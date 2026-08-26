@@ -24,29 +24,33 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 20
-          cache: npm
+          node-version: 24
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Italian UI guard
-        run: npm run check:italian
+        run: bun run check:italian
 
       - name: Rome timezone guard (Juventus)
-        run: npm run check:tz-juventus
+        run: bun run check:tz-juventus
 
       - name: Unit tests
-        run: npm run test
+        run: bun run test
 
       - name: Build
         env:
           VITE_SUPABASE_URL: http://127.0.0.1:54321
           VITE_SUPABASE_PUBLISHABLE_KEY: test-anon-key
-        run: npm run build
+        run: bun run build
 
   e2e:
     name: e2e
@@ -59,17 +63,21 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 20
-          cache: npm
+          node-version: 24
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: bunx playwright install --with-deps chromium
 
       - name: End-to-end tests
-        run: npm run test:e2e
+        run: bun run test:e2e
 
       - name: Upload Playwright report
         if: failure()

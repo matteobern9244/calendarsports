@@ -413,17 +413,18 @@ Rischi:
 
 ### Prerequisiti
 
-- Node.js 20+ raccomandato
-- npm disponibile
+- Node.js 24+ (richiesto da `engines`; gli script guardiano in `scripts/` girano con node)
+- Bun 1.3.13+ — è il package manager del progetto (`packageManager` in `package.json`)
 - progetto Supabase valido se vuoi usare le Edge Functions reali collegate
 
-Il repository contiene anche `bun.lock` e `bun.lockb`, ma i comandi
-ufficialmente presenti in `package.json` sono npm-based.
+Il repository ha un solo lockfile, `bun.lock`. Non usare npm: genererebbe un
+`package-lock.json` concorrente e un albero di dipendenze diverso da quello
+che gira in CI.
 
 ### Installazione
 
 ```bash
-npm install
+bun install
 ```
 
 ### Variabili ambiente
@@ -455,31 +456,31 @@ setup Supabase e Lovable esistente.
 ### Avvio locale
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 ### Build
 
 ```bash
-npm run build
+bun run build
 ```
 
 ### Preview build
 
 ```bash
-npm run preview
+bun run preview
 ```
 
 ### Lint
 
 ```bash
-npm run lint
+bun run lint
 ```
 
 ### Controllo lingua UI italiana
 
 ```bash
-npm run check:italian
+bun run check:italian
 ```
 
 Lo script `scripts/check-italian-ui.mjs` analizza `src/` (escluse cartelle
@@ -529,19 +530,19 @@ dichiarando il motivo nel `changelog.md`.
 ### Test
 
 ```bash
-npm run test
+bun run test
 ```
 
 ### End-to-end test
 
 ```bash
-npm run test:e2e
+bun run test:e2e
 ```
 
 ### Test in watch
 
 ```bash
-npm run test:watch
+bun run test:watch
 ```
 
 ## Supabase e funzioni edge
