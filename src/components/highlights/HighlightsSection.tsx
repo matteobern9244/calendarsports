@@ -51,7 +51,7 @@ export default function HighlightsSection({
           href={playlistUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full border border-[hsl(var(--gold))]/40 bg-[hsl(var(--gold))]/5 px-3 py-1.5 text-[11px] font-heading font-bold uppercase tracking-wider text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/15 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full border border-[hsl(var(--gold))]/40 bg-[hsl(var(--gold))]/5 px-3 py-1.5 text-[11px] font-heading font-bold uppercase tracking-wider text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] hover:bg-[hsl(var(--gold))]/15 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Vedi playlist completa
           <ExternalLink className="h-3 w-3" aria-hidden="true" />

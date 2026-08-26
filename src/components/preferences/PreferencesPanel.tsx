@@ -149,7 +149,7 @@ export default function PreferencesPanel() {
                           "text-xs font-heading font-semibold uppercase tracking-wider",
                           "transition-colors",
                           active
-                            ? "bg-gradient-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
+                            ? "bg-linear-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
                             : "text-muted-foreground hover:text-foreground"
                         )}
                       >
@@ -217,7 +217,7 @@ export default function PreferencesPanel() {
                           "text-xs font-heading font-semibold uppercase tracking-wider",
                           "transition-colors",
                           active
-                            ? "bg-gradient-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
+                            ? "bg-linear-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
                             : "text-muted-foreground hover:text-foreground",
                         )}
                       >
@@ -281,7 +281,7 @@ export default function PreferencesPanel() {
                             "text-xs font-heading font-semibold uppercase tracking-wider",
                             "border transition-colors",
                             active
-                              ? "border-transparent bg-gradient-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
+                              ? "border-transparent bg-linear-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
                               : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
                           )}
                         >

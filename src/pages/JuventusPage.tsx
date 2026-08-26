@@ -231,18 +231,18 @@ export default function JuventusPage() {
             transition={{ duration: 0.4 }}
             className={cn(
               "relative mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--gold))]/40",
-              "bg-gradient-to-br from-[hsl(var(--gold))]/15 via-card to-[hsl(var(--navy))]/20",
+              "bg-linear-to-br from-[hsl(var(--gold))]/15 via-card to-[hsl(var(--navy))]/20",
               "shadow-[0_18px_44px_-22px_hsl(var(--gold)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]"
             )}
           >
             <Link
               to={`/juventus/partite/${encodeURIComponent(nextMatch.id ?? '')}`}
               aria-label={`Apri dettaglio ${isJuveHome ? 'Juventus vs ' + opponent : opponent + ' vs Juventus'}`}
-              className="block px-5 py-5 sm:px-6 sm:py-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
+              className="block px-5 py-5 sm:px-6 sm:py-6 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
             >
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--gold))] to-transparent opacity-80"
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--gold))] to-transparent opacity-80"
             />
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="h-4 w-4 text-[hsl(var(--gold))]" aria-hidden="true" />
@@ -351,7 +351,7 @@ export default function JuventusPage() {
                         key={s.position}
                         className={cn(
                           isJuve &&
-                            "relative bg-gradient-to-r from-[hsl(var(--gold))]/20 via-[hsl(var(--gold))]/8 to-transparent border-l-4 border-[hsl(var(--gold))] hover:bg-gradient-to-r hover:from-[hsl(var(--gold))]/25 hover:via-[hsl(var(--gold))]/10 hover:to-transparent"
+                            "relative bg-linear-to-r from-[hsl(var(--gold))]/20 via-[hsl(var(--gold))]/8 to-transparent border-l-4 border-[hsl(var(--gold))] hover:bg-linear-to-r hover:from-[hsl(var(--gold))]/25 hover:via-[hsl(var(--gold))]/10 hover:to-transparent"
                         )}
                       >
                         <TableCell
@@ -503,27 +503,27 @@ export default function JuventusPage() {
                     <Link
                       to={`/juventus/partite/${encodeURIComponent(m.id ?? '')}`}
                       aria-label={`Apri dettaglio ${m.homeTeam} vs ${m.awayTeam}`}
-                      className="flex items-center gap-3 px-4 py-3.5 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      className="flex items-center gap-3 px-4 py-3.5 rounded-2xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+                      className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
                     />
                     <span
                       aria-hidden="true"
                       className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_top,hsl(var(--gold)/0.10),transparent_60%)]"
                     />
                     {isNext && (
-                      <span className="absolute -top-2.5 left-4 z-10 rounded-full bg-gradient-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--gold)/0.6)]">
+                      <span className="absolute -top-2.5 left-4 z-10 rounded-full bg-linear-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--gold)/0.6)]">
                         Prossima
                       </span>
                     )}
-                    <div className="relative z-[1] flex-shrink-0 w-8">
+                    <div className="relative z-1 shrink-0 w-8">
                       <span className="text-xs text-muted-foreground font-heading">
                         {m.competition === 'Serie A' ? `G${m.matchday}` : m.matchday ? `R${m.matchday}` : '—'}
                       </span>
                     </div>
-                    <div className="relative z-[1] flex items-center gap-2 flex-1 min-w-0">
+                    <div className="relative z-1 flex items-center gap-2 flex-1 min-w-0">
                       <TeamLogo src={opponentLogo} name={opponent} size={24} shape="circle" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold truncate text-foreground">
@@ -555,7 +555,7 @@ export default function JuventusPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="relative z-[1] flex-shrink-0 text-right flex flex-col items-end gap-1">
+                    <div className="relative z-1 shrink-0 text-right flex flex-col items-end gap-1">
                       {isFinished ? (
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-heading font-bold">{m.homeScore} - {m.awayScore}</span>

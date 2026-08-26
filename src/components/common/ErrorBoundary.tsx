@@ -58,7 +58,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
             <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
               Dettagli tecnici
             </summary>
-            <pre className="mt-2 max-h-40 overflow-auto rounded bg-muted p-3 text-[11px] text-muted-foreground whitespace-pre-wrap break-words">
+            <pre className="mt-2 max-h-40 overflow-auto rounded bg-muted p-3 text-[11px] text-muted-foreground whitespace-pre-wrap wrap-break-word">
               {message}
             </pre>
           </details>

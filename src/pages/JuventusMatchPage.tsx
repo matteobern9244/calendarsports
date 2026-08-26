@@ -176,13 +176,13 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
         transition={{ duration: 0.4 }}
         className={cn(
           "relative mt-6 mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--gold))]/40 px-5 py-5 sm:px-6 sm:py-6",
-          "bg-gradient-to-br from-[hsl(var(--gold))]/15 via-card to-[hsl(var(--navy))]/20",
+          "bg-linear-to-br from-[hsl(var(--gold))]/15 via-card to-[hsl(var(--navy))]/20",
           "shadow-[0_18px_44px_-22px_hsl(var(--gold)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]",
         )}
       >
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--gold))] to-transparent opacity-80"
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--gold))] to-transparent opacity-80"
         />
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <Sparkles className="h-4 w-4 text-[hsl(var(--gold))]" aria-hidden="true" />

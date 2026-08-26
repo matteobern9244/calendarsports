@@ -115,7 +115,7 @@ export default function Header() {
                       layoutId="nav-active-pill"
                       className={cn(
                         "absolute inset-0 rounded-full -z-10",
-                        "bg-gradient-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))]",
+                        "bg-linear-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))]",
                         "shadow-[0_6px_20px_-6px_hsl(var(--gold)/0.65),0_1px_0_hsl(var(--gold-light)/0.7)_inset]"
                       )}
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
@@ -228,7 +228,7 @@ export default function Header() {
                         "relative flex items-center gap-3 pl-5 pr-4 py-3.5 rounded-xl border overflow-hidden transition-all duration-200",
                         "text-base font-heading font-semibold tracking-widest uppercase",
                         active
-                          ? "text-primary-foreground bg-gradient-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] border-[hsl(var(--gold-dark))]/60 shadow-[0_8px_22px_-8px_hsl(var(--gold)/0.6)]"
+                          ? "text-primary-foreground bg-linear-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] border-[hsl(var(--gold-dark))]/60 shadow-[0_8px_22px_-8px_hsl(var(--gold)/0.6)]"
                           : "text-foreground/85 border-border/60 bg-muted/30 hover:text-foreground hover:border-[hsl(var(--gold))]/45 hover:bg-muted/60"
                       )}
                     >

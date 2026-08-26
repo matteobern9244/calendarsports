@@ -43,13 +43,13 @@ export default function HighlightCard({ item, accentVar = "gold" }: HighlightCar
         "transition-[box-shadow,border-color,transform] duration-300 ease-out",
         "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
         "hover:shadow-[0_18px_44px_-22px_hsl(var(--gold)/0.55),0_4px_12px_-6px_hsl(var(--navy-dark)/0.4)]",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
       )}
       style={{ ["--ring" as string]: accent }}
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-[var(--accent-line)] to-transparent opacity-70"
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-linear-to-r from-transparent via-(--accent-line) to-transparent opacity-70"
         style={{ ["--accent-line" as string]: accent }}
       />
 
@@ -71,12 +71,12 @@ export default function HighlightCard({ item, accentVar = "gold" }: HighlightCar
         {/* Gradient overlay per leggibilità */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent"
+          className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/65 via-black/10 to-transparent"
         />
         {/* Play button center */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <span
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55 backdrop-blur-sm ring-1 ring-white/20 transition-all duration-300 group-hover:scale-110 group-hover:bg-black/70"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55 backdrop-blur-xs ring-1 ring-white/20 transition-all duration-300 group-hover:scale-110 group-hover:bg-black/70"
             style={{ boxShadow: `0 0 0 0 ${accent}` }}
           >
             <Play className="h-6 w-6 fill-white text-white" aria-hidden="true" />
@@ -96,7 +96,7 @@ export default function HighlightCard({ item, accentVar = "gold" }: HighlightCar
         )}
 
         {/* Badge data top-right */}
-        <span className="absolute top-2.5 right-2.5 rounded-full bg-background/85 backdrop-blur px-2 py-0.5 text-[10px] font-heading font-semibold tracking-wider text-foreground border border-border/60">
+        <span className="absolute top-2.5 right-2.5 rounded-full bg-background/85 backdrop-blur-sm px-2 py-0.5 text-[10px] font-heading font-semibold tracking-wider text-foreground border border-border/60">
           {dateLabel}
         </span>
       </div>
@@ -108,7 +108,7 @@ export default function HighlightCard({ item, accentVar = "gold" }: HighlightCar
         </h3>
         <div className="mt-auto flex items-center justify-between gap-2 pt-1.5 text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-1.5 min-w-0">
-            <Youtube className="h-3.5 w-3.5 flex-shrink-0" style={{ color: accent }} aria-hidden="true" />
+            <Youtube className="h-3.5 w-3.5 shrink-0" style={{ color: accent }} aria-hidden="true" />
             <span className="truncate font-semibold text-foreground/80">{item.source || "YouTube"}</span>
           </span>
           {relative && (

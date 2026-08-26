@@ -356,7 +356,7 @@ export default function TonightTvList() {
     tvQueries.some((q) => q.isPending);
 
   return (
-    <Card className="border-primary/30 bg-gradient-to-br from-card to-card/60">
+    <Card className="border-primary/30 bg-linear-to-br from-card to-card/60">
       <CardContent className="p-4 sm:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0">
@@ -408,7 +408,7 @@ export default function TonightTvList() {
             role="status"
             aria-live="polite"
             aria-busy="true"
-            className="min-h-[18rem] flex items-center justify-center"
+            className="min-h-72 flex items-center justify-center"
           >
             <LoadingState message="Caricamento palinsesto in corso..." />
           </div>
@@ -443,7 +443,7 @@ export default function TonightTvList() {
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`${meta.label} (${famLabel}). Si apre in una nuova scheda del browser.`}
-                        className="inline-flex items-center gap-1 rounded-full border border-[hsl(var(--gold))]/40 bg-card/60 px-2.5 py-1 text-[11px] font-heading uppercase tracking-wider text-foreground transition-colors hover:bg-[hsl(var(--gold))]/15 hover:border-[hsl(var(--gold))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="inline-flex items-center gap-1 rounded-full border border-[hsl(var(--gold))]/40 bg-card/60 px-2.5 py-1 text-[11px] font-heading uppercase tracking-wider text-foreground transition-colors hover:bg-[hsl(var(--gold))]/15 hover:border-[hsl(var(--gold))] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       >
                         <ExternalLink className="h-3 w-3" aria-hidden="true" focusable="false" />
                         <span>{meta.label}</span>
@@ -462,8 +462,8 @@ export default function TonightTvList() {
               className="
                 divide-y-2 divide-border rounded-md border-2 border-border bg-card/70 overflow-hidden
                 sm:grid sm:divide-y-0
-                sm:[grid-template-columns:3.5rem_minmax(5rem,auto)_minmax(0,1fr)_6.5rem_4.5rem]
-                lg:[grid-template-columns:8rem_3.5rem_minmax(5rem,auto)_minmax(0,1fr)_7rem_4.5rem]
+                sm:grid-cols-[3.5rem_minmax(5rem,auto)_minmax(0,1fr)_6.5rem_4.5rem]
+                lg:grid-cols-[8rem_3.5rem_minmax(5rem,auto)_minmax(0,1fr)_7rem_4.5rem]
               "
             >
               {/* Riga di intestazione invisibile: espone i columnheader agli
@@ -517,7 +517,7 @@ export default function TonightTvList() {
                       role="row"
                       aria-rowindex={ariaRowIndex}
                       tabIndex={0}
-                      className="group px-3 py-4 text-sm outline-none transition-colors hover:bg-primary/10 focus-visible:bg-primary/15 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset cursor-pointer sm:contents"
+                      className="group px-3 py-4 text-sm outline-hidden transition-colors hover:bg-primary/10 focus-visible:bg-primary/15 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset cursor-pointer sm:contents"
                     >
                       {/* Desktop/Tablet: celle grid (display:contents sul li) */}
                       {(() => {
@@ -683,7 +683,7 @@ export default function TonightTvList() {
                         </div>
                         {/* Riga 2: titolo + genere */}
                         <div className="flex items-start gap-2 flex-wrap" aria-hidden="true">
-                          <span className="font-medium text-[13px] leading-snug break-words flex-1 min-w-0 text-foreground">
+                          <span className="font-medium text-[13px] leading-snug wrap-break-word flex-1 min-w-0 text-foreground">
                             {row.title}
                           </span>
                           <Badge

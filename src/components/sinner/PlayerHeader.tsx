@@ -78,7 +78,7 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
 
   return (
     <section
-      className="mb-6 overflow-hidden rounded-2xl border border-border border-t-2 border-t-primary/60 bg-gradient-to-br from-card via-card to-secondary/10 p-5 shadow-sm sm:p-7"
+      className="mb-6 overflow-hidden rounded-2xl border border-border border-t-2 border-t-primary/60 bg-linear-to-br from-card via-card to-secondary/10 p-5 shadow-xs sm:p-7"
       aria-label="Profilo giocatore"
     >
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
@@ -242,7 +242,7 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
                         r.years.length ? `, anni ${r.years.join(", ")}` : ""
                       }`}
                       className={cn(
-                        "flex min-w-[7.5rem] flex-col gap-0.5 rounded-lg px-3 py-2.5 shadow-sm",
+                        "flex min-w-30 flex-col gap-0.5 rounded-lg px-3 py-2.5 shadow-xs",
                         isWin
                           ? "gold-gradient text-primary-foreground border border-primary/40"
                           : "border border-border bg-secondary/30 text-foreground",

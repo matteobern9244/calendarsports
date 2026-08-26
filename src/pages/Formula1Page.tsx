@@ -155,11 +155,11 @@ export default function Formula1Page() {
                               decoding="async"
                               width={32}
                               height={32}
-                              className="h-8 w-8 rounded-full object-cover bg-muted flex-shrink-0"
+                              className="h-8 w-8 rounded-full object-cover bg-muted shrink-0"
                               onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.svg'; }}
                             />
                           ) : (
-                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
                               <User className="h-4 w-4 text-muted-foreground" />
                             </div>
                           )}
@@ -169,7 +169,7 @@ export default function Formula1Page() {
                               <img
                                 src={`https://flagcdn.com/${iso}.svg`}
                                 alt={`Bandiera ${iso.toUpperCase()}`}
-                                className="h-3.5 w-5 object-cover rounded-sm flex-shrink-0 border border-border/40"
+                                className="h-3.5 w-5 object-cover rounded-sm shrink-0 border border-border/40"
                                 loading="lazy"
                                 decoding="async"
                                 width={20}
@@ -238,7 +238,7 @@ export default function Formula1Page() {
                       <TableCell className="font-heading font-bold">{c.position}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-12 items-center justify-center rounded-md bg-white p-0.5 border border-border/40 flex-shrink-0">
+                          <div className="flex h-8 w-12 items-center justify-center rounded-md bg-white p-0.5 border border-border/40 shrink-0">
                             <TeamLogo
                               src={c.logoUrl}
                               name={c.constructor}

@@ -120,10 +120,10 @@ export default function ReleaseDetailDialog({
                     decoding="async"
                     width={342}
                     height={513}
-                    className="w-full rounded-md aspect-[2/3] object-cover border border-border/60"
+                    className="w-full rounded-md aspect-2/3 object-cover border border-border/60"
                   />
                 ) : (
-                  <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center rounded-md">
+                  <div className="w-full aspect-2/3 bg-muted flex items-center justify-center rounded-md">
                     <Sparkles className="h-10 w-10 text-muted-foreground" />
                   </div>
                 )}

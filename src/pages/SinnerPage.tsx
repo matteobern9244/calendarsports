@@ -176,7 +176,7 @@ export default function SinnerPage() {
                 <div
                   role="status"
                   aria-live="polite"
-                  className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm"
+                  className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/70 backdrop-blur-xs"
                 >
                   <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 shadow-md">
                     <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
@@ -211,7 +211,7 @@ export default function SinnerPage() {
                     {r.result && (
                       <span
                         className={cn(
-                          "inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md px-2 text-xs font-heading font-bold",
+                          "inline-flex h-6 min-w-6 items-center justify-center rounded-md px-2 text-xs font-heading font-bold",
                           r.result === "V"
                             ? "bg-success/15 text-success border border-success/30"
                             : "bg-destructive/15 text-destructive border border-destructive/30",
@@ -314,13 +314,13 @@ export default function SinnerPage() {
                 >
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+                    className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
                   />
                   <span
                     aria-hidden="true"
                     className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_top,hsl(var(--gold)/0.10),transparent_60%)]"
                   />
-                  <div className="relative z-[1] flex items-start justify-between gap-2 mb-1">
+                  <div className="relative z-1 flex items-start justify-between gap-2 mb-1">
                     <p className="font-heading font-semibold text-sm leading-tight">{t.name}</p>
                     {t.tier && (
                       <span className="shrink-0 text-[10px] font-heading uppercase tracking-wider text-muted-foreground border border-border rounded px-1.5 py-0.5">
@@ -328,8 +328,8 @@ export default function SinnerPage() {
                       </span>
                     )}
                   </div>
-                  {t.location && <p className="relative z-[1] text-xs text-muted-foreground">{t.location}</p>}
-                  <div className="relative z-[1] mt-2 flex items-center justify-between text-xs">
+                  {t.location && <p className="relative z-1 text-xs text-muted-foreground">{t.location}</p>}
+                  <div className="relative z-1 mt-2 flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">
                       {t.date ? formatDateIT(t.date) : "—"}
                       {t.dateEnd ? ` → ${formatDateIT(t.dateEnd)}` : ""}
@@ -337,7 +337,7 @@ export default function SinnerPage() {
                     {t.surface && <span className="text-muted-foreground">{t.surface}</span>}
                   </div>
                   {t.result && (
-                    <p className="relative z-[1] mt-2 text-xs font-heading font-bold text-primary">Risultato: {t.result}</p>
+                    <p className="relative z-1 mt-2 text-xs font-heading font-bold text-primary">Risultato: {t.result}</p>
                   )}
                 </motion.div>
               ))}

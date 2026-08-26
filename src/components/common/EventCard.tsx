@@ -85,7 +85,7 @@ export default function EventCard({
         "transition-[box-shadow,border-color,transform] duration-300 ease-out",
         "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
         "hover:shadow-[0_18px_40px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
-        onClick && "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        onClick && "cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         highlight
           ? "border-[hsl(var(--gold))]/60 ring-1 ring-[hsl(var(--gold))]/25 hover:border-[hsl(var(--gold))]/80"
           : "border-[hsl(var(--gold))]/20 hover:border-[hsl(var(--gold))]/55",
@@ -97,7 +97,7 @@ export default function EventCard({
         aria-hidden="true"
         className={cn(
           "pointer-events-none absolute inset-x-0 top-0 h-px",
-          "bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent",
+          "bg-linear-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent",
           "opacity-60 group-hover:opacity-100 transition-opacity duration-300"
         )}
       />
@@ -111,12 +111,12 @@ export default function EventCard({
         )}
       />
       {highlight && (
-        <span className="absolute -top-2.5 left-4 z-[2] rounded-full bg-gradient-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--gold)/0.6)]">
+        <span className="absolute -top-2.5 left-4 z-2 rounded-full bg-linear-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--gold)/0.6)]">
           Prossimo
         </span>
       )}
       {/* Header */}
-      <div className="relative z-[1] flex items-center justify-between mb-3">
+      <div className="relative z-1 flex items-center justify-between mb-3">
         <span className="text-[10px] font-heading font-bold tracking-[0.2em] uppercase text-primary">
           {sport}
         </span>
@@ -134,11 +134,11 @@ export default function EventCard({
       </div>
 
       {/* Title */}
-      <h3 className="relative z-[1] font-heading text-lg font-bold leading-tight text-foreground mb-1">{title}</h3>
-      {subtitle && <p className="relative z-[1] text-sm text-muted-foreground mb-3">{subtitle}</p>}
+      <h3 className="relative z-1 font-heading text-lg font-bold leading-tight text-foreground mb-1">{title}</h3>
+      {subtitle && <p className="relative z-1 text-sm text-muted-foreground mb-3">{subtitle}</p>}
 
       {/* Date/Time */}
-      <div className="relative z-[1] flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+      <div className="relative z-1 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5 whitespace-nowrap">
           <Calendar className="h-3.5 w-3.5" />
           {date}
@@ -160,7 +160,7 @@ export default function EventCard({
         )}
       </div>
 
-      {children && <div className="relative z-[1] mt-4 pt-3 border-t border-border/50">{children}</div>}
+      {children && <div className="relative z-1 mt-4 pt-3 border-t border-border/50">{children}</div>}
     </motion.div>
   );
 }

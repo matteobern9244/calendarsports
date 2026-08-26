@@ -363,7 +363,7 @@ export default function CalendarPage() {
 
       {/* Vista mese (>= md) */}
       {viewMode === "month" && (
-      <div className="hidden md:block rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
+      <div className="hidden md:block rounded-xl border border-border/60 bg-card/60 backdrop-blur-xs overflow-hidden">
         {/* Header settimana */}
         <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30">
           {WEEKDAY_LABELS.map((w) => (
@@ -376,7 +376,7 @@ export default function CalendarPage() {
           ))}
         </div>
         {/* Griglia */}
-        <div className="grid grid-cols-7 grid-rows-6 [grid-auto-rows:minmax(120px,1fr)]">
+        <div className="grid grid-cols-7 grid-rows-6 auto-rows-[minmax(120px,1fr)]">
           {grid.flat().map((cell) => {
             const key = ymdKey(cell);
             const dayEvents = eventsByDay.get(key) ?? [];
@@ -510,7 +510,7 @@ export default function CalendarPage() {
             return (
               <section key={key} className="rounded-lg border border-border/50 bg-card/60 overflow-hidden">
                 <header className={cn(
-                  "sticky top-0 z-10 px-3 py-2 flex items-center justify-between text-xs font-heading uppercase tracking-widest border-b border-border/40 backdrop-blur",
+                  "sticky top-0 z-10 px-3 py-2 flex items-center justify-between text-xs font-heading uppercase tracking-widest border-b border-border/40 backdrop-blur-sm",
                   isToday
                     ? "bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))]"
                     : "bg-muted/40 text-muted-foreground",

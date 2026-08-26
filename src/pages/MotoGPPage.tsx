@@ -209,7 +209,7 @@ export default function MotoGPPage() {
                           />
                           {s.number != null && (
                             <span
-                              className="font-heading font-bold text-xs text-primary bg-primary/10 rounded-full h-7 w-7 flex items-center justify-center flex-shrink-0"
+                              className="font-heading font-bold text-xs text-primary bg-primary/10 rounded-full h-7 w-7 flex items-center justify-center shrink-0"
                               aria-label={`Numero di gara ${s.number}`}
                             >
                               #{s.number}
@@ -219,7 +219,7 @@ export default function MotoGPPage() {
                             <img
                               src={`https://flagcdn.com/${s.nationality}.svg`}
                               alt={`Bandiera ${s.nationality.toUpperCase()}`}
-                              className="h-3.5 w-5 object-cover rounded-sm flex-shrink-0 border border-border/40"
+                              className="h-3.5 w-5 object-cover rounded-sm shrink-0 border border-border/40"
                               loading="lazy"
                               decoding="async"
                               width={20}
@@ -299,7 +299,7 @@ export default function MotoGPPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div
-                            className="relative h-10 w-14 rounded-md border-2 flex items-center justify-center flex-shrink-0 p-1 bg-white dark:bg-white"
+                            className="relative h-10 w-14 rounded-md border-2 flex items-center justify-center shrink-0 p-1 bg-white dark:bg-white"
                             style={
                               c.constructor && MOTOGP_CONSTRUCTOR_COLORS[c.constructor]
                                 ? { borderColor: MOTOGP_CONSTRUCTOR_COLORS[c.constructor].border }

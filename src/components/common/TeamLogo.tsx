@@ -53,7 +53,7 @@ export default function TeamLogo({
         role="img"
         style={dimensions}
         className={cn(
-          "flex items-center justify-center flex-shrink-0 bg-muted text-foreground font-heading font-bold border border-border/60 select-none",
+          "flex items-center justify-center shrink-0 bg-muted text-foreground font-heading font-bold border border-border/60 select-none",
           shapeClass,
           className,
         )}
@@ -72,7 +72,7 @@ export default function TeamLogo({
       decoding="async"
       referrerPolicy="no-referrer"
       onError={() => setFailedSrc(src)}
-      className={cn("object-contain flex-shrink-0 bg-background/40", shapeClass, className)}
+      className={cn("object-contain shrink-0 bg-background/40", shapeClass, className)}
     />
   );
 }

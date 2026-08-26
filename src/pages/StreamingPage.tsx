@@ -471,7 +471,7 @@ export default function StreamingPage() {
                 <Button
                   key={k.id}
                   size="sm"
-                  variant={kindFilter === k.id ? "default" : "outline"}
+                  variant={kindFilter === k.id ? "default" : "outline-solid"}
                   onClick={() => setKindFilter(k.id)}
                   className={cn(
                     "rounded-full font-heading uppercase tracking-wider text-xs",
@@ -580,7 +580,7 @@ export default function StreamingPage() {
                     key={`${item.type}-${item.tmdbId}`}
                     type="button"
                     onClick={() => setSelected(item)}
-                    className="text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
+                    className="text-left group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
                   >
                     <motion.div
                       whileHover={{ y: -4 }}
@@ -594,7 +594,7 @@ export default function StreamingPage() {
                     >
                       <span
                         aria-hidden="true"
-                        className="pointer-events-none absolute inset-x-0 top-0 h-px z-10 bg-gradient-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+                        className="pointer-events-none absolute inset-x-0 top-0 h-px z-10 bg-linear-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
                       />
                       {item.poster ? (
                         <img
@@ -604,10 +604,10 @@ export default function StreamingPage() {
                           decoding="async"
                           width={342}
                           height={513}
-                          className="w-full aspect-[2/3] object-cover"
+                          className="w-full aspect-2/3 object-cover"
                         />
                       ) : (
-                        <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center">
+                        <div className="w-full aspect-2/3 bg-muted flex items-center justify-center">
                           <Sparkles className="h-8 w-8 text-muted-foreground" />
                         </div>
                       )}
@@ -707,7 +707,7 @@ function FamilySelector({
           <Button
             key={f.id}
             size="sm"
-            variant={value === f.id ? "default" : "outline"}
+            variant={value === f.id ? "default" : "outline-solid"}
             onClick={() => onChange(f.id)}
             className={cn(
               "rounded-full font-heading uppercase tracking-wider text-xs",
@@ -740,7 +740,7 @@ function ItalyProviderFilter({
           <Button
             key={p.id}
             size="sm"
-            variant={value === p.id ? "default" : "outline"}
+            variant={value === p.id ? "default" : "outline-solid"}
             onClick={() => onChange(p.id)}
             className={cn(
               "rounded-full font-heading uppercase tracking-wider text-xs",

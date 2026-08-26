@@ -72,7 +72,7 @@ export default function RaceDetailsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl gap-0 p-0 overflow-hidden sm:rounded-2xl">
-        <DialogHeader className="border-b border-border/60 bg-gradient-to-br from-card to-muted/40 px-5 py-4 sm:px-6 sm:py-5">
+        <DialogHeader className="border-b border-border/60 bg-linear-to-br from-card to-muted/40 px-5 py-4 sm:px-6 sm:py-5">
           <span className="text-[10px] font-heading font-bold tracking-[0.2em] uppercase text-primary">
             {sport}
           </span>
@@ -81,7 +81,7 @@ export default function RaceDetailsDialog({
           </DialogTitle>
           {subtitle && (
             <DialogDescription className="flex items-start gap-1.5 text-sm text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+              <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
               <span>{subtitle}</span>
             </DialogDescription>
           )}
