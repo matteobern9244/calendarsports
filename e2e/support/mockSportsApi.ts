@@ -235,6 +235,49 @@ function getEndpointKey(url: URL): EndpointName | null {
   return key in payloads ? key : null;
 }
 
+// Le edge function impaginano solo quando la richiesta porta `page` o
+// `pageSize`, e lo fanno con due inviluppi diversi che il frontend deve
+// saper leggere entrambi:
+//   sports-football:calendar -> { items, total, page, pageSize, totalPages,
+//                                 nextUpcomingIndex }   (piatto)
+//   sports-tennis:results    -> { items, pagination: {...} }  (annidato)
+// Il mock replica il contratto reale: una fixture che restituisce sempre
+// l'array nudo nasconde i bug del percorso impaginato, che e' quello che
+// l'app usa davvero.
+const PAGINATED_ENDPOINTS = new Set<EndpointName>([
+  "sports-football:calendar",
+  "sports-tennis:results",
+]);
+
+function paginate(endpoint: EndpointName, payload: unknown, url: URL): unknown {
+  if (!PAGINATED_ENDPOINTS.has(endpoint) || !Array.isArray(payload)) return payload;
+
+  const pageParam = url.searchParams.get("page");
+  const pageSizeParam = url.searchParams.get("pageSize");
+  if (pageParam === null && pageSizeParam === null) return payload;
+
+  const parsedPageSize = Number.parseInt(pageSizeParam ?? "12", 10);
+  const pageSize = Number.isFinite(parsedPageSize) && parsedPageSize > 0 ? parsedPageSize : 12;
+  const total = payload.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const parsedPage = Number.parseInt(pageParam ?? "1", 10);
+  const page = Number.isFinite(parsedPage)
+    ? Math.min(totalPages, Math.max(1, parsedPage))
+    : 1;
+  const start = (page - 1) * pageSize;
+  const items = payload.slice(start, start + pageSize);
+
+  if (endpoint === "sports-tennis:results") {
+    return { items, pagination: { page, pageSize, total, totalPages } };
+  }
+
+  // Come il backend: primo match non ancora concluso nell'elenco completo.
+  const nextUpcomingIndex = (payload as Array<{ status?: string }>).findIndex(
+    (m) => m.status !== "FullTime",
+  );
+  return { items, total, page, pageSize, totalPages, nextUpcomingIndex };
+}
+
 async function fulfillJson(route: Route, status: number, body: unknown) {
   await route.fulfill({
     status,
@@ -342,6 +385,9 @@ export async function installSportsApiMocks(page: Page, options: MockOptions = {
       return;
     }
 
-    await fulfillJson(route, 200, { success: true, data: payloads[endpoint] });
+    await fulfillJson(route, 200, {
+      success: true,
+      data: paginate(endpoint, payloads[endpoint], url),
+    });
   });
 }

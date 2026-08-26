@@ -27,8 +27,10 @@ test("loads home and navigates across all main sections with mocked sports data"
   await page.getByRole("link", { name: "JUVENTUS" }).click();
   await expect(page).toHaveURL(/\/juventus$/);
   await expect(page.getByRole("heading", { name: "Juventus" })).toBeVisible();
-  await expect(page.getByText("vs Milan")).toBeVisible();
-  await expect(page.getByText("DAZN")).toBeVisible();
+  await expect(page.getByText("vs Milan").first()).toBeVisible();
+  // Il badge emittente compare sia nella card "Prossima Partita" sia nella
+  // riga di calendario: basta verificarne la presenza, non l'unicita'.
+  await expect(page.getByText("DAZN").first()).toBeVisible();
   await page.getByRole("tab", { name: "Classifica" }).click();
   await expect(page.getByRole("cell", { name: "Juventus" })).toBeVisible();
 
@@ -73,9 +75,12 @@ test("Stasera in TV: separatore oro tra famiglie e etichette mobile visibili", a
   await page.goto("/");
 
   // La scheda esiste e mostra programmi di entrambe le famiglie mockate.
+  // Il titolo del programma esiste due volte nel DOM (albero desktop nascosto
+  // via `hidden sm:flex` + albero mobile `sm:hidden`): a questo viewport ne e'
+  // visibile uno solo, ed e' quello che conta per il test.
   await expect(page.getByRole("heading", { name: "Stasera in TV" })).toBeVisible();
-  await expect(page.getByText("Test Programma RAI 1")).toBeVisible();
-  await expect(page.getByText("Test Programma Canale 5")).toBeVisible();
+  await expect(page.getByText("Test Programma RAI 1").filter({ visible: true })).toBeVisible();
+  await expect(page.getByText("Test Programma Canale 5").filter({ visible: true })).toBeVisible();
 
   // Almeno un separatore oro tra famiglie (RAI -> Mediaset).
   const dividers = page.locator('[data-testid="family-divider"]');

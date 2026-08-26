@@ -22,7 +22,6 @@ type ChannelFixture = { id: string; name: string; number?: number; programs: Pro
 type FamilyFixtures = Partial<Record<TvFamilyPayload["family"], ChannelFixture[]>>;
 
 declare global {
-  // eslint-disable-next-line no-var
   var __TONIGHT_TV_FIXTURES__: FamilyFixtures | undefined;
 }
 

@@ -80,25 +80,6 @@ function installMockFetch(opts: { fail?: boolean } = {}) {
   return () => { globalThis.fetch = orig; };
 }
 
-async function callFunction(action: string): Promise<{ status: number; body: any }> {
-  const mod = await import("./index.ts");
-  void mod; // garantisce import per side-effect (Deno.serve registrato)
-  const url = `http://localhost/functions/v1/sports-motogp?action=${action}&season=2026`;
-  const req = new Request(url, {
-    method: "GET",
-    headers: { origin: "http://localhost:8080" },
-  });
-  // @ts-ignore Deno.serve handler accessibile via fetch dispatch
-  // In assenza di un dispatcher diretto, costruiamo i pezzi a mano dal modulo.
-  // Il pattern piu' semplice: re-importare la funzione handler via export e
-  // testarla. Qui usiamo un workaround: facciamo fetch al modulo passando
-  // il request al Deno.serve registrato non e' direttamente possibile in
-  // un test unit senza esportare l'handler. Per ora, validiamo solo le
-  // helper functions tramite import dinamico.
-  // Fallback: ritorniamo placeholder.
-  return { status: 0, body: null };
-}
-
 Deno.test("MotoGP: italianizeGpName mappa correttamente i nomi noti", async () => {
   const restore = installMockFetch();
   try {

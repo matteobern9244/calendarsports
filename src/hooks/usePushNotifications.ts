@@ -42,7 +42,9 @@ export function usePushNotifications() {
       const sub = await getCurrentSubscription();
       if (!sub && enabled) {
         setEnabledState(false);
-        try { localStorage.setItem(LS_ENABLED, "0"); } catch {}
+        // localStorage puo' fallire (modalita' privata, quota): lo stato in
+        // memoria e' gia' allineato, la mancata persistenza non e' recuperabile.
+        try { localStorage.setItem(LS_ENABLED, "0"); } catch { /* persistenza best-effort */ }
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,7 +59,7 @@ export function usePushNotifications() {
       try {
         localStorage.setItem(LS_ENABLED, "1");
         localStorage.setItem(LS_LEAD, JSON.stringify(times));
-      } catch {}
+      } catch { /* persistenza best-effort */ }
     }
     setBusy(false);
     return res;
@@ -67,14 +69,14 @@ export function usePushNotifications() {
     setBusy(true);
     await unsubscribeFromPush();
     setEnabledState(false);
-    try { localStorage.setItem(LS_ENABLED, "0"); } catch {}
+    try { localStorage.setItem(LS_ENABLED, "0"); } catch { /* persistenza best-effort */ }
     setBusy(false);
   }, []);
 
   const setLeadTimes = useCallback(async (times: LeadTime[]) => {
     const safe = times.length ? times : DEFAULT_LEAD_TIMES;
     setLeadTimesState(safe);
-    try { localStorage.setItem(LS_LEAD, JSON.stringify(safe)); } catch {}
+    try { localStorage.setItem(LS_LEAD, JSON.stringify(safe)); } catch { /* persistenza best-effort */ }
     if (enabled) {
       await updatePushSettings(safe, true);
     }
