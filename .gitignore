@@ -23,6 +23,11 @@ test-results
 .env.local
 .env.*.local
 
+# `.claude/` e' versionata: contiene le regole condivise del progetto. Restano
+# fuori solo le personalizzazioni della singola macchina.
+.claude/settings.local.json
+CLAUDE.local.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(bun run verify)",
+      "Bash(bun run typecheck)",
+      "Bash(bun run lint)",
+      "Bash(bun run test:*)",
+      "Bash(bun run build)",
+      "Bash(bun run check:italian)",
+      "Bash(bun run check:tz-juventus)",
+      "Bash(bunx tsc --noEmit:*)",
+      "Bash(bunx vitest run:*)",
+      "Bash(bun audit)",
+      "Bash(bun outdated)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)",
+      "Bash(rg:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": [
+      "Bash(git push origin main:*)",
+      "Bash(git push:* main)",
+      "Bash(supabase db reset:*)",
+      "Bash(supabase db push:*)",
+      "Read(./.env.local)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-dangerous-bash.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
