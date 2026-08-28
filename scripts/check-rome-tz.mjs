@@ -16,7 +16,8 @@
  *    Al suo posto vanno usati `toRomeDate` o `getDateTimestamp`.
  *
  * `new Date()` senza argomenti resta ammesso: e' l'istante corrente, non
- * l'interpretazione di una stringa.
+ * l'interpretazione di una stringa. Ammesso anche `new Date(Date.UTC(...))`,
+ * che riceve un numero ed e' la costruzione esplicitamente UTC.
  */
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -30,6 +31,7 @@ const TARGETS = [
   "src/pages/SinnerPage.tsx",
   "src/pages/StreamingPage.tsx",
   "src/pages/JuventusMatchPage.tsx",
+  "src/pages/CalendarPage.tsx",
 ];
 const TARGET_DIRS = [
   "src/components/home",
@@ -40,6 +42,13 @@ const TARGET_DIRS = [
 const PATTERN = /\.(toLocaleTimeString|toLocaleDateString)\s*\(/g;
 // `new Date(` seguito da qualcosa: vietato. `new Date()` vuoto: permesso.
 const RAW_DATE_PATTERN = /new Date\s*\(\s*[^)\s]/g;
+// `new Date(Date.UTC(...))` riceve un numero, non una stringa: e' la forma
+// esplicitamente UTC, cioe' proprio quella da preferire. Viene tolta dalla
+// riga prima del controllo invece di essere esentata con un commento, cosi'
+// nessuno impara a spargere `@tz-ignore` su codice corretto. La sostituzione
+// e' locale: se sulla stessa riga c'e' anche un `new Date(stringa)`, quello
+// resta e viene segnalato.
+const SAFE_DATE_UTC = /new Date\s*\(\s*Date\.UTC\s*\(/g;
 
 async function walk(dir) {
   const out = [];
@@ -79,8 +88,9 @@ function findViolations(src) {
       }
     }
 
+    const scanned = line.replace(SAFE_DATE_UTC, "");
     RAW_DATE_PATTERN.lastIndex = 0;
-    if (RAW_DATE_PATTERN.test(line)) {
+    if (RAW_DATE_PATTERN.test(scanned)) {
       // L'esenzione vale sulla riga stessa o su quella prima, come
       // `eslint-disable-next-line`: sulle righe lunghe in coda non si legge.
       const exempt =

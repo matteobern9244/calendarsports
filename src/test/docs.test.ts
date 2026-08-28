@@ -68,27 +68,6 @@ describe("Documentazione", () => {
     expect(broken).toEqual([]);
   });
 
-  it("il gate `verify` contiene tutti gli anelli che la CI esegue", () => {
-    const pkg = JSON.parse(read("package.json")) as {
-      scripts: Record<string, string>;
-    };
-    const verify = pkg.scripts.verify;
-    for (const step of [
-      "typecheck",
-      "lint",
-      "check:italian",
-      "check:tz-juventus",
-      "test",
-      "build",
-    ]) {
-      expect(verify, `verify non esegue ${step}`).toContain(step);
-    }
-  });
-
-  it("lo script lint fa fallire anche i soli avvisi", () => {
-    const pkg = JSON.parse(read("package.json")) as {
-      scripts: Record<string, string>;
-    };
-    expect(pkg.scripts.lint).toContain("--max-warnings=0");
-  });
+  // Il gate e' guardato da `src/test/tooling/gate.test.ts`: qui restava per
+  // ragioni storiche, ma questo file parla di documentazione.
 });

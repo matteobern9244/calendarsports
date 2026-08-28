@@ -1,0 +1,64 @@
+import { describe, expect, it } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
+
+/**
+ * Guardiano sul guardiano del fuso orario.
+ *
+ * `scripts/check-rome-tz.mjs` analizza una lista di file scritta a mano. Una
+ * pagina nuova che manipola date non viola nessuna regola: semplicemente non
+ * viene guardata, e il controllo resta verde mentre il buco si allarga.
+ * E' successo davvero con `CalendarPage.tsx`, aggiunta alla lista solo
+ * durante l'audit.
+ */
+
+const ROOT = resolve(import.meta.dirname, "../../..");
+const script = readFileSync(join(ROOT, "scripts/check-rome-tz.mjs"), "utf8");
+
+/** Forme che rendono una pagina interessante per il guardiano del fuso. */
+const USA_DATE = /toLocale(Time|Date)String|new Date\s*\(/;
+
+function listaSorvegliata(): string[] {
+  const blocco = script.match(/const TARGETS = \[([^\]]*)\]/)?.[1] ?? "";
+  return [...blocco.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+}
+
+function pagineConDate(): string[] {
+  return readdirSync(join(ROOT, "src/pages"))
+    .filter((nome) => nome.endsWith(".tsx") && !nome.includes(".test."))
+    .map((nome) => `src/pages/${nome}`)
+    .filter((rel) => USA_DATE.test(readFileSync(join(ROOT, rel), "utf8")));
+}
+
+describe("Copertura del guardiano sul fuso", () => {
+  it("ogni pagina che manipola date e' nella lista sorvegliata", () => {
+    const sorvegliate = listaSorvegliata();
+    for (const pagina of pagineConDate()) {
+      expect(
+        sorvegliate,
+        `${pagina} usa date ma non e' in TARGETS di scripts/check-rome-tz.mjs`,
+      ).toContain(pagina);
+    }
+  });
+
+  it("la lista non cita file che non esistono piu'", () => {
+    const esistenti = new Set(
+      readdirSync(join(ROOT, "src/pages")).map((nome) => `src/pages/${nome}`),
+    );
+    for (const sorvegliata of listaSorvegliata()) {
+      expect(esistenti, `TARGETS cita ${sorvegliata}, che non esiste`).toContain(sorvegliata);
+    }
+  });
+
+  it("il guardiano ammette la costruzione esplicitamente UTC", () => {
+    // `new Date(Date.UTC(...))` riceve un numero: e' la forma corretta, e
+    // segnalarla insegnerebbe a spargere `@tz-ignore` su codice giusto.
+    expect(script).toContain("SAFE_DATE_UTC");
+  });
+
+  it("il guardiano continua a vietare `new Date(stringa)`", () => {
+    // L'esenzione sopra non deve essere diventata un permesso generale.
+    expect(script).toContain("RAW_DATE_PATTERN");
+    expect(script).toMatch(/RAW_DATE_PATTERN\.test\(scanned\)/);
+  });
+});

@@ -117,7 +117,6 @@ export default tseslint.config(
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
-      "react-hooks/rules-of-hooks": "off",
     },
   },
   // Prettier per ultimo: spegne le regole di stile che confliggono e
