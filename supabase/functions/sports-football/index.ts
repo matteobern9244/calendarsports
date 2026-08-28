@@ -1,4 +1,5 @@
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/security.ts";
+import { buildMatchId, romeDateKeyOf } from "./matchId.ts";
 
 const SKY_BASE = "https://sport.sky.it";
 const SERIE_A_COMP_ID = "21";
@@ -63,34 +64,6 @@ type SkyWidgetResponse = {
   html: string;
   seasonUsed: string;
 };
-
-const ROME_DATE_FMT = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Europe/Rome",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-/**
- * Restituisce la data della partita nel fuso `Europe/Rome` come
- * `YYYY-MM-DD`. Se l'input è una stringa ISO senza offset, viene
- * trattato come UTC (tutti i provider football pubblicano in UTC).
- * Ritorna `null` per input invalidi.
- */
-function romeDateKeyOf(input: string | null | undefined): string | null {
-  if (!input) return null;
-  let normalized = input;
-  if (
-    typeof input === "string" &&
-    /T\d{2}:\d{2}/.test(input) &&
-    !/(Z|[+-]\d{2}:?\d{2})$/i.test(input)
-  ) {
-    normalized = `${input}Z`;
-  }
-  const d = new Date(normalized);
-  if (Number.isNaN(d.getTime())) return null;
-  return ROME_DATE_FMT.format(d);
-}
 
 function unescapeHtml(text: string): string {
   return text
@@ -244,31 +217,6 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
     console.error("Lega API broadcaster fetch error:", e);
     return {};
   }
-}
-
-function slugify(input: string): string {
-  return String(input || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-function buildMatchId(match: any, competitionName: string): string {
-  // Priorita' 1: slug derivato dall'URL Sky (univoco, leggibile, stabile).
-  if (match?.link) {
-    const m = String(match.link).match(/partite\/(\d{4})\/([^/]+)\/([^/]+)/i);
-    if (m) {
-      return `${m[1]}-${m[2]}-${m[3]}`.toLowerCase();
-    }
-  }
-  // Priorita' 2: composizione deterministica competition+data+squadre.
-  const home = slugify(match?.home?.name || "");
-  const away = slugify(match?.away?.name || "");
-  const dateKey = romeDateKeyOf(match?.date) ?? "unknown";
-  const comp = slugify(competitionName);
-  return `${comp}-${dateKey}-${home}-vs-${away}`;
 }
 
 /**
