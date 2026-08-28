@@ -61,46 +61,41 @@ e decidere in base all'esito.
 
 ## Priorità media
 
-### Il bundle è un file solo da un megabyte
+### I payload delle edge function arrivano come `any`
 
-Tutte le pagine sono importate staticamente in `src/App.tsx`: chi apre la Home
-scarica anche il calendario, lo streaming e le classifiche. Manca il code
-splitting per route (`React.lazy` più `Suspense`), e la build lo segnala a ogni
-esecuzione.
+`callEdgeFunction` in [`src/lib/api/sportsApi.ts`](../src/lib/api/sportsApi.ts)
+ritorna `json.data` senza tipo, quindi ogni pagina che la consuma lavora su
+`any`: sono venticinque punti, sparsi fra `JuventusPage`, `SinnerPage`,
+`Index`, `MotoGPPage`, `Formula1Page` e `JuventusMatchPage`. Un campo
+rinominato a monte non produce nessun errore di compilazione: produce
+`undefined` a schermo.
 
-Nello stesso intervento vale la pena mettere un `ErrorBoundary` dentro `Layout`
-attorno all'`Outlet`: oggi ce n'è uno solo attorno a tutta l'app, quindi un
-errore di render in una pagina svuota l'intera applicazione.
+È anche il motivo per cui `@typescript-eslint/no-explicit-any` resta spenta in
+`eslint.config.js`: riaccenderla senza aver tipizzato il confine
+significherebbe venticinque `eslint-disable`.
 
-**Costo**: medio-basso. **Perché ora**: è la voce con il rapporto più alto fra
-beneficio percepito e rischio.
+Serve: schemi al confine, derivati dai payload già tipizzati in
+`e2e/support/mockSportsApi.ts`, e `callEdgeFunction<T>` che li applica.
+**Nota**: `zod` è stato rimosso dalle dipendenze durante l'audit perché non lo
+importava nessuno, quindi il primo passo è reinstallarlo.
 
-### Le chiavi di cache sono scritte due volte
+**Costo**: medio. **Perché ora**: è il confine fra codice controllato e dati
+altrui, l'unico punto dove la tipizzazione compra qualcosa di reale.
 
-`useSyncAll` ricostruisce a mano le chiavi delle query invece di riusare quelle
-degli hook, e almeno una è già divergente: scrive `["sinner","results", season]`
-mentre `useSinnerResults` legge una chiave a cinque elementi. `setQueryData` vuole
-la corrispondenza esatta, quindi quel prefetch viene buttato via a ogni
-sincronizzazione senza che nessuno se ne accorga.
+### Il calendario ricalcola tutto a ogni render
 
-Serve: una fabbrica di chiavi condivisa, consumata sia dagli hook sia da
-`useSyncAll`.
+In [`src/hooks/useCalendarEvents.ts`](../src/hooks/useCalendarEvents.ts)
+l'espansione, il filtro e l'ordinamento di circa 350 eventi stanno nel corpo
+dell'hook, fuori da qualunque `useMemo`. `CalendarPage` fa scattare un tick
+ogni 60 secondi per i conti alla rovescia, e quel tick li invalida tutti.
 
-**Costo**: basso. **Perché ora**: è un guasto silenzioso, la categoria peggiore.
+Nello stesso ambito, `TonightTvList` ha una `useMemo` che dipende da
+`[tvQueries]`, cioè dall'array restituito da `useQueries`, che è nuovo a ogni
+render: quella memo non ha mai memoizzato niente. Va usata l'opzione `combine`
+di `useQueries`, oppure una dipendenza sui `.data`.
 
-### I test delle edge function non vengono eseguiti
-
-`supabase/functions/sports-football/index.test.ts`,
-`sports-motogp/index.test.ts` e `push-dispatcher/timezone.test.ts` esistono ma
-`vitest.config.ts` raccoglie solo `src/**`, e nessuno step di CI lancia
-`deno test`. Sono test che nessuno esegue da quando sono stati scritti.
-
-Nella stessa area: `src/lib/streamingTitleEnrichment.test.ts` verifica una copia
-incollata a mano della logica di `streaming-tv`. Può restare verde mentre la
-funzione vera è rotta, e il commento in testa al file lo ammette.
-
-**Costo**: medio. **Perché ora**: 5.000 righe di backend, la parte più fragile del
-progetto, non sono coperte da nessun gate.
+**Costo**: basso. **Perché ora**: una `useMemo` che non memoizza è peggio di
+nessuna `useMemo`, perché dichiara una garanzia che non c'è.
 
 ### L'app installata non funziona offline
 

@@ -1,8 +1,7 @@
 # WIP — audit completo, punto di ripresa
 
-Lavoro in corso sul branch `develop`, interrotto la sera del **26 agosto 2026**.
-Questo file esiste per poter riprendere a freddo: dice cosa è stato fatto, cosa
-resta, e dove ricominciare esattamente.
+Lavoro in corso sul branch `develop`. Questo file esiste per poter riprendere a
+freddo: dice cosa è stato fatto, cosa resta, e dove ricominciare esattamente.
 
 Il piano completo da cui nasce il lavoro si chiama **«Audit completo
 calendarsports — Piano di implementazione»** e vive fuori dal repository, in
@@ -15,17 +14,16 @@ sul registro npm e la tabella dei rischi per ogni cluster di aggiornamento.
 Misurato, non ricordato:
 
 ```text
-bun audit      → No vulnerabilities found
-bun outdated   → solo typescript 5.9.3 (fermo di proposito, vedi sotto)
-bun run lint   → 0 errori, 0 avvisi (--max-warnings=0)
-bun run typecheck → pulito, con strict attivo
-bun run test   → 136 test su 12 file, tutti verdi
+bun run verify   → exit 0 (typecheck, lint, italiano, fuso, test, build)
+bun run test     → 187 test su 17 file, tutti verdi
 bun run test:e2e → 4 test verdi
-CI Develop     → verde (run 33013634644)
+bun audit        → No vulnerabilities found
+bun outdated     → solo typescript 5.9.3 (fermo di proposito, vedi sotto)
 ```
 
-Il tree è pulito. Diciassette commit sopra `22d2d33`, che era l'ultimo stato
-noto prima dell'audit.
+Il tree è pulito. La CI **non è ancora stata eseguita** sulla nuova
+configurazione: `ci.yml` sostituisce i due workflow precedenti e va guardata al
+primo push.
 
 ## Decisioni prese, da non rimettere in discussione
 
@@ -42,6 +40,10 @@ noto prima dell'audit.
   pubblici.
 - **`tailwindcss-animate` non diventa `tw-animate-css`**: funziona via `@plugin`
   e le circa cento classi di animazione in uso non sono coperte da test.
+- **Prettier è un errore di lint**, ultimo elemento della flat config. La
+  formattazione non si discute più in review.
+- **La CI lancia `bun run verify`**, non l'elenco dei suoi anelli: due elenchi
+  separati divergono, ed è così che una CI smette di essere un gate.
 
 ## Fasi chiuse
 
@@ -57,6 +59,14 @@ faceva morire JuventusPage nell'ErrorBoundary.
 29 componenti shadcn irraggiungibili e 26 dipendenze orfane sono stati **rimossi
 invece che aggiornati**.
 
+**Fase 3 — toolchain di qualità.** Prettier configurato, formattazione globale
+in un commit isolato, poi reso obbligatorio. Lint esteso a `scripts/**`,
+`e2e/**` e `supabase/functions/**`, che non erano analizzati da nessuna regola.
+I tre test delle edge function ora girano davvero, e sul codice vero: la logica
+pura è uscita in moduli importabili senza far partire `Deno.serve`. I due
+workflow CI sono diventati uno. Aggiunti tre guardiani sul tooling in
+`src/test/tooling/`.
+
 **Fase 4 — struttura agentica e documentazione.** `.claude/` versionata,
 AGENTS.md ridotto da 302 a 115 righe in forma di router, CLAUDE.md sottile,
 cinque playbook in `docs/agent-playbook/`, i documenti tecnici
@@ -67,50 +77,30 @@ di Dependabot per npm.
 
 ### 1. Fase 6, i quattro task rimasti
 
-Sono le voci a **priorità media e bassa** di [`docs/ROADMAP.md`](docs/ROADMAP.md),
-dove ognuna ha già costo e motivazione scritti.
+Le prime due sono voci a **priorità media** di [`docs/ROADMAP.md`](docs/ROADMAP.md),
+le altre due a priorità bassa e media; ognuna ha lì costo e motivazione scritti.
 
-- **Tipizzazione dei payload API.** Oggi `callEdgeFunction` restituisce `any` e
-  le pagine hanno circa venticinque punti non tipizzati sui dati che arrivano
-  dalle edge function. Il piano prevede schemi zod al confine, derivati dai
-  payload già tipizzati in `e2e/support/mockSportsApi.ts`. **Nota**: `zod` è
-  stato rimosso dalle dipendenze perché non lo importava nessuno, quindi il
-  primo passo è `bun add zod`.
-- **Memoizzazioni.** `useCalendarEvents` ricalcola espansione, filtro e
-  ordinamento di circa 350 eventi a ogni render, e `CalendarPage` fa scattare un
-  tick ogni 60 secondi che li invalida tutti. `TonightTvList` ha una `useMemo`
-  che dipende dall'array restituito da `useQueries`, che è nuovo a ogni render:
-  quella memo non ha mai memoizzato niente. Va usata l'opzione `combine`.
+- **Tipizzazione dei payload API** — voce «I payload delle edge function
+  arrivano come `any`». Primo passo: reinstallare `zod`, rimosso durante la
+  Fase 2 perché non lo importava nessuno. Chiudendo questa si può riaccendere
+  `@typescript-eslint/no-explicit-any`, oggi spenta con la motivazione scritta
+  accanto in `eslint.config.js`.
+- **Memoizzazioni** — voce «Il calendario ricalcola tutto a ogni render».
 - **Componenti giganti.** `StreamingPage` (828 righe), `TonightTvList` (760),
   `JuventusPage` (631), `CalendarPage` (601). Da estrarre per gradi: prima gli
   hook di derivazione, poi i presentazionali, poi un `SportPageShell` che
   unifichi il guardiano offline e la struttura a tab ripetuta in quattro pagine.
-- **PWA e accessibilità.** Icona 192×192 e maskable con zona di sicurezza reale
-  nel manifest; precache minimale dell'app shell in `public/sw.js`, che oggi
-  gestisce solo le notifiche e lascia la PWA senza niente a freddo; e tre
-  correzioni puntuali di a11y elencate nel piano (riga TV focusabile ma non
+- **PWA e accessibilità** — voce «L'app installata non funziona offline», più le
+  tre correzioni puntuali di a11y elencate nel piano (riga TV focusabile ma non
   interattiva, `aria-disabled` mancante su `PagerNav`, nomi accessibili sui
   bottoni evento del calendario).
 
-### 2. Fase 3, i due pezzi mancanti
+### 2. Fase 5 — richiede te
 
-- **Prettier** come errore di lint, con `eslint-config-prettier` ed
-  `eslint-plugin-prettier` come ultimo elemento della flat config, più
-  `.prettierrc` e `.prettierignore`. La prima formattazione globale va in un
-  commit separato, altrimenti sporca ogni diff successivo.
-- **I test Deno delle edge function non vengono eseguiti da nessuno.**
-  `supabase/functions/sports-football/index.test.ts`,
-  `sports-motogp/index.test.ts` e `push-dispatcher/timezone.test.ts` esistono ma
-  `vitest.config.ts` raccoglie solo `src/**` e nessuno step di CI lancia
-  `deno test`. Vanno o eseguiti davvero, o portati sotto vitest: oggi sono
-  write-only.
-
-### 3. Fase 5 — richiede te
-
-Non l'ho eseguita di proposito: tocca il database di produzione, e AGENTS.md —
-che stiamo applicando — dice di non modificare Supabase senza richiesta
-esplicita. Tutto è documentato in [`docs/SECURITY.md`](docs/SECURITY.md) e in
-cima a [`docs/ROADMAP.md`](docs/ROADMAP.md).
+Non è stata eseguita di proposito: tocca il database di produzione, e AGENTS.md
+dice di non modificare Supabase senza richiesta esplicita. Tutto è documentato
+in [`docs/SECURITY.md`](docs/SECURITY.md) e in cima a
+[`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 - **Rotazione di `DISPATCH_SECRET`** (serve la dashboard Supabase). Il valore è
   in chiaro nella migration `20260523084606_*.sql`, è nella storia di Git e su
@@ -125,7 +115,7 @@ cima a [`docs/ROADMAP.md`](docs/ROADMAP.md).
   `ignoreDuplicates`, invece di `SELECT` e poi `INSERT` con l'errore scartato.
   Produce notifiche doppie sui dispositivi reali.
 
-### 4. Fase 7 — chiusura
+### 3. Fase 7 — chiusura
 
 Changelog e nota di rilascio. La versione attuale è `2.7.0` in `package.json` e
 `src/lib/version.ts`; l'audit merita una `2.8.0` con la sua sezione in
@@ -133,13 +123,38 @@ Changelog e nota di rilascio. La versione attuale è `2.7.0` in `package.json` e
 serie `2.6.x`, che manca dal changelog pur avendo già una nota in
 `docs/releases/`.
 
+**Da non perdere**: sei voci sono state cancellate da `docs/ROADMAP.md` perché
+realizzate, e la regola del ROADMAP dice che si spostano nel changelog. Vanno
+quindi raccontate nella sezione 2.8.0: code splitting per route con
+`ErrorBoundary` dentro `Layout`; chiavi di cache in una fabbrica sola; test
+delle edge function eseguiti davvero; Prettier obbligatorio; lint esteso alle
+tre aree scoperte; un solo workflow CI che lancia il gate locale.
+
 ## Cose scoperte durante il lavoro che vale la pena ricordare
 
+- **Un test-copia è peggio di nessun test: è verde e sbagliato.** Due file di
+  test ricopiavano a mano la logica delle edge function e un terzo verificava
+  le proprie fixture senza mai chiamare la funzione, perché `index.ts`
+  chiama `Deno.serve` a livello di modulo e importarlo da un test farebbe
+  partire un server. Appena i test hanno importato la funzione vera, uno è
+  diventato rosso: la `GENRE_WHITELIST` ricopiata si era fermata a sei generi
+  mentre quella di produzione ne ha decine. La cura non è un mock, è spostare
+  la logica pura in un modulo che all'import non fa niente.
+- **Un guardiano con una lista scritta a mano non fallisce mai: guarda sempre
+  meno codice.** `check-rome-tz.mjs` aveva una lista di file, e `CalendarPage`
+  non c'era. Ora un test in `src/test/tooling/` verifica il contrario: che ogni
+  pagina che manipola date sia nella lista.
+- **`new Date(Date.UTC(...))` è corretto e non va zittito.** Riceve un numero,
+  non una stringa. Il guardiano del fuso ora lo riconosce, invece di farsi
+  mettere a tacere da `@tz-ignore` su codice giusto.
+- Estendere il lint a cartelle mai coperte ha trovato otto problemi reali in
+  dieci minuti, fra cui uno zero-width space nascosto dentro `/* */` in
+  `check-italian-ui.mjs` e due parser di date abbandonati.
 - Il codemod di Tailwind ha rinominato anche il **valore della prop**
   `variant="outline"` in `"outline-solid"` su quattro bottoni, trattandolo come
   una classe CSS. Non l'ha visto né il lint né la build: l'ha trovato `tsc`
-  quando ho attivato `strict`. Se in futuro si lancia un altro codemod, il
-  typecheck va rilanciato subito dopo.
+  quando è stato attivato `strict`. Dopo un codemod, rilanciare subito il
+  typecheck.
 - Su macOS il filesystem è case-insensitive: due moduli che differiscono solo
   per maiuscole collidono in locale e sono distinti su Linux in CI. È già
   successo con `PreferencesPanelContext.tsx` e `preferencesPanelContext.ts`.
@@ -148,7 +163,9 @@ serie `2.6.x`, che manca dal changelog pur avendo già una nota in
   `bun install` da zero.
 - Il wrapper del Toaster leggeva il tema da `next-themes`, che questa app non
   monta: i toast uscivano chiari sopra l'interfaccia scura. Le e2e sono basate
-  sul testo e non lo vedevano; l'ho trovato guardando uno screenshot.
-- **Le e2e non coprono il rischio visivo.** Per Tailwind 4 ho verificato a
-  schermo Home, Juventus, Streaming, Calendario, F1 e Sinner in tema chiaro e
+  sul testo e non lo vedevano; è stato trovato guardando uno screenshot.
+- **Le e2e non coprono il rischio visivo.** Per Tailwind 4 sono state verificate
+  a schermo Home, Juventus, Streaming, Calendario, F1 e Sinner in tema chiaro e
   scuro. Qualunque intervento sullo stile va verificato allo stesso modo.
+- `App.tsx` monta ancora **due** sistemi di toast, Sonner e quello Radix. Il
+  piano (Task 6.6) prevedeva di tenere solo Sonner: non è stato fatto.

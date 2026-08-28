@@ -40,9 +40,10 @@ export default tseslint.config(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
       ],
       // Resta spenta finche' non e' chiusa la tipizzazione dei payload al
-      // confine delle edge function (voce "Tipizzazione dei payload API" in
-      // docs/ROADMAP.md): oggi ci sono 25 `any` nelle pagine, ed e' quel
-      // lavoro a doverli togliere, non un `eslint-disable` per ciascuno.
+      // confine delle edge function (voce "I payload delle edge function
+      // arrivano come `any`" in docs/ROADMAP.md): oggi ci sono 25 `any` nelle
+      // pagine, ed e' quel lavoro a doverli togliere, non un
+      // `eslint-disable` per ciascuno.
       "@typescript-eslint/no-explicit-any": "off",
       "no-restricted-imports": [
         "error",
