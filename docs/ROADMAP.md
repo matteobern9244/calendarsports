@@ -104,9 +104,10 @@ guardiano offline, la stessa struttura di `Tabs` e la stessa terna
 
 ### `StreamingPage` fa troppe cose
 
-828 righe: dieci stati locali, la serializzazione dei filtri nell'URL, tre
+788 righe: dieci stati locali, la serializzazione dei filtri nell'URL, tre
 sotto-componenti definiti in fondo al file e quattro tabelle di dati inline.
-`TonightTvList` (760) e `CalendarPage` (600) sono i successivi in fila.
+`TonightTvList` (802) e `CalendarPage` (695) sono i successivi in fila.
+Conteggi verificati il 28 agosto 2026.
 
 **Costo**: medio-alto. **Perché non ora**: va fatto per estrazioni successive, non
 in un colpo solo.

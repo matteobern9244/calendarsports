@@ -96,10 +96,38 @@ di Dependabot per npm.
 Sono voci di [`docs/ROADMAP.md`](docs/ROADMAP.md), a priorità bassa e media;
 ognuna ha lì costo e motivazione scritti.
 
-- **Componenti giganti.** `StreamingPage` (828 righe), `TonightTvList` (760),
-  `JuventusPage` (631), `CalendarPage` (601). Da estrarre per gradi: prima gli
-  hook di derivazione, poi i presentazionali, poi un `SportPageShell` che
-  unifichi il guardiano offline e la struttura a tab ripetuta in quattro pagine.
+- **Componenti giganti — si riparte da qui, dal `SportPageShell`.** Deciso
+  di cominciare dal guscio trasversale invece che dal file più grande:
+  tocca quattro pagine insieme ed è coperto dalle e2e che le visitano
+  tutte. Conteggi misurati il 28 agosto 2026: `TonightTvList` 802 righe,
+  `StreamingPage` 788, `JuventusPage` 715, `CalendarPage` 695,
+  `Formula1Page` 430, `MotoGPPage` 427, `SinnerPage` 378.
+
+  Il guscio ripetuto in `Formula1Page`, `MotoGPPage`, `SinnerPage` e
+  `JuventusPage` è fatto di tre pezzi distinti, ed è utile non
+  confonderli:
+
+  1. **Il guardiano offline**, identico in tutte e quattro: un `if`
+     che verifica «nessuna sezione ha dati _e_ tutte sono in errore _e_
+     siamo offline», e ritorna `OfflineFallback` dentro il solito
+     `div.container.py-8.sm:py-12`. Vale ~12 righe per pagina.
+  2. **L'intestazione con le tab**: stesso contenitore, `SectionHeader`
+     dentro un `div.mb-2`, `Tabs` con `TabsList` e i trigger che
+     ripetono la stessa classe. Vale ~15 righe per pagina — attenzione,
+     `SinnerPage` usa una `TabsList` più semplice delle altre tre.
+  3. **La terna `LoadingState` / `ErrorState` /
+     `UnavailableExternalSource`** dentro ogni `TabsContent`, con i
+     medesimi tre link esterni ripetuti in ciascuno dei tre stati.
+
+  **La resa vera è nel terzo pezzo, non nei primi due.** I primi due si
+  ripetono quattro volte (una per pagina); la terna si ripete **dieci**
+  volte, perché sta dentro ogni singola tab: tre in `Formula1Page` e
+  `MotoGPPage`, due in `SinnerPage` e `JuventusPage`, a 25-30 righe
+  l'una. Un `SportPageShell` che unifichi solo il guscio esterno
+  toglierebbe una cinquantina di righe in tutto; è la sezione a tre
+  stati il componente che ne vale centinaia. Conviene quindi partire da
+  quella e trattare il guscio come il contorno.
+
 - **PWA e accessibilità** — voce «L'app installata non funziona offline», più le
   tre correzioni puntuali di a11y elencate nel piano (riga TV focusabile ma non
   interattiva, `aria-disabled` mancante su `PagerNav`, nomi accessibili sui
