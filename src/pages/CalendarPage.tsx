@@ -41,15 +41,34 @@ const MONTH_LABELS = [
 
 type RomeYMD = { y: number; m: number; d: number };
 
+// I tre formatter della pagina vivono qui e non dentro le funzioni che li
+// usano. Costruire un `Intl.DateTimeFormat` e' la parte cara dell'API:
+// `toRomeYMD` ne costruiva uno per evento (~350 a mese) e `romeHHMM`, che
+// passava da `toLocaleTimeString`, due per evento visibile.
+const ROME_YMD_FMT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Rome",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const ROME_HHMM_FMT = new Intl.DateTimeFormat("it-IT", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Rome",
+  hour12: false,
+});
+
+const ROME_DAY_HEADER_FMT = new Intl.DateTimeFormat("it-IT", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "Europe/Rome",
+});
+
 /** Estrae anno/mese/giorno della data in fuso `Europe/Rome`. */
 function toRomeYMD(date: Date): RomeYMD {
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Rome",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const [y, m, d] = fmt.format(date).split("-").map(Number);
+  const [y, m, d] = ROME_YMD_FMT.format(date).split("-").map(Number);
   return { y, m, d };
 }
 
@@ -65,12 +84,7 @@ function romeDayKey(iso: string): string | null {
 function romeHHMM(iso: string): string {
   const d = toRomeDate(iso);
   if (!d) return "";
-  return d.toLocaleTimeString("it-IT", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Rome",
-    hour12: false,
-  });
+  return ROME_HHMM_FMT.format(d);
 }
 
 /** Costruisce la matrice 6x7 di giorni del mese visualizzato (lunedì=primo). */
@@ -155,12 +169,7 @@ function loadView(): ViewMode {
 function formatDayHeaderIT(c: RomeYMD): string {
   // Costruiamo una data UTC a mezzogiorno per evitare drift cross-DST
   const d = new Date(Date.UTC(c.y, c.m - 1, c.d, 12, 0, 0));
-  const s = new Intl.DateTimeFormat("it-IT", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "Europe/Rome",
-  }).format(d);
+  const s = ROME_DAY_HEADER_FMT.format(d);
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
@@ -242,15 +251,9 @@ export default function CalendarPage() {
   };
   const goToday = () => setView(today);
 
-  const lastSyncLabel = useMemo(() => {
-    if (!lastSyncAt) return null;
-    return new Intl.DateTimeFormat("it-IT", {
-      timeZone: "Europe/Rome",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(lastSyncAt);
-  }, [lastSyncAt]);
+  // Con il formatter a modulo la formattazione costa quanto leggere una
+  // variabile: la `useMemo` che la avvolgeva non serve piu'.
+  const lastSyncLabel = lastSyncAt ? ROME_HHMM_FMT.format(lastSyncAt) : null;
 
   return (
     <div className="container py-4 sm:py-6 space-y-4">

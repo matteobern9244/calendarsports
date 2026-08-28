@@ -1,5 +1,5 @@
-import { Fragment, useMemo, useState } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { Fragment, memo, useMemo, useState } from "react";
+import { useQueries, type UseQueryResult } from "@tanstack/react-query";
 import {
   ChevronLeft,
   ChevronRight,
@@ -96,11 +96,103 @@ type FilterValue = "all" | StreamingFamilyId;
 
 const TV_PAGE_SIZE = 8;
 
+/**
+ * Un formatter solo per tutta la scheda. Costruire un
+ * `Intl.DateTimeFormat` e' la parte cara dell'API (la `format` successiva
+ * e' quasi gratis): qui viene chiamato due volte per programma, su tutti
+ * i canali di cinque famiglie.
+ */
+const TV_TIME_FMT = new Intl.DateTimeFormat("it-IT", {
+  timeZone: "Europe/Rome",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
 // Prima serata italiana: dalle 21:00 incluse alle 22:59 incluse.
 // I programmi che iniziano alle 23:00 o dopo appartengono alla
 // seconda serata e non devono comparire nella scheda Home.
 const PRIME_TIME_START_MIN = 21 * 60; // 21:00
 const PRIME_TIME_END_EXCLUSIVE_MIN = 23 * 60; // 23:00 (escluso)
+
+/**
+ * Aggrega i palinsesti delle cinque famiglie in righe pronte per la
+ * tabella, e riporta lo stato di attesa aggregato.
+ *
+ * Vive fuori dal componente perche' e' la `combine` di `useQueries`:
+ * TanStack Query la riesegue solo quando cambiano i risultati **o**
+ * quando cambia il riferimento della funzione, e ne condivide
+ * strutturalmente l'output. Una funzione definita dentro il componente
+ * sarebbe nuova a ogni render e non memoizzerebbe niente: era il difetto
+ * della `useMemo(..., [tvQueries])` che c'era prima, visto che
+ * `useQueries` senza `combine` restituisce un array nuovo ogni volta.
+ */
+function combineTvHighlights(results: Array<UseQueryResult<TvFamilyPayload>>) {
+  const rows: TvHighlight[] = [];
+  results.forEach((q, idx) => {
+    const fam = STREAMING_FAMILIES[idx].id;
+    const data = q.data;
+    if (!data?.programsAvailable) return;
+    for (const ch of data.channels ?? []) {
+      // In home limitiamo le famiglie ai canali principali per non
+      // saturare la scheda Stasera in TV.
+      if (fam === "rai" && ch.id !== "rai-1" && ch.id !== "rai-2") continue;
+      if (fam === "mediaset" && ch.id !== "canale-5" && ch.id !== "italia-1") continue;
+      for (const p of ch.programs) {
+        // Tutti gli orari sono normalizzati via `toRomeDate`: gli ISO
+        // "naive" senza offset (es. "2026-04-21T20:30:00") vengono
+        // trattati come UTC, in linea con la policy condivisa con le
+        // pagine Juventus/F1/MotoGP. Senza questa normalizzazione il
+        // client interpreterebbe la stringa come ora locale, con drift
+        // visibile per utenti fuori dal fuso italiano e in DST.
+        const d = toRomeDate(p.start);
+        if (!d) continue;
+        const hhmm = TV_TIME_FMT.format(d);
+        const [hStr, mStr] = hhmm.split(":");
+        const hasExplicitEnd = Boolean(p.end);
+        const endDate = hasExplicitEnd ? toRomeDate(p.end) : null;
+        // Quando la fonte non fornisce l'orario di fine assumiamo una
+        // durata "open-ended" pari alla finestra di prima serata: il
+        // programma e' candidato per la visualizzazione purche' parta
+        // prima delle 23:00 (vedi overlapsPrimeWindow piu' in basso).
+        // La durata mostrata in cella resta pero' 0 cosi' l'utente non
+        // legge una durata inventata.
+        const endMs = endDate ? endDate.getTime() : d.getTime() + 24 * 60 * 60 * 1000; // sentinel "fine ignota"
+        const durationMin = endDate ? Math.max(0, Math.round((endMs - d.getTime()) / 60000)) : 0;
+        // endMs e' un timestamp in millisecondi, non una stringa ISO: qui non
+        // c'e' nessuna interpretazione di fuso da sbagliare.
+        // @tz-ignore
+        const endHHMM = TV_TIME_FMT.format(new Date(endMs));
+        const [endHStr, endMStr] = endHHMM.split(":");
+        const startMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
+        let endMinutesFromMidnight = parseInt(endHStr, 10) * 60 + parseInt(endMStr, 10);
+        // Normalizza il wrap dopo mezzanotte: se la fine cade lo stesso
+        // giorno o prima dell'inizio (es. start 23:30, end 01:15)
+        // aggiungiamo 24h in modo che il confronto con la finestra di
+        // prima serata resti monotono.
+        if (endMinutesFromMidnight <= startMinutes) {
+          endMinutesFromMidnight += 24 * 60;
+        }
+        rows.push({
+          family: fam,
+          channel: ch.name,
+          channelNumber: ch.number,
+          time: hhmm,
+          startMs: d.getTime(),
+          durationMin,
+          hourRome: parseInt(hStr, 10),
+          minuteRome: parseInt(mStr, 10),
+          endTime: hasExplicitEnd ? endHHMM : "",
+          endMinutesFromMidnight,
+          hasExplicitEnd,
+          title: p.title,
+          genre: p.genre,
+        });
+      }
+    }
+  });
+  return { highlights: rows, isPending: results.some((q) => q.isPending) };
+}
 
 /**
  * Scheda "Stasera in TV" della Home: aggrega i palinsesti delle 5 famiglie
@@ -109,92 +201,21 @@ const PRIME_TIME_END_EXCLUSIVE_MIN = 23 * 60; // 23:00 (escluso)
  * paginazione interna. Tutta la logica e' incapsulata qui per non far
  * crescere ulteriormente Index.tsx.
  */
-export default function TonightTvList() {
+function TonightTvList() {
   const [familyFilter, setFamilyFilter] = useState<FilterValue>("all");
   const [tvPage, setTvPage] = useState(0);
 
-  // Fetch parallelo di tutte le 5 famiglie TV
-  const tvQueries = useQueries({
+  // Fetch parallelo delle 5 famiglie TV. `combine` ha sostituito la
+  // vecchia `useMemo`: l'aggregazione gira solo quando cambia davvero
+  // uno dei cinque palinsesti.
+  const { highlights: allHighlights, isPending: tvPending } = useQueries({
     queries: STREAMING_FAMILIES.map((f) => ({
       queryKey: ["streaming-tv", f.id],
       queryFn: () => streamingApi.getTvByFamily(f.id),
       staleTime: 15 * 60 * 1000,
     })),
+    combine: combineTvHighlights,
   });
-
-  // Aggrega tutti i programmi reali da tutte le famiglie con etichetta family
-  const allHighlights = useMemo<TvHighlight[]>(() => {
-    const rows: TvHighlight[] = [];
-    const timeFmt = new Intl.DateTimeFormat("it-IT", {
-      timeZone: "Europe/Rome",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    tvQueries.forEach((q, idx) => {
-      const fam = STREAMING_FAMILIES[idx].id;
-      const data = q.data as TvFamilyPayload | undefined;
-      if (!data?.programsAvailable) return;
-      for (const ch of data.channels ?? []) {
-        // In home limitiamo le famiglie ai canali principali per non
-        // saturare la scheda Stasera in TV.
-        if (fam === "rai" && ch.id !== "rai-1" && ch.id !== "rai-2") continue;
-        if (fam === "mediaset" && ch.id !== "canale-5" && ch.id !== "italia-1") continue;
-        for (const p of ch.programs) {
-          // Tutti gli orari sono normalizzati via `toRomeDate`: gli ISO
-          // "naive" senza offset (es. "2026-04-21T20:30:00") vengono
-          // trattati come UTC, in linea con la policy condivisa con le
-          // pagine Juventus/F1/MotoGP. Senza questa normalizzazione il
-          // client interpreterebbe la stringa come ora locale, con drift
-          // visibile per utenti fuori dal fuso italiano e in DST.
-          const d = toRomeDate(p.start);
-          if (!d) continue;
-          const hhmm = timeFmt.format(d);
-          const [hStr, mStr] = hhmm.split(":");
-          const hasExplicitEnd = Boolean(p.end);
-          const endDate = hasExplicitEnd ? toRomeDate(p.end) : null;
-          // Quando la fonte non fornisce l'orario di fine assumiamo una
-          // durata "open-ended" pari alla finestra di prima serata: il
-          // programma e' candidato per la visualizzazione purche' parta
-          // prima delle 23:00 (vedi overlapsPrimeWindow piu' in basso).
-          // La durata mostrata in cella resta pero' 0 cosi' l'utente non
-          // legge una durata inventata.
-          const endMs = endDate ? endDate.getTime() : d.getTime() + 24 * 60 * 60 * 1000; // sentinel "fine ignota"
-          const durationMin = endDate ? Math.max(0, Math.round((endMs - d.getTime()) / 60000)) : 0;
-          // endMs e' un timestamp in millisecondi, non una stringa ISO: qui non
-          // c'e' nessuna interpretazione di fuso da sbagliare.
-          // @tz-ignore
-          const endHHMM = timeFmt.format(new Date(endMs));
-          const [endHStr, endMStr] = endHHMM.split(":");
-          const startMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
-          let endMinutesFromMidnight = parseInt(endHStr, 10) * 60 + parseInt(endMStr, 10);
-          // Normalizza il wrap dopo mezzanotte: se la fine cade lo stesso
-          // giorno o prima dell'inizio (es. start 23:30, end 01:15)
-          // aggiungiamo 24h in modo che il confronto con la finestra di
-          // prima serata resti monotono.
-          if (endMinutesFromMidnight <= startMinutes) {
-            endMinutesFromMidnight += 24 * 60;
-          }
-          rows.push({
-            family: fam,
-            channel: ch.name,
-            channelNumber: ch.number,
-            time: hhmm,
-            startMs: d.getTime(),
-            durationMin,
-            hourRome: parseInt(hStr, 10),
-            minuteRome: parseInt(mStr, 10),
-            endTime: hasExplicitEnd ? endHHMM : "",
-            endMinutesFromMidnight,
-            hasExplicitEnd,
-            title: p.title,
-            genre: p.genre,
-          });
-        }
-      }
-    });
-    return rows;
-  }, [tvQueries]);
 
   // "Prima fascia serale" italiana: ~21:00 - 22:30 Europe/Rome.
   // Selezioniamo per ogni canale il primo programma in quella finestra,
@@ -346,7 +367,7 @@ export default function TonightTvList() {
   // mai il contenuto con lo spinner, ma riserviamo uno spazio minimo
   // costante via `min-h` cosi' una variazione del numero di righe non
   // produce salti di layout.
-  const isInitialTvLoading = tonightHighlights.length === 0 && tvQueries.some((q) => q.isPending);
+  const isInitialTvLoading = tonightHighlights.length === 0 && tvPending;
 
   return (
     <Card className="border-primary/30 bg-linear-to-br from-card to-card/60">
@@ -774,3 +795,8 @@ export default function TonightTvList() {
     </Card>
   );
 }
+
+// Non riceve props: `memo` la stacca del tutto dai render del padre. La
+// Home si ri-renderizza a ogni passo della barra di avanzamento durante
+// "Sincronizza", e questa scheda non ha ragione di seguirla.
+export default memo(TonightTvList);

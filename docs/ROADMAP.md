@@ -77,21 +77,6 @@ mano, che potrebbero già essere in ritardo sul codice.
 **Costo**: medio. **Perché ora**: `StreamingPage` è la pagina più grande del
 progetto e la sola dove un campo rinominato a monte non fa rumore.
 
-### Il calendario ricalcola tutto a ogni render
-
-In [`src/hooks/useCalendarEvents.ts`](../src/hooks/useCalendarEvents.ts)
-l'espansione, il filtro e l'ordinamento di circa 350 eventi stanno nel corpo
-dell'hook, fuori da qualunque `useMemo`. `CalendarPage` fa scattare un tick
-ogni 60 secondi per i conti alla rovescia, e quel tick li invalida tutti.
-
-Nello stesso ambito, `TonightTvList` ha una `useMemo` che dipende da
-`[tvQueries]`, cioè dall'array restituito da `useQueries`, che è nuovo a ogni
-render: quella memo non ha mai memoizzato niente. Va usata l'opzione `combine`
-di `useQueries`, oppure una dipendenza sui `.data`.
-
-**Costo**: basso. **Perché ora**: una `useMemo` che non memoizza è peggio di
-nessuna `useMemo`, perché dichiara una garanzia che non c'è.
-
 ### L'app installata non funziona offline
 
 `public/sw.js` gestisce solo le notifiche push: non ha un handler `fetch`, quindi

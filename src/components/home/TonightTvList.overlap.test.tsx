@@ -54,8 +54,18 @@ vi.mock("@tanstack/react-query", () => {
     discovery: "Discovery",
   };
   return {
-    useQueries: ({ queries }: { queries: Array<{ queryKey: unknown[] }> }) =>
-      queries.map((q) => {
+    // Il mock rispetta il contratto reale di `useQueries`, `combine`
+    // compresa: senza applicarla restituirebbe l'array grezzo dei
+    // risultati a un componente che si aspetta il valore aggregato,
+    // cioe' collauderebbe una libreria che non esiste.
+    useQueries: <T,>({
+      queries,
+      combine,
+    }: {
+      queries: Array<{ queryKey: unknown[] }>;
+      combine?: (results: Array<{ data: TvFamilyPayload; isPending: boolean }>) => T;
+    }) => {
+      const results = queries.map((q) => {
         const familyId = (q.queryKey?.[1] as string) ?? "rai";
         return {
           data: buildPayload(
@@ -63,9 +73,12 @@ vi.mock("@tanstack/react-query", () => {
             labelByFamily[familyId] ?? familyId,
           ),
           isLoading: false,
+          isPending: false,
           isError: false,
         };
-      }),
+      });
+      return combine ? combine(results) : results;
+    },
   };
 });
 

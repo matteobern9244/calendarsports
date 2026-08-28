@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { f1Api, footballApi, motogpApi } from "@/lib/api/sportsApi";
 import {
@@ -235,26 +236,49 @@ export function useCalendarEvents() {
     },
   });
 
-  const events: CalendarItem[] = [
-    ...expandF1(f1.data as unknown[] | undefined),
-    ...expandMotoGP(motogp.data as unknown[] | undefined),
-    ...expandJuventus(
-      (juveAll.data as unknown[] | undefined) ??
-        (juveFirst.data as { items?: unknown[] } | undefined)?.items,
-    ),
-  ]
-    .filter((e) => toRomeDate(e.date) !== null)
-    .sort((a, b) => a.date.localeCompare(b.date));
+  // Espansione, filtro e ordinamento di ~350 eventi. Memoizzati perche'
+  // `CalendarPage` fa scattare un tick ogni 60 secondi per ingrigire gli
+  // eventi conclusi: senza questa memo quel tick rifarebbe tutto il lavoro
+  // e, essendo `events` una nuova referenza, invaliderebbe a cascata anche
+  // le memo di `CalendarPage` che ne dipendono. Le tre `expand*` sono
+  // funzioni pure di modulo, quindi non sono dipendenze: le uniche sono i
+  // dati, che React Query mantiene referenzialmente stabili.
+  const f1Data = f1.data;
+  const motogpData = motogp.data;
+  const juveAllData = juveAll.data;
+  const juveFirstData = juveFirst.data;
+
+  const events: CalendarItem[] = useMemo(
+    () =>
+      [
+        ...expandF1(f1Data as unknown[] | undefined),
+        ...expandMotoGP(motogpData as unknown[] | undefined),
+        ...expandJuventus(
+          (juveAllData as unknown[] | undefined) ??
+            (juveFirstData as { items?: unknown[] } | undefined)?.items,
+        ),
+      ]
+        .filter((e) => toRomeDate(e.date) !== null)
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [f1Data, motogpData, juveAllData, juveFirstData],
+  );
+
+  const { refetch: refetchF1 } = f1;
+  const { refetch: refetchMotogp } = motogp;
+  const { refetch: refetchJuveFirst } = juveFirst;
+  const { refetch: refetchJuveAll } = juveAll;
+
+  const refetchAll = useCallback(() => {
+    refetchF1();
+    refetchMotogp();
+    refetchJuveFirst();
+    refetchJuveAll();
+  }, [refetchF1, refetchMotogp, refetchJuveFirst, refetchJuveAll]);
 
   return {
     events,
     isLoading: f1.isLoading || motogp.isLoading || juveFirst.isLoading || juveAll.isLoading,
     isError: !!(f1.error && motogp.error && juveFirst.error),
-    refetchAll: () => {
-      f1.refetch();
-      motogp.refetch();
-      juveFirst.refetch();
-      juveAll.refetch();
-    },
+    refetchAll,
   };
 }

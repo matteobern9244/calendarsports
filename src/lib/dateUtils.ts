@@ -8,6 +8,18 @@
  *
  * Ritorna `null` per input invalidi, vuoti o non parsabili.
  */
+/**
+ * `YYYY-MM-DD` nel fuso italiano. Costruito una volta: e' la stessa
+ * configurazione che serviva a `todayRomeISO` e `daysUntilRome`, che se ne
+ * fabbricavano una a ogni chiamata.
+ */
+const ROME_YMD_FMT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Rome",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 export function toRomeDate(input: string | Date | null | undefined): Date | null {
   if (input == null) return null;
   if (input instanceof Date) {
@@ -195,12 +207,7 @@ export function getEventStatus(dateStr: string): "prossimo" | "in_corso" | "comp
  * streaming (Index + StreamingPage) al giorno italiano.
  */
 export function todayRomeISO(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Rome",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  return ROME_YMD_FMT.format(new Date());
 }
 
 /**
@@ -230,14 +237,8 @@ export function daysUntilRome(dateIso: string | null | undefined): number | null
   const parsed = new Date(dateIso);
   if (Number.isNaN(parsed.getTime())) return null;
 
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Rome",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const todayIso = fmt.format(new Date());
-  const targetIso = fmt.format(parsed);
+  const todayIso = ROME_YMD_FMT.format(new Date());
+  const targetIso = ROME_YMD_FMT.format(parsed);
 
   const [ty, tm, td] = todayIso.split("-").map(Number);
   const [ry, rm, rd] = targetIso.split("-").map(Number);
