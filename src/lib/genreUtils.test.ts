@@ -17,17 +17,25 @@ describe("inferGenre", () => {
       expect(inferGenre("sky-sport", "Sky Sport Uno", "Moto2 Qualifiche")).toBe("MotoGP");
     });
     it("riconosce Formula 1", () => {
-      expect(inferGenre("sky-sport", "Sky Sport F1", "Formula 1: Gara Australia")).toBe("Formula 1");
+      expect(inferGenre("sky-sport", "Sky Sport F1", "Formula 1: Gara Australia")).toBe(
+        "Formula 1",
+      );
       expect(inferGenre("sky-sport", "Sky Sport F1", "F1 Qualifiche")).toBe("Formula 1");
     });
     it("riconosce Champions League senza falsi positivi (es. World Championship)", () => {
-      expect(inferGenre("sky-sport", "Sky Sport", "Champions League: Real - Bayern")).toBe("Champions League");
+      expect(inferGenre("sky-sport", "Sky Sport", "Champions League: Real - Bayern")).toBe(
+        "Champions League",
+      );
     });
     it("riconosce calcio italiano", () => {
-      expect(inferGenre("sky-sport", "Sky Sport Calcio", "Serie A: Juventus - Inter")).toBe("Calcio");
+      expect(inferGenre("sky-sport", "Sky Sport Calcio", "Serie A: Juventus - Inter")).toBe(
+        "Calcio",
+      );
     });
     it("riconosce tennis", () => {
-      expect(inferGenre("sky-sport", "Sky Sport Tennis", "ATP Madrid: Sinner - Alcaraz")).toBe("Tennis");
+      expect(inferGenre("sky-sport", "Sky Sport Tennis", "ATP Madrid: Sinner - Alcaraz")).toBe(
+        "Tennis",
+      );
     });
     it("default per Sky Sport non riconosciuto -> Sport", () => {
       expect(inferGenre("sky-sport", "Sky Sport Arena", "Programma generico")).toBe("Sport");
@@ -99,7 +107,9 @@ describe("inferGenre", () => {
       expect(inferGenre("discovery", "Real Time", "Casa a Prima Vista")).toBe("Lifestyle");
     });
     it("estrae genere da '(Inchieste)' finale e mappa a Talk Show", () => {
-      expect(inferGenre("mediaset", "Italia 1", "Le Iene presentano - Il verdetto (Inchieste)")).toBe("Talk Show");
+      expect(
+        inferGenre("mediaset", "Italia 1", "Le Iene presentano - Il verdetto (Inchieste)"),
+      ).toBe("Talk Show");
     });
   });
 });

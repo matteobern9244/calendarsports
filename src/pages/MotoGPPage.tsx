@@ -6,7 +6,11 @@ import UnavailableExternalSource from "@/components/common/UnavailableExternalSo
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getCurrentMotoGPSeason } from "@/lib/currentSeason";
-import { useMotoGPCalendar, useMotoGPStandings, useMotoGPConstructorStandings } from "@/hooks/useSportsData";
+import {
+  useMotoGPCalendar,
+  useMotoGPStandings,
+  useMotoGPConstructorStandings,
+} from "@/hooks/useSportsData";
 import {
   formatDateIT,
   formatTimeIT,
@@ -16,32 +20,60 @@ import {
 } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import TeamLogo from "@/components/common/TeamLogo";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
 import RaceDetailsDialog, { type RaceSession } from "@/components/common/RaceDetailsDialog";
 import { useState } from "react";
 
 const MOTOGP_CONSTRUCTOR_COLORS: Record<string, { border: string; bg: string }> = {
-  ducati:  { border: 'hsl(var(--brand-ducati))',  bg: 'hsl(var(--brand-ducati) / 0.08)' },
-  aprilia: { border: 'hsl(var(--brand-aprilia))', bg: 'hsl(var(--brand-aprilia) / 0.06)' },
-  ktm:     { border: 'hsl(var(--brand-ktm))',     bg: 'hsl(var(--brand-ktm) / 0.10)' },
-  yamaha:  { border: 'hsl(var(--brand-yamaha))',  bg: 'hsl(var(--brand-yamaha) / 0.08)' },
-  honda:   { border: 'hsl(var(--brand-honda))',   bg: 'hsl(var(--brand-honda) / 0.08)' },
+  ducati: { border: "hsl(var(--brand-ducati))", bg: "hsl(var(--brand-ducati) / 0.08)" },
+  aprilia: { border: "hsl(var(--brand-aprilia))", bg: "hsl(var(--brand-aprilia) / 0.06)" },
+  ktm: { border: "hsl(var(--brand-ktm))", bg: "hsl(var(--brand-ktm) / 0.10)" },
+  yamaha: { border: "hsl(var(--brand-yamaha))", bg: "hsl(var(--brand-yamaha) / 0.08)" },
+  honda: { border: "hsl(var(--brand-honda))", bg: "hsl(var(--brand-honda) / 0.08)" },
 };
 
 export default function MotoGPPage() {
   const season = getCurrentMotoGPSeason();
-  const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useMotoGPCalendar(season);
-  const { data: standings, isLoading: stLoading, error: stError, refetch: stRefetch } = useMotoGPStandings(season);
-  const { data: constructors, isLoading: csLoading, error: csError, refetch: csRefetch } = useMotoGPConstructorStandings(season);
+  const {
+    data: calendar,
+    isLoading: calLoading,
+    error: calError,
+    refetch: calRefetch,
+  } = useMotoGPCalendar(season);
+  const {
+    data: standings,
+    isLoading: stLoading,
+    error: stError,
+    refetch: stRefetch,
+  } = useMotoGPStandings(season);
+  const {
+    data: constructors,
+    isLoading: csLoading,
+    error: csError,
+    refetch: csRefetch,
+  } = useMotoGPConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
 
   if (!isOnline && calError && !calendar && stError && !standings && csError && !constructors) {
     return (
       <div className="container py-8 sm:py-12">
-        <OfflineFallback onRetry={() => { calRefetch(); stRefetch(); csRefetch(); }} />
+        <OfflineFallback
+          onRetry={() => {
+            calRefetch();
+            stRefetch();
+            csRefetch();
+          }}
+        />
       </div>
     );
   }
@@ -54,10 +86,21 @@ export default function MotoGPPage() {
 
       <Tabs defaultValue="calendario" className="w-full">
         <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">Calendario</TabsTrigger>
-          <TabsTrigger value="piloti" className="font-heading text-xs tracking-wider uppercase">Classifica Piloti</TabsTrigger>
-          <TabsTrigger value="costruttori" className="font-heading text-xs tracking-wider uppercase">Classifica Costruttori</TabsTrigger>
-          <TabsTrigger value="highlights" className="font-heading text-xs tracking-wider uppercase">Highlights</TabsTrigger>
+          <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">
+            Calendario
+          </TabsTrigger>
+          <TabsTrigger value="piloti" className="font-heading text-xs tracking-wider uppercase">
+            Classifica Piloti
+          </TabsTrigger>
+          <TabsTrigger
+            value="costruttori"
+            className="font-heading text-xs tracking-wider uppercase"
+          >
+            Classifica Costruttori
+          </TabsTrigger>
+          <TabsTrigger value="highlights" className="font-heading text-xs tracking-wider uppercase">
+            Highlights
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendario">
@@ -87,73 +130,79 @@ export default function MotoGPPage() {
               ctaHint="Tocca qui per orari Sprint e gara"
             />
           )}
-          {calendar && calendar.length > 0 && (() => {
-            const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
-              calendar,
-              (event: any) => event.date || event.date_start,
-              undefined,
-              (event: any) =>
-                event.date_end
-                  ? `${event.date_end}T23:59:59Z`
-                  : event.date || event.date_start
-            );
-            return (
-            <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {orderedCalendar.map((e: any, i: number) => {
-                const startDate = e.date || e.date_start;
-                const endDate = e.date_end;
-                const location = [e.circuit, e.location || e.venue, e.city, e.country].filter(Boolean).join(" · ");
-                // `toRomeDate` normalizza ISO "naive" come UTC (policy
-                // condivisa con le altre pagine sportive). I confronti
-                // sono in millisecondi assoluti quindi indipendenti dal
-                // fuso, ma evitiamo l'interpretazione locale del client
-                // sui giorni senza orario (es. `2026-04-21`).
-                const startMs = toRomeDate(startDate)?.getTime() ?? NaN;
-                const endMsRaw = toRomeDate(endDate)?.getTime();
-                // L'evento e' "in corso" fino alla fine del giorno
-                // dell'ultima sessione (weekend di gara MotoGP).
-                const endMs = endMsRaw != null
-                  ? endMsRaw + 24 * 60 * 60 * 1000 - 1
-                  : startMs;
-                const nowMs = Date.now();
-
-                const status = Number.isFinite(startMs) && Number.isFinite(endMs)
-                  ? nowMs > endMs
-                    ? "completato"
-                    : nowMs >= startMs
-                      ? "in_corso"
-                      : "prossimo"
-                  : startDate
-                    ? getEventStatus(startDate)
-                    : "prossimo";
-
-                return (
-                <EventCard
-                  key={e.id || e.round || i}
-                  sport={e.round ? `Round ${e.round}` : "MotoGP"}
-                  title={e.name}
-                  subtitle={location}
-                  date={startDate ? formatDateIT(startDate) : "—"}
-                  time={e.time ? formatTimeIT(e.time, startDate) : undefined}
-                  startDate={e.time && startDate ? `${startDate}T${e.time}` : startDate}
-                  endDate={endDate ? `${endDate}T23:59:59Z` : undefined}
-                  status={status}
-                  highlight={i === highlightIndex}
-                  onRetry={() => calRefetch()}
-                  onClick={() => setSelectedEvent(e)}
+          {calendar &&
+            calendar.length > 0 &&
+            (() => {
+              const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
+                calendar,
+                (event: any) => event.date || event.date_start,
+                undefined,
+                (event: any) =>
+                  event.date_end ? `${event.date_end}T23:59:59Z` : event.date || event.date_start,
+              );
+              return (
+                <motion.div
+                  className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  initial="hidden"
+                  animate="show"
+                  variants={{ show: { transition: { staggerChildren: 0.05 } } }}
                 >
-                  {endDate && startDate !== endDate && (
-                    <p className="text-sm text-muted-foreground">Weekend di gara fino al {formatDateIT(endDate)}</p>
-                  )}
-                  {e.result && (
-                    <p className="text-sm text-muted-foreground">{e.result}</p>
-                  )}
-                </EventCard>
-                );
-              })}
-            </motion.div>
-            );
-          })()}
+                  {orderedCalendar.map((e: any, i: number) => {
+                    const startDate = e.date || e.date_start;
+                    const endDate = e.date_end;
+                    const location = [e.circuit, e.location || e.venue, e.city, e.country]
+                      .filter(Boolean)
+                      .join(" · ");
+                    // `toRomeDate` normalizza ISO "naive" come UTC (policy
+                    // condivisa con le altre pagine sportive). I confronti
+                    // sono in millisecondi assoluti quindi indipendenti dal
+                    // fuso, ma evitiamo l'interpretazione locale del client
+                    // sui giorni senza orario (es. `2026-04-21`).
+                    const startMs = toRomeDate(startDate)?.getTime() ?? NaN;
+                    const endMsRaw = toRomeDate(endDate)?.getTime();
+                    // L'evento e' "in corso" fino alla fine del giorno
+                    // dell'ultima sessione (weekend di gara MotoGP).
+                    const endMs = endMsRaw != null ? endMsRaw + 24 * 60 * 60 * 1000 - 1 : startMs;
+                    const nowMs = Date.now();
+
+                    const status =
+                      Number.isFinite(startMs) && Number.isFinite(endMs)
+                        ? nowMs > endMs
+                          ? "completato"
+                          : nowMs >= startMs
+                            ? "in_corso"
+                            : "prossimo"
+                        : startDate
+                          ? getEventStatus(startDate)
+                          : "prossimo";
+
+                    return (
+                      <EventCard
+                        key={e.id || e.round || i}
+                        sport={e.round ? `Round ${e.round}` : "MotoGP"}
+                        title={e.name}
+                        subtitle={location}
+                        date={startDate ? formatDateIT(startDate) : "—"}
+                        time={e.time ? formatTimeIT(e.time, startDate) : undefined}
+                        startDate={e.time && startDate ? `${startDate}T${e.time}` : startDate}
+                        endDate={endDate ? `${endDate}T23:59:59Z` : undefined}
+                        status={status}
+                        highlight={i === highlightIndex}
+                        onRetry={() => calRefetch()}
+                        onClick={() => setSelectedEvent(e)}
+                      >
+                        {endDate && startDate !== endDate && (
+                          <p className="text-sm text-muted-foreground">
+                            Weekend di gara fino al {formatDateIT(endDate)}
+                          </p>
+                        )}
+                        {e.result && <p className="text-sm text-muted-foreground">{e.result}</p>}
+                      </EventCard>
+                    );
+                  })}
+                </motion.div>
+              );
+            })()}
         </TabsContent>
 
         <TabsContent value="piloti">
@@ -188,10 +237,18 @@ export default function MotoGPPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">Pos</TableHead>
-                    <TableHead className="font-heading text-xs tracking-wider uppercase">Pilota</TableHead>
-                    <TableHead className="font-heading text-xs tracking-wider uppercase">Team</TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Punti</TableHead>
+                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">
+                      Pos
+                    </TableHead>
+                    <TableHead className="font-heading text-xs tracking-wider uppercase">
+                      Pilota
+                    </TableHead>
+                    <TableHead className="font-heading text-xs tracking-wider uppercase">
+                      Team
+                    </TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
+                      Punti
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -224,7 +281,9 @@ export default function MotoGPPage() {
                               decoding="async"
                               width={20}
                               height={14}
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = "none";
+                              }}
                             />
                           )}
                           <span className="font-semibold">{s.name}</span>
@@ -243,10 +302,12 @@ export default function MotoGPPage() {
                             <span>{s.team}</span>
                           </div>
                         ) : (
-                          '—'
+                          "—"
                         )}
                       </TableCell>
-                      <TableCell className="text-center font-bold text-primary">{s.points}</TableCell>
+                      <TableCell className="text-center font-bold text-primary">
+                        {s.points}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -287,9 +348,15 @@ export default function MotoGPPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">Pos</TableHead>
-                    <TableHead className="font-heading text-xs tracking-wider uppercase">Team</TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Punti</TableHead>
+                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">
+                      Pos
+                    </TableHead>
+                    <TableHead className="font-heading text-xs tracking-wider uppercase">
+                      Team
+                    </TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
+                      Punti
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -303,7 +370,7 @@ export default function MotoGPPage() {
                             style={
                               c.constructor && MOTOGP_CONSTRUCTOR_COLORS[c.constructor]
                                 ? { borderColor: MOTOGP_CONSTRUCTOR_COLORS[c.constructor].border }
-                                : { borderColor: 'hsl(var(--border))' }
+                                : { borderColor: "hsl(var(--border))" }
                             }
                           >
                             <TeamLogo
@@ -317,7 +384,9 @@ export default function MotoGPPage() {
                           <span className="font-semibold">{c.team}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center font-bold text-primary">{c.points}</TableCell>
+                      <TableCell className="text-center font-bold text-primary">
+                        {c.points}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -338,7 +407,12 @@ export default function MotoGPPage() {
         title={selectedEvent?.name ?? ""}
         subtitle={
           selectedEvent
-            ? [selectedEvent.circuit, selectedEvent.location || selectedEvent.venue, selectedEvent.city, selectedEvent.country]
+            ? [
+                selectedEvent.circuit,
+                selectedEvent.location || selectedEvent.venue,
+                selectedEvent.city,
+                selectedEvent.country,
+              ]
                 .filter(Boolean)
                 .join(" · ")
             : undefined
@@ -351,7 +425,7 @@ export default function MotoGPPage() {
                 primary: s.type === "RAC",
               }))
             : selectedEvent
-              ? [
+              ? ([
                   selectedEvent.date_start && {
                     label: "Inizio weekend",
                     date: selectedEvent.date_start,
@@ -361,7 +435,7 @@ export default function MotoGPPage() {
                     date: selectedEvent.date_end,
                     primary: true,
                   },
-                ].filter(Boolean) as RaceSession[]
+                ].filter(Boolean) as RaceSession[])
               : []
         }
       />

@@ -60,15 +60,9 @@ export default function LandingSpinner({
         role="status"
         aria-live="polite"
         aria-busy="true"
-        className={cn(
-          "flex flex-col items-center justify-center gap-4",
-          minHeightClassName,
-        )}
+        className={cn("flex flex-col items-center justify-center gap-4", minHeightClassName)}
       >
-        <Loader2
-          className="h-8 w-8 animate-spin text-primary"
-          aria-hidden="true"
-        />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
         <p className="text-sm text-muted-foreground">{message}</p>
         <span className="sr-only">{message}</span>
       </div>

@@ -21,9 +21,7 @@ function renderWithClient(ui: ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
 describe("SinnerPage", () => {
@@ -69,9 +67,7 @@ describe("SinnerPage", () => {
 
     renderWithClient(<SinnerPage />);
 
-    expect(
-      screen.getByText(/Risultati stagione \d{4} non disponibili/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Risultati stagione \d{4} non disponibili/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Riprova/i })).toBeInTheDocument();
   });
 
@@ -102,9 +98,7 @@ describe("SinnerPage", () => {
     const nav = screen.getByRole("navigation", { name: /Paginazione risultati/i });
     expect(nav).toBeInTheDocument();
     expect(nav).toHaveTextContent(/Pagina 1 \/ 3 · 30 risultati/i);
-    expect(
-      screen.getByRole("button", { name: /Pagina precedente dei risultati/i }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Pagina precedente dei risultati/i })).toBeDisabled();
     expect(
       screen.getByRole("button", { name: /Pagina successiva dei risultati/i }),
     ).not.toBeDisabled();

@@ -67,8 +67,22 @@ const payloads: Record<EndpointName, unknown> = {
     },
   ],
   "sports-f1:constructor-standings": [
-    { position: 1, points: 150, wins: 5, constructor: "McLaren", nationality: "British", logoUrl: null },
-    { position: 2, points: 132, wins: 2, constructor: "Ferrari", nationality: "Italian", logoUrl: null },
+    {
+      position: 1,
+      points: 150,
+      wins: 5,
+      constructor: "McLaren",
+      nationality: "British",
+      logoUrl: null,
+    },
+    {
+      position: 2,
+      points: 132,
+      wins: 2,
+      constructor: "Ferrari",
+      nationality: "Italian",
+      logoUrl: null,
+    },
   ],
   "sports-f1:next-race": {
     round: 6,
@@ -265,9 +279,7 @@ function paginate(endpoint: EndpointName, payload: unknown, url: URL): unknown {
   const total = payload.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const parsedPage = Number.parseInt(pageParam ?? "1", 10);
-  const page = Number.isFinite(parsedPage)
-    ? Math.min(totalPages, Math.max(1, parsedPage))
-    : 1;
+  const page = Number.isFinite(parsedPage) ? Math.min(totalPages, Math.max(1, parsedPage)) : 1;
   const start = (page - 1) * pageSize;
   const items = payload.slice(start, start + pageSize);
 

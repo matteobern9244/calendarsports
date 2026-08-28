@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import {
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -18,15 +14,29 @@ import {
 import { Badge } from "@/components/ui/badge";
 import LoadingState from "@/components/common/LoadingState";
 import { useSyncAll } from "@/hooks/useSyncAll";
-import { useCalendarEvents, type CalendarItem, type CalendarSport } from "@/hooks/useCalendarEvents";
+import {
+  useCalendarEvents,
+  type CalendarItem,
+  type CalendarSport,
+} from "@/hooks/useCalendarEvents";
 import { toRomeDate, formatDateTimeIT } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 
 // Etichette IT per settimane e mesi (no date-fns/locale per zero-dipendenze)
 const WEEKDAY_LABELS = ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"] as const;
 const MONTH_LABELS = [
-  "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-  "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
+  "Gennaio",
+  "Febbraio",
+  "Marzo",
+  "Aprile",
+  "Maggio",
+  "Giugno",
+  "Luglio",
+  "Agosto",
+  "Settembre",
+  "Ottobre",
+  "Novembre",
+  "Dicembre",
 ] as const;
 
 type RomeYMD = { y: number; m: number; d: number };
@@ -74,11 +84,13 @@ function buildMonthGrid(year: number, monthIndex0: number): RomeYMD[][] {
   for (let w = 0; w < 6; w++) {
     const row: RomeYMD[] = [];
     for (let i = 0; i < 7; i++) {
-      const day = new Date(Date.UTC(
-        startUtc.getUTCFullYear(),
-        startUtc.getUTCMonth(),
-        startUtc.getUTCDate() + w * 7 + i,
-      ));
+      const day = new Date(
+        Date.UTC(
+          startUtc.getUTCFullYear(),
+          startUtc.getUTCMonth(),
+          startUtc.getUTCDate() + w * 7 + i,
+        ),
+      );
       row.push({
         y: day.getUTCFullYear(),
         m: day.getUTCMonth() + 1,
@@ -107,9 +119,11 @@ const SPORT_LABEL: Record<CalendarItem["sport"], string> = {
 };
 
 const SPORT_BADGE: Record<CalendarItem["sport"], string> = {
-  juventus: "border-[hsl(var(--sport-juventus))]/40 text-[hsl(var(--sport-juventus))] bg-[hsl(var(--sport-juventus))]/10",
+  juventus:
+    "border-[hsl(var(--sport-juventus))]/40 text-[hsl(var(--sport-juventus))] bg-[hsl(var(--sport-juventus))]/10",
   f1: "border-[hsl(var(--sport-f1))]/40 text-[hsl(var(--sport-f1))] bg-[hsl(var(--sport-f1))]/10",
-  motogp: "border-[hsl(var(--sport-motogp))]/40 text-[hsl(var(--sport-motogp))] bg-[hsl(var(--sport-motogp))]/10",
+  motogp:
+    "border-[hsl(var(--sport-motogp))]/40 text-[hsl(var(--sport-motogp))] bg-[hsl(var(--sport-motogp))]/10",
 };
 
 const SPORTS: ReadonlyArray<CalendarSport> = ["juventus", "f1", "motogp"];
@@ -158,10 +172,18 @@ export default function CalendarPage() {
   const [enabled, setEnabled] = useState<Record<CalendarSport, boolean>>(() => loadFilters());
 
   useEffect(() => {
-    try { window.localStorage.setItem(FILTERS_KEY, JSON.stringify(enabled)); } catch { /* noop */ }
+    try {
+      window.localStorage.setItem(FILTERS_KEY, JSON.stringify(enabled));
+    } catch {
+      /* noop */
+    }
   }, [enabled]);
   useEffect(() => {
-    try { window.localStorage.setItem(VIEW_KEY, viewMode); } catch { /* noop */ }
+    try {
+      window.localStorage.setItem(VIEW_KEY, viewMode);
+    } catch {
+      /* noop */
+    }
   }, [viewMode]);
 
   const { events, isLoading, refetchAll } = useCalendarEvents();
@@ -179,10 +201,7 @@ export default function CalendarPage() {
     return d ? d.getTime() < nowMs : false;
   };
 
-  const filteredEvents = useMemo(
-    () => events.filter((e) => enabled[e.sport]),
-    [events, enabled],
-  );
+  const filteredEvents = useMemo(() => events.filter((e) => enabled[e.sport]), [events, enabled]);
 
   // Indice eventi per giorno (chiave Rome YYYY-MM-DD)
   const eventsByDay = useMemo(() => {
@@ -264,20 +283,25 @@ export default function CalendarPage() {
           >
             <ChevronRight className="h-5 w-5" />
           </Button>
-          <h1 className="ml-2 font-heading text-2xl md:text-3xl tracking-wide">
-            {monthLabel}
-          </h1>
+          <h1 className="ml-2 font-heading text-2xl md:text-3xl tracking-wide">{monthLabel}</h1>
         </div>
 
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center justify-end gap-3">
             {syncing && syncStep ? (
-              <span className="text-xs font-heading uppercase tracking-wider text-muted-foreground animate-pulse" aria-live="polite">
+              <span
+                className="text-xs font-heading uppercase tracking-wider text-muted-foreground animate-pulse"
+                aria-live="polite"
+              >
                 {syncStep}
               </span>
             ) : lastSyncLabel ? (
-              <span className="text-xs font-heading uppercase tracking-wider text-muted-foreground" aria-live="polite">
-                Ultimo aggiornamento: <span className="text-foreground/80 font-mono normal-case">{lastSyncLabel}</span>
+              <span
+                className="text-xs font-heading uppercase tracking-wider text-muted-foreground"
+                aria-live="polite"
+              >
+                Ultimo aggiornamento:{" "}
+                <span className="text-foreground/80 font-mono normal-case">{lastSyncLabel}</span>
               </span>
             ) : null}
             <Button
@@ -295,7 +319,11 @@ export default function CalendarPage() {
             </Button>
           </div>
           {syncing && (
-            <Progress value={syncProgress} aria-label="Avanzamento sincronizzazione" className="h-1.5 w-[240px]" />
+            <Progress
+              value={syncProgress}
+              aria-label="Avanzamento sincronizzazione"
+              className="h-1.5 w-[240px]"
+            />
           )}
         </div>
       </div>
@@ -319,7 +347,13 @@ export default function CalendarPage() {
                   : "border-border/50 text-muted-foreground/60 bg-transparent line-through",
               )}
             >
-              <span className={cn("inline-block h-2 w-2 rounded-full", SPORT_DOT[s], !on && "opacity-40")} />
+              <span
+                className={cn(
+                  "inline-block h-2 w-2 rounded-full",
+                  SPORT_DOT[s],
+                  !on && "opacity-40",
+                )}
+              />
               <span>{SPORT_LABEL[s]}</span>
             </button>
           );
@@ -334,7 +368,11 @@ export default function CalendarPage() {
         </button>
 
         {/* Toggle vista Mese / Agenda */}
-        <div className="ml-auto inline-flex rounded-full border border-border/60 overflow-hidden" role="tablist" aria-label="Vista calendario">
+        <div
+          className="ml-auto inline-flex rounded-full border border-border/60 overflow-hidden"
+          role="tablist"
+          aria-label="Vista calendario"
+        >
           {(["month", "agenda"] as const).map((m) => {
             const active = viewMode === m;
             const label = m === "month" ? "Mese" : "Agenda";
@@ -363,140 +401,169 @@ export default function CalendarPage() {
 
       {/* Vista mese (>= md) */}
       {viewMode === "month" && (
-      <div className="hidden md:block rounded-xl border border-border/60 bg-card/60 backdrop-blur-xs overflow-hidden">
-        {/* Header settimana */}
-        <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30">
-          {WEEKDAY_LABELS.map((w) => (
-            <div
-              key={w}
-              className="px-2 py-2 text-[11px] font-heading uppercase tracking-widest text-muted-foreground text-center"
-            >
-              {w}
-            </div>
-          ))}
-        </div>
-        {/* Griglia */}
-        <div className="grid grid-cols-7 grid-rows-6 auto-rows-[minmax(120px,1fr)]">
-          {grid.flat().map((cell) => {
-            const key = ymdKey(cell);
-            const dayEvents = eventsByDay.get(key) ?? [];
-            const isToday = cell.y === today.y && cell.m === today.m && cell.d === today.d;
-            const inMonth = cell.m === view.m;
-            const visible = dayEvents.slice(0, 4);
-            const hidden = dayEvents.length - visible.length;
-            return (
+        <div className="hidden md:block rounded-xl border border-border/60 bg-card/60 backdrop-blur-xs overflow-hidden">
+          {/* Header settimana */}
+          <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30">
+            {WEEKDAY_LABELS.map((w) => (
               <div
-                key={key}
-                className={cn(
-                  "min-h-[120px] border-r border-b border-border/40 p-1.5 flex flex-col gap-1",
-                  !inMonth && "bg-muted/10 text-muted-foreground/60",
-                )}
+                key={w}
+                className="px-2 py-2 text-[11px] font-heading uppercase tracking-widest text-muted-foreground text-center"
               >
-                <div className="flex items-center justify-between">
-                  <div
-                    className={cn(
-                      "inline-flex items-center justify-center text-xs font-medium",
-                      isToday
-                        ? "h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold"
-                        : "px-1",
+                {w}
+              </div>
+            ))}
+          </div>
+          {/* Griglia */}
+          <div className="grid grid-cols-7 grid-rows-6 auto-rows-[minmax(120px,1fr)]">
+            {grid.flat().map((cell) => {
+              const key = ymdKey(cell);
+              const dayEvents = eventsByDay.get(key) ?? [];
+              const isToday = cell.y === today.y && cell.m === today.m && cell.d === today.d;
+              const inMonth = cell.m === view.m;
+              const visible = dayEvents.slice(0, 4);
+              const hidden = dayEvents.length - visible.length;
+              return (
+                <div
+                  key={key}
+                  className={cn(
+                    "min-h-[120px] border-r border-b border-border/40 p-1.5 flex flex-col gap-1",
+                    !inMonth && "bg-muted/10 text-muted-foreground/60",
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div
+                      className={cn(
+                        "inline-flex items-center justify-center text-xs font-medium",
+                        isToday
+                          ? "h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold"
+                          : "px-1",
+                      )}
+                    >
+                      {cell.d}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-0.5 overflow-hidden">
+                    {visible.map((ev) => {
+                      const past = isPast(ev.date);
+                      return (
+                        <button
+                          key={ev.id}
+                          onClick={() => setSelectedEvent(ev)}
+                          className={cn(
+                            "group flex items-start gap-1 text-left text-[11px] leading-tight px-1 py-0.5 rounded hover:bg-muted/50 transition-colors",
+                            past && "opacity-50 grayscale line-through",
+                          )}
+                          title={`${romeHHMM(ev.date)} ${ev.title}${past ? " (concluso)" : ""}`}
+                        >
+                          <span
+                            className={cn(
+                              "mt-1 h-1.5 w-1.5 rounded-full shrink-0",
+                              SPORT_DOT[ev.sport],
+                            )}
+                          />
+                          <span className="truncate">
+                            <span className="font-mono">{romeHHMM(ev.date)}</span>{" "}
+                            <span className="font-semibold uppercase tracking-wide">
+                              {SPORT_LABEL[ev.sport]}:
+                            </span>{" "}
+                            <span>{ev.shortLabel}</span>{" "}
+                            <span className="text-muted-foreground">({ev.context})</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                    {hidden > 0 && (
+                      <button
+                        onClick={() => setSelectedEvent(dayEvents[4])}
+                        className="text-[11px] text-muted-foreground hover:text-foreground px-1"
+                      >
+                        +{hidden} altri
+                      </button>
                     )}
-                  >
-                    {cell.d}
                   </div>
                 </div>
-                <div className="flex flex-col gap-0.5 overflow-hidden">
-                  {visible.map((ev) => {
-                    const past = isPast(ev.date);
-                    return (
-                    <button
-                      key={ev.id}
-                      onClick={() => setSelectedEvent(ev)}
-                      className={cn(
-                        "group flex items-start gap-1 text-left text-[11px] leading-tight px-1 py-0.5 rounded hover:bg-muted/50 transition-colors",
-                        past && "opacity-50 grayscale line-through",
-                      )}
-                      title={`${romeHHMM(ev.date)} ${ev.title}${past ? " (concluso)" : ""}`}
-                    >
-                      <span className={cn("mt-1 h-1.5 w-1.5 rounded-full shrink-0", SPORT_DOT[ev.sport])} />
-                      <span className="truncate">
-                        <span className="font-mono">{romeHHMM(ev.date)}</span>{" "}
-                        <span className="font-semibold uppercase tracking-wide">
-                          {SPORT_LABEL[ev.sport]}:
-                        </span>{" "}
-                        <span>{ev.shortLabel}</span>{" "}
-                        <span className="text-muted-foreground">({ev.context})</span>
-                      </span>
-                    </button>
-                    );
-                  })}
-                  {hidden > 0 && (
-                    <button
-                      onClick={() => setSelectedEvent(dayEvents[4])}
-                      className="text-[11px] text-muted-foreground hover:text-foreground px-1"
-                    >
-                      +{hidden} altri
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
       )}
 
       {/* Vista lista (mobile) — solo in modalità mese */}
       {viewMode === "month" && (
-      <div className="md:hidden space-y-3">
-        {grid.flat()
-          .filter((c) => c.m === view.m)
-          .map((cell) => {
-            const key = ymdKey(cell);
-            const dayEvents = eventsByDay.get(key) ?? [];
-            if (dayEvents.length === 0) return null;
-            const isToday = cell.y === today.y && cell.m === today.m && cell.d === today.d;
-            return (
-              <div key={key} className="rounded-lg border border-border/50 bg-card/60 overflow-hidden">
-                <div className={cn(
-                  "px-3 py-1.5 flex items-center justify-between text-xs font-heading uppercase tracking-widest border-b border-border/40",
-                  isToday ? "bg-primary text-primary-foreground" : "bg-muted/40 text-muted-foreground",
-                )}>
-                  <span>{cell.d} {MONTH_LABELS[cell.m - 1]}</span>
-                  <span>{dayEvents.length} eventi</span>
+        <div className="md:hidden space-y-3">
+          {grid
+            .flat()
+            .filter((c) => c.m === view.m)
+            .map((cell) => {
+              const key = ymdKey(cell);
+              const dayEvents = eventsByDay.get(key) ?? [];
+              if (dayEvents.length === 0) return null;
+              const isToday = cell.y === today.y && cell.m === today.m && cell.d === today.d;
+              return (
+                <div
+                  key={key}
+                  className="rounded-lg border border-border/50 bg-card/60 overflow-hidden"
+                >
+                  <div
+                    className={cn(
+                      "px-3 py-1.5 flex items-center justify-between text-xs font-heading uppercase tracking-widest border-b border-border/40",
+                      isToday
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/40 text-muted-foreground",
+                    )}
+                  >
+                    <span>
+                      {cell.d} {MONTH_LABELS[cell.m - 1]}
+                    </span>
+                    <span>{dayEvents.length} eventi</span>
+                  </div>
+                  <ul className="divide-y divide-border/40">
+                    {dayEvents.map((ev) => {
+                      const past = isPast(ev.date);
+                      return (
+                        <li key={ev.id}>
+                          <button
+                            onClick={() => setSelectedEvent(ev)}
+                            className={cn(
+                              "w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-muted/40",
+                              past && "opacity-50 grayscale",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "mt-1.5 h-2 w-2 rounded-full shrink-0",
+                                SPORT_DOT[ev.sport],
+                              )}
+                            />
+                            <span className={cn("flex-1 min-w-0", past && "line-through")}>
+                              <span className="block text-sm font-semibold truncate">
+                                {ev.shortLabel}{" "}
+                                <span className="text-muted-foreground font-normal">
+                                  · {ev.context}
+                                </span>
+                              </span>
+                              <span className="block text-xs text-muted-foreground font-mono mt-0.5">
+                                {romeHHMM(ev.date)} · {SPORT_LABEL[ev.sport]}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
-                <ul className="divide-y divide-border/40">
-                  {dayEvents.map((ev) => {
-                    const past = isPast(ev.date);
-                    return (
-                    <li key={ev.id}>
-                      <button
-                        onClick={() => setSelectedEvent(ev)}
-                        className={cn(
-                          "w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-muted/40",
-                          past && "opacity-50 grayscale",
-                        )}
-                      >
-                        <span className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", SPORT_DOT[ev.sport])} />
-                        <span className={cn("flex-1 min-w-0", past && "line-through")}>
-                          <span className="block text-sm font-semibold truncate">
-                            {ev.shortLabel} <span className="text-muted-foreground font-normal">· {ev.context}</span>
-                          </span>
-                          <span className="block text-xs text-muted-foreground font-mono mt-0.5">
-                            {romeHHMM(ev.date)} · {SPORT_LABEL[ev.sport]}
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })}
-        {!isLoading && grid.flat().filter((c) => c.m === view.m).every((c) => (eventsByDay.get(ymdKey(c)) ?? []).length === 0) && (
-          <p className="text-center text-muted-foreground py-12">Nessun evento in {monthLabel}</p>
-        )}
-      </div>
+              );
+            })}
+          {!isLoading &&
+            grid
+              .flat()
+              .filter((c) => c.m === view.m)
+              .every((c) => (eventsByDay.get(ymdKey(c)) ?? []).length === 0) && (
+              <p className="text-center text-muted-foreground py-12">
+                Nessun evento in {monthLabel}
+              </p>
+            )}
+        </div>
       )}
 
       {/* Vista Agenda */}
@@ -508,48 +575,69 @@ export default function CalendarPage() {
           {agendaDays.map(({ ymd, key, events: dayEvents }) => {
             const isToday = ymd.y === today.y && ymd.m === today.m && ymd.d === today.d;
             return (
-              <section key={key} className="rounded-lg border border-border/50 bg-card/60 overflow-hidden">
-                <header className={cn(
-                  "sticky top-0 z-10 px-3 py-2 flex items-center justify-between text-xs font-heading uppercase tracking-widest border-b border-border/40 backdrop-blur-sm",
-                  isToday
-                    ? "bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))]"
-                    : "bg-muted/40 text-muted-foreground",
-                )}>
+              <section
+                key={key}
+                className="rounded-lg border border-border/50 bg-card/60 overflow-hidden"
+              >
+                <header
+                  className={cn(
+                    "sticky top-0 z-10 px-3 py-2 flex items-center justify-between text-xs font-heading uppercase tracking-widest border-b border-border/40 backdrop-blur-sm",
+                    isToday
+                      ? "bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))]"
+                      : "bg-muted/40 text-muted-foreground",
+                  )}
+                >
                   <span>{formatDayHeaderIT(ymd)}</span>
-                  <span>{dayEvents.length} {dayEvents.length === 1 ? "evento" : "eventi"}</span>
+                  <span>
+                    {dayEvents.length} {dayEvents.length === 1 ? "evento" : "eventi"}
+                  </span>
                 </header>
                 <ul className="divide-y divide-border/40">
                   {dayEvents.map((ev) => {
                     const past = isPast(ev.date);
                     return (
-                    <li key={ev.id}>
-                      <button
-                        onClick={() => setSelectedEvent(ev)}
-                        className={cn(
-                          "w-full text-left px-3 py-2.5 flex items-start gap-3 hover:bg-muted/40 transition-colors",
-                          past && "opacity-50 grayscale",
-                        )}
-                      >
-                        <span className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", SPORT_DOT[ev.sport])} />
-                        <span className="font-mono text-xs text-muted-foreground w-12 shrink-0 mt-0.5">
-                          {romeHHMM(ev.date)}
-                        </span>
-                        <Badge variant="outline" className={cn("text-[10px] font-heading uppercase tracking-widest shrink-0 mt-0.5", SPORT_BADGE[ev.sport])}>
-                          {SPORT_LABEL[ev.sport]}
-                        </Badge>
-                        <span className={cn("flex-1 min-w-0", past && "line-through")}>
-                          <span className="block text-sm font-semibold truncate">
-                            {ev.shortLabel}
-                            <span className="text-muted-foreground font-normal"> · {ev.context}</span>
-                          </span>
-                          {ev.broadcaster && (
-                            <span className="block text-xs text-muted-foreground mt-0.5">
-                              In TV: <span className="text-foreground/80">{ev.broadcaster}</span>
-                            </span>
+                      <li key={ev.id}>
+                        <button
+                          onClick={() => setSelectedEvent(ev)}
+                          className={cn(
+                            "w-full text-left px-3 py-2.5 flex items-start gap-3 hover:bg-muted/40 transition-colors",
+                            past && "opacity-50 grayscale",
                           )}
-                        </span>
-                      </button>
-                    </li>
+                        >
+                          <span
+                            className={cn(
+                              "mt-1.5 h-2 w-2 rounded-full shrink-0",
+                              SPORT_DOT[ev.sport],
+                            )}
+                          />
+                          <span className="font-mono text-xs text-muted-foreground w-12 shrink-0 mt-0.5">
+                            {romeHHMM(ev.date)}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] font-heading uppercase tracking-widest shrink-0 mt-0.5",
+                              SPORT_BADGE[ev.sport],
+                            )}
+                          >
+                            {SPORT_LABEL[ev.sport]}
+                          </Badge>
+                          <span className={cn("flex-1 min-w-0", past && "line-through")}>
+                            <span className="block text-sm font-semibold truncate">
+                              {ev.shortLabel}
+                              <span className="text-muted-foreground font-normal">
+                                {" "}
+                                · {ev.context}
+                              </span>
+                            </span>
+                            {ev.broadcaster && (
+                              <span className="block text-xs text-muted-foreground mt-0.5">
+                                In TV: <span className="text-foreground/80">{ev.broadcaster}</span>
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      </li>
                     );
                   })}
                 </ul>
@@ -566,19 +654,21 @@ export default function CalendarPage() {
             <>
               <DialogHeader>
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline" className={cn("text-[10px] font-heading uppercase tracking-widest", SPORT_BADGE[selectedEvent.sport])}>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] font-heading uppercase tracking-widest",
+                      SPORT_BADGE[selectedEvent.sport],
+                    )}
+                  >
                     {SPORT_LABEL[selectedEvent.sport]}
                   </Badge>
                   <span className="text-xs text-muted-foreground font-mono">
                     {formatDateTimeIT(selectedEvent.date)}
                   </span>
                 </div>
-                <DialogTitle className="text-left">
-                  {selectedEvent.title}
-                </DialogTitle>
-                <DialogDescription className="text-left">
-                  {selectedEvent.context}
-                </DialogDescription>
+                <DialogTitle className="text-left">{selectedEvent.title}</DialogTitle>
+                <DialogDescription className="text-left">{selectedEvent.context}</DialogDescription>
               </DialogHeader>
               {selectedEvent.broadcaster && (
                 <div className="text-sm">

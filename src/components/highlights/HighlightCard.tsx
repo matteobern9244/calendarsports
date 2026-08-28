@@ -108,8 +108,14 @@ export default function HighlightCard({ item, accentVar = "gold" }: HighlightCar
         </h3>
         <div className="mt-auto flex items-center justify-between gap-2 pt-1.5 text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-1.5 min-w-0">
-            <SquarePlay className="h-3.5 w-3.5 shrink-0" style={{ color: accent }} aria-hidden="true" />
-            <span className="truncate font-semibold text-foreground/80">{item.source || "YouTube"}</span>
+            <SquarePlay
+              className="h-3.5 w-3.5 shrink-0"
+              style={{ color: accent }}
+              aria-hidden="true"
+            />
+            <span className="truncate font-semibold text-foreground/80">
+              {item.source || "YouTube"}
+            </span>
           </span>
           {relative && (
             <span className="font-heading uppercase tracking-wider text-[10px] whitespace-nowrap">

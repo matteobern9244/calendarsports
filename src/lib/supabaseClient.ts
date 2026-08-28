@@ -21,22 +21,17 @@ const FALLBACK_SUPABASE_URL = "https://jxijruuclgskxlbqittk.supabase.co";
 const FALLBACK_SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4aWpydXVjbGdza3hsYnFpdHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDc1ODksImV4cCI6MjA5MDM4MzU4OX0.DHIimVDItkhF1o9e6NK71BKjNkVP2EHsJpJyJIqgiSE";
 
-const SUPABASE_URL =
-  import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_SUPABASE_ANON_KEY;
 
-export const supabase = createClient<Database>(
-  SUPABASE_URL,
-  SUPABASE_PUBLISHABLE_KEY,
-  {
-    auth: {
-      storage: typeof window !== "undefined" ? window.localStorage : undefined,
-      persistSession: true,
-      autoRefreshToken: true,
-    },
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
+    persistSession: true,
+    autoRefreshToken: true,
   },
-);
+});
 
 export const SUPABASE_PROJECT_URL = SUPABASE_URL;
 export const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;

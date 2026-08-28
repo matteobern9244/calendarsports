@@ -1,9 +1,5 @@
 import { useSyncExternalStore } from "react";
-import {
-  getNowMinute,
-  getNowSecond,
-  subscribeCountdown,
-} from "@/lib/countdownClock";
+import { getNowMinute, getNowSecond, subscribeCountdown } from "@/lib/countdownClock";
 
 /**
  * Orario corrente letto dal clock globale, non da `Date.now()`.
@@ -18,17 +14,9 @@ import {
  * al secondo solo dove il secondo si vede.
  */
 export function useNowMinute(): number {
-  return useSyncExternalStore(
-    (cb) => subscribeCountdown(cb, "minute"),
-    getNowMinute,
-    getNowMinute,
-  );
+  return useSyncExternalStore((cb) => subscribeCountdown(cb, "minute"), getNowMinute, getNowMinute);
 }
 
 export function useNowSecond(): number {
-  return useSyncExternalStore(
-    (cb) => subscribeCountdown(cb, "second"),
-    getNowSecond,
-    getNowSecond,
-  );
+  return useSyncExternalStore((cb) => subscribeCountdown(cb, "second"), getNowSecond, getNowSecond);
 }

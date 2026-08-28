@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { formatDuration, formatDurationSpoken, toRomeDate, formatJuventusDateTime } from "./dateUtils";
+import {
+  formatDuration,
+  formatDurationSpoken,
+  toRomeDate,
+  formatJuventusDateTime,
+} from "./dateUtils";
 
 describe("formatDuration", () => {
   describe("valori invalidi -> stringa vuota", () => {

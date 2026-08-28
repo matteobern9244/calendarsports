@@ -21,17 +21,23 @@ function loadLead(): LeadTime[] {
     const arr = JSON.parse(raw) as number[];
     const valid = arr.filter((n): n is LeadTime => n === 15 || n === 60 || n === 1440);
     return valid.length ? valid : DEFAULT_LEAD_TIMES;
-  } catch { return DEFAULT_LEAD_TIMES; }
+  } catch {
+    return DEFAULT_LEAD_TIMES;
+  }
 }
 
 export function usePushNotifications() {
   const supported = isPushSupported() && !isPreviewOrIframe();
   const [enabled, setEnabledState] = useState<boolean>(() => {
-    try { return localStorage.getItem(LS_ENABLED) === "1"; } catch { return false; }
+    try {
+      return localStorage.getItem(LS_ENABLED) === "1";
+    } catch {
+      return false;
+    }
   });
   const [leadTimes, setLeadTimesState] = useState<LeadTime[]>(loadLead);
   const [permission, setPermission] = useState<NotificationPermission>(
-    typeof Notification !== "undefined" ? Notification.permission : "default"
+    typeof Notification !== "undefined" ? Notification.permission : "default",
   );
   const [busy, setBusy] = useState(false);
 
@@ -44,7 +50,11 @@ export function usePushNotifications() {
         setEnabledState(false);
         // localStorage puo' fallire (modalita' privata, quota): lo stato in
         // memoria e' gia' allineato, la mancata persistenza non e' recuperabile.
-        try { localStorage.setItem(LS_ENABLED, "0"); } catch { /* persistenza best-effort */ }
+        try {
+          localStorage.setItem(LS_ENABLED, "0");
+        } catch {
+          /* persistenza best-effort */
+        }
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,7 +69,9 @@ export function usePushNotifications() {
       try {
         localStorage.setItem(LS_ENABLED, "1");
         localStorage.setItem(LS_LEAD, JSON.stringify(times));
-      } catch { /* persistenza best-effort */ }
+      } catch {
+        /* persistenza best-effort */
+      }
     }
     setBusy(false);
     return res;
@@ -69,21 +81,38 @@ export function usePushNotifications() {
     setBusy(true);
     await unsubscribeFromPush();
     setEnabledState(false);
-    try { localStorage.setItem(LS_ENABLED, "0"); } catch { /* persistenza best-effort */ }
+    try {
+      localStorage.setItem(LS_ENABLED, "0");
+    } catch {
+      /* persistenza best-effort */
+    }
     setBusy(false);
   }, []);
 
-  const setLeadTimes = useCallback(async (times: LeadTime[]) => {
-    const safe = times.length ? times : DEFAULT_LEAD_TIMES;
-    setLeadTimesState(safe);
-    try { localStorage.setItem(LS_LEAD, JSON.stringify(safe)); } catch { /* persistenza best-effort */ }
-    if (enabled) {
-      await updatePushSettings(safe, true);
-    }
-  }, [enabled]);
+  const setLeadTimes = useCallback(
+    async (times: LeadTime[]) => {
+      const safe = times.length ? times : DEFAULT_LEAD_TIMES;
+      setLeadTimesState(safe);
+      try {
+        localStorage.setItem(LS_LEAD, JSON.stringify(safe));
+      } catch {
+        /* persistenza best-effort */
+      }
+      if (enabled) {
+        await updatePushSettings(safe, true);
+      }
+    },
+    [enabled],
+  );
 
   return {
-    supported, enabled, leadTimes, permission, busy,
-    enable, disable, setLeadTimes,
+    supported,
+    enabled,
+    leadTimes,
+    permission,
+    busy,
+    enable,
+    disable,
+    setLeadTimes,
   };
 }

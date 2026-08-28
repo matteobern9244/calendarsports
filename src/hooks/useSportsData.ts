@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
-import { f1Api, footballApi, tennisApi, motogpApi, highlightsApi, type HighlightSport } from "@/lib/api/sportsApi";
+import {
+  f1Api,
+  footballApi,
+  tennisApi,
+  motogpApi,
+  highlightsApi,
+  type HighlightSport,
+} from "@/lib/api/sportsApi";
 
 // === F1 Hooks ===
 export function useF1Calendar(season: number) {

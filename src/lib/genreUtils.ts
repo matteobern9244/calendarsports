@@ -18,11 +18,7 @@ import type { StreamingFamilyId } from "@/lib/api/sportsApi";
  *     telegiornali, estrazione `(Genere)` finale dal titolo).
  *  4) Default deterministico per famiglia.
  */
-export function inferGenre(
-  family: StreamingFamilyId,
-  channel: string,
-  title: string,
-): string {
+export function inferGenre(family: StreamingFamilyId, channel: string, title: string): string {
   const t = title.toLowerCase();
   const ch = channel.toLowerCase();
 
@@ -35,7 +31,8 @@ export function inferGenre(
     if (/\bgran premio\b|\bgp\b/.test(t)) return "Formula 1";
     if (/\bchampions league\b|champions(?!\w)/.test(t)) return "Champions League";
     if (/europa league|conference league/.test(t)) return "Calcio";
-    if (/calcio|serie a|coppa italia|napoli|juventus|inter|milan|roma|lazio/.test(t)) return "Calcio";
+    if (/calcio|serie a|coppa italia|napoli|juventus|inter|milan|roma|lazio/.test(t))
+      return "Calcio";
     if (/tennis|atp|wta|sinner|alcaraz|djokovic/.test(t)) return "Tennis";
     if (/basket|nba|eurolega/.test(t)) return "Basket";
     if (/ciclismo|giro d['’]italia|tour de france/.test(t)) return "Ciclismo";
@@ -49,28 +46,59 @@ export function inferGenre(
   if (/\bmeteo\b/.test(t)) return "Meteo";
 
   // Quiz / Game show
-  if (/quiz|reazione a catena|l['’]eredita|caduta libera|affari tuoi|the wall|avanti un altro|chi vuol essere milionario|soliti ignoti/.test(t)) return "Quiz";
+  if (
+    /quiz|reazione a catena|l['’]eredita|caduta libera|affari tuoi|the wall|avanti un altro|chi vuol essere milionario|soliti ignoti/.test(
+      t,
+    )
+  )
+    return "Quiz";
 
   // Talk Show
-  if (/striscia|paperissima|zelig|le iene|propaganda|porta a porta|piazzapulita|dimartedi|cartabianca|stasera italia|belve|che tempo che fa|domenica in|verissimo|pomeriggio cinque|quarta repubblica|controcorrente|zona bianca|dritto e rovescio|accordi e disaccordi|otto e mezzo|in onda/.test(t)) return "Talk Show";
+  if (
+    /striscia|paperissima|zelig|le iene|propaganda|porta a porta|piazzapulita|dimartedi|cartabianca|stasera italia|belve|che tempo che fa|domenica in|verissimo|pomeriggio cinque|quarta repubblica|controcorrente|zona bianca|dritto e rovescio|accordi e disaccordi|otto e mezzo|in onda/.test(
+      t,
+    )
+  )
+    return "Talk Show";
 
   // Reality
-  if (/grande fratello|temptation|amici|isola dei famosi|x factor|masterchef|pechino express|ballando|gf vip|the voice|tu si que vales|italia['’]?s got talent/.test(t)) return "Reality";
+  if (
+    /grande fratello|temptation|amici|isola dei famosi|x factor|masterchef|pechino express|ballando|gf vip|the voice|tu si que vales|italia['’]?s got talent/.test(
+      t,
+    )
+  )
+    return "Reality";
 
   // Cooking
-  if (/bake off|cucine da incubo|4 ristoranti|hell['’]?s kitchen|4 hotel|family food fight/.test(t)) return "Cooking";
+  if (/bake off|cucine da incubo|4 ristoranti|hell['’]?s kitchen|4 hotel|family food fight/.test(t))
+    return "Cooking";
 
   // Lifestyle (Discovery / Real Time)
-  if (/casa a prima vista|cortesie per gli ospiti|cake star|vado a vivere in campagna|little big italy/.test(t)) return "Lifestyle";
+  if (
+    /casa a prima vista|cortesie per gli ospiti|cake star|vado a vivere in campagna|little big italy/.test(
+      t,
+    )
+  )
+    return "Lifestyle";
 
   // Documentario
-  if (/documentar|inchies|presa diretta|\breport\b|petrolio|ulisse|superquark|\bgeo\b|kilimangiaro|passato e presente/.test(t)) return "Documentario";
+  if (
+    /documentar|inchies|presa diretta|\breport\b|petrolio|ulisse|superquark|\bgeo\b|kilimangiaro|passato e presente/.test(
+      t,
+    )
+  )
+    return "Documentario";
 
   // Cartoni
   if (/cartoni|pokemon|peppa|barbapapa/.test(t)) return "Cartoni";
 
   // Fiction italiana nota
-  if (/il commissario montalbano|don matteo|un posto al sole|\bcuori\b|mina settembre|che dio ci aiuti|imma tataranni|doc nelle tue mani|\bblanca\b|lolita lobosco|i bastardi di pizzofalcone|\bmakari\b|carosello carosone/.test(t)) return "Fiction";
+  if (
+    /il commissario montalbano|don matteo|un posto al sole|\bcuori\b|mina settembre|che dio ci aiuti|imma tataranni|doc nelle tue mani|\bblanca\b|lolita lobosco|i bastardi di pizzofalcone|\bmakari\b|carosello carosone/.test(
+      t,
+    )
+  )
+    return "Fiction";
 
   // Musica
   if (/\bconcerto\b|\bmusica\b|sanremo|festival/.test(t)) return "Musica";

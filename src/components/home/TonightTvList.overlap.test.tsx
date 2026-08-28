@@ -30,10 +30,7 @@ function setFixtures(fx: FamilyFixtures) {
 }
 
 vi.mock("@tanstack/react-query", () => {
-  const buildPayload = (
-    family: TvFamilyPayload["family"],
-    label: string,
-  ): TvFamilyPayload => {
+  const buildPayload = (family: TvFamilyPayload["family"], label: string): TvFamilyPayload => {
     const channels = globalThis.__TONIGHT_TV_FIXTURES__?.[family] ?? [];
     return {
       family,
@@ -80,11 +77,11 @@ import TonightTvList from "./TonightTvList";
 
 // Helper: gli ISO sono in UTC ma corrispondono agli orari Europe/Rome
 // indicati nel commento (21 aprile 2026, CEST = UTC+2).
-const program = (
-  startUtc: string,
-  endUtc: string,
-  title: string,
-): ProgramFixture => ({ start: startUtc, end: endUtc, title });
+const program = (startUtc: string, endUtc: string, title: string): ProgramFixture => ({
+  start: startUtc,
+  end: endUtc,
+  title,
+});
 
 describe("TonightTvList - algoritmo di overlap prima serata", () => {
   beforeEach(() => {
@@ -110,13 +107,15 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
     expect(screen.getAllByText("Maratona Sportiva").length).toBeGreaterThan(0);
     // L'orario reale di inizio (20:30) deve essere mostrato anche se
     // anteriore alla fascia, perche' il programma e' ancora in onda.
-    expect(screen.getAllByLabelText(/^Inizio alle 20:30(?:, fine alle \d{2}:\d{2})?$/).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByLabelText(/^Inizio alle 20:30(?:, fine alle \d{2}:\d{2})?$/).length,
+    ).toBeGreaterThan(0);
     // L'orario di fine (23:15) deve essere comunicato sia visivamente
     // sia nell'aria-label, cosi' l'utente capisce perche' il programma
     // copre la prima serata pur essendo iniziato prima delle 21:00.
-    expect(
-      screen.getAllByLabelText("Inizio alle 20:30, fine alle 23:15").length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText("Inizio alle 20:30, fine alle 23:15").length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("mostra un programma 22:55 -> 23:50 Rome (inizia in fascia, finisce dopo le 23)", () => {
@@ -126,15 +125,15 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
           id: "rai-1",
           name: "RAI 1",
           number: 1,
-          programs: [
-            program("2026-04-21T20:55:00Z", "2026-04-21T21:50:00Z", "Speciale Tg1 Notte"),
-          ],
+          programs: [program("2026-04-21T20:55:00Z", "2026-04-21T21:50:00Z", "Speciale Tg1 Notte")],
         },
       ],
     });
     render(<TonightTvList />);
     expect(screen.getAllByText("Speciale Tg1 Notte").length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(/^Inizio alle 22:55(?:, fine alle \d{2}:\d{2})?$/).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByLabelText(/^Inizio alle 22:55(?:, fine alle \d{2}:\d{2})?$/).length,
+    ).toBeGreaterThan(0);
   });
 
   it("mostra un programma che attraversa la mezzanotte (22:30 -> 00:30)", () => {
@@ -154,7 +153,9 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
     });
     render(<TonightTvList />);
     expect(screen.getAllByText("X-Style Night").length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(/^Inizio alle 22:30(?:, fine alle \d{2}:\d{2})?$/).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByLabelText(/^Inizio alle 22:30(?:, fine alle \d{2}:\d{2})?$/).length,
+    ).toBeGreaterThan(0);
   });
 
   it("NON mostra 19:00 -> 20:00 Rome (interamente prima della fascia)", () => {
@@ -164,9 +165,7 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
           id: "rai-1",
           name: "RAI 1",
           number: 1,
-          programs: [
-            program("2026-04-21T17:00:00Z", "2026-04-21T18:00:00Z", "Reazione a Catena"),
-          ],
+          programs: [program("2026-04-21T17:00:00Z", "2026-04-21T18:00:00Z", "Reazione a Catena")],
         },
       ],
     });
@@ -181,9 +180,7 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
           id: "rai-1",
           name: "RAI 1",
           number: 1,
-          programs: [
-            program("2026-04-21T16:30:00Z", "2026-04-21T18:55:00Z", "Pre-Serata Lunga"),
-          ],
+          programs: [program("2026-04-21T16:30:00Z", "2026-04-21T18:55:00Z", "Pre-Serata Lunga")],
         },
       ],
     });
@@ -198,9 +195,7 @@ describe("TonightTvList - algoritmo di overlap prima serata", () => {
           id: "rai-1",
           name: "RAI 1",
           number: 1,
-          programs: [
-            program("2026-04-21T21:00:00Z", "2026-04-21T22:30:00Z", "Porta a Porta"),
-          ],
+          programs: [program("2026-04-21T21:00:00Z", "2026-04-21T22:30:00Z", "Porta a Porta")],
         },
       ],
     });
@@ -285,9 +280,7 @@ describe("TonightTvList - programmi senza orario di fine (dati incompleti)", () 
           id: "rai-1",
           name: "RAI 1",
           number: 1,
-          programs: [
-            program("2026-04-21T19:30:00Z", "2026-04-21T21:25:00Z", "Fiction Completa"),
-          ],
+          programs: [program("2026-04-21T19:30:00Z", "2026-04-21T21:25:00Z", "Fiction Completa")],
         },
       ],
     });
@@ -303,9 +296,7 @@ describe("TonightTvList - programmi senza orario di fine (dati incompleti)", () 
           id: "rai-1",
           name: "RAI 1",
           number: 1,
-          programs: [
-            { start: "2026-04-21T20:00:00Z", end: "", title: "RAI Open" },
-          ],
+          programs: [{ start: "2026-04-21T20:00:00Z", end: "", title: "RAI Open" }],
         },
       ],
       mediaset: [
@@ -313,9 +304,7 @@ describe("TonightTvList - programmi senza orario di fine (dati incompleti)", () 
           id: "canale-5",
           name: "Canale 5",
           number: 5,
-          programs: [
-            { start: "2026-04-21T20:00:00Z", end: "", title: "Mediaset Open" },
-          ],
+          programs: [{ start: "2026-04-21T20:00:00Z", end: "", title: "Mediaset Open" }],
         },
       ],
     });

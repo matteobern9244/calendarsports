@@ -26,9 +26,7 @@ describe("queryKeys", () => {
       null,
       false,
     ]);
-    expect(queryKeys.juventus.calendar(2026, 1, 12)).not.toEqual(
-      queryKeys.juventus.calendar(2026),
-    );
+    expect(queryKeys.juventus.calendar(2026, 1, 12)).not.toEqual(queryKeys.juventus.calendar(2026));
   });
 
   it("nessuno riscrive le chiavi a mano fuori dalla fabbrica", () => {

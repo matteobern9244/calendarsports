@@ -18,10 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import LoadingState from "@/components/common/LoadingState";
-import {
-  STREAMING_FAMILIES,
-  type TvFamilyPayload,
-} from "@/hooks/useStreamingData";
+import { STREAMING_FAMILIES, type TvFamilyPayload } from "@/hooks/useStreamingData";
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
 import { formatDuration, formatDurationSpoken, toRomeDate } from "@/lib/dateUtils";
 import { inferGenre } from "@/lib/genreUtils";
@@ -102,7 +99,7 @@ const TV_PAGE_SIZE = 8;
 // Prima serata italiana: dalle 21:00 incluse alle 22:59 incluse.
 // I programmi che iniziano alle 23:00 o dopo appartengono alla
 // seconda serata e non devono comparire nella scheda Home.
-const PRIME_TIME_START_MIN = 21 * 60;       // 21:00
+const PRIME_TIME_START_MIN = 21 * 60; // 21:00
 const PRIME_TIME_END_EXCLUSIVE_MIN = 23 * 60; // 23:00 (escluso)
 
 /**
@@ -162,12 +159,8 @@ export default function TonightTvList() {
           // prima delle 23:00 (vedi overlapsPrimeWindow piu' in basso).
           // La durata mostrata in cella resta pero' 0 cosi' l'utente non
           // legge una durata inventata.
-          const endMs = endDate
-            ? endDate.getTime()
-            : d.getTime() + 24 * 60 * 60 * 1000; // sentinel "fine ignota"
-          const durationMin = endDate
-            ? Math.max(0, Math.round((endMs - d.getTime()) / 60000))
-            : 0;
+          const endMs = endDate ? endDate.getTime() : d.getTime() + 24 * 60 * 60 * 1000; // sentinel "fine ignota"
+          const durationMin = endDate ? Math.max(0, Math.round((endMs - d.getTime()) / 60000)) : 0;
           // endMs e' un timestamp in millisecondi, non una stringa ISO: qui non
           // c'e' nessuna interpretazione di fuso da sbagliare.
           // @tz-ignore
@@ -209,7 +202,9 @@ export default function TonightTvList() {
   // -> Discovery) e per numero canale.
   const familyOrder = useMemo(() => {
     const m: Record<StreamingFamilyId, number> = {} as Record<StreamingFamilyId, number>;
-    STREAMING_FAMILIES.forEach((f, i) => { m[f.id] = i; });
+    STREAMING_FAMILIES.forEach((f, i) => {
+      m[f.id] = i;
+    });
     return m;
   }, []);
 
@@ -234,8 +229,7 @@ export default function TonightTvList() {
         return startMin < PRIME_TIME_END_EXCLUSIVE_MIN;
       }
       return (
-        startMin < PRIME_TIME_END_EXCLUSIVE_MIN &&
-        h.endMinutesFromMidnight > PRIME_TIME_START_MIN
+        startMin < PRIME_TIME_END_EXCLUSIVE_MIN && h.endMinutesFromMidnight > PRIME_TIME_START_MIN
       );
     };
     // Minuti di sovrapposizione effettiva con la fascia di prima serata.
@@ -252,9 +246,10 @@ export default function TonightTvList() {
     // film 100+, news show 40+. Tg regionali (~30 min) esclusi.
     const MIN_DURATION = 40;
 
-    const pool = familyFilter === "all"
-      ? allHighlights
-      : allHighlights.filter((r) => r.family === familyFilter);
+    const pool =
+      familyFilter === "all"
+        ? allHighlights
+        : allHighlights.filter((r) => r.family === familyFilter);
 
     // Per ogni canale: scegli il programma che massimizza l'overlap con
     // la fascia di prima serata. Tie-break: durata totale (preferisce il
@@ -290,25 +285,24 @@ export default function TonightTvList() {
       if (h.startMs < existing.startMs) byChannel.set(key, h);
     }
 
-    return Array.from(byChannel.values())
-      .sort((a, b) => {
-        const fa = familyOrder[a.family] - familyOrder[b.family];
-        if (fa !== 0) return fa;
-        const cn = (a.channelNumber ?? 9999) - (b.channelNumber ?? 9999);
-        if (cn !== 0) return cn;
-        return a.startMs - b.startMs;
-      });
+    return Array.from(byChannel.values()).sort((a, b) => {
+      const fa = familyOrder[a.family] - familyOrder[b.family];
+      if (fa !== 0) return fa;
+      const cn = (a.channelNumber ?? 9999) - (b.channelNumber ?? 9999);
+      if (cn !== 0) return cn;
+      return a.startMs - b.startMs;
+    });
   }, [allHighlights, familyFilter, familyOrder]);
 
   const familyLabelMap = useMemo(() => {
     const m: Record<StreamingFamilyId, string> = {} as Record<StreamingFamilyId, string>;
-    STREAMING_FAMILIES.forEach((f) => { m[f.id] = f.label; });
+    STREAMING_FAMILIES.forEach((f) => {
+      m[f.id] = f.label;
+    });
     return m;
   }, []);
 
-  const filteredFamilyLabel = familyFilter !== "all"
-    ? familyLabelMap[familyFilter]
-    : null;
+  const filteredFamilyLabel = familyFilter !== "all" ? familyLabelMap[familyFilter] : null;
 
   // Reset paginazione quando cambia il filtro famiglia. Confrontato con il
   // render precedente invece che in un effect: cosi' non scatta al mount e
@@ -335,9 +329,7 @@ export default function TonightTvList() {
     for (const h of tonightHighlights) {
       if (!h.hasExplicitEnd) seen.add(h.family);
     }
-    return Array.from(seen).sort(
-      (a, b) => familyOrder[a] - familyOrder[b],
-    );
+    return Array.from(seen).sort((a, b) => familyOrder[a] - familyOrder[b]);
   }, [tonightHighlights, familyOrder]);
 
   // Stato di caricamento allineato al pattern delle pagine risultati
@@ -354,9 +346,7 @@ export default function TonightTvList() {
   // mai il contenuto con lo spinner, ma riserviamo uno spazio minimo
   // costante via `min-h` cosi' una variazione del numero di righe non
   // produce salti di layout.
-  const isInitialTvLoading =
-    tonightHighlights.length === 0 &&
-    tvQueries.some((q) => q.isPending);
+  const isInitialTvLoading = tonightHighlights.length === 0 && tvQueries.some((q) => q.isPending);
 
   return (
     <Card className="border-primary/30 bg-linear-to-br from-card to-card/60">
@@ -431,8 +421,8 @@ export default function TonightTvList() {
                   />
                   <p className="leading-snug">
                     Per alcuni canali la fonte non fornisce l'orario di fine: durata e
-                    sovrapposizione con la prima serata sono stime. Verifica il palinsesto
-                    reale sulla Guida TV ufficiale.
+                    sovrapposizione con la prima serata sono stime. Verifica il palinsesto reale
+                    sulla Guida TV ufficiale.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1.5 pl-6">
@@ -473,17 +463,25 @@ export default function TonightTvList() {
                   screen reader senza impatto visivo. Su mobile (<sm) la <li>
                   e' completamente sr-only; su >=sm si fonde nella grid via
                   display:contents e ogni cella resta sr-only. */}
-              <li
-                role="row"
-                aria-rowindex={1}
-                className="sr-only sm:contents"
-              >
-                <div role="columnheader" aria-colindex={1} className="sr-only">Famiglia</div>
-                <div role="columnheader" aria-colindex={2} className="sr-only">Ora</div>
-                <div role="columnheader" aria-colindex={3} className="sr-only">Canale</div>
-                <div role="columnheader" aria-colindex={4} className="sr-only">Titolo</div>
-                <div role="columnheader" aria-colindex={5} className="sr-only">Genere</div>
-                <div role="columnheader" aria-colindex={6} className="sr-only">Durata</div>
+              <li role="row" aria-rowindex={1} className="sr-only sm:contents">
+                <div role="columnheader" aria-colindex={1} className="sr-only">
+                  Famiglia
+                </div>
+                <div role="columnheader" aria-colindex={2} className="sr-only">
+                  Ora
+                </div>
+                <div role="columnheader" aria-colindex={3} className="sr-only">
+                  Canale
+                </div>
+                <div role="columnheader" aria-colindex={4} className="sr-only">
+                  Titolo
+                </div>
+                <div role="columnheader" aria-colindex={5} className="sr-only">
+                  Genere
+                </div>
+                <div role="columnheader" aria-colindex={6} className="sr-only">
+                  Durata
+                </div>
               </li>
               {pagedHighlights.map((row, i) => {
                 const prev = pagedHighlights[i - 1];
@@ -499,23 +497,27 @@ export default function TonightTvList() {
                         className="h-[3px] bg-primary border-y border-primary/40 list-none sm:col-span-full"
                       />
                     )}
-                    {showFamilyDivider && (() => {
-                      const FamilyIcon = FAMILY_ICONS[row.family];
-                      return (
-                        <li
-                          data-testid="family-label-mobile"
-                          data-family={row.family}
-                          role="rowheader"
-                          aria-label={`Famiglia ${familyLabelMap[row.family]}`}
-                          className="lg:hidden flex items-center gap-1.5 px-2.5 pt-2 pb-1 bg-primary/5 sm:col-span-full"
-                        >
-                          <FamilyIcon className="h-3.5 w-3.5 text-primary/80 shrink-0" aria-hidden="true" />
-                          <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-primary/80">
-                            {familyLabelMap[row.family]}
-                          </span>
-                        </li>
-                      );
-                    })()}
+                    {showFamilyDivider &&
+                      (() => {
+                        const FamilyIcon = FAMILY_ICONS[row.family];
+                        return (
+                          <li
+                            data-testid="family-label-mobile"
+                            data-family={row.family}
+                            role="rowheader"
+                            aria-label={`Famiglia ${familyLabelMap[row.family]}`}
+                            className="lg:hidden flex items-center gap-1.5 px-2.5 pt-2 pb-1 bg-primary/5 sm:col-span-full"
+                          >
+                            <FamilyIcon
+                              className="h-3.5 w-3.5 text-primary/80 shrink-0"
+                              aria-hidden="true"
+                            />
+                            <span className="font-heading font-bold text-[10px] uppercase tracking-widest text-primary/80">
+                              {familyLabelMap[row.family]}
+                            </span>
+                          </li>
+                        );
+                      })()}
                     <li
                       role="row"
                       aria-rowindex={ariaRowIndex}
@@ -532,7 +534,9 @@ export default function TonightTvList() {
                           : "";
                         const durDisplay = row.hasExplicitEnd ? dur : "—";
                         const durAriaLabel = row.hasExplicitEnd
-                          ? (durSpoken ? `Durata ${durSpoken}` : undefined)
+                          ? durSpoken
+                            ? `Durata ${durSpoken}`
+                            : undefined
                           : "Durata non disponibile dalla fonte";
                         const familyLabel = familyLabelMap[row.family];
                         return (
@@ -547,7 +551,10 @@ export default function TonightTvList() {
                             >
                               {showFamilyDivider ? (
                                 <>
-                                  <FamilyIcon className="h-3.5 w-3.5 text-primary/80 shrink-0" aria-hidden="true" />
+                                  <FamilyIcon
+                                    className="h-3.5 w-3.5 text-primary/80 shrink-0"
+                                    aria-hidden="true"
+                                  />
                                   <span className="font-heading font-bold text-xs uppercase tracking-wider text-primary/80 truncate">
                                     {familyLabel}
                                   </span>
@@ -622,7 +629,11 @@ export default function TonightTvList() {
                               aria-colindex={6}
                               aria-label={durAriaLabel}
                               className="hidden sm:flex sm:items-center sm:justify-end sm:pr-3 sm:pl-2 sm:py-4 sm:border-t-2 sm:border-border font-mono text-xs text-foreground/75 tabular-nums whitespace-nowrap transition-colors sm:group-hover:bg-primary/10 sm:group-focus-visible:bg-primary/15"
-                              title={row.hasExplicitEnd ? undefined : "Orario di fine non disponibile dalla fonte"}
+                              title={
+                                row.hasExplicitEnd
+                                  ? undefined
+                                  : "Orario di fine non disponibile dalla fonte"
+                              }
                             >
                               {durDisplay}
                             </div>
@@ -648,54 +659,55 @@ export default function TonightTvList() {
                         ];
                         ariaParts.push(`genere ${g}`);
                         if (durSpoken) ariaParts.push(`durata ${durSpoken}`);
-                        else if (!row.hasExplicitEnd) ariaParts.push("durata non disponibile dalla fonte");
+                        else if (!row.hasExplicitEnd)
+                          ariaParts.push("durata non disponibile dalla fonte");
                         return (
                           <article
                             aria-label={ariaParts.join(", ")}
                             className="sm:hidden flex flex-col gap-2"
                           >
-                        {/* Riga 1: ora + canale + durata */}
-                        <div className="flex items-center gap-2 flex-wrap" aria-hidden="true">
-                          <span className="font-mono font-bold text-primary text-sm leading-none shrink-0">
-                            {row.time}
-                            {row.endTime && (
-                              <span className="font-normal text-foreground/60 text-[11px] ml-1">
-                                –{row.endTime}
+                            {/* Riga 1: ora + canale + durata */}
+                            <div className="flex items-center gap-2 flex-wrap" aria-hidden="true">
+                              <span className="font-mono font-bold text-primary text-sm leading-none shrink-0">
+                                {row.time}
+                                {row.endTime && (
+                                  <span className="font-normal text-foreground/60 text-[11px] ml-1">
+                                    –{row.endTime}
+                                  </span>
+                                )}
                               </span>
-                            )}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] font-bold uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
-                          >
-                            {row.channel}
-                          </Badge>
-                          {row.hasExplicitEnd && formatDuration(row.durationMin) && (
-                            <span className="text-[11px] text-foreground/75 whitespace-nowrap font-mono leading-none ml-auto">
-                              {formatDuration(row.durationMin)}
-                            </span>
-                          )}
-                          {!row.hasExplicitEnd && (
-                            <span
-                              className="text-[11px] text-foreground/60 whitespace-nowrap font-mono leading-none ml-auto"
-                              title="Orario di fine non disponibile dalla fonte"
-                            >
-                              —
-                            </span>
-                          )}
-                        </div>
-                        {/* Riga 2: titolo + genere */}
-                        <div className="flex items-start gap-2 flex-wrap" aria-hidden="true">
-                          <span className="font-medium text-[13px] leading-snug wrap-break-word flex-1 min-w-0 text-foreground">
-                            {row.title}
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none mt-0.5"
-                          >
-                            {g}
-                          </Badge>
-                        </div>
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] font-bold uppercase tracking-wider shrink-0 whitespace-nowrap leading-none"
+                              >
+                                {row.channel}
+                              </Badge>
+                              {row.hasExplicitEnd && formatDuration(row.durationMin) && (
+                                <span className="text-[11px] text-foreground/75 whitespace-nowrap font-mono leading-none ml-auto">
+                                  {formatDuration(row.durationMin)}
+                                </span>
+                              )}
+                              {!row.hasExplicitEnd && (
+                                <span
+                                  className="text-[11px] text-foreground/60 whitespace-nowrap font-mono leading-none ml-auto"
+                                  title="Orario di fine non disponibile dalla fonte"
+                                >
+                                  —
+                                </span>
+                              )}
+                            </div>
+                            {/* Riga 2: titolo + genere */}
+                            <div className="flex items-start gap-2 flex-wrap" aria-hidden="true">
+                              <span className="font-medium text-[13px] leading-snug wrap-break-word flex-1 min-w-0 text-foreground">
+                                {row.title}
+                              </span>
+                              <Badge
+                                variant="secondary"
+                                className="text-[9px] uppercase tracking-wider shrink-0 bg-primary/15 text-primary border-primary/20 hover:bg-primary/20 leading-none mt-0.5"
+                              >
+                                {g}
+                              </Badge>
+                            </div>
                           </article>
                         );
                       })()}

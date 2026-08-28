@@ -1,9 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  f1Api,
-  footballApi,
-  motogpApi,
-} from "@/lib/api/sportsApi";
+import { f1Api, footballApi, motogpApi } from "@/lib/api/sportsApi";
 import {
   getCurrentF1Season,
   getCurrentJuventusSeason,
@@ -61,7 +57,11 @@ function expandF1(rounds: unknown[] | undefined): CalendarItem[] {
       { key: "fp1", label: "Prove libere 1", sess: r.firstPractice as Sess | null },
       { key: "fp2", label: "Prove libere 2", sess: r.secondPractice as Sess | null },
       { key: "fp3", label: "Prove libere 3", sess: r.thirdPractice as Sess | null },
-      { key: "spr-q", label: "Qualifiche Sprint", sess: (r.sprintQualifying ?? null) as Sess | null },
+      {
+        key: "spr-q",
+        label: "Qualifiche Sprint",
+        sess: (r.sprintQualifying ?? null) as Sess | null,
+      },
       { key: "spr", label: "Sprint", sess: r.sprint as Sess | null },
       { key: "qua", label: "Qualifiche", sess: r.qualifying as Sess | null },
     ];
@@ -110,7 +110,9 @@ function expandMotoGP(rounds: unknown[] | undefined): CalendarItem[] {
     const name = String(r.name ?? "");
     const shortContext = SHORT_GP(name) || name;
     const baseId = `motogp-${round}`;
-    const sessions = Array.isArray(r.sessions) ? (r.sessions as Array<Record<string, unknown>>) : [];
+    const sessions = Array.isArray(r.sessions)
+      ? (r.sessions as Array<Record<string, unknown>>)
+      : [];
 
     if (sessions.length > 0) {
       for (const s of sessions) {
@@ -219,8 +221,8 @@ export function useCalendarEvents() {
       const items: unknown[] = Array.isArray(first?.items) ? [...first.items] : [];
       if (cap > 1) {
         const rest = await Promise.allSettled(
-          Array.from({ length: cap - 1 }, (_, i) => i + 2).map((p) =>
-            footballApi.getCalendar(seasonJ, p, 12) as Promise<{ items?: unknown[] }>,
+          Array.from({ length: cap - 1 }, (_, i) => i + 2).map(
+            (p) => footballApi.getCalendar(seasonJ, p, 12) as Promise<{ items?: unknown[] }>,
           ),
         );
         for (const r of rest) {
@@ -236,7 +238,10 @@ export function useCalendarEvents() {
   const events: CalendarItem[] = [
     ...expandF1(f1.data as unknown[] | undefined),
     ...expandMotoGP(motogp.data as unknown[] | undefined),
-    ...expandJuventus((juveAll.data as unknown[] | undefined) ?? (juveFirst.data as { items?: unknown[] } | undefined)?.items),
+    ...expandJuventus(
+      (juveAll.data as unknown[] | undefined) ??
+        (juveFirst.data as { items?: unknown[] } | undefined)?.items,
+    ),
   ]
     .filter((e) => toRomeDate(e.date) !== null)
     .sort((a, b) => a.date.localeCompare(b.date));

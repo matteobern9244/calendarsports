@@ -41,10 +41,7 @@ import {
   type ReleaseItem,
   type TvChannel,
 } from "@/hooks/useStreamingData";
-import type {
-  StreamingFamilyId,
-  StreamingProviderId,
-} from "@/lib/api/sportsApi";
+import type { StreamingFamilyId, StreamingProviderId } from "@/lib/api/sportsApi";
 import { cn } from "@/lib/utils";
 import { todayRomeISO, addDaysISO, formatDateIT, toRomeDate } from "@/lib/dateUtils";
 import { Progress } from "@/components/ui/progress";
@@ -111,7 +108,6 @@ function formatHour(iso: string): string {
   }).format(d);
 }
 
-
 function isFamily(value: string | null): value is StreamingFamilyId {
   return !!value && STREAMING_FAMILIES.some((f) => f.id === value);
 }
@@ -141,24 +137,16 @@ export default function StreamingPage() {
   const initialFamily = isFamily(params.get("family"))
     ? (params.get("family") as StreamingFamilyId)
     : "rai";
-  const initialRange = isRange(params.get("range"))
-    ? (params.get("range") as RangeId)
-    : "7d";
-  const initialKind = isKind(params.get("kind"))
-    ? (params.get("kind") as KindId)
-    : "all";
+  const initialRange = isRange(params.get("range")) ? (params.get("range") as RangeId) : "7d";
+  const initialKind = isKind(params.get("kind")) ? (params.get("kind") as KindId) : "all";
   const initialPage = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
   const initialSort: SortId = isSort(params.get("sort"))
     ? (params.get("sort") as SortId)
     : "release";
   const initialGenreParam = params.get("genre");
   const initialGenre: number | null =
-    initialGenreParam && /^\d+$/.test(initialGenreParam)
-      ? parseInt(initialGenreParam, 10)
-      : null;
-  const initialItalyProvider: StreamingProviderId | "all" = isProvider(
-    params.get("itProvider"),
-  )
+    initialGenreParam && /^\d+$/.test(initialGenreParam) ? parseInt(initialGenreParam, 10) : null;
+  const initialItalyProvider: StreamingProviderId | "all" = isProvider(params.get("itProvider"))
     ? (params.get("itProvider") as StreamingProviderId)
     : "all";
 
@@ -199,17 +187,7 @@ export default function StreamingPage() {
     }
     if (page > 1) next.set("page", String(page));
     setParams(next, { replace: true });
-  }, [
-    tab,
-    family,
-    range,
-    kindFilter,
-    page,
-    setParams,
-    italyProvider,
-    sort,
-    genre,
-  ]);
+  }, [tab, family, range, kindFilter, page, setParams, italyProvider, sort, genre]);
 
   // Reset della pagina quando cambiano i filtri.
   //
@@ -251,11 +229,7 @@ export default function StreamingPage() {
   const channels = tvQuery.data?.channels ?? NO_CHANNELS;
   const channelsPageCount = Math.max(1, Math.ceil(channels.length / CHANNELS_PER_PAGE));
   const visibleChannels = useMemo(
-    () =>
-      channels.slice(
-        (page - 1) * CHANNELS_PER_PAGE,
-        page * CHANNELS_PER_PAGE,
-      ),
+    () => channels.slice((page - 1) * CHANNELS_PER_PAGE, page * CHANNELS_PER_PAGE),
     [channels, page],
   );
 
@@ -264,17 +238,13 @@ export default function StreamingPage() {
   const filteredItems: ReleaseItem[] = italyQuery.data?.items ?? NO_ITEMS;
   const itemsPageCount = Math.max(1, Math.ceil(filteredItems.length / RELEASES_PER_PAGE));
   const visibleItems = useMemo(
-    () =>
-      filteredItems.slice(
-        (page - 1) * RELEASES_PER_PAGE,
-        page * RELEASES_PER_PAGE,
-      ),
+    () => filteredItems.slice((page - 1) * RELEASES_PER_PAGE, page * RELEASES_PER_PAGE),
     [filteredItems, page],
   );
 
   const providerLabel =
     italyProvider !== "all"
-      ? STREAMING_PROVIDERS.find((p) => p.id === italyProvider)?.label ?? italyProvider
+      ? (STREAMING_PROVIDERS.find((p) => p.id === italyProvider)?.label ?? italyProvider)
       : "Italia";
 
   const widened = italyQuery.data?.widenedWindow === true;
@@ -416,9 +386,7 @@ export default function StreamingPage() {
                               <div className="min-w-0">
                                 <p className="font-medium truncate">{p.title}</p>
                                 {p.genre && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {p.genre}
-                                  </p>
+                                  <p className="text-xs text-muted-foreground">{p.genre}</p>
                                 )}
                               </div>
                             </li>
@@ -431,11 +399,7 @@ export default function StreamingPage() {
               </Accordion>
 
               {channelsPageCount > 1 && (
-                <PagerNav
-                  page={page}
-                  pageCount={channelsPageCount}
-                  onChange={setPage}
-                />
+                <PagerNav page={page} pageCount={channelsPageCount} onChange={setPage} />
               )}
             </>
           )}
@@ -469,7 +433,10 @@ export default function StreamingPage() {
               </SelectTrigger>
               <SelectContent>
                 {GENRES.map((g) => (
-                  <SelectItem key={String(g.id ?? "all")} value={g.id === null ? "all" : String(g.id)}>
+                  <SelectItem
+                    key={String(g.id ?? "all")}
+                    value={g.id === null ? "all" : String(g.id)}
+                  >
                     {g.label}
                   </SelectItem>
                 ))}
@@ -505,22 +472,22 @@ export default function StreamingPage() {
           </div>
 
           {fallbackRecent && filteredItems.length > 0 && (
-            <p
-              className="text-xs text-muted-foreground italic"
-              aria-live="polite"
-            >
-              Nessuna uscita {providerLabel !== "Italia" ? `su ${providerLabel} ` : ""}nella finestra selezionata: stiamo mostrando le uscite più recenti.
+            <p className="text-xs text-muted-foreground italic" aria-live="polite">
+              Nessuna uscita {providerLabel !== "Italia" ? `su ${providerLabel} ` : ""}nella
+              finestra selezionata: stiamo mostrando le uscite più recenti.
             </p>
           )}
 
-          {!fallbackRecent && widened && effectiveFrom && effectiveTo && filteredItems.length > 0 && (
-            <p
-              className="text-xs text-muted-foreground italic"
-              aria-live="polite"
-            >
-              Nessun titolo nella finestra selezionata: stiamo mostrando le uscite tra {formatDateIT(effectiveFrom)} e {formatDateIT(effectiveTo)}.
-            </p>
-          )}
+          {!fallbackRecent &&
+            widened &&
+            effectiveFrom &&
+            effectiveTo &&
+            filteredItems.length > 0 && (
+              <p className="text-xs text-muted-foreground italic" aria-live="polite">
+                Nessun titolo nella finestra selezionata: stiamo mostrando le uscite tra{" "}
+                {formatDateIT(effectiveFrom)} e {formatDateIT(effectiveTo)}.
+              </p>
+            )}
 
           {activeQuery.isSuccess && activeQuery.data?.configured && (
             <div
@@ -528,16 +495,19 @@ export default function StreamingPage() {
               aria-live="polite"
             >
               <Badge variant="secondary" className="font-normal">
-                Provider: <span className="ml-1 font-semibold text-foreground">{providerLabel}</span>
+                Provider:{" "}
+                <span className="ml-1 font-semibold text-foreground">{providerLabel}</span>
               </Badge>
               <Badge variant="secondary" className="font-normal">
                 Tipo: <span className="ml-1 font-semibold text-foreground">{activeKindLabel}</span>
               </Badge>
               <Badge variant="secondary" className="font-normal">
-                Genere: <span className="ml-1 font-semibold text-foreground">{activeGenreLabel}</span>
+                Genere:{" "}
+                <span className="ml-1 font-semibold text-foreground">{activeGenreLabel}</span>
               </Badge>
               <Badge variant="secondary" className="font-normal">
-                Ordina: <span className="ml-1 font-semibold text-foreground">{activeSortLabel}</span>
+                Ordina:{" "}
+                <span className="ml-1 font-semibold text-foreground">{activeSortLabel}</span>
               </Badge>
               <Badge variant="secondary" className="font-normal">
                 Finestra:{" "}
@@ -568,25 +538,21 @@ export default function StreamingPage() {
           {activeQuery.isSuccess && !activeQuery.data?.configured && (
             <EmptyState message="Configura la chiave TMDB_API_KEY per visualizzare le nuove uscite." />
           )}
-          {activeQuery.isSuccess &&
-            activeQuery.data?.configured &&
-            filteredItems.length === 0 && (
-              <div className="flex flex-col items-center gap-3">
-                <EmptyState
-                  message="Nessun titolo trovato in Italia per i filtri selezionati. Allarga la finestra o cambia genere."
-                />
-                {range !== "90d" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRange("90d")}
-                    className="rounded-full font-heading uppercase tracking-wider text-xs"
-                  >
-                    Allarga finestra
-                  </Button>
-                )}
-              </div>
-            )}
+          {activeQuery.isSuccess && activeQuery.data?.configured && filteredItems.length === 0 && (
+            <div className="flex flex-col items-center gap-3">
+              <EmptyState message="Nessun titolo trovato in Italia per i filtri selezionati. Allarga la finestra o cambia genere." />
+              {range !== "90d" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRange("90d")}
+                  className="rounded-full font-heading uppercase tracking-wider text-xs"
+                >
+                  Allarga finestra
+                </Button>
+              )}
+            </div>
+          )}
 
           {activeQuery.isSuccess && filteredItems.length > 0 && (
             <>
@@ -652,9 +618,7 @@ export default function StreamingPage() {
                             {item.year ? ` · ${item.year}` : ""}
                           </Badge>
                           {item.voteAverage !== null && item.voteAverage > 0 && (
-                            <span className="font-mono">
-                              ★ {item.voteAverage.toFixed(1)}
-                            </span>
+                            <span className="font-mono">★ {item.voteAverage.toFixed(1)}</span>
                           )}
                         </div>
                         {item.availableProviders && item.availableProviders.length > 0 && (
@@ -692,11 +656,7 @@ export default function StreamingPage() {
               </motion.div>
 
               {itemsPageCount > 1 && (
-                <PagerNav
-                  page={page}
-                  pageCount={itemsPageCount}
-                  onChange={setPage}
-                />
+                <PagerNav page={page} pageCount={itemsPageCount} onChange={setPage} />
               )}
             </>
           )}
@@ -819,9 +779,7 @@ function PagerNav({
               e.preventDefault();
               if (page < pageCount) onChange(page + 1);
             }}
-            className={cn(
-              page === pageCount && "pointer-events-none opacity-50",
-            )}
+            className={cn(page === pageCount && "pointer-events-none opacity-50")}
           />
         </PaginationItem>
       </PaginationContent>

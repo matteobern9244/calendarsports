@@ -29,15 +29,9 @@ import { fileURLToPath } from "node:url";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const SRC = join(ROOT, "src");
 
-const EXCLUDE_DIRS = new Set([
-  join("src", "components", "ui"),
-]);
+const EXCLUDE_DIRS = new Set([join("src", "components", "ui")]);
 
-const EXCLUDE_FILE_PATTERNS = [
-  /\.test\.(ts|tsx)$/,
-  /\.spec\.(ts|tsx)$/,
-  /\.d\.ts$/,
-];
+const EXCLUDE_FILE_PATTERNS = [/\.test\.(ts|tsx)$/, /\.spec\.(ts|tsx)$/, /\.d\.ts$/];
 
 /**
  * Parole consentite (case-insensitive su parola intera).
@@ -389,9 +383,7 @@ function isAsciiOnly(s) {
 }
 
 function tokens(value) {
-  return value
-    .split(/[^A-Za-zÀ-ÿ']+/)
-    .filter((t) => t.length > 1);
+  return value.split(/[^A-Za-zÀ-ÿ']+/).filter((t) => t.length > 1);
 }
 
 function checkValue(value) {

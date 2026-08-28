@@ -6,11 +6,27 @@ import UnavailableExternalSource from "@/components/common/UnavailableExternalSo
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getCurrentF1Season } from "@/lib/currentSeason";
-import { useF1Calendar, useF1DriverStandings, useF1ConstructorStandings } from "@/hooks/useSportsData";
-import { formatDateIT, formatTimeIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
+import {
+  useF1Calendar,
+  useF1DriverStandings,
+  useF1ConstructorStandings,
+} from "@/hooks/useSportsData";
+import {
+  formatDateIT,
+  formatTimeIT,
+  getEventStatus,
+  prioritizeNextUpcoming,
+} from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { User } from "lucide-react";
 import { f1NationalityToIso } from "@/lib/f1Utils";
 import TeamLogo from "@/components/common/TeamLogo";
@@ -20,9 +36,23 @@ import { useState } from "react";
 
 export default function Formula1Page() {
   const season = getCurrentF1Season();
-  const { data: calendar, isLoading: calLoading, error: calError, refetch: calRefetch } = useF1Calendar(season);
-  const { data: drivers, isLoading: drvLoading, error: drvError, refetch: drvRefetch } = useF1DriverStandings(season);
-  const { data: constructors, isLoading: conLoading, error: conError } = useF1ConstructorStandings(season);
+  const {
+    data: calendar,
+    isLoading: calLoading,
+    error: calError,
+    refetch: calRefetch,
+  } = useF1Calendar(season);
+  const {
+    data: drivers,
+    isLoading: drvLoading,
+    error: drvError,
+    refetch: drvRefetch,
+  } = useF1DriverStandings(season);
+  const {
+    data: constructors,
+    isLoading: conLoading,
+    error: conError,
+  } = useF1ConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
   const [selectedRace, setSelectedRace] = useState<any | null>(null);
 
@@ -30,7 +60,12 @@ export default function Formula1Page() {
   if (!isOnline && calError && !calendar && drvError && !drivers && conError && !constructors) {
     return (
       <div className="container py-8 sm:py-12">
-        <OfflineFallback onRetry={() => { calRefetch(); drvRefetch(); }} />
+        <OfflineFallback
+          onRetry={() => {
+            calRefetch();
+            drvRefetch();
+          }}
+        />
       </div>
     );
   }
@@ -43,10 +78,21 @@ export default function Formula1Page() {
 
       <Tabs defaultValue="calendario" className="w-full">
         <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">Calendario</TabsTrigger>
-          <TabsTrigger value="piloti" className="font-heading text-xs tracking-wider uppercase">Classifica Piloti</TabsTrigger>
-          <TabsTrigger value="costruttori" className="font-heading text-xs tracking-wider uppercase">Costruttori</TabsTrigger>
-          <TabsTrigger value="highlights" className="font-heading text-xs tracking-wider uppercase">Highlights</TabsTrigger>
+          <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">
+            Calendario
+          </TabsTrigger>
+          <TabsTrigger value="piloti" className="font-heading text-xs tracking-wider uppercase">
+            Classifica Piloti
+          </TabsTrigger>
+          <TabsTrigger
+            value="costruttori"
+            className="font-heading text-xs tracking-wider uppercase"
+          >
+            Costruttori
+          </TabsTrigger>
+          <TabsTrigger value="highlights" className="font-heading text-xs tracking-wider uppercase">
+            Highlights
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendario">
@@ -76,39 +122,67 @@ export default function Formula1Page() {
               ctaHint="Tocca qui per orari e circuiti del Mondiale"
             />
           )}
-          {calendar && calendar.length > 0 && (() => {
-            const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(calendar, (race: any) => race.date);
-            return (
-            <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.05 } } }}>
-              {orderedCalendar.map((r: any, idx: number) => (
-                <EventCard
-                  key={r.round}
-                  sport={`Round ${r.round}`}
-                  title={r.raceName}
-                  subtitle={`${r.circuit} · ${r.locality}, ${r.country}`}
-                  date={formatDateIT(r.date)}
-                  time={formatTimeIT(r.time, r.date)}
-                  startDate={r.time ? `${r.date}T${r.time}` : r.date}
-                  status={getEventStatus(r.date)}
-                  highlight={idx === highlightIndex}
-                  onRetry={() => calRefetch()}
-                  onClick={() => setSelectedRace(r)}
+          {calendar &&
+            calendar.length > 0 &&
+            (() => {
+              const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
+                calendar,
+                (race: any) => race.date,
+              );
+              return (
+                <motion.div
+                  className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  initial="hidden"
+                  animate="show"
+                  variants={{ show: { transition: { staggerChildren: 0.05 } } }}
                 >
-                  <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-                    {r.firstPractice && <span>PL1: {formatTimeIT(r.firstPractice.time, r.firstPractice.date)}</span>}
-                    {r.secondPractice && <span>PL2: {formatTimeIT(r.secondPractice.time, r.secondPractice.date)}</span>}
-                    {r.thirdPractice && <span>PL3: {formatTimeIT(r.thirdPractice.time, r.thirdPractice.date)}</span>}
-                    {r.qualifying && <span>Qual: {formatTimeIT(r.qualifying.time, r.qualifying.date)}</span>}
-                    {r.sprint && <span>Sprint: {formatTimeIT(r.sprint.time, r.sprint.date)}</span>}
-                    <span className={`font-semibold text-primary ${!r.sprint && !r.thirdPractice ? '' : 'col-span-2'}`}>
-                      Gara: {formatTimeIT(r.time, r.date)}
-                    </span>
-                  </div>
-                </EventCard>
-              ))}
-            </motion.div>
-            );
-          })()}
+                  {orderedCalendar.map((r: any, idx: number) => (
+                    <EventCard
+                      key={r.round}
+                      sport={`Round ${r.round}`}
+                      title={r.raceName}
+                      subtitle={`${r.circuit} · ${r.locality}, ${r.country}`}
+                      date={formatDateIT(r.date)}
+                      time={formatTimeIT(r.time, r.date)}
+                      startDate={r.time ? `${r.date}T${r.time}` : r.date}
+                      status={getEventStatus(r.date)}
+                      highlight={idx === highlightIndex}
+                      onRetry={() => calRefetch()}
+                      onClick={() => setSelectedRace(r)}
+                    >
+                      <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                        {r.firstPractice && (
+                          <span>
+                            PL1: {formatTimeIT(r.firstPractice.time, r.firstPractice.date)}
+                          </span>
+                        )}
+                        {r.secondPractice && (
+                          <span>
+                            PL2: {formatTimeIT(r.secondPractice.time, r.secondPractice.date)}
+                          </span>
+                        )}
+                        {r.thirdPractice && (
+                          <span>
+                            PL3: {formatTimeIT(r.thirdPractice.time, r.thirdPractice.date)}
+                          </span>
+                        )}
+                        {r.qualifying && (
+                          <span>Qual: {formatTimeIT(r.qualifying.time, r.qualifying.date)}</span>
+                        )}
+                        {r.sprint && (
+                          <span>Sprint: {formatTimeIT(r.sprint.time, r.sprint.date)}</span>
+                        )}
+                        <span
+                          className={`font-semibold text-primary ${!r.sprint && !r.thirdPractice ? "" : "col-span-2"}`}
+                        >
+                          Gara: {formatTimeIT(r.time, r.date)}
+                        </span>
+                      </div>
+                    </EventCard>
+                  ))}
+                </motion.div>
+              );
+            })()}
         </TabsContent>
 
         <TabsContent value="piloti">
@@ -134,11 +208,21 @@ export default function Formula1Page() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">Pos</TableHead>
-                    <TableHead className="font-heading text-xs tracking-wider uppercase">Pilota</TableHead>
-                    <TableHead className="font-heading text-xs tracking-wider uppercase hidden sm:table-cell">Scuderia</TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Vittorie</TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Punti</TableHead>
+                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">
+                      Pos
+                    </TableHead>
+                    <TableHead className="font-heading text-xs tracking-wider uppercase">
+                      Pilota
+                    </TableHead>
+                    <TableHead className="font-heading text-xs tracking-wider uppercase hidden sm:table-cell">
+                      Scuderia
+                    </TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
+                      Vittorie
+                    </TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
+                      Punti
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -156,7 +240,9 @@ export default function Formula1Page() {
                               width={32}
                               height={32}
                               className="h-8 w-8 rounded-full object-cover bg-muted shrink-0"
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.svg'; }}
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src = "/placeholder.svg";
+                              }}
                             />
                           ) : (
                             <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -174,19 +260,27 @@ export default function Formula1Page() {
                                 decoding="async"
                                 width={20}
                                 height={14}
-                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                                }}
                               />
                             ) : null;
                           })()}
                           <div>
                             <span className="font-semibold">{d.driver}</span>
-                            <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">{d.driverCode}</span>
+                            <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">
+                              {d.driverCode}
+                            </span>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground hidden sm:table-cell">{d.constructor}</TableCell>
+                      <TableCell className="text-muted-foreground hidden sm:table-cell">
+                        {d.constructor}
+                      </TableCell>
                       <TableCell className="text-center">{d.wins}</TableCell>
-                      <TableCell className="text-center font-bold text-primary">{d.points}</TableCell>
+                      <TableCell className="text-center font-bold text-primary">
+                        {d.points}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -226,10 +320,18 @@ export default function Formula1Page() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">Pos</TableHead>
-                    <TableHead className="font-heading text-xs tracking-wider uppercase">Scuderia</TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Vittorie</TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">Punti</TableHead>
+                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">
+                      Pos
+                    </TableHead>
+                    <TableHead className="font-heading text-xs tracking-wider uppercase">
+                      Scuderia
+                    </TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
+                      Vittorie
+                    </TableHead>
+                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
+                      Punti
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -251,7 +353,9 @@ export default function Formula1Page() {
                         </div>
                       </TableCell>
                       <TableCell className="text-center">{c.wins}</TableCell>
-                      <TableCell className="text-center font-bold text-primary">{c.points}</TableCell>
+                      <TableCell className="text-center font-bold text-primary">
+                        {c.points}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

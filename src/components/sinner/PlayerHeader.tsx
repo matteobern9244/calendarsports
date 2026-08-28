@@ -38,13 +38,21 @@ function formatRankingDate(iso?: string | null): string | null {
   if (!iso) return null;
   try {
     const d = new Date(iso);
-    return new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" }).format(d);
+    return new Intl.DateTimeFormat("it-IT", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(d);
   } catch {
     return iso;
   }
 }
 
-const SLAM_LABELS: { key: keyof NonNullable<PlayerHeaderProps["slamResults"]>; short: string; full: string }[] = [
+const SLAM_LABELS: {
+  key: keyof NonNullable<PlayerHeaderProps["slamResults"]>;
+  short: string;
+  full: string;
+}[] = [
   { key: "australianOpen", short: "AO", full: "Australian Open" },
   { key: "rolandGarros", short: "RG", full: "Roland Garros" },
   { key: "wimbledon", short: "W", full: "Wimbledon" },
@@ -134,9 +142,7 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
                 {rankingLabel}
               </p>
               {rankingDate && (
-                <p className="mt-1.5 text-[11px] text-muted-foreground">
-                  agg. {rankingDate}
-                </p>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">agg. {rankingDate}</p>
               )}
             </div>
 
@@ -171,10 +177,7 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
 
           {/* Bio chips */}
           {(props.height || props.weight || props.plays || props.birthPlace || props.coach) && (
-            <ul
-              className="mt-4 flex flex-wrap gap-2"
-              aria-label="Informazioni personali"
-            >
+            <ul className="mt-4 flex flex-wrap gap-2" aria-label="Informazioni personali">
               {props.height && (
                 <li className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted px-3 py-1.5 text-xs">
                   <Ruler className="h-3.5 w-3.5 text-primary" aria-hidden />
@@ -279,7 +282,6 @@ export default function PlayerHeader(props: PlayerHeaderProps) {
               </ul>
             </div>
           )}
-
         </div>
       </div>
     </section>

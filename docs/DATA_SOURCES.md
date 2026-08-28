@@ -13,11 +13,11 @@ quanto è affidabile, è la premessa di ogni intervento su questa parte.
 
 ## Le tre nature di un dato
 
-| Natura              | Che cosa vuol dire                                                   | Come si rompe                                       |
-| ------------------- | -------------------------------------------------------------------- | --------------------------------------------------- |
-| **API reale**       | un endpoint pubblico che restituisce JSON con un contratto dichiarato | cambia versione, va in rate limit, va giù            |
-| **Scraping HTML**   | una pagina web pensata per essere letta da persone, non da programmi  | cambia il layout, e nessuno ce lo dice               |
-| **Dataset statico** | valori scritti nel codice, aggiornati a mano                          | invecchia in silenzio al cambio di stagione          |
+| Natura              | Che cosa vuol dire                                                    | Come si rompe                               |
+| ------------------- | --------------------------------------------------------------------- | ------------------------------------------- |
+| **API reale**       | un endpoint pubblico che restituisce JSON con un contratto dichiarato | cambia versione, va in rate limit, va giù   |
+| **Scraping HTML**   | una pagina web pensata per essere letta da persone, non da programmi  | cambia il layout, e nessuno ce lo dice      |
+| **Dataset statico** | valori scritti nel codice, aggiornati a mano                          | invecchia in silenzio al cambio di stagione |
 
 La regola che ne discende sta in
 [`AGENTS.md`](../AGENTS.md): **non presentare mai come fonte ufficiale ciò che è
@@ -138,13 +138,13 @@ funzioni di questo stesso progetto).
 Questi valori sono corretti oggi e non lo saranno per sempre. Nessuno li
 sorveglia automaticamente.
 
-| Dove                                          | Cosa                                              |
-| --------------------------------------------- | ------------------------------------------------- |
-| `sports-tennis`                               | elenco curato dei tornei 2026, gate sull'anno 2026 |
-| `sports-football` → `LEGA_SEASON_IDS`         | id stagione fino al 2026                          |
-| `sports-motogp`                               | numeri, nazionalità e foto della griglia 2026     |
-| `sports-f1` → `F1_DRIVER_PHOTOS`              | percorsi CDN che citano `2025`                    |
-| `streaming-tv`                                | slug dei canali, verificati a mano                |
+| Dove                                  | Cosa                                               |
+| ------------------------------------- | -------------------------------------------------- |
+| `sports-tennis`                       | elenco curato dei tornei 2026, gate sull'anno 2026 |
+| `sports-football` → `LEGA_SEASON_IDS` | id stagione fino al 2026                           |
+| `sports-motogp`                       | numeri, nazionalità e foto della griglia 2026      |
+| `sports-f1` → `F1_DRIVER_PHOTOS`      | percorsi CDN che citano `2025`                     |
+| `streaming-tv`                        | slug dei canali, verificati a mano                 |
 
 ## Riferimenti
 

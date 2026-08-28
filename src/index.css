@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap')
+@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap")
 layer(base);
 
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @plugin 'tailwindcss-animate';
 
@@ -357,15 +357,24 @@ layer(base);
     @apply bg-background text-foreground font-body antialiased;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-heading;
   }
 
   html {
     color-scheme: light dark;
   }
-  html.dark { color-scheme: dark; }
-  html:not(.dark) { color-scheme: light; }
+  html.dark {
+    color-scheme: dark;
+  }
+  html:not(.dark) {
+    color-scheme: light;
+  }
 
   /* Transizione applicata SOLO durante il toggle tema (~300ms),
      gestita dall'hook useTheme. Evita costi di transizione su tutte
@@ -392,4 +401,3 @@ layer(base);
     }
   }
 }
-

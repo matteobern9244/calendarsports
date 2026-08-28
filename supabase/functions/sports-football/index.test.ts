@@ -12,7 +12,11 @@ const ROME_DATE_FMT = new Intl.DateTimeFormat("en-CA", {
 function romeDateKeyOf(input: string | null | undefined): string | null {
   if (!input) return null;
   let normalized = input;
-  if (typeof input === "string" && /T\d{2}:\d{2}/.test(input) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(input)) {
+  if (
+    typeof input === "string" &&
+    /T\d{2}:\d{2}/.test(input) &&
+    !/(Z|[+-]\d{2}:?\d{2})$/i.test(input)
+  ) {
     normalized = `${input}Z`;
   }
   const d = new Date(normalized);
@@ -31,10 +35,7 @@ Deno.test("romeDateKeyOf: notte UTC sfora la mezzanotte italiana", () => {
 });
 
 Deno.test("romeDateKeyOf: stringa naive trattata come UTC", () => {
-  assertEquals(
-    romeDateKeyOf("2026-04-21T23:30:00"),
-    romeDateKeyOf("2026-04-21T23:30:00Z"),
-  );
+  assertEquals(romeDateKeyOf("2026-04-21T23:30:00"), romeDateKeyOf("2026-04-21T23:30:00Z"));
 });
 
 Deno.test("romeDateKeyOf: input invalidi/null", () => {
@@ -81,8 +82,7 @@ function buildMatchId(match: any, competitionName: string): string {
 Deno.test("buildMatchId: slug derivato dall'URL Sky", () => {
   const id = buildMatchId(
     {
-      link:
-        "https://sport.sky.it/calcio/serie-a/partite/2025/giornata-1/juventus-parma/risultato-gol",
+      link: "https://sport.sky.it/calcio/serie-a/partite/2025/giornata-1/juventus-parma/risultato-gol",
       home: { name: "Juventus" },
       away: { name: "Parma" },
       date: "2025-08-24T18:30:00Z",
@@ -108,8 +108,7 @@ Deno.test("buildMatchId: fallback deterministico senza link", () => {
 Deno.test("buildMatchId: id univoci per partite diverse", () => {
   const a = buildMatchId(
     {
-      link:
-        "https://sport.sky.it/calcio/serie-a/partite/2025/giornata-1/juventus-parma/risultato-gol",
+      link: "https://sport.sky.it/calcio/serie-a/partite/2025/giornata-1/juventus-parma/risultato-gol",
       home: { name: "Juventus" },
       away: { name: "Parma" },
       date: "2025-08-24T18:30:00Z",
@@ -118,8 +117,7 @@ Deno.test("buildMatchId: id univoci per partite diverse", () => {
   );
   const b = buildMatchId(
     {
-      link:
-        "https://sport.sky.it/calcio/serie-a/partite/2025/giornata-2/genoa-juventus/risultato-gol",
+      link: "https://sport.sky.it/calcio/serie-a/partite/2025/giornata-2/genoa-juventus/risultato-gol",
       home: { name: "Genoa" },
       away: { name: "Juventus" },
       date: "2025-08-31T18:30:00Z",
@@ -132,8 +130,7 @@ Deno.test("buildMatchId: id univoci per partite diverse", () => {
 Deno.test("buildMatchId: link Sky con slug squadre composte", () => {
   const id = buildMatchId(
     {
-      link:
-        "https://sport.sky.it/calcio/champions-league/partite/2025/girone-fase-campionato/juventus-borussia-dortmund/risultato-gol",
+      link: "https://sport.sky.it/calcio/champions-league/partite/2025/girone-fase-campionato/juventus-borussia-dortmund/risultato-gol",
       home: { name: "Juventus" },
       away: { name: "Borussia Dortmund" },
       date: "2025-09-16T19:00:00Z",

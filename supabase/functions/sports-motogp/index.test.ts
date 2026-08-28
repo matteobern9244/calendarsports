@@ -40,11 +40,13 @@ const EVENTS_PAYLOAD = [
 const TEAMS_PAYLOAD = [
   {
     name: "Ducati Lenovo Team",
-    picture: "https://photos.motogp.com/teams/8/9/892fff2f-7402-4fbd-99fb-5fd567d8a80c/main-picture.png",
+    picture:
+      "https://photos.motogp.com/teams/8/9/892fff2f-7402-4fbd-99fb-5fd567d8a80c/main-picture.png",
   },
   {
     name: "Aprilia Racing",
-    picture: "https://photos.motogp.com/teams/1/1/11d18b37-baba-400a-80c2-f8ddf040f97e/main-picture.png",
+    picture:
+      "https://photos.motogp.com/teams/1/1/11d18b37-baba-400a-80c2-f8ddf040f97e/main-picture.png",
   },
   {
     name: "HRC Test Team",
@@ -60,24 +62,20 @@ function installMockFetch(opts: { fail?: boolean } = {}) {
       return Promise.resolve(new Response("upstream down", { status: 503 }));
     }
     if (url.includes("/results/seasons")) {
-      return Promise.resolve(
-        new Response(JSON.stringify(SEASONS_PAYLOAD), { status: 200 }),
-      );
+      return Promise.resolve(new Response(JSON.stringify(SEASONS_PAYLOAD), { status: 200 }));
     }
     if (url.includes("/results/events")) {
-      return Promise.resolve(
-        new Response(JSON.stringify(EVENTS_PAYLOAD), { status: 200 }),
-      );
+      return Promise.resolve(new Response(JSON.stringify(EVENTS_PAYLOAD), { status: 200 }));
     }
     if (url.includes("/v1/teams")) {
-      return Promise.resolve(
-        new Response(JSON.stringify(TEAMS_PAYLOAD), { status: 200 }),
-      );
+      return Promise.resolve(new Response(JSON.stringify(TEAMS_PAYLOAD), { status: 200 }));
     }
     // Sky Sport (classifiche) non chiamato in questi test
     return orig(input as Request, init);
   };
-  return () => { globalThis.fetch = orig; };
+  return () => {
+    globalThis.fetch = orig;
+  };
 }
 
 Deno.test("MotoGP: italianizeGpName mappa correttamente i nomi noti", async () => {
@@ -99,8 +97,8 @@ Deno.test("MotoGP: italianizeGpName mappa correttamente i nomi noti", async () =
 });
 
 Deno.test("MotoGP: mock events payload contiene 2 GP + 1 test", () => {
-  const gps = EVENTS_PAYLOAD.filter(e => e.test === false);
-  const tests = EVENTS_PAYLOAD.filter(e => e.test === true);
+  const gps = EVENTS_PAYLOAD.filter((e) => e.test === false);
+  const tests = EVENTS_PAYLOAD.filter((e) => e.test === true);
   assertEquals(gps.length, 2);
   assertEquals(tests.length, 1);
 });

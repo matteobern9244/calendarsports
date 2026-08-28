@@ -41,7 +41,8 @@ export default function PreferencesPanel() {
         });
       } else if (res.reason === "unsupported") {
         toast.error("Notifiche non supportate", {
-          description: "Su iPhone installa l'app sulla schermata Home (richiede iOS 16.4 o successivo).",
+          description:
+            "Su iPhone installa l'app sulla schermata Home (richiede iOS 16.4 o successivo).",
         });
       } else {
         toast.error("Impossibile attivare le notifiche");
@@ -71,9 +72,7 @@ export default function PreferencesPanel() {
         side={isMobile ? "bottom" : "right"}
         className={cn(
           "flex flex-col gap-0 p-0 border-border/60 bg-card/95 backdrop-blur-xl",
-          isMobile
-            ? "h-[88vh] rounded-t-2xl sm:max-w-none"
-            : "w-full sm:max-w-[520px]"
+          isMobile ? "h-[88vh] rounded-t-2xl sm:max-w-none" : "w-full sm:max-w-[520px]",
         )}
       >
         {/* Drag handle mobile */}
@@ -88,9 +87,7 @@ export default function PreferencesPanel() {
           <SheetTitle className="font-heading text-2xl uppercase tracking-tight">
             <span className="text-gold-gradient">Preferenze</span>
           </SheetTitle>
-          <SheetDescription>
-            Personalizza tema e comportamento dei countdown.
-          </SheetDescription>
+          <SheetDescription>Personalizza tema e comportamento dei countdown.</SheetDescription>
         </SheetHeader>
 
         {/* Body scrollable */}
@@ -112,9 +109,7 @@ export default function PreferencesPanel() {
                   <p className="text-sm font-heading uppercase tracking-wider text-foreground">
                     Tema dell'interfaccia
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Modalità chiara o scura.
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Modalità chiara o scura.</p>
                 </div>
                 <div
                   role="radiogroup"
@@ -150,7 +145,7 @@ export default function PreferencesPanel() {
                           "transition-colors",
                           active
                             ? "bg-linear-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
-                            : "text-muted-foreground hover:text-foreground"
+                            : "text-muted-foreground hover:text-foreground",
                         )}
                       >
                         <Icon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -181,7 +176,8 @@ export default function PreferencesPanel() {
                     Frequenza aggiornamento
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Tempo reale: aggiornamenti al secondo. Risparmio: aggiornamenti al minuto, riduce il consumo CPU su dispositivi mobili.
+                    Tempo reale: aggiornamenti al secondo. Risparmio: aggiornamenti al minuto,
+                    riduce il consumo CPU su dispositivi mobili.
                   </p>
                 </div>
                 <div
@@ -282,7 +278,7 @@ export default function PreferencesPanel() {
                             "border transition-colors",
                             active
                               ? "border-transparent bg-linear-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] text-primary-foreground shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
-                              : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
+                              : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground",
                           )}
                         >
                           {opt.label}
@@ -296,7 +292,8 @@ export default function PreferencesPanel() {
               {push.permission === "denied" && (
                 <p className="flex items-start gap-2 text-xs text-destructive">
                   <BellOff className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                  Hai negato il permesso. Sblocca le notifiche dalle impostazioni del browser per questo sito.
+                  Hai negato il permesso. Sblocca le notifiche dalle impostazioni del browser per
+                  questo sito.
                 </p>
               )}
             </div>

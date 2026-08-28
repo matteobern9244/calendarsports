@@ -24,11 +24,7 @@ export default function ReleaseCountdownBadge({
   // Sottoscrizione al clock globale a risoluzione "minute": basta un
   // refresh ogni 30s per cogliere il cambio di giorno a Roma. Lo snapshot
   // restituito cambia solo ai cambi minuto reali → nessun re-render extra.
-  useSyncExternalStore(
-    (cb) => subscribeCountdown(cb, "minute"),
-    getNowMinute,
-    getNowMinute,
-  );
+  useSyncExternalStore((cb) => subscribeCountdown(cb, "minute"), getNowMinute, getNowMinute);
   const diff = daysUntilRome(releaseDate);
   if (diff === null) return null;
 
@@ -60,10 +56,8 @@ export default function ReleaseCountdownBadge({
   }
 
   const toneClasses: Record<typeof tone, string> = {
-    today:
-      "bg-[hsl(var(--gold))]/15 border-[hsl(var(--gold))]/50 text-[hsl(var(--gold))]",
-    soon:
-      "bg-[hsl(var(--gold))]/10 border-[hsl(var(--gold))]/35 text-[hsl(var(--gold))]",
+    today: "bg-[hsl(var(--gold))]/15 border-[hsl(var(--gold))]/50 text-[hsl(var(--gold))]",
+    soon: "bg-[hsl(var(--gold))]/10 border-[hsl(var(--gold))]/35 text-[hsl(var(--gold))]",
     future: "bg-transparent border-border/70 text-foreground/80",
     past: "bg-muted/60 border-transparent text-muted-foreground",
   };

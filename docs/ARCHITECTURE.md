@@ -64,18 +64,18 @@ src/
 
 Tutte figlie di `Layout`, tranne il catch-all.
 
-| Path                          | Componente          |
-| ----------------------------- | ------------------- |
-| `/`                           | `Index`             |
-| `/calendario`                 | `CalendarPage`      |
-| `/streaming`                  | `StreamingPage`     |
-| `/sinner`                     | `SinnerPage`        |
-| `/juventus`                   | `JuventusPage`      |
-| `/juventus/partite/:matchId`  | `JuventusMatchPage` |
-| `/formula1`                   | `Formula1Page`      |
-| `/motogp`                     | `MotoGPPage`        |
-| `/preferenze`                 | `PreferencesPage`   |
-| `*`                           | `NotFound`          |
+| Path                         | Componente          |
+| ---------------------------- | ------------------- |
+| `/`                          | `Index`             |
+| `/calendario`                | `CalendarPage`      |
+| `/streaming`                 | `StreamingPage`     |
+| `/sinner`                    | `SinnerPage`        |
+| `/juventus`                  | `JuventusPage`      |
+| `/juventus/partite/:matchId` | `JuventusMatchPage` |
+| `/formula1`                  | `Formula1Page`      |
+| `/motogp`                    | `MotoGPPage`        |
+| `/preferenze`                | `PreferencesPage`   |
+| `*`                          | `NotFound`          |
 
 Routing dichiarativo con react-router 8: nessun data router, nessun loader.
 
@@ -85,26 +85,26 @@ Ogni hook è un involucro sottile su React Query. La chiave è la sua identità:
 punti che leggono la stessa cosa con chiavi diverse non condividono niente, e un
 prefetch scritto con una chiave sbagliata viene semplicemente buttato.
 
-| Hook                                                    | Chiave                                                                  | Azione                              |
-| ------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------- |
-| `useF1Calendar(season)`                                 | `["f1","calendar",season]`                                              | `sports-f1?action=calendar`         |
-| `useF1DriverStandings(season)`                          | `["f1","driver-standings",season]`                                      | `driver-standings`                  |
-| `useF1ConstructorStandings(season)`                     | `["f1","constructor-standings",season]`                                 | `constructor-standings`             |
-| `useF1NextRace()`                                       | `["f1","next-race"]`                                                    | `next-race`                         |
-| `useSerieAStandings(season)`                            | `["juventus","standings",season]`                                       | `sports-football?action=standings`  |
-| `useJuventusCalendar(season,page?,pageSize?,upcoming?)` | `["juventus","calendar",season,page??null,pageSize??null,upcomingOnly]` | `calendar`                          |
-| `useSinnerInfo()`                                       | `["sinner","info"]`                                                     | `sports-tennis?action=player-info`  |
-| `useSinnerNextEvent()`                                  | `["sinner","next-event"]`                                               | `next-event`                        |
-| `useSinnerSchedule(season)`                             | `["sinner","schedule",season]`                                          | `schedule`                          |
-| `useSinnerResults(season,page?,pageSize?)`              | `["sinner","results",season,page??null,pageSize??null]`                | `results`                           |
-| `useMotoGPCalendar(season)`                             | `["motogp","calendar",season]`                                          | `sports-motogp?action=calendar`     |
-| `useMotoGPNextEvent()`                                  | `["motogp","next-event"]`                                               | `next-event`                        |
-| `useMotoGPStandings(season)`                            | `["motogp","standings",season]`                                         | `standings`                         |
-| `useMotoGPConstructorStandings(season)`                 | `["motogp","constructor-standings",season]`                             | `constructor-standings`             |
-| `useHighlights(sport,limit)`                            | `["highlights",sport,limit]`                                            | `highlights-youtube`                |
-| `useTvByFamily(family)`                                 | `["streaming-tv",family]`                                               | `streaming-tv?action=prime-time`    |
+| Hook                                                    | Chiave                                                                  | Azione                                |
+| ------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------- |
+| `useF1Calendar(season)`                                 | `["f1","calendar",season]`                                              | `sports-f1?action=calendar`           |
+| `useF1DriverStandings(season)`                          | `["f1","driver-standings",season]`                                      | `driver-standings`                    |
+| `useF1ConstructorStandings(season)`                     | `["f1","constructor-standings",season]`                                 | `constructor-standings`               |
+| `useF1NextRace()`                                       | `["f1","next-race"]`                                                    | `next-race`                           |
+| `useSerieAStandings(season)`                            | `["juventus","standings",season]`                                       | `sports-football?action=standings`    |
+| `useJuventusCalendar(season,page?,pageSize?,upcoming?)` | `["juventus","calendar",season,page??null,pageSize??null,upcomingOnly]` | `calendar`                            |
+| `useSinnerInfo()`                                       | `["sinner","info"]`                                                     | `sports-tennis?action=player-info`    |
+| `useSinnerNextEvent()`                                  | `["sinner","next-event"]`                                               | `next-event`                          |
+| `useSinnerSchedule(season)`                             | `["sinner","schedule",season]`                                          | `schedule`                            |
+| `useSinnerResults(season,page?,pageSize?)`              | `["sinner","results",season,page??null,pageSize??null]`                 | `results`                             |
+| `useMotoGPCalendar(season)`                             | `["motogp","calendar",season]`                                          | `sports-motogp?action=calendar`       |
+| `useMotoGPNextEvent()`                                  | `["motogp","next-event"]`                                               | `next-event`                          |
+| `useMotoGPStandings(season)`                            | `["motogp","standings",season]`                                         | `standings`                           |
+| `useMotoGPConstructorStandings(season)`                 | `["motogp","constructor-standings",season]`                             | `constructor-standings`               |
+| `useHighlights(sport,limit)`                            | `["highlights",sport,limit]`                                            | `highlights-youtube`                  |
+| `useTvByFamily(family)`                                 | `["streaming-tv",family]`                                               | `streaming-tv?action=prime-time`      |
 | `useReleasesItaly(opts)`                                | `["streaming-releases-italy",provider,kind,from,to,sort,genreId]`       | `streaming-releases?action=new-italy` |
-| `useReleaseDetails(type,id)`                            | `["streaming-release-details",type,id]`                                 | `details`                           |
+| `useReleaseDetails(type,id)`                            | `["streaming-release-details",type,id]`                                 | `details`                             |
 
 `useJuventusCalendar` chiamata **senza** `page` e `pageSize` restituisce l'intera
 stagione: è la forma che usano la Home e il dettaglio partita, e condividono la

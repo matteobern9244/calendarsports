@@ -43,8 +43,7 @@ export const queryKeys = {
     calendar: (season: number) => ["motogp", "calendar", season] as const,
     nextEvent: () => ["motogp", "next-event"] as const,
     standings: (season: number) => ["motogp", "standings", season] as const,
-    constructorStandings: (season: number) =>
-      ["motogp", "constructor-standings", season] as const,
+    constructorStandings: (season: number) => ["motogp", "constructor-standings", season] as const,
   },
   highlights: (sport: HighlightSport, limit: number) => ["highlights", sport, limit] as const,
   streaming: {

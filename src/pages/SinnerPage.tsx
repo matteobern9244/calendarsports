@@ -37,12 +37,13 @@ export default function SinnerPage() {
     isFetching: resFetching,
     error: resError,
     refetch: resRefetch,
-  } = useSinnerResults(
-    season,
-    resultsPage,
-    RESULTS_PAGE_SIZE,
-  );
-  const { data: schedule, isLoading: schLoading, error: schError, refetch: schRefetch } = useSinnerSchedule(season);
+  } = useSinnerResults(season, resultsPage, RESULTS_PAGE_SIZE);
+  const {
+    data: schedule,
+    isLoading: schLoading,
+    error: schError,
+    refetch: schRefetch,
+  } = useSinnerSchedule(season);
   const { isOnline } = useOnlineStatus();
 
   // Reset paginazione quando cambia la stagione: pagine alte di una
@@ -57,9 +58,7 @@ export default function SinnerPage() {
   // Compatibilita' di forma: il backend ora restituisce
   // `{ items, pagination }`, ma per sicurezza accettiamo anche il
   // vecchio shape `MatchRow[]` (es. cache stale o fallback).
-  const resultItems: any[] = Array.isArray(results)
-    ? results
-    : (results?.items ?? []);
+  const resultItems: any[] = Array.isArray(results) ? results : (results?.items ?? []);
   const resultsPagination: {
     page: number;
     pageSize: number;
@@ -90,7 +89,12 @@ export default function SinnerPage() {
   if (!isOnline && resError && !results && schError && !schedule && !playerInfo) {
     return (
       <div className="container py-8 sm:py-12">
-        <OfflineFallback onRetry={() => { resRefetch(); schRefetch(); }} />
+        <OfflineFallback
+          onRetry={() => {
+            resRefetch();
+            schRefetch();
+          }}
+        />
       </div>
     );
   }
@@ -125,8 +129,12 @@ export default function SinnerPage() {
 
       <Tabs defaultValue="risultati" className="w-full">
         <TabsList className="mb-6 bg-muted">
-          <TabsTrigger value="risultati" className="font-heading text-xs tracking-wider uppercase">Risultati</TabsTrigger>
-          <TabsTrigger value="tornei" className="font-heading text-xs tracking-wider uppercase">Tornei</TabsTrigger>
+          <TabsTrigger value="risultati" className="font-heading text-xs tracking-wider uppercase">
+            Risultati
+          </TabsTrigger>
+          <TabsTrigger value="tornei" className="font-heading text-xs tracking-wider uppercase">
+            Tornei
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="risultati">
@@ -156,116 +164,135 @@ export default function SinnerPage() {
               ctaHint="Tocca qui per i punteggi set per set"
             />
           )}
-          {resultItems.length > 0 && (() => {
-            const { items: orderedResults, highlightIndex } = prioritizeNextUpcoming(
-              resultItems,
-              (result: any) => result.date,
-            );
-            // Quando React Query sta gia' fetchando una nuova pagina ma
-            // sta ancora mostrando i dati precedenti (`placeholderData`),
-            // segnaliamo lo stato di caricamento sia visivamente
-            // (overlay attenuato + spinner) sia per gli screen reader
-            // (`role="status"` con `aria-live="polite"`). Cosi' l'utente
-            // capisce che la lista in vista e' ancora quella vecchia in
-            // attesa dell'aggiornamento.
-            const isPageChanging = resFetching && !resLoading;
-            return (
-            <>
-            <div className="relative">
-              {isPageChanging && (
-                <div
-                  role="status"
-                  aria-live="polite"
-                  className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/70 backdrop-blur-xs"
-                >
-                  <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 shadow-md">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
-                    <span className="text-xs font-heading uppercase tracking-wider text-foreground">
-                      Caricamento risultati...
-                    </span>
-                  </div>
-                </div>
-              )}
-              <motion.div
-                className={cn(
-                  "grid gap-4 sm:grid-cols-2 transition-opacity duration-200",
-                  isPageChanging && "opacity-50 pointer-events-none",
-                )}
-                aria-busy={isPageChanging}
-                initial="hidden"
-                animate="show"
-                variants={{ show: { transition: { staggerChildren: 0.08 } } }}
-              >
-              {orderedResults.map((r: any, i: number) => (
-                <EventCard
-                  key={i}
-                  sport={r.tournament || 'ATP'}
-                  title={r.opponent ? `vs. ${r.opponent}${r.opponentRank ? ` (#${r.opponentRank})` : ""}` : r.tournament}
-                  subtitle={r.round ? `${r.round}${r.surface ? ` · ${r.surface}` : ""}` : r.surface}
-                  date={r.date ? formatDateIT(r.date) : '—'}
-                  startDate={r.date}
-                  status={r.date ? getEventStatus(r.date) : 'completato'}
-                  highlight={i === highlightIndex}
-                >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {r.result && (
-                      <span
-                        className={cn(
-                          "inline-flex h-6 min-w-6 items-center justify-center rounded-md px-2 text-xs font-heading font-bold",
-                          r.result === "V"
-                            ? "bg-success/15 text-success border border-success/30"
-                            : "bg-destructive/15 text-destructive border border-destructive/30",
-                        )}
-                        aria-label={r.result === "V" ? "Vittoria" : "Sconfitta"}
+          {resultItems.length > 0 &&
+            (() => {
+              const { items: orderedResults, highlightIndex } = prioritizeNextUpcoming(
+                resultItems,
+                (result: any) => result.date,
+              );
+              // Quando React Query sta gia' fetchando una nuova pagina ma
+              // sta ancora mostrando i dati precedenti (`placeholderData`),
+              // segnaliamo lo stato di caricamento sia visivamente
+              // (overlay attenuato + spinner) sia per gli screen reader
+              // (`role="status"` con `aria-live="polite"`). Cosi' l'utente
+              // capisce che la lista in vista e' ancora quella vecchia in
+              // attesa dell'aggiornamento.
+              const isPageChanging = resFetching && !resLoading;
+              return (
+                <>
+                  <div className="relative">
+                    {isPageChanging && (
+                      <div
+                        role="status"
+                        aria-live="polite"
+                        className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/70 backdrop-blur-xs"
                       >
-                        {r.result}
-                      </span>
+                        <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 shadow-md">
+                          <Loader2
+                            className="h-4 w-4 animate-spin text-primary"
+                            aria-hidden="true"
+                          />
+                          <span className="text-xs font-heading uppercase tracking-wider text-foreground">
+                            Caricamento risultati...
+                          </span>
+                        </div>
+                      </div>
                     )}
-                    {r.score && <p className="text-sm font-heading font-bold text-foreground">{r.score}</p>}
+                    <motion.div
+                      className={cn(
+                        "grid gap-4 sm:grid-cols-2 transition-opacity duration-200",
+                        isPageChanging && "opacity-50 pointer-events-none",
+                      )}
+                      aria-busy={isPageChanging}
+                      initial="hidden"
+                      animate="show"
+                      variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+                    >
+                      {orderedResults.map((r: any, i: number) => (
+                        <EventCard
+                          key={i}
+                          sport={r.tournament || "ATP"}
+                          title={
+                            r.opponent
+                              ? `vs. ${r.opponent}${r.opponentRank ? ` (#${r.opponentRank})` : ""}`
+                              : r.tournament
+                          }
+                          subtitle={
+                            r.round ? `${r.round}${r.surface ? ` · ${r.surface}` : ""}` : r.surface
+                          }
+                          date={r.date ? formatDateIT(r.date) : "—"}
+                          startDate={r.date}
+                          status={r.date ? getEventStatus(r.date) : "completato"}
+                          highlight={i === highlightIndex}
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {r.result && (
+                              <span
+                                className={cn(
+                                  "inline-flex h-6 min-w-6 items-center justify-center rounded-md px-2 text-xs font-heading font-bold",
+                                  r.result === "V"
+                                    ? "bg-success/15 text-success border border-success/30"
+                                    : "bg-destructive/15 text-destructive border border-destructive/30",
+                                )}
+                                aria-label={r.result === "V" ? "Vittoria" : "Sconfitta"}
+                              >
+                                {r.result}
+                              </span>
+                            )}
+                            {r.score && (
+                              <p className="text-sm font-heading font-bold text-foreground">
+                                {r.score}
+                              </p>
+                            )}
+                          </div>
+                        </EventCard>
+                      ))}
+                    </motion.div>
                   </div>
-                </EventCard>
-              ))}
-              </motion.div>
-            </div>
-            {resultsPagination && resultsPagination.totalPages > 1 && (
-              <nav
-                aria-label="Paginazione risultati"
-                className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-border/40"
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setResultsPage((p) => Math.max(1, p - 1))}
-                  disabled={resultsPagination.page <= 1 || resFetching}
-                  className="h-9 px-3 gap-1 text-xs font-heading uppercase tracking-wider"
-                  aria-label="Pagina precedente dei risultati"
-                >
-                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">Precedente</span>
-                </Button>
-                <span
-                  aria-live="polite"
-                  aria-atomic="true"
-                  className="text-[11px] sm:text-xs font-heading uppercase tracking-wider text-muted-foreground text-center"
-                >
-                  Pagina {resultsPagination.page} / {resultsPagination.totalPages} · {resultsPagination.total} risultati
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setResultsPage((p) => Math.min(resultsPagination.totalPages, p + 1))}
-                  disabled={resultsPagination.page >= resultsPagination.totalPages || resFetching}
-                  className="h-9 px-3 gap-1 text-xs font-heading uppercase tracking-wider"
-                  aria-label="Pagina successiva dei risultati"
-                >
-                  <span className="hidden sm:inline">Successiva</span>
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                </Button>
-              </nav>
-            )}
-            </>
-            );
-          })()}
+                  {resultsPagination && resultsPagination.totalPages > 1 && (
+                    <nav
+                      aria-label="Paginazione risultati"
+                      className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-border/40"
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setResultsPage((p) => Math.max(1, p - 1))}
+                        disabled={resultsPagination.page <= 1 || resFetching}
+                        className="h-9 px-3 gap-1 text-xs font-heading uppercase tracking-wider"
+                        aria-label="Pagina precedente dei risultati"
+                      >
+                        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                        <span className="hidden sm:inline">Precedente</span>
+                      </Button>
+                      <span
+                        aria-live="polite"
+                        aria-atomic="true"
+                        className="text-[11px] sm:text-xs font-heading uppercase tracking-wider text-muted-foreground text-center"
+                      >
+                        Pagina {resultsPagination.page} / {resultsPagination.totalPages} ·{" "}
+                        {resultsPagination.total} risultati
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setResultsPage((p) => Math.min(resultsPagination.totalPages, p + 1))
+                        }
+                        disabled={
+                          resultsPagination.page >= resultsPagination.totalPages || resFetching
+                        }
+                        className="h-9 px-3 gap-1 text-xs font-heading uppercase tracking-wider"
+                        aria-label="Pagina successiva dei risultati"
+                      >
+                        <span className="hidden sm:inline">Successiva</span>
+                        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                    </nav>
+                  )}
+                </>
+              );
+            })()}
         </TabsContent>
 
         <TabsContent value="tornei">
@@ -328,7 +355,9 @@ export default function SinnerPage() {
                       </span>
                     )}
                   </div>
-                  {t.location && <p className="relative z-1 text-xs text-muted-foreground">{t.location}</p>}
+                  {t.location && (
+                    <p className="relative z-1 text-xs text-muted-foreground">{t.location}</p>
+                  )}
                   <div className="relative z-1 mt-2 flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">
                       {t.date ? formatDateIT(t.date) : "—"}
@@ -337,7 +366,9 @@ export default function SinnerPage() {
                     {t.surface && <span className="text-muted-foreground">{t.surface}</span>}
                   </div>
                   {t.result && (
-                    <p className="relative z-1 mt-2 text-xs font-heading font-bold text-primary">Risultato: {t.result}</p>
+                    <p className="relative z-1 mt-2 text-xs font-heading font-bold text-primary">
+                      Risultato: {t.result}
+                    </p>
                   )}
                 </motion.div>
               ))}

@@ -136,6 +136,7 @@ L'app espone sei viste principali:
   `first_air_date` TMDB (data di prima pubblicazione mondiale, non
   ingresso sulla singola piattaforma in IT): la striscia provider sotto
   la card chiarisce dove il titolo è già disponibile in Italia oggi.
+
 - `Jannik Sinner`: profilo sintetico, risultati e calendario tornei.
 - `Juventus`: calendario partite e classifica Serie A.
 - `Formula 1`: calendario GP, classifica piloti e costruttori.
@@ -171,8 +172,8 @@ Funzionalita' trasversali:
 - **layout responsive a 2 righe** della scheda "Stasera in TV" su
   mobile (`src/components/home/TonightTvList.tsx`): in viewport ≤640px
   ogni riga di programma e' divisa su due livelli (riga 1: ora + canale
-  + durata; riga 2: titolo + genere) per garantire la leggibilita' dei
-  titoli lunghi; layout desktop a singola riga invariato;
+  - durata; riga 2: titolo + genere) per garantire la leggibilita' dei
+    titoli lunghi; layout desktop a singola riga invariato;
 - **icona PWA dedicata** (`public/favicon.png`, 1024x1024) usata sia
   come favicon che come icona installabile dal manifest
   (`public/manifest.webmanifest`, `purpose: any` + `maskable`):
@@ -201,13 +202,13 @@ Nella scheda "Stasera in TV" della Home ogni riga mostra:
 Tutti gli slug attivi sono stati validati con `curl` contro
 `staseraintv.com` e ritornano almeno 12 righe `HH:MM` per giorno:
 
-| Famiglia | Coperti | Non coperti |
-| --- | --- | --- |
-| **RAI** | Rai 1, 2, 3, 4, 5, Movie, Premium, Gulp, YoYo, Storia, Scuola, Sport +HD | — |
-| **Mediaset** | Canale 5, Italia 1, Italia 2, Rete 4, Iris, 20, La5, Cine34, Boing, Cartoonito, Top Crime, Focus, Mediaset Extra | — |
-| **Sky Cinema** | Uno, Collection, Family, Action, Romance | Due, Suspense, Drama, Comedy |
-| **Discovery** | Real Time, DMax, Nove, Discovery Channel, Discovery Turbo, Food Network, HGTV, Giallo, K2, Frisbee | — |
-| **Sport** | **Sportitalia** (canale 60 DTT, palinsesto sport reale) | Tutti i canali Sky Sport branded (Uno, Calcio, Tennis, F1, MotoGP, Arena, Football, Action, Golf, Max, 24) |
+| Famiglia       | Coperti                                                                                                          | Non coperti                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **RAI**        | Rai 1, 2, 3, 4, 5, Movie, Premium, Gulp, YoYo, Storia, Scuola, Sport +HD                                         | —                                                                                                          |
+| **Mediaset**   | Canale 5, Italia 1, Italia 2, Rete 4, Iris, 20, La5, Cine34, Boing, Cartoonito, Top Crime, Focus, Mediaset Extra | —                                                                                                          |
+| **Sky Cinema** | Uno, Collection, Family, Action, Romance                                                                         | Due, Suspense, Drama, Comedy                                                                               |
+| **Discovery**  | Real Time, DMax, Nove, Discovery Channel, Discovery Turbo, Food Network, HGTV, Giallo, K2, Frisbee               | —                                                                                                          |
+| **Sport**      | **Sportitalia** (canale 60 DTT, palinsesto sport reale)                                                          | Tutti i canali Sky Sport branded (Uno, Calcio, Tennis, F1, MotoGP, Arena, Football, Action, Golf, Max, 24) |
 
 I canali Sky Sport branded restano elencati nella whitelist con
 `programs=[]`: la UI dichiara onestamente "Palinsesto non disponibile". E'
@@ -499,8 +500,8 @@ Superfici analizzate: testo JSX, attributi `aria-label`,
 Titoli pagina e titoli modali hanno copertura dedicata con messaggi di
 errore espliciti:
 
-- `document.title = "..."` e `document.title = \`...\`` (template literal,
-  parte statica): segnalati come `TITOLO PAGINA (document.title)`.
+- `document.title = "..."` e `document.title = \`...\``(template literal,
+parte statica): segnalati come`TITOLO PAGINA (document.title)`.
 - contenuto di `<DialogTitle>`, `<AlertDialogTitle>`, `<SheetTitle>`,
   `<DrawerTitle>`, `<SidebarTitle>`: segnalato come
   `TITOLO MODALE (<TagName>)`.
@@ -657,10 +658,10 @@ Se Lovable mostra questo errore, controllare in ordine:
 
 1. Esiste ancora una Branch protection classica attiva oltre alla Ruleset?
 2. La Ruleset di `main` contiene per errore gate come `pull_request` o
-  `required_status_checks` invece del solo set minimale compatibile con
-  Lovable?
+   `required_status_checks` invece del solo set minimale compatibile con
+   Lovable?
 3. E' attivo qualche flag tipo `Do not allow bypassing` o `Enforce for
-   admins`?
+admins`?
 
 Risultato pratico:
 

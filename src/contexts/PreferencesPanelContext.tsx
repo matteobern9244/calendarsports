@@ -1,8 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import {
-  PreferencesPanelContext,
-  type PreferencesPanelContextValue,
-} from "./usePreferencesPanel";
+import { PreferencesPanelContext, type PreferencesPanelContextValue } from "./usePreferencesPanel";
 
 export function PreferencesPanelProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -10,12 +7,10 @@ export function PreferencesPanelProvider({ children }: { children: ReactNode }) 
 
   const value = useMemo<PreferencesPanelContextValue>(
     () => ({ open, setOpen, toggle }),
-    [open, toggle]
+    [open, toggle],
   );
 
   return (
-    <PreferencesPanelContext.Provider value={value}>
-      {children}
-    </PreferencesPanelContext.Provider>
+    <PreferencesPanelContext.Provider value={value}>{children}</PreferencesPanelContext.Provider>
   );
 }

@@ -30,7 +30,8 @@ export default function ErrorState({
 }: ErrorStateProps) {
   const fallbackHint =
     externalLink && externalLabel
-      ? ctaHint ?? `Nel frattempo puoi consultare i dati ufficiali: tocca qui per ${externalLabel.toLowerCase()}.`
+      ? (ctaHint ??
+        `Nel frattempo puoi consultare i dati ufficiali: tocca qui per ${externalLabel.toLowerCase()}.`)
       : null;
   const linkAriaLabel =
     externalLink && externalLabel
@@ -45,9 +46,7 @@ export default function ErrorState({
       <AlertTriangle className="h-10 w-10 text-destructive" aria-hidden="true" focusable="false" />
       <div className="space-y-1.5 max-w-prose">
         <p className="text-base font-heading font-bold text-foreground">{message}</p>
-        {detail && (
-          <p className="text-[0.95rem] leading-relaxed text-foreground/80">{detail}</p>
-        )}
+        {detail && <p className="text-[0.95rem] leading-relaxed text-foreground/80">{detail}</p>}
       </div>
       <div className="flex flex-col sm:flex-row items-center gap-3 mt-1">
         {onRetry && (

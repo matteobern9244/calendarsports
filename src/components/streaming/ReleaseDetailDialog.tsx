@@ -9,10 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useReleaseDetails,
-  type ReleaseItem,
-} from "@/hooks/useStreamingData";
+import { useReleaseDetails, type ReleaseItem } from "@/hooks/useStreamingData";
 import type { StreamingProviderId } from "@/lib/api/sportsApi";
 import { formatDateIT } from "@/lib/dateUtils";
 import ReleaseCountdownBadge from "@/components/streaming/ReleaseCountdownBadge";
@@ -31,30 +28,18 @@ interface Props {
   onClose: () => void;
 }
 
-export default function ReleaseDetailDialog({
-  item,
-  provider,
-  providerLabel,
-  onClose,
-}: Props) {
-  const detailsQuery = useReleaseDetails(
-    item?.type ?? null,
-    item?.tmdbId ?? null,
-  );
+export default function ReleaseDetailDialog({ item, provider, providerLabel, onClose }: Props) {
+  const detailsQuery = useReleaseDetails(item?.type ?? null, item?.tmdbId ?? null);
   const details = detailsQuery.data;
 
   const open = !!item;
-  const tmdbUrl = item
-    ? `https://www.themoviedb.org/${item.type}/${item.tmdbId}`
-    : "#";
+  const tmdbUrl = item ? `https://www.themoviedb.org/${item.type}/${item.tmdbId}` : "#";
   const providerHomepage = PROVIDER_HOMEPAGES[provider];
   // Per la vista "Catalogo Italia" preferiamo il link JustWatch del titolo
   // (TMDB results.IT.link) che porta alla pagina di disponibilità Italia.
   const justWatchLink = details?.justWatchLink ?? item?.justWatchLink ?? null;
   const targetUrl = justWatchLink ?? item?.deepLink ?? providerHomepage;
-  const targetLabel = justWatchLink
-    ? "Vedi dove è disponibile"
-    : `Vai a ${providerLabel}`;
+  const targetLabel = justWatchLink ? "Vedi dove è disponibile" : `Vai a ${providerLabel}`;
 
   const overview = details?.overview ?? item?.overview ?? "";
   const genres = details?.genres ?? item?.genres ?? [];
@@ -101,9 +86,7 @@ export default function ReleaseDetailDialog({
                 {item.title}
               </DialogTitle>
               {genres.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {genres.join(" · ")}
-                </p>
+                <p className="text-xs text-muted-foreground">{genres.join(" · ")}</p>
               )}
               <DialogDescription className="sr-only">
                 Dettaglio uscita {item.title}
@@ -131,9 +114,7 @@ export default function ReleaseDetailDialog({
 
               <div className="space-y-4 min-w-0">
                 {overview ? (
-                  <p className="text-sm text-foreground/90 leading-relaxed">
-                    {overview}
-                  </p>
+                  <p className="text-sm text-foreground/90 leading-relaxed">{overview}</p>
                 ) : (
                   <p className="text-sm text-muted-foreground italic">
                     Nessuna sinossi disponibile.
@@ -142,17 +123,13 @@ export default function ReleaseDetailDialog({
 
                 {(details?.directors?.length ?? 0) > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    <span className="uppercase tracking-widest font-heading mr-1">
-                      Regia:
-                    </span>
+                    <span className="uppercase tracking-widest font-heading mr-1">Regia:</span>
                     {details!.directors.join(", ")}
                   </p>
                 )}
                 {(details?.creators?.length ?? 0) > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    <span className="uppercase tracking-widest font-heading mr-1">
-                      Creatori:
-                    </span>
+                    <span className="uppercase tracking-widest font-heading mr-1">Creatori:</span>
                     {details!.creators.join(", ")}
                   </p>
                 )}
@@ -232,14 +209,10 @@ export default function ReleaseDetailDialog({
                     </div>
                   )}
                   {detailsQuery.isError && (
-                    <p className="text-xs text-muted-foreground">
-                      Cast non disponibile.
-                    </p>
+                    <p className="text-xs text-muted-foreground">Cast non disponibile.</p>
                   )}
                   {detailsQuery.isSuccess && cast.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Cast non disponibile su TMDB.
-                    </p>
+                    <p className="text-xs text-muted-foreground">Cast non disponibile su TMDB.</p>
                   )}
                   {detailsQuery.isSuccess && cast.length > 0 && (
                     <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -277,21 +250,13 @@ export default function ReleaseDetailDialog({
 
                 <div className="flex flex-col sm:flex-row gap-2 pt-2">
                   <Button asChild size="sm" className="gap-2">
-                    <a
-                      href={targetUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                    <a href={targetUrl} target="_blank" rel="noopener noreferrer">
                       {targetLabel}
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                   </Button>
                   <Button asChild size="sm" variant="outline" className="gap-2">
-                    <a
-                      href={tmdbUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                    <a href={tmdbUrl} target="_blank" rel="noopener noreferrer">
                       Dettagli su TMDB
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>

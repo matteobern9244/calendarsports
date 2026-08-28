@@ -95,10 +95,10 @@ se una sezione sta servendo dati vivi o degradati.
 **Alcune funzioni impaginano solo se glielo chiedi**, e non lo fanno tutte allo
 stesso modo:
 
-| Funzione                   | Senza `page`/`pageSize` | Con `page`/`pageSize`                                                 |
-| -------------------------- | ----------------------- | --------------------------------------------------------------------- |
-| `sports-football:calendar` | array nudo              | `{ items, total, page, pageSize, totalPages, nextUpcomingIndex }`      |
-| `sports-tennis:results`    | array nudo              | `{ items, pagination: { page, pageSize, total, totalPages } }`         |
+| Funzione                   | Senza `page`/`pageSize` | Con `page`/`pageSize`                                             |
+| -------------------------- | ----------------------- | ----------------------------------------------------------------- |
+| `sports-football:calendar` | array nudo              | `{ items, total, page, pageSize, totalPages, nextUpcomingIndex }` |
+| `sports-tennis:results`    | array nudo              | `{ items, pagination: { page, pageSize, total, totalPages } }`    |
 
 Le due forme sono diverse per ragioni storiche, non per disegno. Chi legge deve
 accettarle entrambe: `matchesOf` in `src/pages/JuventusMatchPage.tsx` è

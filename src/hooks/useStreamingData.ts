@@ -189,10 +189,7 @@ export function useReleasesItaly(opts: UseReleasesItalyOpts) {
   });
 }
 
-export function useReleaseCredits(
-  type: "movie" | "tv" | null,
-  id: number | null,
-) {
+export function useReleaseCredits(type: "movie" | "tv" | null, id: number | null) {
   return useQuery<CreditsPayload>({
     queryKey: queryKeys.streaming.credits(type, id),
     queryFn: () => streamingApi.getReleaseCredits(type as "movie" | "tv", id as number),
@@ -201,10 +198,7 @@ export function useReleaseCredits(
   });
 }
 
-export function useReleaseDetails(
-  type: "movie" | "tv" | null,
-  id: number | null,
-) {
+export function useReleaseDetails(type: "movie" | "tv" | null, id: number | null) {
   return useQuery<ReleaseDetailsPayload>({
     queryKey: queryKeys.streaming.details(type, id),
     queryFn: () => streamingApi.getReleaseDetails(type as "movie" | "tv", id as number),

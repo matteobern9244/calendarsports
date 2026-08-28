@@ -43,7 +43,19 @@ function enrichTitle(
     }
   }
   const PLACEHOLDER_TO_GENRE: Record<string, string[]> = {
-    "EV-SP": ["Sport", "Calcio", "Tennis", "Motori", "Basket", "Pallavolo", "Pallacanestro", "Rugby", "Volley", "Nuoto", "Ciclismo"],
+    "EV-SP": [
+      "Sport",
+      "Calcio",
+      "Tennis",
+      "Motori",
+      "Basket",
+      "Pallavolo",
+      "Pallacanestro",
+      "Rugby",
+      "Volley",
+      "Nuoto",
+      "Ciclismo",
+    ],
     "EV-CN": ["Film", "Cinema"],
     "EV-FILM": ["Film", "Cinema"],
     "EV-TV": ["Fiction", "Serie Tv", "Telefilm", "Miniserie"],
@@ -56,12 +68,18 @@ function enrichTitle(
     for (const cand of rich) {
       const mm = cand.title.match(/\(([^()]{2,40})\)\s*$/);
       if (!mm) continue;
-      const genreCanon = mm[1].trim()
+      const genreCanon = mm[1]
+        .trim()
         .toLowerCase()
         .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
       if (!wanted.includes(genreCanon)) continue;
       let score = 0;
-      if (rawHh !== undefined && rawMm !== undefined && cand.hh !== undefined && cand.mm !== undefined) {
+      if (
+        rawHh !== undefined &&
+        rawMm !== undefined &&
+        cand.hh !== undefined &&
+        cand.mm !== undefined
+      ) {
         const distance = Math.min(720, Math.abs(cand.hh * 60 + cand.mm - rawHh * 60 - rawMm));
         if (distance === 0) score += 1000;
         score -= distance;
@@ -82,17 +100,16 @@ function enrichTitle(
     }
     if (timeBest) best = timeBest;
   }
-  const source = best || rawUpper
-    .toLowerCase()
-    .replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
-  const GENRE_WHITELIST = new Set([
-    "Fiction", "Film", "Sport", "Calcio", "Tennis", "Cinema",
-  ]);
+  const source =
+    best ||
+    rawUpper.toLowerCase().replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+  const GENRE_WHITELIST = new Set(["Fiction", "Film", "Sport", "Calcio", "Tennis", "Cinema"]);
   const mm = source.match(/\s*\(([^()]{2,40})\)\s*$/);
   let title = source;
   let genre: string | undefined;
   if (mm) {
-    const candidate = mm[1].trim()
+    const candidate = mm[1]
+      .trim()
       .toLowerCase()
       .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
     if (GENRE_WHITELIST.has(candidate)) {
@@ -115,19 +132,14 @@ describe("enrichTitle", () => {
   });
 
   it("placeholder EV-CN risolve al rich title col genere Film", () => {
-    const rich: RichTitle[] = [
-      { title: "Il Padrino (Film)" },
-      { title: "Telegiornale (News)" },
-    ];
+    const rich: RichTitle[] = [{ title: "Il Padrino (Film)" }, { title: "Telegiornale (News)" }];
     const result = enrichTitle("EV-CN", rich, 21, 15);
     expect(result.title).toBe("Il Padrino");
     expect(result.genre).toBe("Film");
   });
 
   it("match per HH:MM esatto quando il prefisso fallisce", () => {
-    const rich: RichTitle[] = [
-      { title: "Programma Speciale Misterioso (Sport)", hh: 20, mm: 40 },
-    ];
+    const rich: RichTitle[] = [{ title: "Programma Speciale Misterioso (Sport)", hh: 20, mm: 40 }];
     const result = enrichTitle("XYZ-123", rich, 20, 40);
     expect(result.title).toBe("Programma Speciale Misterioso");
     expect(result.genre).toBe("Sport");
@@ -137,10 +149,7 @@ describe("enrichTitle", () => {
     const rich: RichTitle[] = [
       { title: "Roberta Valente Notaio in Sorrento - Stagione 1 (Fiction)" },
     ];
-    const result = enrichTitle(
-      "ROBERTA VALENTE - NOTAIO IN SORRENTO - S1E3",
-      rich,
-    );
+    const result = enrichTitle("ROBERTA VALENTE - NOTAIO IN SORRENTO - S1E3", rich);
     expect(result.title).toContain("Roberta Valente");
     expect(result.genre).toBe("Fiction");
   });
@@ -182,9 +191,7 @@ describe("enrichTitle", () => {
   });
 
   it("EV-SP senza candidati di genere atteso: safety net match per orario", () => {
-    const rich: RichTitle[] = [
-      { title: "Tg5 - Notte (News)", hh: 20, mm: 40 },
-    ];
+    const rich: RichTitle[] = [{ title: "Tg5 - Notte (News)", hh: 20, mm: 40 }];
     const result = enrichTitle("EV-SP", rich, 20, 40);
     // News non e' nella whitelist locale ridotta del test, quindi il titolo
     // resta con il suffisso "(News)" e genre undefined. Cio' che conta e' che

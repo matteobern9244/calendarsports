@@ -41,10 +41,7 @@ export default tseslint.config(
           ],
           patterns: [
             {
-              group: [
-                "**/integrations/supabase/client",
-                "src/integrations/supabase/client",
-              ],
+              group: ["**/integrations/supabase/client", "src/integrations/supabase/client"],
               message:
                 "Importa il client Supabase da '@/lib/supabaseClient'. Il file auto-generato non e' sicuro in build di produzione (env var non sempre iniettate).",
             },

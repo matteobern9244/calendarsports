@@ -17,11 +17,7 @@
 // `data.items=[]` e `configured=false` cosi' il frontend mostra uno
 // stato vuoto informativo.
 
-import {
-  buildCorsHeaders,
-  checkRateLimit,
-  rateLimitResponse,
-} from "../_shared/security.ts";
+import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/security.ts";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
@@ -48,9 +44,9 @@ const TMDB_PROVIDER_ID_TO_KEY: Record<number, string> = Object.fromEntries(
 // "Tutti" deve mostrare solo titoli realmente disponibili su almeno uno
 // dei 4 provider che l'utente può poi filtrare singolarmente.
 const ITALY_MAINSTREAM_PROVIDER_IDS: number[] = [
-  8,    // Netflix
-  119,  // Amazon Prime Video
-  337,  // Disney+
+  8, // Netflix
+  119, // Amazon Prime Video
+  337, // Disney+
   1899, // HBO Max (in IT esposto via Sky/NOW)
 ];
 const ITALY_MAINSTREAM_SET = new Set<number>(ITALY_MAINSTREAM_PROVIDER_IDS);
@@ -83,7 +79,8 @@ type ItemProvidersInfo = {
 const itemProvidersCache = new Map<string, { at: number; payload: ItemProvidersInfo }>();
 
 type GenreMap = Record<number, string>;
-const genreMapCache: { movie?: { at: number; map: GenreMap }; tv?: { at: number; map: GenreMap } } = {};
+const genreMapCache: { movie?: { at: number; map: GenreMap }; tv?: { at: number; map: GenreMap } } =
+  {};
 
 // Quando la finestra richiesta non produce risultati, ampliamo automaticamente
 // la ricerca di N giorni indietro e M giorni in avanti, mantenendo provider e
@@ -230,11 +227,7 @@ function pickTrailerYouTubeKey(videos: any): string | null {
   return (trailer ?? ytTrailers[0])?.key ?? null;
 }
 
-async function tmdbCredits(
-  kind: "movie" | "tv",
-  id: string,
-  apiKey: string,
-): Promise<any> {
+async function tmdbCredits(kind: "movie" | "tv", id: string, apiKey: string): Promise<any> {
   const url = new URL(`${TMDB_BASE}/${kind}/${id}/credits`);
   url.searchParams.set("api_key", apiKey);
   url.searchParams.set("language", "it-IT");
@@ -303,7 +296,8 @@ async function tmdbItemProvidersFullIT(
       flatrate: map(itResults?.flatrate),
       free: map(itResults?.free),
       ads: map(itResults?.ads),
-      link: typeof itResults?.link === "string" && itResults.link.length > 0 ? itResults.link : null,
+      link:
+        typeof itResults?.link === "string" && itResults.link.length > 0 ? itResults.link : null,
     };
     itemProvidersCache.set(cacheKey, { at: Date.now(), payload });
     return payload;
@@ -354,7 +348,13 @@ function yearFromDate(date: string | null | undefined): number | null {
 /** Mappa i provider IT (flatrate prioritari) verso il payload compatto UI. */
 function compactProviders(info: ItemProvidersInfo) {
   const seen = new Set<number>();
-  const out: Array<{ id: number; key: string | null; name: string; logo: string | null; type: "flatrate" | "free" | "ads" }> = [];
+  const out: Array<{
+    id: number;
+    key: string | null;
+    name: string;
+    logo: string | null;
+    type: "flatrate" | "free" | "ads";
+  }> = [];
   const push = (type: "flatrate" | "free" | "ads", arr: ItemProvidersInfo["flatrate"]) => {
     for (const p of arr) {
       if (!p?.provider_id || seen.has(p.provider_id)) continue;
@@ -525,9 +525,10 @@ Deno.serve(async (req) => {
                 logo_path: p.logo_path ?? null,
               }))
             : [],
-          link: typeof raw?.["watch/providers"]?.results?.IT?.link === "string"
-            ? raw["watch/providers"].results.IT.link
-            : null,
+          link:
+            typeof raw?.["watch/providers"]?.results?.IT?.link === "string"
+              ? raw["watch/providers"].results.IT.link
+              : null,
         };
         const isMovie = type === "movie";
         const title = isMovie ? raw.title : raw.name;
@@ -540,18 +541,24 @@ Deno.serve(async (req) => {
           ? `https://image.tmdb.org/t/p/w780${raw.backdrop_path}`
           : null;
         const genres = Array.isArray(raw.genres)
-          ? raw.genres.map((g: any) => g?.name).filter((n: any): n is string => typeof n === "string" && n.length > 0)
+          ? raw.genres
+              .map((g: any) => g?.name)
+              .filter((n: any): n is string => typeof n === "string" && n.length > 0)
           : [];
         const cast = normalizeCast(raw?.credits ?? {});
-        const directors = isMovie && Array.isArray(raw?.credits?.crew)
-          ? raw.credits.crew
-              .filter((c: any) => c?.job === "Director")
-              .map((c: any) => c?.name)
-              .filter((n: any): n is string => typeof n === "string")
-          : [];
-        const creators = !isMovie && Array.isArray(raw?.created_by)
-          ? raw.created_by.map((c: any) => c?.name).filter((n: any): n is string => typeof n === "string")
-          : [];
+        const directors =
+          isMovie && Array.isArray(raw?.credits?.crew)
+            ? raw.credits.crew
+                .filter((c: any) => c?.job === "Director")
+                .map((c: any) => c?.name)
+                .filter((n: any): n is string => typeof n === "string")
+            : [];
+        const creators =
+          !isMovie && Array.isArray(raw?.created_by)
+            ? raw.created_by
+                .map((c: any) => c?.name)
+                .filter((n: any): n is string => typeof n === "string")
+            : [];
         const trailerKey = pickTrailerYouTubeKey(raw?.videos);
         const payload = {
           type,
@@ -566,8 +573,16 @@ Deno.serve(async (req) => {
           voteAverage: typeof raw.vote_average === "number" ? raw.vote_average : null,
           voteCount: typeof raw.vote_count === "number" ? raw.vote_count : 0,
           runtime: isMovie ? (typeof raw.runtime === "number" ? raw.runtime : null) : null,
-          numberOfSeasons: !isMovie ? (typeof raw.number_of_seasons === "number" ? raw.number_of_seasons : null) : null,
-          numberOfEpisodes: !isMovie ? (typeof raw.number_of_episodes === "number" ? raw.number_of_episodes : null) : null,
+          numberOfSeasons: !isMovie
+            ? typeof raw.number_of_seasons === "number"
+              ? raw.number_of_seasons
+              : null
+            : null,
+          numberOfEpisodes: !isMovie
+            ? typeof raw.number_of_episodes === "number"
+              ? raw.number_of_episodes
+              : null
+            : null,
           genres,
           directors,
           creators,
@@ -668,7 +683,8 @@ Deno.serve(async (req) => {
 
       // Default server-side: data di uscita decrescente (allineato al
       // default UI). L'utente può richiedere "popularity" dal client.
-      const sortByMovie = sortParam === "popularity" ? "popularity.desc" : "primary_release_date.desc";
+      const sortByMovie =
+        sortParam === "popularity" ? "popularity.desc" : "primary_release_date.desc";
       const sortByTv = sortParam === "popularity" ? "popularity.desc" : "first_air_date.desc";
 
       const wantMovie = kindParam === "all" || kindParam === "movie";
@@ -684,13 +700,9 @@ Deno.serve(async (req) => {
       // - se providerKey scelto: il titolo deve essere in flatrate IT su
       //   quel provider (id watch_provider) — garantisce coerenza.
       // - se "all": il titolo deve essere su almeno un provider mainstream IT.
-      const enrichAndFilter = async (
-        rawCandidates: Array<{ kind: "movie" | "tv"; raw: any }>,
-      ) => {
+      const enrichAndFilter = async (rawCandidates: Array<{ kind: "movie" | "tv"; raw: any }>) => {
         const providersByItem = await Promise.all(
-          rawCandidates.map((c) =>
-            tmdbItemProvidersFullIT(c.kind, c.raw.id, apiKey),
-          ),
+          rawCandidates.map((c) => tmdbItemProvidersFullIT(c.kind, c.raw.id, apiKey)),
         );
         let built = rawCandidates.map((c, i) => {
           const base = normalizeItem(c.raw, c.kind, providersByItem[i].link);
@@ -704,15 +716,11 @@ Deno.serve(async (req) => {
         });
         if (providerId) {
           built = built.filter((it) =>
-            (it.availableProviders ?? []).some(
-              (p) => p.id === providerId && p.type === "flatrate",
-            ),
+            (it.availableProviders ?? []).some((p) => p.id === providerId && p.type === "flatrate"),
           );
         } else {
           built = built.filter((it) =>
-            (it.availableProviders ?? []).some((p) =>
-              ITALY_MAINSTREAM_SET.has(p.id),
-            ),
+            (it.availableProviders ?? []).some((p) => ITALY_MAINSTREAM_SET.has(p.id)),
           );
         }
         return built;
@@ -723,9 +731,7 @@ Deno.serve(async (req) => {
           if (sortParam === "popularity") {
             return (b.popularity ?? 0) - (a.popularity ?? 0);
           }
-          const dateCmp = (b.releaseDate ?? "").localeCompare(
-            a.releaseDate ?? "",
-          );
+          const dateCmp = (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "");
           if (dateCmp !== 0) return dateCmp;
           return (b.voteAverage ?? 0) - (a.voteAverage ?? 0);
         });
@@ -746,9 +752,7 @@ Deno.serve(async (req) => {
       // filtriamo di nuovo per provider/whitelist.
       const TMDB_PAGES = 3;
 
-      const buildItalyCatalog = async (opts: {
-        applyDateWindow: boolean;
-      }) => {
+      const buildItalyCatalog = async (opts: { applyDateWindow: boolean }) => {
         const tasks: Promise<any[]>[] = [];
         for (let p = 1; p <= TMDB_PAGES; p++) {
           if (wantMovie) {
@@ -849,14 +853,12 @@ Deno.serve(async (req) => {
           for (let p = 1; p <= TMDB_PAGES; p++) {
             if (wantMovie) {
               for (const m of results[i])
-                if (m?.poster_path && m?.release_date)
-                  cand.push({ kind: "movie", raw: m });
+                if (m?.poster_path && m?.release_date) cand.push({ kind: "movie", raw: m });
               i++;
             }
             if (wantTv) {
               for (const t of results[i])
-                if (t?.poster_path && t?.first_air_date)
-                  cand.push({ kind: "tv", raw: t });
+                if (t?.poster_path && t?.first_air_date) cand.push({ kind: "tv", raw: t });
               i++;
             }
           }
@@ -915,14 +917,12 @@ Deno.serve(async (req) => {
           for (let p = 1; p <= TMDB_PAGES; p++) {
             if (wantMovie) {
               for (const m of results[i])
-                if (m?.poster_path && m?.release_date)
-                  cand.push({ kind: "movie", raw: m });
+                if (m?.poster_path && m?.release_date) cand.push({ kind: "movie", raw: m });
               i++;
             }
             if (wantTv) {
               for (const t of results[i])
-                if (t?.poster_path && t?.first_air_date)
-                  cand.push({ kind: "tv", raw: t });
+                if (t?.poster_path && t?.first_air_date) cand.push({ kind: "tv", raw: t });
               i++;
             }
           }
@@ -1094,7 +1094,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("[streaming-releases]", err);
     return jsonResponse(
-      { success: false, error: 'Errore interno del server' },
+      { success: false, error: "Errore interno del server" },
       { status: 500 },
       corsHeaders,
     );

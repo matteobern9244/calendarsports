@@ -4,9 +4,19 @@ import EventCard from "@/components/common/EventCard";
 import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
-import { useF1NextRace, useJuventusCalendar, useSinnerNextEvent, useMotoGPNextEvent } from "@/hooks/useSportsData";
+import {
+  useF1NextRace,
+  useJuventusCalendar,
+  useSinnerNextEvent,
+  useMotoGPNextEvent,
+} from "@/hooks/useSportsData";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
-import { formatDateIT, formatTimeIT, formatJuventusDateTime, getDateTimestamp } from "@/lib/dateUtils";
+import {
+  formatDateIT,
+  formatTimeIT,
+  formatJuventusDateTime,
+  getDateTimestamp,
+} from "@/lib/dateUtils";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -47,10 +57,30 @@ export default function HomePage() {
     }).format(lastSyncAt);
   }, [lastSyncAt]);
 
-  const { data: f1Data, isLoading: f1Loading, error: f1Error, refetch: f1Refetch } = useF1NextRace();
-  const { data: juveCalendar, isLoading: juveLoading, error: juveError, refetch: juveRefetch } = useJuventusCalendar(getCurrentJuventusSeason());
-  const { data: sinnerNext, isLoading: sinnerLoading, error: sinnerError, refetch: sinnerRefetch } = useSinnerNextEvent();
-  const { data: motogpNext, isLoading: motogpLoading, error: motogpError, refetch: motogpRefetch } = useMotoGPNextEvent();
+  const {
+    data: f1Data,
+    isLoading: f1Loading,
+    error: f1Error,
+    refetch: f1Refetch,
+  } = useF1NextRace();
+  const {
+    data: juveCalendar,
+    isLoading: juveLoading,
+    error: juveError,
+    refetch: juveRefetch,
+  } = useJuventusCalendar(getCurrentJuventusSeason());
+  const {
+    data: sinnerNext,
+    isLoading: sinnerLoading,
+    error: sinnerError,
+    refetch: sinnerRefetch,
+  } = useSinnerNextEvent();
+  const {
+    data: motogpNext,
+    isLoading: motogpLoading,
+    error: motogpError,
+    refetch: motogpRefetch,
+  } = useMotoGPNextEvent();
 
   const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
 
@@ -81,7 +111,7 @@ export default function HomePage() {
         upcoming.push({
           sport: "Calcio · Juventus",
           title: `${isHome ? "vs" : "@"} ${opponent}`,
-          subtitle: `${nextMatch.competition || 'Serie A'} · ${nextMatch.competition === 'Serie A' ? `Giornata ${nextMatch.matchday || "—"}` : `Turno ${nextMatch.matchday || "—"}`}`,
+          subtitle: `${nextMatch.competition || "Serie A"} · ${nextMatch.competition === "Serie A" ? `Giornata ${nextMatch.matchday || "—"}` : `Turno ${nextMatch.matchday || "—"}`}`,
           rawDate: nextMatch.date,
           date: dateStr,
           time: timeStr,
@@ -119,10 +149,14 @@ export default function HomePage() {
   // Fallback offline: nessun dato in cache da nessuna fonte e siamo offline
   if (
     !isOnline &&
-    f1Error && !f1Data &&
-    juveError && !juveCalendar &&
-    sinnerError && !sinnerNext &&
-    motogpError && !motogpNext
+    f1Error &&
+    !f1Data &&
+    juveError &&
+    !juveCalendar &&
+    sinnerError &&
+    !sinnerNext &&
+    motogpError &&
+    !motogpNext
   ) {
     return (
       <div className="container py-8 sm:py-12">
@@ -154,7 +188,8 @@ export default function HomePage() {
               className="text-xs font-heading uppercase tracking-wider text-muted-foreground"
               aria-live="polite"
             >
-              Ultimo aggiornamento: <span className="text-foreground/80 font-mono normal-case">{lastSyncLabel}</span>
+              Ultimo aggiornamento:{" "}
+              <span className="text-foreground/80 font-mono normal-case">{lastSyncLabel}</span>
             </span>
           ) : null}
           <Button
@@ -194,7 +229,12 @@ export default function HomePage() {
       )}
 
       {events.length > 0 && (
-        <motion.div variants={container} initial="hidden" animate="show" className="grid gap-5 sm:grid-cols-2">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="grid gap-5 sm:grid-cols-2"
+        >
           {events.map((ev, idx) => (
             <EventCard
               key={`${ev.sport}-${ev.rawDate}`}
@@ -215,14 +255,22 @@ export default function HomePage() {
             >
               {ev.broadcaster && (
                 <div className="flex flex-wrap gap-1.5">
-                  {ev.broadcaster.split('|').map((b) => b.trim()).filter(Boolean).map((name) => {
-                    const { className } = getBroadcasterStyle(name);
-                    return (
-                      <Badge key={name} variant="outline" className={cn('text-[10px]', className)}>
-                        {name}
-                      </Badge>
-                    );
-                  })}
+                  {ev.broadcaster
+                    .split("|")
+                    .map((b) => b.trim())
+                    .filter(Boolean)
+                    .map((name) => {
+                      const { className } = getBroadcasterStyle(name);
+                      return (
+                        <Badge
+                          key={name}
+                          variant="outline"
+                          className={cn("text-[10px]", className)}
+                        >
+                          {name}
+                        </Badge>
+                      );
+                    })}
                 </div>
               )}
             </EventCard>

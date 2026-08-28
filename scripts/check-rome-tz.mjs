@@ -83,8 +83,8 @@ function findViolations(src) {
     if (RAW_DATE_PATTERN.test(line)) {
       // L'esenzione vale sulla riga stessa o su quella prima, come
       // `eslint-disable-next-line`: sulle righe lunghe in coda non si legge.
-      const exempt = /\/\/\s*@tz-ignore/.test(line) ||
-        (i > 0 && /\/\/\s*@tz-ignore/.test(lines[i - 1]));
+      const exempt =
+        /\/\/\s*@tz-ignore/.test(line) || (i > 0 && /\/\/\s*@tz-ignore/.test(lines[i - 1]));
       if (!exempt) {
         violations.push({ line: i + 1, text: line.trim(), kind: "newDate" });
       }

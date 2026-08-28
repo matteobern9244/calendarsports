@@ -70,7 +70,11 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-card/80 backdrop-blur-xl">
       <div className="container flex h-16 md:h-20 items-center justify-between gap-4">
         {/* Logo */}
-        <Link to="/" aria-label="Calendar Events — vai alla home" className="flex items-center shrink-0">
+        <Link
+          to="/"
+          aria-label="Calendar Events — vai alla home"
+          className="flex items-center shrink-0"
+        >
           <img
             src="/logo-header.jpg"
             alt="Calendar Events"
@@ -88,7 +92,7 @@ export default function Header() {
             className={cn(
               "hidden md:flex items-center gap-0.5 rounded-full px-1.5 py-1.5",
               "border border-[hsl(var(--gold))]/25 bg-card/60 backdrop-blur-md",
-              "shadow-[0_4px_18px_-10px_hsl(var(--gold)/0.45),0_1px_0_hsl(var(--gold-light)/0.15)_inset]"
+              "shadow-[0_4px_18px_-10px_hsl(var(--gold)/0.45),0_1px_0_hsl(var(--gold-light)/0.15)_inset]",
             )}
           >
             {navItems.map((item) => {
@@ -107,7 +111,7 @@ export default function Header() {
                     "transition-colors duration-200",
                     active
                       ? "text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {active && (
@@ -116,7 +120,7 @@ export default function Header() {
                       className={cn(
                         "absolute inset-0 rounded-full -z-10",
                         "bg-linear-to-br from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))]",
-                        "shadow-[0_6px_20px_-6px_hsl(var(--gold)/0.65),0_1px_0_hsl(var(--gold-light)/0.7)_inset]"
+                        "shadow-[0_6px_20px_-6px_hsl(var(--gold)/0.65),0_1px_0_hsl(var(--gold-light)/0.7)_inset]",
                       )}
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
                     />
@@ -155,10 +159,14 @@ export default function Header() {
                     <Icon
                       className={cn(
                         "h-[18px] w-[18px] transition-opacity duration-200",
-                        active ? "opacity-100 drop-shadow-[0_1px_0_hsl(var(--navy-dark)/0.4)]" : "opacity-80 group-hover:opacity-100"
+                        active
+                          ? "opacity-100 drop-shadow-[0_1px_0_hsl(var(--navy-dark)/0.4)]"
+                          : "opacity-80 group-hover:opacity-100",
                       )}
                     />
-                    {active && <SparkleLoop count={4} intervalMs={4500} radius={16} size={4} glow />}
+                    {active && (
+                      <SparkleLoop count={4} intervalMs={4500} radius={16} size={4} glow />
+                    )}
                   </motion.span>
                   <span className="relative z-10 hidden lg:inline">{item.label}</span>
                   <span className="relative z-10 lg:hidden">{item.shortLabel}</span>
@@ -181,7 +189,7 @@ export default function Header() {
               "rounded-full border transition-colors",
               prefsOpen
                 ? "border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))] shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
-                : "border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10"
+                : "border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10",
             )}
           >
             <Settings className="h-4 w-4" />
@@ -229,7 +237,7 @@ export default function Header() {
                         "text-base font-heading font-semibold tracking-widest uppercase",
                         active
                           ? "text-primary-foreground bg-linear-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] border-[hsl(var(--gold-dark))]/60 shadow-[0_8px_22px_-8px_hsl(var(--gold)/0.6)]"
-                          : "text-foreground/85 border-border/60 bg-muted/30 hover:text-foreground hover:border-[hsl(var(--gold))]/45 hover:bg-muted/60"
+                          : "text-foreground/85 border-border/60 bg-muted/30 hover:text-foreground hover:border-[hsl(var(--gold))]/45 hover:bg-muted/60",
                       )}
                     >
                       {active && (

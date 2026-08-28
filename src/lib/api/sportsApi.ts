@@ -14,8 +14,8 @@ async function fetchEdgeWithRetry(url: string): Promise<Response> {
     try {
       const response = await fetch(url, {
         headers: {
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          "apikey": SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          apikey: SUPABASE_ANON_KEY,
         },
       });
       if (response.ok) return response;
@@ -59,7 +59,15 @@ async function callEdgeFunction(functionName: string, params: Record<string, str
  * `callEdgeFunction` che restituisce solo `data`.
  */
 export type EdgeMeta = {
-  dataSource?: "live" | "static-fallback" | "fallback-previous-season" | "wikipedia" | "wikipedia+curated" | "static" | "mixed" | "unknown";
+  dataSource?:
+    | "live"
+    | "static-fallback"
+    | "fallback-previous-season"
+    | "wikipedia"
+    | "wikipedia+curated"
+    | "static"
+    | "mixed"
+    | "unknown";
   season?: number | string;
   source?: string;
   [key: string]: unknown;
@@ -91,8 +99,7 @@ export const f1Api = {
     callEdgeFunction("sports-f1", { action: "driver-standings", season: String(season) }),
   getConstructorStandings: (season: number) =>
     callEdgeFunction("sports-f1", { action: "constructor-standings", season: String(season) }),
-  getNextRace: () =>
-    callEdgeFunction("sports-f1", { action: "next-race" }),
+  getNextRace: () => callEdgeFunction("sports-f1", { action: "next-race" }),
   getLastResult: (season: number) =>
     callEdgeFunction("sports-f1", { action: "last-result", season: String(season) }),
 };
@@ -114,10 +121,8 @@ export const footballApi = {
 
 // === Tennis API (ATP scraping) ===
 export const tennisApi = {
-  getPlayerInfo: () =>
-    callEdgeFunction("sports-tennis", { action: "player-info" }),
-  getNextEvent: () =>
-    callEdgeFunction("sports-tennis", { action: "next-event" }),
+  getPlayerInfo: () => callEdgeFunction("sports-tennis", { action: "player-info" }),
+  getNextEvent: () => callEdgeFunction("sports-tennis", { action: "next-event" }),
   getSchedule: (season: number) =>
     callEdgeFunction("sports-tennis", { action: "schedule", season: String(season) }),
   getResults: (season: number, page?: number, pageSize?: number) =>
@@ -130,12 +135,7 @@ export const tennisApi = {
 };
 
 // === Streaming API (TV palinsesto + nuove uscite) ===
-export type StreamingFamilyId =
-  | "sky-sport"
-  | "sky-cinema"
-  | "rai"
-  | "mediaset"
-  | "discovery";
+export type StreamingFamilyId = "sky-sport" | "sky-cinema" | "rai" | "mediaset" | "discovery";
 
 export type StreamingProviderId = "netflix" | "prime" | "disney" | "hbo";
 
@@ -146,11 +146,7 @@ export const streamingApi = {
       family,
       ...(date ? { date } : {}),
     }),
-  getReleasesByProvider: (
-    provider: StreamingProviderId,
-    dateFrom?: string,
-    dateTo?: string,
-  ) =>
+  getReleasesByProvider: (provider: StreamingProviderId, dateFrom?: string, dateTo?: string) =>
     callEdgeFunction("streaming-releases", {
       action: "new-today",
       provider,
@@ -202,7 +198,10 @@ export const motogpApi = {
   getCalendar: (season: number) =>
     callEdgeFunction("sports-motogp", { action: "calendar", season: String(season) }),
   getNextEvent: () =>
-    callEdgeFunction("sports-motogp", { action: "next-event", season: String(new Date().getFullYear()) }),
+    callEdgeFunction("sports-motogp", {
+      action: "next-event",
+      season: String(new Date().getFullYear()),
+    }),
   getStandings: (season: number) =>
     callEdgeFunction("sports-motogp", { action: "standings", season: String(season) }),
   getConstructorStandings: (season: number) =>

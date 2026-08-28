@@ -67,8 +67,7 @@ export function SparkleLoop({
 
   useEffect(() => {
     if (reduce) return;
-    const nextBurst = () =>
-      setBurst((b) => ({ id: b.id + 1, sparks: buildSparks(count, radius) }));
+    const nextBurst = () => setBurst((b) => ({ id: b.id + 1, sparks: buildSparks(count, radius) }));
     // Primo burst leggermente ritardato per non partire subito al mount
     const initial = window.setTimeout(nextBurst, 800);
     const id = window.setInterval(nextBurst, intervalMs + Math.random() * 800);
@@ -120,8 +119,7 @@ export function SparkleLoop({
               height: size,
               background:
                 "radial-gradient(circle, hsl(var(--gold-light)) 0%, hsl(var(--gold)) 55%, transparent 75%)",
-              boxShadow:
-                "0 0 6px hsl(var(--gold) / 0.85), 0 0 2px hsl(var(--gold-light))",
+              boxShadow: "0 0 6px hsl(var(--gold) / 0.85), 0 0 2px hsl(var(--gold-light))",
             }}
             initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
             animate={{

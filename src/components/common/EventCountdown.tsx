@@ -84,10 +84,7 @@ export default function EventCountdown({
     getNowSecond,
   );
 
-  const parts = useMemo(
-    () => getPartsAt(valid ? target : 0, now),
-    [target, valid, now],
-  );
+  const parts = useMemo(() => getPartsAt(valid ? target : 0, now), [target, valid, now]);
 
   // Stato derivato dal clock globale: cambia automaticamente nel momento
   // esatto in cui l'evento inizia / finisce, senza setState interno.
@@ -167,7 +164,7 @@ export default function EventCountdown({
       className={cn(
         "inline-flex items-center gap-2 rounded-full border border-[hsl(var(--gold))]/30 bg-[hsl(var(--gold))]/5 px-2.5 py-1",
         "text-[11px] font-heading font-semibold tracking-wider text-foreground",
-        className
+        className,
       )}
       aria-label="Tempo mancante all'evento"
     >

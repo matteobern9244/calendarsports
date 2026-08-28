@@ -48,9 +48,11 @@ export function formatDateIT(dateStr: string): string {
  * fuso del client. Centralizza la formattazione per evitare drift
  * (vedi `scripts/check-rome-tz.mjs`).
  */
-export function formatJuventusDateTime(
-  input: string | Date | null | undefined
-): { date: string; time: string; full: string } {
+export function formatJuventusDateTime(input: string | Date | null | undefined): {
+  date: string;
+  time: string;
+  full: string;
+} {
   const date = toRomeDate(input);
   if (!date) return { date: "—", time: "", full: "—" };
   const day = date.toLocaleDateString("it-IT", { day: "2-digit", timeZone: "Europe/Rome" });
@@ -84,9 +86,11 @@ export function prioritizeNextUpcoming<T>(
   items: T[],
   getDate: (item: T) => string | undefined | null,
   isUpcomingCandidate: (item: T) => boolean = () => true,
-  getEndDate?: (item: T) => string | undefined | null
+  getEndDate?: (item: T) => string | undefined | null,
 ): { items: T[]; highlightIndex: number } {
-  const sorted = [...items].sort((a, b) => getDateTimestamp(getDate(a)) - getDateTimestamp(getDate(b)));
+  const sorted = [...items].sort(
+    (a, b) => getDateTimestamp(getDate(a)) - getDateTimestamp(getDate(b)),
+  );
   const now = Date.now();
 
   // Un evento "in corso" (start <= now <= end) ha priorita' assoluta
@@ -96,9 +100,7 @@ export function prioritizeNextUpcoming<T>(
     const startTs = getDateTimestamp(getDate(item));
     if (!Number.isFinite(startTs) || startTs > now) return false;
     const endRaw = getEndDate?.(item);
-    const endTs = endRaw
-      ? getDateTimestamp(endRaw)
-      : startTs + 3 * 60 * 60 * 1000; // fallback: finestra di 3h per eventi single-day
+    const endTs = endRaw ? getDateTimestamp(endRaw) : startTs + 3 * 60 * 60 * 1000; // fallback: finestra di 3h per eventi single-day
     return Number.isFinite(endTs) && now <= endTs;
   });
 
@@ -139,9 +141,7 @@ export function formatTimeIT(timeStr?: string | null, dateStr?: string): string 
     // `HH:mm:ss` puro o quando manca `dateStr`.
     const hasOffset = /(Z|[+-]\d{2}:?\d{2})$/i.test(rawTime);
     const normalizedTime = hasOffset ? rawTime : `${rawTime}Z`;
-    const fullDate = dateStr
-      ? `${dateStr}T${normalizedTime}`
-      : `2026-01-01T${normalizedTime}`;
+    const fullDate = dateStr ? `${dateStr}T${normalizedTime}` : `2026-01-01T${normalizedTime}`;
     const date = new Date(fullDate);
     return date.toLocaleTimeString("it-IT", {
       hour: "2-digit",
@@ -165,7 +165,11 @@ export function formatDateTimeIT(dateStr: string): string {
     const day = date.toLocaleDateString("it-IT", { day: "2-digit", timeZone: "Europe/Rome" });
     const month = date.toLocaleDateString("it-IT", { month: "2-digit", timeZone: "Europe/Rome" });
     const year = date.toLocaleDateString("it-IT", { year: "numeric", timeZone: "Europe/Rome" });
-    const time = date.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" });
+    const time = date.toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Rome",
+    });
     return `${day}/${month}/${year} ${time}`;
   } catch {
     return dateStr;
@@ -179,7 +183,7 @@ export function getEventStatus(dateStr: string): "prossimo" | "in_corso" | "comp
   const now = new Date();
   const diffMs = eventDate.getTime() - now.getTime();
   const diffHours = diffMs / (1000 * 60 * 60);
-  
+
   if (diffHours < -3) return "completato";
   if (diffHours < 3 && diffHours > -3) return "in_corso";
   return "prossimo";

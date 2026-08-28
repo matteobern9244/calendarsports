@@ -6,8 +6,7 @@ export interface PreferencesPanelContextValue {
   toggle: () => void;
 }
 
-export const PreferencesPanelContext =
-  createContext<PreferencesPanelContextValue | null>(null);
+export const PreferencesPanelContext = createContext<PreferencesPanelContextValue | null>(null);
 
 /**
  * Vive in un file separato dal provider perche' Fast Refresh ricarica un

@@ -217,8 +217,8 @@ Bump applicativo `2.3.3` → `2.3.4` esposto da `src/lib/version.ts`.
 Correzione mirata della sezione **Streaming → Nuove uscite (Catalogo
 Italia)**. La precedente strategia per `with_networks`/`with_companies`
 era allineata alle pagine TMDB `/network/<id>` ma NON al catalogo
-effettivamente disponibile in Italia: titoli come *Daredevil: Born
-Again* su Disney+ Italia venivano esclusi perché non appartenenti al
+effettivamente disponibile in Italia: titoli come _Daredevil: Born
+Again_ su Disney+ Italia venivano esclusi perché non appartenenti al
 network Disney+ TMDB `2739` o con `first_air_date` storica fuori
 finestra.
 
@@ -272,8 +272,8 @@ File toccati: `supabase/functions/streaming-releases/index.ts`,
 `src/hooks/useStreamingData.ts`, `src/pages/StreamingPage.tsx`,
 `src/lib/version.ts`. Verificato via `curl` per Netflix, Prime Video,
 Disney+ e HBO Max: tutte le risposte restituiscono titoli reali (es.
-*Girigo*, *Cochinas*, *Star Wars: Maul - Shadow Lord*, *Gina
-Lollobrigida: Diva Contesa*) con disponibilità IT confermata.
+_Girigo_, _Cochinas_, _Star Wars: Maul - Shadow Lord_, _Gina
+Lollobrigida: Diva Contesa_) con disponibilità IT confermata.
 
 ## [2.3.2] — Streaming: vista unificata Catalogo Italia (2026-04-27)
 
@@ -541,7 +541,7 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
   callsite di `toLocaleTimeString` / `toLocaleDateString` privo di
   `timeZone: "Europe/Rome"` introdotto nelle pagine sport o Home.
 - Il footer continua a usare la `v` minuscola (`Calendar Events ·
-  v2.2.0`).
+v2.2.0`).
 
 ### Performance
 
@@ -646,10 +646,10 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
   UTC e poi convertite in ora italiana via
   `Intl.DateTimeFormat({ timeZone: "Europe/Rome" })`. I tre callsite
   hand-rolled in `src/pages/JuventusPage.tsx` (card "Prossima Partita"
-  + card calendario) e `src/pages/Index.tsx` (sezione Juventus) usano
-  ora l'helper unico. Comportamento esterno per gli utenti invariato
-  nei casi normali; eliminato il rischio che un orologio device su
-  fuso non-Europe/Rome o una stringa naive bypassino la conversione.
+  - card calendario) e `src/pages/Index.tsx` (sezione Juventus) usano
+    ora l'helper unico. Comportamento esterno per gli utenti invariato
+    nei casi normali; eliminato il rischio che un orologio device su
+    fuso non-Europe/Rome o una stringa naive bypassino la conversione.
 - **Backend `sports-football`**: la `dateKey` per il lookup
   broadcaster (sia in `fetchBroadcasterMap` sia in
   `extractJuventusMatches`) viene ora calcolata sulla **data Roma**
@@ -734,7 +734,7 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
   `MOTOGP_GP_NAME_IT` (es. `GRAND PRIX OF SPAIN` → `GP di Spagna`).
   Su errore upstream: `dataSource: 'static-fallback'`, `data: []` /
   `null`, nessun fallback hardcoded. `meta.source = "motogp.com
-  (Pulselive API)"`. Il calendario F1 era già live via Jolpica/Ergast,
+(Pulselive API)"`. Il calendario F1 era già live via Jolpica/Ergast,
   nessuna modifica necessaria. **Effetto utente**: la sincronizzazione
   carica i 22 GP reali della stagione corrente; il toast warning "Dati
   non live per MotoGP" sparisce.
@@ -812,7 +812,7 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
   `<ul>/<li>`. Il `<ul>` riceve `role="table"`,
   `aria-label="Programmi in prima serata stasera"`, `aria-rowcount` e
   `aria-colcount=6`. Aggiunta come prima riga del grid una `<li
-  role="row">` invisibile (`sr-only` sulle 6 celle) con `role="columnheader"`
+role="row">` invisibile (`sr-only` sulle 6 celle) con `role="columnheader"`
   per Famiglia, Ora, Canale, Titolo, Genere, Durata. Ogni riga programma
   desktop ha `role="row"` + `aria-rowindex` calcolato dalla pagina corrente,
   ogni cella ha `role="cell"` (o `rowheader` per la cella famiglia che
@@ -829,7 +829,7 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
   cambio pagina senza interrompere la navigazione. Aggiunta funzione
   `formatDurationSpoken(min)` in `src/lib/dateUtils.ts` con singolare/
   plurale italiano (`1 minuto`, `45 minuti`, `1 ora`, `2 ore`, `1 ora e 5
-  minuti`), coperta da test in `src/lib/dateUtils.test.ts`. Nuovo file
+minuti`), coperta da test in `src/lib/dateUtils.test.ts`. Nuovo file
   `src/components/home/TonightTvList.test.tsx` con suite accessibilità
   (mock di `useQueries`) che verifica ruoli, columnheader, rowindex,
   aria-label parlate e `<article>` mobile. Layout visivo invariato su
@@ -838,7 +838,7 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
 
 - **Sincronizza stagione-aware + indicatore `dataSource` reale**. Riscritto `src/hooks/useSyncAll.ts`: il pulsante "Sincronizza" in home ora calcola al volo le stagioni correnti via `src/lib/currentSeason.ts` (Sinner/F1/MotoGP = anno solare, Juventus = stagione Serie A con cutoff luglio), rimuove dalla cache React Query tutte le chiavi sportive con stagione diversa da quella corrente (`removeQueries` con predicate sui 4 sport) e fa prefetch esplicito delle query primarie di ciascun sport per la stagione attiva (15 query in totale, divise in 4 step granulari con messaggi tipo "Aggiorno F1 2026...", "Aggiorno Juventus 2025/26...", ecc.). Aggiunto helper `formatJuventusSeasonLabel(season)` in `currentSeason.ts` (es. `2025` → `2025/26`, `2099` → `2099/00`) coperto da test. Le 4 edge function sport (`sports-f1`, `sports-football`, `sports-motogp`, `sports-tennis`) ora restituiscono un campo `meta: { dataSource, season, source }` che il client legge durante sync per distinguere dati live da fallback statici: `live` per Jolpica F1 e standings MotoGP da Sky; `live` o `fallback-previous-season` per Sky Sport calcio in base a `seasonUsed`; `wikipedia` o `wikipedia+curated` per Sinner (warning se la lista upcoming "curated" hardcoded è stata appesa); `static` per il calendario MotoGP 2026 (dataset hardcoded in `MOTOGP_CALENDAR_2026`). Toast finale di sync: `success` se tutti gli sport sono `live`/`wikipedia`, `warning` con elenco degli sport non-live altrimenti (es. "Sincronizzazione completata. Dati non live per: MotoGP 2026. Riprova più tardi."). Validato manualmente con `curl` sulle 4 edge function: F1 2026 → 22 gare reali da Jolpica, Juventus 2025 → 50 partite reali da Sky con broadcaster Lega Serie A, MotoGP 2026 → 22 gare statiche (atteso, documentato), Sinner 2026 → tornei reali Wikipedia con risultati round-per-round. Nuovo helper `callEdgeFunctionWithMeta<T>` in `src/lib/api/sportsApi.ts` per leggere l'envelope completo (data + meta) durante sync senza alterare il flusso normale di React Query (`callEdgeFunction` continua a restituire solo `data`). Versione applicativa invariata `2.1.0`.
 
-- **Sinner – sezione Grande Slam ridisegnata per leggibilità**. In `src/components/sinner/PlayerHeader.tsx` i chip dei risultati Slam passano da pill compatte criptiche (`AO V ·24·25`) a mini-card auto-esplicative con sigla torneo (`AO`, `RG`, `W`, `US`, `Finals`), etichetta italiana del miglior risultato (nuova mappa `RESULT_LABELS`: `V`→`Vittoria`, `F`→`Finale`, `SF`→`Semifinale`, `QF`→`Quarti`, `4T`→`Ottavi`, `3T`/`2T`/`1T`→`3°/2°/1° turno`, `RR`→`Round Robin`), nome torneo esteso e anni a 4 cifre separati da ` · ` (es. `2024 · 2025`). Vittorie evidenziate con icona `Trophy` di Lucide e sfondo `gold-gradient`; non vittorie con `border border-border bg-secondary/30`. Container passa da `flex flex-wrap` a `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5` per layout sempre allineato (5 chip = 1 riga su desktop largo, 3+2 su sm, 2+2+1 su mobile 375px). Header sezione: `Grande Slam · Miglior risultato` con sottotitolo in `text-muted-foreground/70`. `aria-label` esteso su ogni `<li>` (es. "Australian Open: Vittoria, anni 2024, 2025"). Tooltip `title` mantenuto come fallback desktop. Rimossa la helper `shortYears`, non più usata. Tutti i colori restano token semantici (`primary`, `primary-foreground`, `border`, `secondary`, `muted-foreground`, `foreground`): tema chiaro/scuro preservato. Allowlist guard italiano estesa con `Round`/`Robin` (terminologia ufficiale ATP Finals). Nessuna modifica al backend `sports-tennis`, nessuna nuova dipendenza (`Trophy` già in `lucide-react`). Versione applicativa invariata `2.1.0`.
+- **Sinner – sezione Grande Slam ridisegnata per leggibilità**. In `src/components/sinner/PlayerHeader.tsx` i chip dei risultati Slam passano da pill compatte criptiche (`AO V ·24·25`) a mini-card auto-esplicative con sigla torneo (`AO`, `RG`, `W`, `US`, `Finals`), etichetta italiana del miglior risultato (nuova mappa `RESULT_LABELS`: `V`→`Vittoria`, `F`→`Finale`, `SF`→`Semifinale`, `QF`→`Quarti`, `4T`→`Ottavi`, `3T`/`2T`/`1T`→`3°/2°/1° turno`, `RR`→`Round Robin`), nome torneo esteso e anni a 4 cifre separati da `·` (es. `2024 · 2025`). Vittorie evidenziate con icona `Trophy` di Lucide e sfondo `gold-gradient`; non vittorie con `border border-border bg-secondary/30`. Container passa da `flex flex-wrap` a `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5` per layout sempre allineato (5 chip = 1 riga su desktop largo, 3+2 su sm, 2+2+1 su mobile 375px). Header sezione: `Grande Slam · Miglior risultato` con sottotitolo in `text-muted-foreground/70`. `aria-label` esteso su ogni `<li>` (es. "Australian Open: Vittoria, anni 2024, 2025"). Tooltip `title` mantenuto come fallback desktop. Rimossa la helper `shortYears`, non più usata. Tutti i colori restano token semantici (`primary`, `primary-foreground`, `border`, `secondary`, `muted-foreground`, `foreground`): tema chiaro/scuro preservato. Allowlist guard italiano estesa con `Round`/`Robin` (terminologia ufficiale ATP Finals). Nessuna modifica al backend `sports-tennis`, nessuna nuova dipendenza (`Trophy` già in `lucide-react`). Versione applicativa invariata `2.1.0`.
 
 ### Changed
 
@@ -872,7 +872,7 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
 
 - **Chip "Orari in ora italiana" rimosso ovunque**. Eliminato il render di `<TimezoneBadge />` da `src/pages/Index.tsx`, `src/pages/SinnerPage.tsx`, `src/pages/JuventusPage.tsx`, `src/pages/Formula1Page.tsx`, `src/pages/MotoGPPage.tsx` e `src/pages/StreamingPage.tsx`, con cleanup degli import non più usati. Cancellato il componente `src/components/common/TimezoneBadge.tsx`. Nessun cambio funzionale: tutti gli orari restano formattati nel fuso `Europe/Rome` via `dateUtils` e `Intl.DateTimeFormat`. Versione applicativa invariata `2.1.0`.
 
-- **Estensione guard CI titoli pagina/modali**. `scripts/check-italian-ui.mjs` ora cattura anche `document.title` assegnato via template literal (parte statica prima di `${...}`), il contenuto testuale di `<DialogTitle>`/`<AlertDialogTitle>`/`<SheetTitle>`/`<DrawerTitle>`/`<SidebarTitle>` (kind `dialog-title:<Tag>`) e la prop `title="..."` su qualunque componente il cui nome contiene `Dialog`/`Modal`/`Sheet`/`Drawer` (kind `dialog-title-prop:<Tag>`). I report di errore usano prefissi espliciti `TITOLO PAGINA (document.title)` e `TITOLO MODALE (<Tag>)` / `TITOLO MODALE (prop title su <Tag>)` per facilitare il triage. Validato con 4 test negativi (`document.title = "Settings"`, `document.title = \`Settings · ${app}\``, `<DialogTitle>Close window</DialogTitle>`, `<ConfirmDialog title="Delete item">`): tutti falliscono come previsto, baseline corrente resta a 0 violazioni. Documentazione aggiornata in `README.md`. Nessuna modifica UI, nessuna nuova dipendenza, allowlist e `FORBIDDEN_WORDS` invariati. Versione applicativa invariata `2.1.0`.
+- **Estensione guard CI titoli pagina/modali**. `scripts/check-italian-ui.mjs` ora cattura anche `document.title` assegnato via template literal (parte statica prima di `${...}`), il contenuto testuale di `<DialogTitle>`/`<AlertDialogTitle>`/`<SheetTitle>`/`<DrawerTitle>`/`<SidebarTitle>` (kind `dialog-title:<Tag>`) e la prop `title="..."` su qualunque componente il cui nome contiene `Dialog`/`Modal`/`Sheet`/`Drawer` (kind `dialog-title-prop:<Tag>`). I report di errore usano prefissi espliciti `TITOLO PAGINA (document.title)` e `TITOLO MODALE (<Tag>)` / `TITOLO MODALE (prop title su <Tag>)` per facilitare il triage. Validato con 4 test negativi (`document.title = "Settings"`, `document.title = \`Settings · ${app}\``, `<DialogTitle>Close window</DialogTitle>`, `<ConfirmDialog title="Delete item">`): tutti falliscono come previsto, baseline corrente resta a 0 violazioni. Documentazione aggiornata in `README.md`. Nessuna modifica UI, nessuna nuova dipendenza, allowlist e `FORBIDDEN_WORDS`invariati. Versione applicativa invariata`2.1.0`.
 
 - **Audit lingua UI completo + rafforzamento `check-italian-ui`**. Eseguito sweep manuale e automatico su tutte le superfici testuali utente (`index.html`, `public/manifest.webmanifest`, JSX, attributi ARIA, `placeholder`, `title`, `alt`, `sr-only`, toast Sonner, `document.title`): **0 stringhe inglesi residue**, baseline confermata pulita. Esteso `scripts/check-italian-ui.mjs` con nuove superfici di analisi: attributi `aria-describedby`, `aria-roledescription`, `aria-valuetext`, prop di componenti `subtitle` e `description`, primo argomento dei `toast(...)`/`toast.success(...)`/`toast.error(...)`/`toast.info(...)`/`toast.warning(...)`/`toast.loading(...)` (kind `toast-message`) e assegnazioni `document.title = "..."` (kind `document-title`). Aggiunto commento esplicativo su `Home`, `Sport`, `Open` nell'allowlist (uso italiano corrente o nomi propri di tornei). Documentati in `README.md` i marker `// @lingua-ignore` (riga) e `@lingua-ignore-file` (file) come escape valves. Nessuna modifica UI, nessuna nuova dipendenza, allowlist invariata. Versione applicativa invariata `2.1.0`.
 
@@ -1112,7 +1112,7 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
   `-18px hsl(var(--gold)/0.45)`, badge "Prossimo" con gradiente
   `gold-dark -> gold -> gold-light`. Stesso trattamento applicato alle card
   custom partite di `JuventusPage.tsx` per coerenza visiva (hover lift `y:
-  -3`, shadow gold, top line, glow radiale, badge gradient).
+-3`, shadow gold, top line, glow radiale, badge gradient).
 - **Glow pulsante gold** sull'icona della voce di navigazione attiva
   (`Header.tsx`), sincronizzato con il loop di scintille (`SparkleLoop`).
 - **Icona PWA dedicata** (`public/favicon.png`, 1024x1024 PNG): nuova
@@ -1170,10 +1170,10 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
      del filtro TMDB + bottone "Allarga finestra" che imposta `range = "90d"`
      quando la finestra corrente e' vuota; quando il fallback widened scatta,
      un hint italic informa che si sta mostrando una finestra estesa.
-  Verifica: curl edge function con Netflix range 7d → ritorna ≥10 items
-  (widenedWindow=true), HBO Max range 30d → ritorna 3 items
-  (widenedWindow=true). Versione applicativa invariata `2.1.0` (bugfix).
-  Nessun cambio di provider TMDB, secret, scraping o dipendenze.
+     Verifica: curl edge function con Netflix range 7d → ritorna ≥10 items
+     (widenedWindow=true), HBO Max range 30d → ritorna 3 items
+     (widenedWindow=true). Versione applicativa invariata `2.1.0` (bugfix).
+     Nessun cambio di provider TMDB, secret, scraping o dipendenze.
 
 - **Leggibilita' "Stasera in TV" su mobile**
   (`src/components/home/TonightTvList.tsx`): le righe della tabella
@@ -1209,7 +1209,6 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
   pagine sport, nessun overflow o testo coperto da effetti di sfondo, card
   finite (Juventus `FullTime`, Sinner `completato`) non mostrano countdown
   come da logica.
-
 
 ## [2.1.0] - 2026-04-19 (rebrand "Calendar Events")
 
@@ -1256,7 +1255,7 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
 - Quadro reale **Stasera in TV** in Home con aggregazione
   multi-famiglia (5 query parallele) e filtri rapidi user-friendly
   (chip selezionabili `Tutti / RAI / Mediaset / Sky Sport / Sky Cinema
-  / Discovery`), un programma per canale nella fascia di prima serata
+/ Discovery`), un programma per canale nella fascia di prima serata
   (21:00 - 22:30), paginazione interna (8 canali per pagina), label
   famiglia e separatori oro tra gruppi su mobile, con icone Lucide
   (`Radio`, `Tv`, `Trophy`, `Film`, `Compass`).
@@ -1331,7 +1330,6 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
   `package-lock.json` puo' ancora far fallire `npm ci` finche' il
   lockfile non viene rigenerato (fuori scope di questa change set).
 
-
 ## [2.0.2] - 2026-04-19
 
 ### Fixed
@@ -1381,7 +1379,7 @@ Tutte le voci sono UI/UX e helper di presentazione sopra la baseline `2.1.0`.
   gli stessi gia' esposti nel client auto-generato e nel bundle): non
   introducono rischi di sicurezza.
 - La regola ESLint e' `error`, quindi una violazione fa fallire `npm run
-  lint` sia in locale sia in CI (`.github/workflows/ci-pr-main.yml` esegue
+lint` sia in locale sia in CI (`.github/workflows/ci-pr-main.yml` esegue
   gia' `npm run lint` su ogni PR verso `main`).
 - Il file auto-generato `src/integrations/supabase/client.ts` resta
   intatto e read-only.

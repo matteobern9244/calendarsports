@@ -57,14 +57,14 @@ Alcune proprietà di questo progetto non si verificano eseguendo il codice ma
 stringa, da dove si importa un client. Vivono in punti che un test di
 comportamento non raggiunge, o raggiungerebbe troppo tardi.
 
-| Guardiano                                                            | Vieta                                                                                                                                                    |
-| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/check-rome-tz.mjs` (`bun run check:tz-juventus`)            | `toLocale*String` senza `timeZone: "Europe/Rome"`, e `new Date(stringa)` per confrontare eventi: legge l'ISO come ora locale e sfasa il conto alla rovescia |
-| `scripts/check-italian-ui.mjs` (`bun run check:italian`)             | testo inglese in contenuti, `aria-label`, `placeholder`, toast e titoli. Non è un parser AST: copre il caso comune, non tutti                              |
-| `no-restricted-imports` in `eslint.config.js`                        | l'import di `@/integrations/supabase/client`: senza env var iniettate produce richieste che rispondono HTML 200 e lasciano React Query in caricamento eterno |
-| `react-hooks/set-state-in-effect`                                    | il `setState` sincrono dentro un effect: gira anche al mount, e così azzerava la pagina arrivata da `?page=`                                                |
-| `react-hooks/purity`                                                 | `Math.random()` e `Date.now()` durante il render: valori che React non può ricalcolare                                                                     |
-| `tsc --strict` (`bun run typecheck`)                                 | i tipi sbagliati. Ha trovato quattro `variant="outline-solid"` prodotti da un codemod che aveva scambiato una prop per una classe CSS                       |
+| Guardiano                                                 | Vieta                                                                                                                                                        |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `scripts/check-rome-tz.mjs` (`bun run check:tz-juventus`) | `toLocale*String` senza `timeZone: "Europe/Rome"`, e `new Date(stringa)` per confrontare eventi: legge l'ISO come ora locale e sfasa il conto alla rovescia  |
+| `scripts/check-italian-ui.mjs` (`bun run check:italian`)  | testo inglese in contenuti, `aria-label`, `placeholder`, toast e titoli. Non è un parser AST: copre il caso comune, non tutti                                |
+| `no-restricted-imports` in `eslint.config.js`             | l'import di `@/integrations/supabase/client`: senza env var iniettate produce richieste che rispondono HTML 200 e lasciano React Query in caricamento eterno |
+| `react-hooks/set-state-in-effect`                         | il `setState` sincrono dentro un effect: gira anche al mount, e così azzerava la pagina arrivata da `?page=`                                                 |
+| `react-hooks/purity`                                      | `Math.random()` e `Date.now()` durante il render: valori che React non può ricalcolare                                                                       |
+| `tsc --strict` (`bun run typecheck`)                      | i tipi sbagliati. Ha trovato quattro `variant="outline-solid"` prodotti da un codemod che aveva scambiato una prop per una classe CSS                        |
 
 ### Regole d'uso dei guardiani
 

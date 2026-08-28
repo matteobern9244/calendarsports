@@ -17,21 +17,21 @@ script disponibili.
 
 ## Mappa per dominio
 
-| Area                  | Punti di ingresso da leggere                                                                                                  |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Home                  | `src/pages/Index.tsx`, `components/home/TonightTvList.tsx`, `components/common/EventCard.tsx`, hook `use*NextEvent`             |
-| Calendario aggregato  | `src/pages/CalendarPage.tsx`, `src/hooks/useCalendarEvents.ts` (espansione F1 + MotoGP + Juventus, filtri persistiti)           |
-| Juventus              | `src/pages/JuventusPage.tsx`, `src/pages/JuventusMatchPage.tsx`, `sports-football`, `useJuventusCalendar`, `useSerieAStandings` |
-| Formula 1             | `src/pages/Formula1Page.tsx`, `sports-f1`, `src/lib/f1Utils.ts`                                                                |
-| MotoGP                | `src/pages/MotoGPPage.tsx`, `sports-motogp` (Pulselive per il calendario, Sky per le classifiche)                               |
-| Sinner                | `src/pages/SinnerPage.tsx`, `components/sinner/PlayerHeader.tsx`, `sports-tennis` (Wikipedia + dataset curato)                  |
-| Streaming e TV        | `src/pages/StreamingPage.tsx`, `src/hooks/useStreamingData.ts`, `streaming-tv`, `streaming-releases`                            |
-| Highlights            | `components/highlights/`, `highlights-youtube`, `useHighlights`                                                                 |
-| Notifiche push        | `src/lib/pushClient.ts`, `src/hooks/usePushNotifications.ts`, `push-subscribe`, `push-vapid-key`, `push-dispatcher`, `public/sw.js` |
-| Preferenze e tema     | `components/preferences/PreferencesPanel.tsx`, `src/hooks/useTheme.ts`, `src/contexts/usePreferencesPanel.ts`                    |
-| Sincronizzazione      | `src/hooks/useSyncAll.ts`, `src/hooks/syncWarning.ts`                                                                            |
-| Conto alla rovescia   | `src/lib/countdownClock.ts`, `src/hooks/useNow.ts`, `components/common/EventCountdown.tsx`                                       |
-| Stato offline         | `src/hooks/useOnlineStatus.ts`, `components/common/OfflineFallback.tsx`, `OfflineIndicator.tsx`                                  |
+| Area                 | Punti di ingresso da leggere                                                                                                        |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Home                 | `src/pages/Index.tsx`, `components/home/TonightTvList.tsx`, `components/common/EventCard.tsx`, hook `use*NextEvent`                 |
+| Calendario aggregato | `src/pages/CalendarPage.tsx`, `src/hooks/useCalendarEvents.ts` (espansione F1 + MotoGP + Juventus, filtri persistiti)               |
+| Juventus             | `src/pages/JuventusPage.tsx`, `src/pages/JuventusMatchPage.tsx`, `sports-football`, `useJuventusCalendar`, `useSerieAStandings`     |
+| Formula 1            | `src/pages/Formula1Page.tsx`, `sports-f1`, `src/lib/f1Utils.ts`                                                                     |
+| MotoGP               | `src/pages/MotoGPPage.tsx`, `sports-motogp` (Pulselive per il calendario, Sky per le classifiche)                                   |
+| Sinner               | `src/pages/SinnerPage.tsx`, `components/sinner/PlayerHeader.tsx`, `sports-tennis` (Wikipedia + dataset curato)                      |
+| Streaming e TV       | `src/pages/StreamingPage.tsx`, `src/hooks/useStreamingData.ts`, `streaming-tv`, `streaming-releases`                                |
+| Highlights           | `components/highlights/`, `highlights-youtube`, `useHighlights`                                                                     |
+| Notifiche push       | `src/lib/pushClient.ts`, `src/hooks/usePushNotifications.ts`, `push-subscribe`, `push-vapid-key`, `push-dispatcher`, `public/sw.js` |
+| Preferenze e tema    | `components/preferences/PreferencesPanel.tsx`, `src/hooks/useTheme.ts`, `src/contexts/usePreferencesPanel.ts`                       |
+| Sincronizzazione     | `src/hooks/useSyncAll.ts`, `src/hooks/syncWarning.ts`                                                                               |
+| Conto alla rovescia  | `src/lib/countdownClock.ts`, `src/hooks/useNow.ts`, `components/common/EventCountdown.tsx`                                          |
+| Stato offline        | `src/hooks/useOnlineStatus.ts`, `components/common/OfflineFallback.tsx`, `OfflineIndicator.tsx`                                     |
 
 ## File e contratti speciali
 

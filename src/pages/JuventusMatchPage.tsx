@@ -43,7 +43,7 @@ function findMatch(calendar: unknown, matchId: string) {
     matchesOf(calendar).find((m: any) => {
       if (m?.id == null) return false;
       const id = String(m.id);
-      if (id === '' || id === 'undefined' || id === 'null') return false;
+      if (id === "" || id === "undefined" || id === "null") return false;
       return id === matchId;
     }) ?? null
   );
@@ -129,12 +129,7 @@ export default function JuventusMatchPage() {
     );
   }
 
-  return (
-    <MatchDetail
-      match={foundMatch}
-      onRetry={() => calendarQuery.refetch()}
-    />
-  );
+  return <MatchDetail match={foundMatch} onRetry={() => calendarQuery.refetch()} />;
 }
 
 function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
@@ -153,7 +148,10 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
   }, [isFinished, juveGoals, oppGoals]);
 
   const broadcasters: string[] = match.broadcaster
-    ? String(match.broadcaster).split(" | ").map((b: string) => b.trim()).filter(Boolean)
+    ? String(match.broadcaster)
+        .split(" | ")
+        .map((b: string) => b.trim())
+        .filter(Boolean)
     : [];
 
   return (
@@ -196,7 +194,9 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
           </Badge>
           {match.matchday != null && (
             <span className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground">
-              {match.competition === "Serie A" ? `Giornata ${match.matchday}` : `Turno ${match.matchday}`}
+              {match.competition === "Serie A"
+                ? `Giornata ${match.matchday}`
+                : `Turno ${match.matchday}`}
             </span>
           )}
         </div>
@@ -222,7 +222,8 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
               </span>
             )}
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {dateStr}{timeStr ? ` · ${timeStr}` : ""}
+              {dateStr}
+              {timeStr ? ` · ${timeStr}` : ""}
             </span>
           </div>
 
@@ -249,9 +250,7 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
               </span>
             );
           })}
-          {!isFinished && match.date && (
-            <EventCountdown startDate={match.date} onRetry={onRetry} />
-          )}
+          {!isFinished && match.date && <EventCountdown startDate={match.date} onRetry={onRetry} />}
         </div>
       </motion.div>
 
@@ -285,16 +284,8 @@ function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
             )}
             <InfoRow label="Data" value={dateStr} />
             <InfoRow label="Ora (Italia)" value={timeStr || "—"} />
-            <InfoRow
-              label="Squadra di casa"
-              value={match.homeTeam}
-              highlighted={isJuveHome}
-            />
-            <InfoRow
-              label="Squadra ospite"
-              value={match.awayTeam}
-              highlighted={!isJuveHome}
-            />
+            <InfoRow label="Squadra di casa" value={match.homeTeam} highlighted={isJuveHome} />
+            <InfoRow label="Squadra ospite" value={match.awayTeam} highlighted={!isJuveHome} />
             <InfoRow
               label="Diretta TV"
               value={broadcasters.length > 0 ? broadcasters.join(" · ") : "—"}

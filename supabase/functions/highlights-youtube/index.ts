@@ -49,7 +49,7 @@ function parseFeed(xml: string, limit: number): Highlight[] {
     const published = pick(entry, "published");
     // L'autore è nell'elemento <author><name>...</name></author>
     const authorBlock = entry.match(/<author>([\s\S]*?)<\/author>/i);
-    const source = authorBlock ? pick(authorBlock[1], "name") ?? "" : "";
+    const source = authorBlock ? (pick(authorBlock[1], "name") ?? "") : "";
     if (!videoId || !title || !published) continue;
     out.push({
       videoId,
@@ -82,7 +82,10 @@ Deno.serve(async (req) => {
 
     if (!sport || !(sport in PLAYLIST_IDS)) {
       return new Response(
-        JSON.stringify({ success: false, error: "Parametro 'sport' richiesto: juventus | f1 | motogp" }),
+        JSON.stringify({
+          success: false,
+          error: "Parametro 'sport' richiesto: juventus | f1 | motogp",
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -95,8 +98,9 @@ Deno.serve(async (req) => {
     try {
       const ytRes = await fetch(feedUrl, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; CalendarEvents/1.0; +https://rydercalendarevents.lovable.app)",
-          "Accept": "application/atom+xml, application/xml, text/xml",
+          "User-Agent":
+            "Mozilla/5.0 (compatible; CalendarEvents/1.0; +https://rydercalendarevents.lovable.app)",
+          Accept: "application/atom+xml, application/xml, text/xml",
         },
       });
       if (ytRes.ok) {

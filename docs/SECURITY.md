@@ -39,13 +39,13 @@ niente di importante deve dipenderne.
 
 ### Punti aperti dichiarati
 
-| Cosa                                                                                        | Perché è aperto                                                                                          |
-| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| L'allowlist CORS accetta qualunque sottodominio `.lovable.app`, `.lovableproject.com`, `.lovable.dev` | copre anche progetti Lovable di altri utenti. Restringerla ai domini propri richiede di conoscerli tutti  |
-| Gli `origin` di localhost sono ammessi anche in produzione                                  | comodo in sviluppo, inutile e non necessario in produzione                                                |
-| `push-vapid-key` non ha rate limit                                                          | restituisce solo una chiave pubblica, ma è un'incoerenza rispetto a tutte le altre                        |
-| `push-subscribe` non verifica il possesso dell'endpoint                                     | chi conosce l'endpoint push di un altro browser può disattivargli le notifiche o cambiargli gli anticipi   |
-| `verify_jwt` non è dichiarato in `supabase/config.toml`                                     | la configurazione reale vive nella dashboard: la posture non è riproducibile dal repository                |
+| Cosa                                                                                                  | Perché è aperto                                                                                          |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| L'allowlist CORS accetta qualunque sottodominio `.lovable.app`, `.lovableproject.com`, `.lovable.dev` | copre anche progetti Lovable di altri utenti. Restringerla ai domini propri richiede di conoscerli tutti |
+| Gli `origin` di localhost sono ammessi anche in produzione                                            | comodo in sviluppo, inutile e non necessario in produzione                                               |
+| `push-vapid-key` non ha rate limit                                                                    | restituisce solo una chiave pubblica, ma è un'incoerenza rispetto a tutte le altre                       |
+| `push-subscribe` non verifica il possesso dell'endpoint                                               | chi conosce l'endpoint push di un altro browser può disattivargli le notifiche o cambiargli gli anticipi |
+| `verify_jwt` non è dichiarato in `supabase/config.toml`                                               | la configurazione reale vive nella dashboard: la posture non è riproducibile dal repository              |
 
 Nessuno di questi espone dati personali, perché non ce ne sono. Il danno
 possibile è spam di notifiche e consumo di quota.
@@ -71,11 +71,11 @@ autenticazione.
 
 ## Segreti e variabili
 
-| Dove                       | Cosa contiene                                                                         |
-| -------------------------- | ------------------------------------------------------------------------------------- |
-| `.env` (tracciato)         | solo valori pubblici: URL del progetto, anon key, project id                            |
-| `.env.local` (ignorato)    | sovrascritture personali                                                                |
-| Secrets Supabase           | `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `TMDB_API_KEY`, `DISPATCH_SECRET` |
+| Dove                    | Cosa contiene                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| `.env` (tracciato)      | solo valori pubblici: URL del progetto, anon key, project id                                            |
+| `.env.local` (ignorato) | sovrascritture personali                                                                                |
+| Secrets Supabase        | `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `TMDB_API_KEY`, `DISPATCH_SECRET` |
 
 `.env` è tracciato di proposito: serve a Lovable per il build. L'anon key è
 progettata per viaggiare nel bundle del browser e le tabelle sono in diniego

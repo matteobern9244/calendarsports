@@ -5,11 +5,7 @@
 // This module is intentionally dependency-free so it can be imported by
 // any Deno edge function in this project.
 
-const ALLOWED_ORIGIN_SUFFIXES = [
-  "lovable.app",
-  "lovableproject.com",
-  "lovable.dev",
-];
+const ALLOWED_ORIGIN_SUFFIXES = ["lovable.app", "lovableproject.com", "lovable.dev"];
 
 const ALLOWED_ORIGIN_EXACT = new Set<string>([
   "http://localhost:3000",
@@ -24,9 +20,7 @@ function isOriginAllowed(origin: string | null): boolean {
   if (ALLOWED_ORIGIN_EXACT.has(origin)) return true;
   try {
     const host = new URL(origin).hostname;
-    return ALLOWED_ORIGIN_SUFFIXES.some(
-      (suffix) => host === suffix || host.endsWith(`.${suffix}`),
-    );
+    return ALLOWED_ORIGIN_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
   } catch {
     return false;
   }
@@ -44,14 +38,12 @@ const ALLOWED_HEADERS =
  */
 export function buildCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin");
-  const allowOrigin = isOriginAllowed(origin)
-    ? origin!
-    : "https://calendarsports.lovable.app";
+  const allowOrigin = isOriginAllowed(origin) ? origin! : "https://calendarsports.lovable.app";
   return {
     "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Headers": ALLOWED_HEADERS,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
 }
 
@@ -72,9 +64,7 @@ function getClientIp(req: Request): string {
   return "unknown";
 }
 
-export type RateLimitResult =
-  | { allowed: true }
-  | { allowed: false; retryAfterSeconds: number };
+export type RateLimitResult = { allowed: true } | { allowed: false; retryAfterSeconds: number };
 
 export function checkRateLimit(
   req: Request,
@@ -113,15 +103,12 @@ export function rateLimitResponse(
   result: Extract<RateLimitResult, { allowed: false }>,
   corsHeaders: Record<string, string>,
 ): Response {
-  return new Response(
-    JSON.stringify({ success: false, error: "Too many requests" }),
-    {
-      status: 429,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-        "Retry-After": String(result.retryAfterSeconds),
-      },
+  return new Response(JSON.stringify({ success: false, error: "Too many requests" }), {
+    status: 429,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+      "Retry-After": String(result.retryAfterSeconds),
     },
-  );
+  });
 }

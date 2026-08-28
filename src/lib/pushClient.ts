@@ -10,7 +10,11 @@ export function isPushSupported(): boolean {
 function isInIframe(): boolean {
   // L'accesso a window.top e' bloccato cross-origin: se solleva, siamo
   // certamente dentro un iframe di un'altra origine.
-  try { return window.self !== window.top; } catch { return true; }
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
 }
 
 export function isPreviewOrIframe(): boolean {
@@ -59,15 +63,15 @@ async function fetchVapidKey(): Promise<string> {
 }
 
 export async function subscribeToPush(leadTimes: number[]): Promise<{
-  ok: boolean; reason?: "denied" | "unsupported" | "error";
+  ok: boolean;
+  reason?: "denied" | "unsupported" | "error";
 }> {
   if (!isPushSupported()) return { ok: false, reason: "unsupported" };
   const reg = await ensureServiceWorker();
   if (!reg) return { ok: false, reason: "unsupported" };
 
-  const perm = Notification.permission === "granted"
-    ? "granted"
-    : await Notification.requestPermission();
+  const perm =
+    Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
   if (perm !== "granted") return { ok: false, reason: "denied" };
 
   const publicKey = await fetchVapidKey();

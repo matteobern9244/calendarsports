@@ -1,10 +1,10 @@
-import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from '../_shared/security.ts';
+import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/security.ts";
 
-const SKY_BASE = 'https://sport.sky.it';
-const SERIE_A_COMP_ID = '21';
-const UCL_COMP_ID = '5';
-const COPPA_ITALIA_COMP_ID = '259';
-const LEGA_API = 'https://api-sdp.legaseriea.it/v1/serie-a/football';
+const SKY_BASE = "https://sport.sky.it";
+const SERIE_A_COMP_ID = "21";
+const UCL_COMP_ID = "5";
+const COPPA_ITALIA_COMP_ID = "259";
+const LEGA_API = "https://api-sdp.legaseriea.it/v1/serie-a/football";
 
 /**
  * Competizioni interrogate per costruire il calendario Juventus.
@@ -18,24 +18,45 @@ const LEGA_API = 'https://api-sdp.legaseriea.it/v1/serie-a/football';
  */
 const CORE_COMPETITION_IDS = [SERIE_A_COMP_ID, UCL_COMP_ID, COPPA_ITALIA_COMP_ID];
 const EXTRA_COMPETITION_IDS = [
-  '4', '6', '7', '8', '9', '10', '11', '12', '13',
-  '20', '22', '23', '24', '25', '26', '27', '28', '29', '30',
-  '105', '106', '107', '260', '261',
+  "4",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+  "13",
+  "20",
+  "22",
+  "23",
+  "24",
+  "25",
+  "26",
+  "27",
+  "28",
+  "29",
+  "30",
+  "105",
+  "106",
+  "107",
+  "260",
+  "261",
 ];
 const ALL_COMPETITION_IDS = [...CORE_COMPETITION_IDS, ...EXTRA_COMPETITION_IDS];
 
 const LEGA_SEASON_IDS: Record<string, string> = {
-  '2026': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a',
-  '2025': 'serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a',
-  '2024': 'serie-a::Football_Season::1e32f55e98fc408a9d1fc27c0ba43243',
-  '2023': 'serie-a::Football_Season::104a84bc07f641e685f70a850c6399eb',
-  '2022': 'serie-a::Football_Season::65f4d59dedbb43b68197b0ff0529fa21',
+  "2026": "serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a",
+  "2025": "serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a",
+  "2024": "serie-a::Football_Season::1e32f55e98fc408a9d1fc27c0ba43243",
+  "2023": "serie-a::Football_Season::104a84bc07f641e685f70a850c6399eb",
+  "2022": "serie-a::Football_Season::65f4d59dedbb43b68197b0ff0529fa21",
 };
 
 const COMPETITION_NAMES: Record<string, string> = {
-  [SERIE_A_COMP_ID]: 'Serie A',
-  [UCL_COMP_ID]: 'Champions League',
-  [COPPA_ITALIA_COMP_ID]: 'Coppa Italia',
+  [SERIE_A_COMP_ID]: "Serie A",
+  [UCL_COMP_ID]: "Champions League",
+  [COPPA_ITALIA_COMP_ID]: "Coppa Italia",
 };
 
 type SkyWidgetResponse = {
@@ -43,11 +64,11 @@ type SkyWidgetResponse = {
   seasonUsed: string;
 };
 
-const ROME_DATE_FMT = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Europe/Rome',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
+const ROME_DATE_FMT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Rome",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
 });
 
 /**
@@ -59,7 +80,11 @@ const ROME_DATE_FMT = new Intl.DateTimeFormat('en-CA', {
 function romeDateKeyOf(input: string | null | undefined): string | null {
   if (!input) return null;
   let normalized = input;
-  if (typeof input === 'string' && /T\d{2}:\d{2}/.test(input) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(input)) {
+  if (
+    typeof input === "string" &&
+    /T\d{2}:\d{2}/.test(input) &&
+    !/(Z|[+-]\d{2}:?\d{2})$/i.test(input)
+  ) {
     normalized = `${input}Z`;
   }
   const d = new Date(normalized);
@@ -70,38 +95,45 @@ function romeDateKeyOf(input: string | null | undefined): string | null {
 function unescapeHtml(text: string): string {
   return text
     .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'");
 }
 
 function extractWidgetModel(html: string): any {
   // Nuovo formato Sky (2026): JSON in <script type="application/json" data-props="true">...</script>
-  const scriptMatch = html.match(
-    /<script[^>]*type=["']application\/json["'][^>]*data-props=["']true["'][^>]*>([\s\S]*?)<\/script>/i,
-  ) || html.match(
-    /<script[^>]*data-props=["']true["'][^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/i,
-  );
+  const scriptMatch =
+    html.match(
+      /<script[^>]*type=["']application\/json["'][^>]*data-props=["']true["'][^>]*>([\s\S]*?)<\/script>/i,
+    ) ||
+    html.match(
+      /<script[^>]*data-props=["']true["'][^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/i,
+    );
   if (scriptMatch) {
     try {
       return JSON.parse(scriptMatch[1]);
     } catch (e) {
-      console.error('Failed to parse data-props JSON:', e);
+      console.error("Failed to parse data-props JSON:", e);
     }
   }
   // Vecchio formato Sky: attributo model='...'/model="..."
   const modelMatch = html.match(/model='([^']*)'/) || html.match(/model="([^"]*)"/);
   if (!modelMatch) {
-    console.error('No model/data-props found. HTML length:', html.length, 'First 500 chars:', html.substring(0, 500));
+    console.error(
+      "No model/data-props found. HTML length:",
+      html.length,
+      "First 500 chars:",
+      html.substring(0, 500),
+    );
     return null;
   }
   try {
     const unescaped = unescapeHtml(modelMatch[1]);
     return JSON.parse(unescaped);
   } catch (e) {
-    console.error('Failed to parse model JSON:', e);
+    console.error("Failed to parse model JSON:", e);
     return null;
   }
 }
@@ -112,19 +144,18 @@ async function fetchSkyWidget(
   allowPreviousSeason = true,
 ): Promise<SkyWidgetResponse> {
   const parsedSeason = Number.parseInt(requestedSeason, 10);
-  const fallbackSeason = allowPreviousSeason && Number.isFinite(parsedSeason)
-    ? String(parsedSeason - 1)
-    : null;
+  const fallbackSeason =
+    allowPreviousSeason && Number.isFinite(parsedSeason) ? String(parsedSeason - 1) : null;
   const seasonsToTry = [...new Set([requestedSeason, fallbackSeason].filter(Boolean) as string[])];
 
   let lastStatus: number | null = null;
 
   for (const season of seasonsToTry) {
     const widgetUrl = buildUrl(season);
-    console.log('Fetching:', widgetUrl);
+    console.log("Fetching:", widgetUrl);
 
     const res = await fetch(widgetUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
     });
 
     if (res.ok) {
@@ -151,13 +182,13 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
 
   try {
     const url = `${LEGA_API}/seasons/${encodeURIComponent(seasonId)}/matches?locale=it-IT`;
-    console.log('Fetching Lega Serie A broadcasters:', url);
+    console.log("Fetching Lega Serie A broadcasters:", url);
 
     const res = await fetch(url, {
       headers: {
-        'accept': 'text/plain; x-api-version=1.0',
-        'Referer': 'https://www.legaseriea.it/',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        accept: "text/plain; x-api-version=1.0",
+        Referer: "https://www.legaseriea.it/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       },
     });
 
@@ -171,10 +202,13 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
     const map: Record<string, string> = {};
 
     for (const m of matches) {
-      const homeName = m.home?.shortName || m.home?.officialName || '';
-      const awayName = m.away?.shortName || m.away?.officialName || '';
+      const homeName = m.home?.shortName || m.home?.officialName || "";
+      const awayName = m.away?.shortName || m.away?.officialName || "";
 
-      if (!homeName.toLowerCase().includes('juventus') && !awayName.toLowerCase().includes('juventus')) {
+      if (
+        !homeName.toLowerCase().includes("juventus") &&
+        !awayName.toLowerCase().includes("juventus")
+      ) {
         continue;
       }
 
@@ -186,7 +220,7 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
       if (broadcasters.broadcasterNational2) parts.push(broadcasters.broadcasterNational2);
       if (broadcasters.broadcasterNational3) parts.push(broadcasters.broadcasterNational3);
 
-      const broadcasterStr = parts.join(' | ');
+      const broadcasterStr = parts.join(" | ");
       if (!broadcasterStr) continue;
 
       const matchdayMatch = m.matchSet?.name?.match(/(\d+)/);
@@ -207,18 +241,18 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
     console.log(`Found broadcaster info for ${Object.keys(map).length} Juventus matches`);
     return map;
   } catch (e) {
-    console.error('Lega API broadcaster fetch error:', e);
+    console.error("Lega API broadcaster fetch error:", e);
     return {};
   }
 }
 
 function slugify(input: string): string {
-  return String(input || '')
+  return String(input || "")
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function buildMatchId(match: any, competitionName: string): string {
@@ -230,9 +264,9 @@ function buildMatchId(match: any, competitionName: string): string {
     }
   }
   // Priorita' 2: composizione deterministica competition+data+squadre.
-  const home = slugify(match?.home?.name || '');
-  const away = slugify(match?.away?.name || '');
-  const dateKey = romeDateKeyOf(match?.date) ?? 'unknown';
+  const home = slugify(match?.home?.name || "");
+  const away = slugify(match?.away?.name || "");
+  const dateKey = romeDateKeyOf(match?.date) ?? "unknown";
   const comp = slugify(competitionName);
   return `${comp}-${dateKey}-${home}-vs-${away}`;
 }
@@ -246,14 +280,14 @@ function competitionNameFromMatches(rounds: any[]): string | null {
   for (const round of rounds || []) {
     for (const matchDay of round?.matchDayList || []) {
       for (const match of matchDay?.matchList || []) {
-        const link = String(match?.link || '');
+        const link = String(match?.link || "");
         const m = link.match(/\/calcio\/([^/]+)\/partite\//i);
         if (m) {
           return m[1]
-            .split('-')
+            .split("-")
             .filter(Boolean)
             .map((w) => (w.length <= 2 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
-            .join(' ');
+            .join(" ");
         }
       }
     }
@@ -261,11 +295,15 @@ function competitionNameFromMatches(rounds: any[]): string | null {
   return null;
 }
 
-function extractJuventusMatches(model: any, competitionId: string, broadcasterMap: Record<string, string>): any[] {
+function extractJuventusMatches(
+  model: any,
+  competitionId: string,
+  broadcasterMap: Record<string, string>,
+): any[] {
   const rounds = model.competitionMatchList || [];
   const matches: any[] = [];
   const competitionName =
-    COMPETITION_NAMES[competitionId] || competitionNameFromMatches(rounds) || 'Altro';
+    COMPETITION_NAMES[competitionId] || competitionNameFromMatches(rounds) || "Altro";
 
   for (const round of rounds) {
     const roundNum = round.round;
@@ -273,11 +311,15 @@ function extractJuventusMatches(model: any, competitionId: string, broadcasterMa
     for (const matchDay of matchDayList) {
       const matchList = matchDay.matchList || [];
       for (const match of matchList) {
-        const homeName = match.home?.name || '';
-        const awayName = match.away?.name || '';
-        if (!homeName.toLowerCase().includes('juventus') && !awayName.toLowerCase().includes('juventus')) continue;
+        const homeName = match.home?.name || "";
+        const awayName = match.away?.name || "";
+        if (
+          !homeName.toLowerCase().includes("juventus") &&
+          !awayName.toLowerCase().includes("juventus")
+        )
+          continue;
 
-        const isFinished = match.status === 'FullTime';
+        const isFinished = match.status === "FullTime";
 
         // Broadcaster lookup (only for Serie A)
         let broadcaster: string | null = null;
@@ -313,32 +355,33 @@ function extractJuventusMatches(model: any, competitionId: string, broadcasterMa
 
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const rl = checkRateLimit(req, { key: 'sports-football' });
+  const rl = checkRateLimit(req, { key: "sports-football" });
   if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
   try {
     const url = new URL(req.url);
-    const action = url.searchParams.get('action');
-    const season = url.searchParams.get('season') || '2025';
+    const action = url.searchParams.get("action");
+    const season = url.searchParams.get("season") || "2025";
 
     // Validate season strictly to prevent URL path injection on upstream APIs
     if (!/^\d{4}$/.test(season)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid season parameter' }), {
+      return new Response(JSON.stringify({ success: false, error: "Invalid season parameter" }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     let data: any;
     let seasonUsed = season;
-    let calendarMeta: { competitionsIncluded: string[]; competitionsUnavailable: string[] } | null = null;
+    let calendarMeta: { competitionsIncluded: string[]; competitionsUnavailable: string[] } | null =
+      null;
 
     switch (action) {
-      case 'standings': {
+      case "standings": {
         const response = await fetchSkyWidget(
           (s) => `${SKY_BASE}/football/competition-ranking/${s}/${SERIE_A_COMP_ID}/widget.html`,
           season,
@@ -347,7 +390,7 @@ Deno.serve(async (req) => {
         seasonUsed = response.seasonUsed;
         const model = extractWidgetModel(html);
         if (!model?.rankingLists?.[0]?.teams) {
-          throw new Error('Dati classifica non trovati nella pagina Sky Sport');
+          throw new Error("Dati classifica non trovati nella pagina Sky Sport");
         }
         data = model.rankingLists[0].teams.map((t: any) => ({
           position: t.position,
@@ -373,7 +416,7 @@ Deno.serve(async (req) => {
         break;
       }
 
-      case 'calendar': {
+      case "calendar": {
         // Tutte le competizioni Juventus della stagione richiesta.
         // IMPORTANTE: nessun fallback alla stagione precedente, altrimenti i
         // tornei non ancora pubblicati (es. Champions a inizio stagione)
@@ -382,15 +425,15 @@ Deno.serve(async (req) => {
 
         const [broadcasterMap, ...skyResponses] = await Promise.all([
           fetchBroadcasterMap(season),
-          ...competitionIds.map(compId =>
+          ...competitionIds.map((compId) =>
             fetchSkyWidget(
               (s) => `${SKY_BASE}/football/competition-calendar-results/${s}/${compId}/widget.html`,
               season,
               false,
-            ).catch(err => {
+            ).catch((err) => {
               console.warn(`Failed to fetch competition ${compId}:`, err?.message ?? err);
               return null;
-            })
+            }),
           ),
         ]);
 
@@ -423,7 +466,7 @@ Deno.serve(async (req) => {
         // Deduplica per id partita (competizioni sovrapposte / id duplicati).
         const seenIds = new Set<string>();
         for (let i = allMatches.length - 1; i >= 0; i--) {
-          const id = String(allMatches[i]?.id ?? '');
+          const id = String(allMatches[i]?.id ?? "");
           if (id && seenIds.has(id)) allMatches.splice(i, 1);
           else if (id) seenIds.add(id);
         }
@@ -440,10 +483,10 @@ Deno.serve(async (req) => {
 
         // Filtro opzionale "solo prossime": esclude le partite gia' giocate
         // della stagione in corso (restano consultabili senza il parametro).
-        if (url.searchParams.get('upcoming') === '1') {
+        if (url.searchParams.get("upcoming") === "1") {
           const now = Date.now();
           const upcoming = allMatches.filter((m) => {
-            if (m.status === 'FullTime') return false;
+            if (m.status === "FullTime") return false;
             if (!m.date) return true;
             const t = new Date(m.date).getTime();
             return Number.isNaN(t) ? true : t >= now - 3 * 60 * 60 * 1000;
@@ -454,11 +497,11 @@ Deno.serve(async (req) => {
 
         // Optional pagination (backward compatible: when neither page nor pageSize is
         // provided, return the flat array as before).
-        const pageParam = url.searchParams.get('page');
-        const pageSizeParam = url.searchParams.get('pageSize');
+        const pageParam = url.searchParams.get("page");
+        const pageSizeParam = url.searchParams.get("pageSize");
         if (pageParam !== null || pageSizeParam !== null) {
-          const parsedPageSize = Number.parseInt(pageSizeParam ?? '12', 10);
-          const parsedPage = Number.parseInt(pageParam ?? '1', 10);
+          const parsedPageSize = Number.parseInt(pageSizeParam ?? "12", 10);
+          const parsedPage = Number.parseInt(pageParam ?? "1", 10);
           const pageSize = Number.isFinite(parsedPageSize)
             ? Math.min(50, Math.max(1, parsedPageSize))
             : 12;
@@ -469,7 +512,7 @@ Deno.serve(async (req) => {
             : 1;
           // Global index of the next upcoming (non-finished) match, useful for the UI
           // landing logic. -1 when no upcoming match exists.
-          const nextUpcomingIndex = allMatches.findIndex((m) => m.status !== 'FullTime');
+          const nextUpcomingIndex = allMatches.findIndex((m) => m.status !== "FullTime");
           const start = (page - 1) * pageSize;
           const items = allMatches.slice(start, start + pageSize);
           data = { items, total, page, pageSize, totalPages, nextUpcomingIndex };
@@ -479,7 +522,7 @@ Deno.serve(async (req) => {
         break;
       }
 
-      case 'next-match': {
+      case "next-match": {
         const response = await fetchSkyWidget(
           (s) => `${SKY_BASE}/football/competition-ranking/${s}/${SERIE_A_COMP_ID}/widget.html`,
           season,
@@ -488,59 +531,74 @@ Deno.serve(async (req) => {
         seasonUsed = response.seasonUsed;
         const model = extractWidgetModel(html);
         if (!model?.rankingLists?.[0]?.teams) {
-          throw new Error('Dati non trovati');
+          throw new Error("Dati non trovati");
         }
         const juve = model.rankingLists[0].teams.find((t: any) =>
-          t.teamName?.toLowerCase().includes('juventus')
+          t.teamName?.toLowerCase().includes("juventus"),
         );
-        data = juve ? {
-          position: juve.position,
-          team: juve.teamName,
-          points: juve.points,
-          played: juve.games,
-          wins: juve.gamesWon,
-          draws: juve.gamesDraw,
-          losses: juve.gamesLost,
-          goalsFor: juve.goalsScored,
-          goalsAgainst: juve.goalsConceded,
-          goalDiff: juve.goalsDifference,
-          logoUrl: juve.logoUrl,
-          lastMatches: (juve.lastMatchesTrend || []).map((m: any) => ({
-            result: m.label,
-            home: m.home,
-            away: m.away,
-          })),
-        } : null;
+        data = juve
+          ? {
+              position: juve.position,
+              team: juve.teamName,
+              points: juve.points,
+              played: juve.games,
+              wins: juve.gamesWon,
+              draws: juve.gamesDraw,
+              losses: juve.gamesLost,
+              goalsFor: juve.goalsScored,
+              goalsAgainst: juve.goalsConceded,
+              goalDiff: juve.goalsDifference,
+              logoUrl: juve.logoUrl,
+              lastMatches: (juve.lastMatchesTrend || []).map((m: any) => ({
+                result: m.label,
+                home: m.home,
+                away: m.away,
+              })),
+            }
+          : null;
         break;
       }
 
       default:
-        return new Response(JSON.stringify({ error: 'Azione non valida. Usa: standings, calendar, next-match' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ error: "Azione non valida. Usa: standings, calendar, next-match" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
     }
 
     // dataSource:
     //  - "live" se la stagione richiesta e' stata effettivamente servita da Sky;
     //  - "fallback-previous-season" se l'helper ha dovuto ripiegare su season-1.
-    const dataSource: 'live' | 'fallback-previous-season' =
-      seasonUsed === season ? 'live' : 'fallback-previous-season';
+    const dataSource: "live" | "fallback-previous-season" =
+      seasonUsed === season ? "live" : "fallback-previous-season";
     const meta = {
       dataSource,
       season: /^\d{4}$/.test(season) ? parseInt(season, 10) : season,
       seasonUsed: /^\d{4}$/.test(seasonUsed) ? parseInt(seasonUsed, 10) : seasonUsed,
-      source: 'Sky Sport Italia + Lega Serie A',
+      source: "Sky Sport Italia + Lega Serie A",
       ...(calendarMeta ?? {}),
     };
-    return new Response(JSON.stringify({ success: true, data, meta, source: meta.source, requestedSeason: season, seasonUsed }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta,
+        source: meta.source,
+        requestedSeason: season,
+        seasonUsed,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
-    console.error('Football API error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Errore interno del server' }), {
+    console.error("Football API error:", error);
+    return new Response(JSON.stringify({ success: false, error: "Errore interno del server" }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

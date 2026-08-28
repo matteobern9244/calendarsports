@@ -29,7 +29,10 @@ export default function UnavailableExternalSource({
 }: UnavailableExternalSourceProps) {
   const hint = ctaHint ?? `Tocca il pulsante qui sotto per ${externalLabel.toLowerCase()}`;
   // id stabile derivato dal titolo per associare titolo/descrizione al container
-  const baseId = `unavailable-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+  const baseId = `unavailable-${title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")}`;
   const titleId = `${baseId}-title`;
   const descId = `${baseId}-desc`;
   // aria-label completo del link: chiarisce destinazione, contesto e che si apre in nuova scheda.

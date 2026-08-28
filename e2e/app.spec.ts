@@ -7,7 +7,9 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("loads home and navigates across all main sections with mocked sports data", async ({ page }) => {
+test("loads home and navigates across all main sections with mocked sports data", async ({
+  page,
+}) => {
   await installSportsApiMocks(page);
 
   await page.goto("/");
@@ -103,7 +105,10 @@ test("dettaglio partita Juventus: raggiungibile dal calendario e con id diretto"
 
   // Percorso reale dell'utente: dal calendario si apre la scheda partita.
   await page.goto("/juventus");
-  await page.getByRole("link", { name: /vs Milan/ }).first().click();
+  await page
+    .getByRole("link", { name: /vs Milan/ })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/juventus\/partite\//);
   await expect(page.getByRole("heading", { name: /Juventus – Milan/ })).toBeVisible();
   await expect(page.getByText("DAZN").first()).toBeVisible();

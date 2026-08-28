@@ -56,11 +56,7 @@ export default function EventCard({
   // dover ricaricare la pagina ne aspettare il prossimo refetch.
   const [liveStatus, setLiveStatus] = useState<CountdownStatus | null>(null);
   const effectiveStatus =
-    liveStatus === "live"
-      ? "in_corso"
-      : liveStatus === "ended"
-        ? "completato"
-        : status;
+    liveStatus === "live" ? "in_corso" : liveStatus === "ended" ? "completato" : status;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -85,11 +81,12 @@ export default function EventCard({
         "transition-[box-shadow,border-color,transform] duration-300 ease-out",
         "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
         "hover:shadow-[0_18px_40px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
-        onClick && "cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        onClick &&
+          "cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         highlight
           ? "border-[hsl(var(--gold))]/60 ring-1 ring-[hsl(var(--gold))]/25 hover:border-[hsl(var(--gold))]/80"
           : "border-[hsl(var(--gold))]/20 hover:border-[hsl(var(--gold))]/55",
-        className
+        className,
       )}
     >
       {/* Top gold accent line */}
@@ -98,7 +95,7 @@ export default function EventCard({
         className={cn(
           "pointer-events-none absolute inset-x-0 top-0 h-px",
           "bg-linear-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent",
-          "opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+          "opacity-60 group-hover:opacity-100 transition-opacity duration-300",
         )}
       />
       {/* Soft gold glow on hover */}
@@ -107,7 +104,7 @@ export default function EventCard({
         className={cn(
           "pointer-events-none absolute -inset-px rounded-2xl",
           "opacity-0 group-hover:opacity-100 transition-opacity duration-300",
-          "bg-[radial-gradient(circle_at_top,hsl(var(--gold)/0.10),transparent_60%)]"
+          "bg-[radial-gradient(circle_at_top,hsl(var(--gold)/0.10),transparent_60%)]",
         )}
       />
       {highlight && (
@@ -134,7 +131,9 @@ export default function EventCard({
       </div>
 
       {/* Title */}
-      <h3 className="relative z-1 font-heading text-lg font-bold leading-tight text-foreground mb-1">{title}</h3>
+      <h3 className="relative z-1 font-heading text-lg font-bold leading-tight text-foreground mb-1">
+        {title}
+      </h3>
       {subtitle && <p className="relative z-1 text-sm text-muted-foreground mb-3">{subtitle}</p>}
 
       {/* Date/Time */}
@@ -160,7 +159,9 @@ export default function EventCard({
         )}
       </div>
 
-      {children && <div className="relative z-1 mt-4 pt-3 border-t border-border/50">{children}</div>}
+      {children && (
+        <div className="relative z-1 mt-4 pt-3 border-t border-border/50">{children}</div>
+      )}
     </motion.div>
   );
 }

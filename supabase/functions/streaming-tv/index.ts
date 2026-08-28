@@ -10,11 +10,7 @@
 // dalla fonte (es. Sky Sport non e' presente su staseraintv.com),
 // `programs=[]` e la UI dichiara stato "non disponibile".
 
-import {
-  buildCorsHeaders,
-  checkRateLimit,
-  rateLimitResponse,
-} from "../_shared/security.ts";
+import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/security.ts";
 
 type Channel = {
   id: string;
@@ -32,7 +28,7 @@ type Channel = {
 
 type Program = {
   start: string; // ISO
-  end: string;   // ISO
+  end: string; // ISO
   title: string;
   genre?: string;
   description?: string;
@@ -57,27 +53,117 @@ const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
     channels: [
       // Sky Sport branded via superguidatv.it (verificato 2026-04-19,
       // ~40 righe HH:MM/giorno con genere "Sport" estratto).
-      { id: "sky-sport-uno", name: "Sky Sport Uno", logo: null, number: 201, superguidatvPath: "guida-programmi-tv-sky-sport-uno/sky-sport/37" },
-      { id: "sky-sport-calcio", name: "Sky Sport Calcio", logo: null, number: 202, superguidatvPath: "guida-programmi-tv-sky-sport-calcio/sky-sport/572" },
-      { id: "sky-sport-tennis", name: "Sky Sport Tennis", logo: null, number: 203, superguidatvPath: "guida-programmi-tv-sky-sport-tennis-hd/sky-sport/598" },
-      { id: "sky-sport-f1", name: "Sky Sport F1", logo: null, number: 207, superguidatvPath: "guida-programmi-tv-sky-sport-f1-hd/sky-sport/43" },
-      { id: "sky-sport-motogp", name: "Sky Sport MotoGP", logo: null, number: 208, superguidatvPath: "guida-programmi-tv-sky-sport-motogp/sky-sport/44" },
-      { id: "sky-sport-arena", name: "Sky Sport Arena", logo: null, number: 204, superguidatvPath: "guida-programmi-tv-sky-sport-arena/sky-sport/38" },
-      { id: "sky-sport-golf", name: "Sky Sport Golf", logo: null, number: 209, superguidatvPath: "guida-programmi-tv-sky-sport-golf/sky-sport/573" },
-      { id: "sky-sport-max", name: "Sky Sport Max", logo: null, number: 256, superguidatvPath: "guida-programmi-tv-sky-sport-max/sky-sport/1248568499" },
-      { id: "sky-sport-basket", name: "Sky Sport Basket", logo: null, number: 205, superguidatvPath: "guida-programmi-tv-sky-sport-basket/sky-sport/40" },
-      { id: "sky-sport-24", name: "Sky Sport 24", logo: null, number: 200, superguidatvPath: "guida-programmi-tv-sky-sport24/sky-sport/36" },
+      {
+        id: "sky-sport-uno",
+        name: "Sky Sport Uno",
+        logo: null,
+        number: 201,
+        superguidatvPath: "guida-programmi-tv-sky-sport-uno/sky-sport/37",
+      },
+      {
+        id: "sky-sport-calcio",
+        name: "Sky Sport Calcio",
+        logo: null,
+        number: 202,
+        superguidatvPath: "guida-programmi-tv-sky-sport-calcio/sky-sport/572",
+      },
+      {
+        id: "sky-sport-tennis",
+        name: "Sky Sport Tennis",
+        logo: null,
+        number: 203,
+        superguidatvPath: "guida-programmi-tv-sky-sport-tennis-hd/sky-sport/598",
+      },
+      {
+        id: "sky-sport-f1",
+        name: "Sky Sport F1",
+        logo: null,
+        number: 207,
+        superguidatvPath: "guida-programmi-tv-sky-sport-f1-hd/sky-sport/43",
+      },
+      {
+        id: "sky-sport-motogp",
+        name: "Sky Sport MotoGP",
+        logo: null,
+        number: 208,
+        superguidatvPath: "guida-programmi-tv-sky-sport-motogp/sky-sport/44",
+      },
+      {
+        id: "sky-sport-arena",
+        name: "Sky Sport Arena",
+        logo: null,
+        number: 204,
+        superguidatvPath: "guida-programmi-tv-sky-sport-arena/sky-sport/38",
+      },
+      {
+        id: "sky-sport-golf",
+        name: "Sky Sport Golf",
+        logo: null,
+        number: 209,
+        superguidatvPath: "guida-programmi-tv-sky-sport-golf/sky-sport/573",
+      },
+      {
+        id: "sky-sport-max",
+        name: "Sky Sport Max",
+        logo: null,
+        number: 256,
+        superguidatvPath: "guida-programmi-tv-sky-sport-max/sky-sport/1248568499",
+      },
+      {
+        id: "sky-sport-basket",
+        name: "Sky Sport Basket",
+        logo: null,
+        number: 205,
+        superguidatvPath: "guida-programmi-tv-sky-sport-basket/sky-sport/40",
+      },
+      {
+        id: "sky-sport-24",
+        name: "Sky Sport 24",
+        logo: null,
+        number: 200,
+        superguidatvPath: "guida-programmi-tv-sky-sport24/sky-sport/36",
+      },
       // Verificato 2026-04-19: nessuna pagina pubblica dedicata trovata per Sky Sport Football / Action.
     ],
   },
   "sky-cinema": {
     label: "Sky Cinema (Now TV)",
     channels: [
-      { id: "sky-cinema-uno", name: "Sky Cinema Uno", logo: null, number: 301, staseraSlug: "sky_cinema1" },
-      { id: "sky-cinema-collection", name: "Sky Cinema Collection", logo: null, number: 303, staseraSlug: "sky_cinema_collection" },
-      { id: "sky-cinema-family", name: "Sky Cinema Family", logo: null, number: 304, staseraSlug: "sky_cinema_family" },
-      { id: "sky-cinema-action", name: "Sky Cinema Action", logo: null, number: 305, staseraSlug: "sky_cinema_action" },
-      { id: "sky-cinema-romance", name: "Sky Cinema Romance", logo: null, number: 307, staseraSlug: "sky_cinema_romance" },
+      {
+        id: "sky-cinema-uno",
+        name: "Sky Cinema Uno",
+        logo: null,
+        number: 301,
+        staseraSlug: "sky_cinema1",
+      },
+      {
+        id: "sky-cinema-collection",
+        name: "Sky Cinema Collection",
+        logo: null,
+        number: 303,
+        staseraSlug: "sky_cinema_collection",
+      },
+      {
+        id: "sky-cinema-family",
+        name: "Sky Cinema Family",
+        logo: null,
+        number: 304,
+        staseraSlug: "sky_cinema_family",
+      },
+      {
+        id: "sky-cinema-action",
+        name: "Sky Cinema Action",
+        logo: null,
+        number: 305,
+        staseraSlug: "sky_cinema_action",
+      },
+      {
+        id: "sky-cinema-romance",
+        name: "Sky Cinema Romance",
+        logo: null,
+        number: 307,
+        staseraSlug: "sky_cinema_romance",
+      },
       // Non coperti dalla fonte:
       { id: "sky-cinema-due", name: "Sky Cinema Due", logo: null, number: 302 },
       { id: "sky-cinema-suspense", name: "Sky Cinema Suspense", logo: null, number: 306 },
@@ -94,12 +180,24 @@ const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
       { id: "rai-4", name: "Rai 4", logo: null, number: 21, staseraSlug: "rai4" },
       { id: "rai-5", name: "Rai 5", logo: null, number: 23, staseraSlug: "rai5" },
       { id: "rai-movie", name: "Rai Movie", logo: null, number: 24, staseraSlug: "raimovie" },
-      { id: "rai-premium", name: "Rai Premium", logo: null, number: 25, staseraSlug: "rai_premium" },
+      {
+        id: "rai-premium",
+        name: "Rai Premium",
+        logo: null,
+        number: 25,
+        staseraSlug: "rai_premium",
+      },
       { id: "rai-gulp", name: "Rai Gulp", logo: null, number: 42, staseraSlug: "rai_gulp" },
       { id: "rai-yoyo", name: "Rai Yoyo", logo: null, number: 43, staseraSlug: "rai_yoyo" },
       { id: "rai-storia", name: "Rai Storia", logo: null, number: 54, staseraSlug: "rai_storia" },
       { id: "rai-scuola", name: "Rai Scuola", logo: null, number: 57, staseraSlug: "rai_scuola" },
-      { id: "rai-sport", name: "Rai Sport +HD", logo: null, number: 58, staseraSlug: "rai_sport_hd" },
+      {
+        id: "rai-sport",
+        name: "Rai Sport +HD",
+        logo: null,
+        number: 58,
+        staseraSlug: "rai_sport_hd",
+      },
     ],
   },
   mediaset: {
@@ -117,7 +215,13 @@ const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
       { id: "cartoonito", name: "Cartoonito", logo: null, number: 46, staseraSlug: "cartoonito" },
       { id: "top-crime", name: "Top Crime", logo: null, number: 39, staseraSlug: "topcrime" },
       { id: "focus", name: "Focus", logo: null, number: 35, staseraSlug: "focustv" },
-      { id: "mediaset-extra", name: "Mediaset Extra", logo: null, number: 55, staseraSlug: "mediaset_extra" },
+      {
+        id: "mediaset-extra",
+        name: "Mediaset Extra",
+        logo: null,
+        number: 55,
+        staseraSlug: "mediaset_extra",
+      },
     ],
   },
   discovery: {
@@ -126,9 +230,27 @@ const FAMILIES: Record<FamilyId, { label: string; channels: Channel[] }> = {
       { id: "real-time", name: "Real Time", logo: null, number: 31, staseraSlug: "realtime" },
       { id: "dmax", name: "DMax", logo: null, number: 52, staseraSlug: "dmax" },
       { id: "nove", name: "Nove", logo: null, number: 9, staseraSlug: "nove" },
-      { id: "discovery-channel", name: "Discovery Channel", logo: null, number: 401, staseraSlug: "discovery_channel" },
-      { id: "discovery-turbo", name: "Discovery Turbo", logo: null, number: 402, staseraSlug: "discovery_turbo" },
-      { id: "food-network", name: "Food Network", logo: null, number: 33, staseraSlug: "food_network" },
+      {
+        id: "discovery-channel",
+        name: "Discovery Channel",
+        logo: null,
+        number: 401,
+        staseraSlug: "discovery_channel",
+      },
+      {
+        id: "discovery-turbo",
+        name: "Discovery Turbo",
+        logo: null,
+        number: 402,
+        staseraSlug: "discovery_turbo",
+      },
+      {
+        id: "food-network",
+        name: "Food Network",
+        logo: null,
+        number: 33,
+        staseraSlug: "food_network",
+      },
       { id: "hgtv", name: "HGTV", logo: null, number: 56, staseraSlug: "hgtv" },
       { id: "giallo", name: "Giallo", logo: null, number: 38, staseraSlug: "giallotv" },
       { id: "k2", name: "K2", logo: null, number: 41, staseraSlug: "k2" },
@@ -185,14 +307,16 @@ function buildRomeIso(date: string, hh: number, mm: number): string {
   const offH = m ? parseInt(m[2], 10) : 1;
   const offM = m && m[3] ? parseInt(m[3], 10) : 0;
   const offMin = sign * (offH * 60 + offM);
-  const utcMs = Date.UTC(
-    parseInt(date.slice(0, 4), 10),
-    parseInt(date.slice(5, 7), 10) - 1,
-    parseInt(date.slice(8, 10), 10),
-    hh,
-    mm,
-    0,
-  ) - offMin * 60 * 1000;
+  const utcMs =
+    Date.UTC(
+      parseInt(date.slice(0, 4), 10),
+      parseInt(date.slice(5, 7), 10) - 1,
+      parseInt(date.slice(8, 10), 10),
+      hh,
+      mm,
+      0,
+    ) -
+    offMin * 60 * 1000;
   return new Date(utcMs).toISOString();
 }
 
@@ -213,7 +337,12 @@ export function extractRichTitles(html: string): RichTitle[] {
   const rich: RichTitle[] = [];
   const seen = new Set<string>();
   const push = (raw: string, hh?: number, mm?: number) => {
-    const t = decodeEntities(raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+    const t = decodeEntities(
+      raw
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
     if (!t || t.length < 5) return;
     if (!/[A-Za-zÀ-ÿ]/.test(t)) return;
     const key = `${t}|${hh ?? ""}:${mm ?? ""}`;
@@ -226,7 +355,8 @@ export function extractRichTitles(html: string): RichTitle[] {
   // char, anche con tag/newline) dal titolo ricco "... (Genere)".
   // Cattura l'orario di inizio per match-by-time quando il prefisso fallisce
   // (es. raw "EV-SP" 20:40 ↔ rich "Calcio - Coppa Italia ... (Sport)").
-  const reTimed = /(\d{1,2}):(\d{2})[\s\S]{0,400}?([A-Za-zÀ-ÿ0-9][^<>\r\n]{4,250}\([A-Za-zÀ-ÿ' ]{3,40}\))/g;
+  const reTimed =
+    /(\d{1,2}):(\d{2})[\s\S]{0,400}?([A-Za-zÀ-ÿ0-9][^<>\r\n]{4,250}\([A-Za-zÀ-ÿ' ]{3,40}\))/g;
   let m: RegExpExecArray | null;
   while ((m = reTimed.exec(html)) !== null) {
     const hh = parseInt(m[1], 10);
@@ -292,7 +422,19 @@ export function enrichTitle(
   // NOTA: per estendere a nuovi placeholder o nuovi generi, aggiornare
   // PLACEHOLDER_TO_GENRE qui sotto.
   const PLACEHOLDER_TO_GENRE: Record<string, string[]> = {
-    "EV-SP": ["Sport", "Calcio", "Tennis", "Motori", "Basket", "Pallavolo", "Pallacanestro", "Rugby", "Volley", "Nuoto", "Ciclismo"],
+    "EV-SP": [
+      "Sport",
+      "Calcio",
+      "Tennis",
+      "Motori",
+      "Basket",
+      "Pallavolo",
+      "Pallacanestro",
+      "Rugby",
+      "Volley",
+      "Nuoto",
+      "Ciclismo",
+    ],
     "EV-CN": ["Film", "Cinema"],
     "EV-FILM": ["Film", "Cinema"],
     "EV-TV": ["Fiction", "Serie Tv", "Telefilm", "Miniserie"],
@@ -305,7 +447,8 @@ export function enrichTitle(
     for (const cand of rich) {
       const mm = cand.title.match(/\(([^()]{2,40})\)\s*$/);
       if (!mm) continue;
-      const genreCanon = mm[1].trim()
+      const genreCanon = mm[1]
+        .trim()
         .toLowerCase()
         .replace(/(^|\s)(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
       if (!wanted.includes(genreCanon)) continue;
@@ -313,7 +456,12 @@ export function enrichTitle(
       // 720 = 12h per evitare overflow su gap notte/mattina), tiebreaker
       // lengthBonus capped a +1.0 (molto < di 1 minuto di distanza).
       let score = 0;
-      if (rawHh !== undefined && rawMm !== undefined && cand.hh !== undefined && cand.mm !== undefined) {
+      if (
+        rawHh !== undefined &&
+        rawMm !== undefined &&
+        cand.hh !== undefined &&
+        cand.mm !== undefined
+      ) {
         const distance = Math.min(720, Math.abs(cand.hh * 60 + cand.mm - rawHh * 60 - rawMm));
         if (distance === 0) score += 1000;
         score -= distance;
@@ -338,31 +486,82 @@ export function enrichTitle(
     }
     if (timeBest) best = timeBest;
   }
-  const source = best || rawUpper
-    .toLowerCase()
-    .replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+  const source =
+    best ||
+    rawUpper.toLowerCase().replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
 
   // Estrai genere fra parentesi a fine titolo: "... (Fiction)" / "(Film)" / "(Sport)".
   // Whitelist generi noti per evitare di confondere parentesi descrittive
   // (es. "(Replica)", "(2023)").
   const GENRE_WHITELIST = new Set([
-    "Fiction", "Film", "Serie", "Serie Tv", "Serie Tv Drammatica",
-    "Telefilm", "Miniserie", "Soap Opera", "Soap",
-    "Sport", "Calcio", "Tennis", "Motori", "Formula 1", "Motogp", "Ciclismo",
-    "Basket", "Pallavolo", "Pallacanestro", "Rugby", "Volley", "Nuoto",
-    "Documentario", "Reality", "Talk Show", "Talkshow", "Show", "Varieta'", "Varieta",
-    "Intrattenimento", "Cartoni", "Cartoni Animati", "Animazione",
-    "News", "Telegiornale", "Attualita'", "Attualita", "Rubrica",
-    "Magazine", "Approfondimento", "Inchiesta", "Meteo",
-    "Cucina", "Lifestyle", "Musica", "Quiz", "Cinema", "Game Show",
-    "Commedia", "Azione", "Thriller", "Avventura", "Horror", "Romantico",
-    "Drammatico", "Biografico", "Storico", "Western", "Fantascienza",
-    "Religione", "Educativo", "Cultura", "Viaggi",
+    "Fiction",
+    "Film",
+    "Serie",
+    "Serie Tv",
+    "Serie Tv Drammatica",
+    "Telefilm",
+    "Miniserie",
+    "Soap Opera",
+    "Soap",
+    "Sport",
+    "Calcio",
+    "Tennis",
+    "Motori",
+    "Formula 1",
+    "Motogp",
+    "Ciclismo",
+    "Basket",
+    "Pallavolo",
+    "Pallacanestro",
+    "Rugby",
+    "Volley",
+    "Nuoto",
+    "Documentario",
+    "Reality",
+    "Talk Show",
+    "Talkshow",
+    "Show",
+    "Varieta'",
+    "Varieta",
+    "Intrattenimento",
+    "Cartoni",
+    "Cartoni Animati",
+    "Animazione",
+    "News",
+    "Telegiornale",
+    "Attualita'",
+    "Attualita",
+    "Rubrica",
+    "Magazine",
+    "Approfondimento",
+    "Inchiesta",
+    "Meteo",
+    "Cucina",
+    "Lifestyle",
+    "Musica",
+    "Quiz",
+    "Cinema",
+    "Game Show",
+    "Commedia",
+    "Azione",
+    "Thriller",
+    "Avventura",
+    "Horror",
+    "Romantico",
+    "Drammatico",
+    "Biografico",
+    "Storico",
+    "Western",
+    "Fantascienza",
+    "Religione",
+    "Educativo",
+    "Cultura",
+    "Viaggi",
   ]);
   // Normalizza varianti note in forma canonica.
   const GENRE_ALIASES: Record<string, string> = {
-    "Talkshow": "Talk Show",
-    "Varieta": "Varieta'",
+    Talkshow: "Talk Show",
+    Varieta: "Varieta'",
   };
   const tryExtractGenre = (s: string): { stripped: string; genre?: string } => {
     const mm = s.match(/\s*\(([^()]{2,40})\)\s*$/);
@@ -388,9 +587,10 @@ export function enrichTitle(
       // Se il raw conteneva il genere ma il rich no, mantieni il rich come
       // titolo (gia' senza parentesi) o usa il raw strippato se non c'e'
       // alcun rich match.
-      if (!best) title = rawTry.stripped
-        .toLowerCase()
-        .replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+      if (!best)
+        title = rawTry.stripped
+          .toLowerCase()
+          .replace(/(^|[\s\-:'"(])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
     }
   }
   return { title, genre };
@@ -411,7 +611,10 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
     const mm = parseInt(m[2], 10);
     if (hh > 27 || mm > 59) continue;
 
-    let titleRaw = m[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    let titleRaw = m[3]
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
     titleRaw = decodeEntities(titleRaw);
     if (!titleRaw || titleRaw.length < 2) continue;
     if (/^(continua|stagione|episodio)$/i.test(titleRaw)) continue;
@@ -451,8 +654,7 @@ function parseStaseraintvHtml(html: string, date: string): Program[] {
   }
   if (programs.length > 0) {
     const last = programs[programs.length - 1];
-    last.end = new Date(new Date(last.start).getTime() + 30 * 60 * 1000)
-      .toISOString();
+    last.end = new Date(new Date(last.start).getTime() + 30 * 60 * 1000).toISOString();
   }
   return programs;
 }
@@ -493,7 +695,7 @@ async function fetchStasera(slug: string, date: string): Promise<Program[]> {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (compatible; CalendarSports/1.0; +https://calendarsports.lovable.app)",
-        "Accept": "text/html,application/xhtml+xml",
+        Accept: "text/html,application/xhtml+xml",
         "Accept-Language": "it-IT,it;q=0.9",
       },
     });
@@ -520,8 +722,14 @@ async function fetchStasera(slug: string, date: string): Promise<Program[]> {
 // Solo "oggi" e' supportato (la fonte non espone domani/ieri in URL stabile).
 function parseSuperguidatvHtml(html: string, date: string): Program[] {
   const timeMatches = [...html.matchAll(/<p class="[^"]*sgtv-w-20[^"]*">(\d{1,2}:\d{2})<\/p>/g)];
-  const titleMatches = [...html.matchAll(/<p class="[^"]*sgtv-truncate sgtv-text-lg sgtv-leading-tight[^"]*">([^<]+)<\/p>/g)];
-  const metaMatches = [...html.matchAll(/<p class="[^"]*sgtv-truncate sgtv-border-l-\[10px\][^"]*">([^<]+)<\/p>/g)];
+  const titleMatches = [
+    ...html.matchAll(
+      /<p class="[^"]*sgtv-truncate sgtv-text-lg sgtv-leading-tight[^"]*">([^<]+)<\/p>/g,
+    ),
+  ];
+  const metaMatches = [
+    ...html.matchAll(/<p class="[^"]*sgtv-truncate sgtv-border-l-\[10px\][^"]*">([^<]+)<\/p>/g),
+  ];
 
   const rowCount = Math.min(timeMatches.length, titleMatches.length, metaMatches.length);
   if (rowCount === 0) return [];
@@ -578,8 +786,11 @@ function parseSuperguidatvHtml(html: string, date: string): Program[] {
   const dedup: Program[] = [];
   for (const p of programs) {
     const prev = dedup[dedup.length - 1];
-    if (prev && prev.title === p.title &&
-        Math.abs(new Date(p.start).getTime() - new Date(prev.end).getTime()) < 5 * 60 * 1000) {
+    if (
+      prev &&
+      prev.title === p.title &&
+      Math.abs(new Date(p.start).getTime() - new Date(prev.end).getTime()) < 5 * 60 * 1000
+    ) {
       prev.end = p.end;
       continue;
     }
@@ -603,7 +814,7 @@ async function fetchSuperguidatv(path: string, date: string): Promise<Program[]>
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
+        Accept: "text/html,application/xhtml+xml",
         "Accept-Language": "it-IT,it;q=0.9",
       },
     });
@@ -614,7 +825,14 @@ async function fetchSuperguidatv(path: string, date: string): Promise<Program[]>
     }
     const html = await res.text();
     const programs = parseSuperguidatvHtml(html, date);
-    console.log("[streaming-tv] superguidatv parsed", path, "programs=", programs.length, "htmlLen=", html.length);
+    console.log(
+      "[streaming-tv] superguidatv parsed",
+      path,
+      "programs=",
+      programs.length,
+      "htmlLen=",
+      html.length,
+    );
     fetchCache.set(cacheKey, { at: Date.now(), programs });
     return programs;
   } catch (err) {
@@ -623,10 +841,7 @@ async function fetchSuperguidatv(path: string, date: string): Promise<Program[]>
   }
 }
 
-async function fetchProgramsForChannel(
-  channel: Channel,
-  date: string,
-): Promise<Program[]> {
+async function fetchProgramsForChannel(channel: Channel, date: string): Promise<Program[]> {
   if (channel.staseraSlug) return await fetchStasera(channel.staseraSlug, date);
   if (channel.superguidatvPath) return await fetchSuperguidatv(channel.superguidatvPath, date);
   return [];
@@ -670,16 +885,16 @@ Deno.serve(async (req) => {
     const dateParam = url.searchParams.get("date") ?? "";
 
     if (action !== "prime-time") {
-      return new Response(
-        JSON.stringify({ success: false, error: "Azione non supportata" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ success: false, error: "Azione non supportata" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
     if (!FAMILY_RE.test(family)) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Famiglia canali non valida" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ success: false, error: "Famiglia canali non valida" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
     const date = DATE_RE.test(dateParam) ? dateParam : todayRomeISO();
     const familyCfg = FAMILIES[family as FamilyId];
@@ -705,15 +920,14 @@ Deno.serve(async (req) => {
       programsAvailable: channels.some((c) => c.programs.length > 0),
     };
 
-    return new Response(
-      JSON.stringify({ success: true, data: payload }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ success: true, data: payload }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("[streaming-tv]", err);
-    return new Response(
-      JSON.stringify({ success: false, error: 'Errore interno del server' }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ success: false, error: "Errore interno del server" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

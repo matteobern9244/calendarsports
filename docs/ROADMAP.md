@@ -157,10 +157,10 @@ e non è usato da niente. Con pochi iscritti non è un problema oggi.
 
 ## Falsi vuoti — cose che sembrano mancare ma ci sono
 
-| Sembra mancare                    | In realtà                                                                             |
-| --------------------------------- | -------------------------------------------------------------------------------------- |
-| Gestione offline nelle pagine     | c'è in tutte, `StreamingPage` compresa da agosto 2026                                    |
+| Sembra mancare                        | In realtà                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Gestione offline nelle pagine         | c'è in tutte, `StreamingPage` compresa da agosto 2026                                       |
 | Un orologio per i conti alla rovescia | `src/lib/countdownClock.ts`: un timer per tutta l'app, adattivo, che si ferma in background |
-| Validazione dei parametri edge    | ogni funzione valida con regex strette prima di interpolare nelle URL a monte             |
-| RLS sulle tabelle push            | attiva, con diniego totale per i ruoli client e una policy restrittiva sopra              |
-| Test sul fuso orario              | `src/lib/timezoneConsistency.test.ts`, che copre formattazione **e** confronti            |
+| Validazione dei parametri edge        | ogni funzione valida con regex strette prima di interpolare nelle URL a monte               |
+| RLS sulle tabelle push                | attiva, con diniego totale per i ruoli client e una policy restrittiva sopra                |
+| Test sul fuso orario                  | `src/lib/timezoneConsistency.test.ts`, che copre formattazione **e** confronti              |
