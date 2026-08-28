@@ -11,6 +11,7 @@ import {
   useMotoGPNextEvent,
 } from "@/hooks/useSportsData";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
+import type { FootballMatch } from "@/lib/api/schemas";
 import {
   formatDateIT,
   formatTimeIT,
@@ -101,9 +102,15 @@ export default function HomePage() {
     }
 
     if (juveCalendar && Array.isArray(juveCalendar)) {
-      const nextMatch = [...juveCalendar]
-        .filter((m: any) => m.status !== "FullTime" && m.date && getDateTimestamp(m.date) > now)
-        .sort((a: any, b: any) => getDateTimestamp(a.date) - getDateTimestamp(b.date))[0];
+      // Il predicato non filtra soltanto: restringe il tipo, cosi' `date`
+      // resta una stringa fino in fondo invece di tornare opzionale un
+      // rigo piu' sotto.
+      const nextMatch = juveCalendar
+        .filter(
+          (m): m is FootballMatch & { date: string } =>
+            m.status !== "FullTime" && typeof m.date === "string" && getDateTimestamp(m.date) > now,
+        )
+        .sort((a, b) => getDateTimestamp(a.date) - getDateTimestamp(b.date))[0];
       if (nextMatch) {
         const isHome = nextMatch.homeTeam?.toLowerCase().includes("juventus");
         const opponent = isHome ? nextMatch.awayTeam : nextMatch.homeTeam;
@@ -131,7 +138,7 @@ export default function HomePage() {
     }
 
     if (motogpNext) {
-      const startDate = motogpNext.date_start || motogpNext.date;
+      const startDate = motogpNext.date_start;
       if (startDate) {
         upcoming.push({
           sport: "MotoGP",

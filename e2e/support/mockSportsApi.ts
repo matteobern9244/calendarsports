@@ -227,8 +227,12 @@ const payloads: Record<EndpointName, unknown> = {
     { position: 2, name: "Marquez M.", team: "Gresini Racing", points: 97, photoUrl: null },
   ],
   "sports-motogp:constructor-standings": [
-    { position: 1, team: "Ducati Lenovo Team", points: 180, logoUrl: null },
-    { position: 2, team: "Aprilia Racing", points: 149, logoUrl: null },
+    // `constructor` (la casa, in minuscolo) e' parte del contratto reale:
+    // l'edge function lo ricava dal nome del team e la UI ci prende i
+    // colori. Ometterlo faceva passare il mock per un payload che non
+    // esiste.
+    { position: 1, team: "Ducati Lenovo Team", points: 180, logoUrl: null, constructor: "ducati" },
+    { position: 2, team: "Aprilia Racing", points: 149, logoUrl: null, constructor: "aprilia" },
   ],
   "sports-motogp:next-event": {
     round: 5,

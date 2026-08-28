@@ -85,7 +85,7 @@ export async function subscribeToPush(leadTimes: number[]): Promise<{
     });
   }
 
-  const json = sub.toJSON() as any;
+  const json = sub.toJSON();
   const payload = {
     endpoint: sub.endpoint,
     keys: {
@@ -108,7 +108,7 @@ export async function updatePushSettings(leadTimes: number[], enabled: boolean):
   if (!reg) return false;
   const sub = await reg.pushManager.getSubscription();
   if (!sub) return false;
-  const json = sub.toJSON() as any;
+  const json = sub.toJSON();
   const { error } = await supabase.functions.invoke("push-subscribe", {
     body: {
       endpoint: sub.endpoint,

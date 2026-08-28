@@ -39,12 +39,10 @@ export default tseslint.config(
         // parametro esiste per posizione e non viene usato di proposito.
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
       ],
-      // Resta spenta finche' non e' chiusa la tipizzazione dei payload al
-      // confine delle edge function (voce "I payload delle edge function
-      // arrivano come `any`" in docs/ROADMAP.md): oggi ci sono 25 `any` nelle
-      // pagine, ed e' quel lavoro a doverli togliere, non un
-      // `eslint-disable` per ciascuno.
-      "@typescript-eslint/no-explicit-any": "off",
+      // Accesa da quando i payload sono validati in src/lib/api/schemas.ts:
+      // dentro src/ non resta un solo `any`, e il modo di aggiungerne uno
+      // e' passare dal confine, non da un `eslint-disable`.
+      "@typescript-eslint/no-explicit-any": "error",
       "no-restricted-imports": [
         "error",
         {
@@ -109,9 +107,11 @@ export default tseslint.config(
     // Edge function: runtime Deno, non browser. `Deno`, `Response` e `fetch`
     // esistono, `document` e `window` no.
     //
-    // `no-explicit-any` resta spenta anche qui: i payload delle fonti a monte
-    // sono JSON non tipizzato e la tipizzazione al confine e' un lavoro a se',
-    // tracciato in docs/ROADMAP.md.
+    // `no-explicit-any` resta spenta qui e solo qui: le edge function
+    // leggono JSON grezzo da scraping (widget Sky, HTML Wikipedia,
+    // Pulselive) e sono loro a dargli forma. E' il lato del confine dove
+    // il dato non e' ancora tipizzato: tipizzarlo qui vorrebbe dire
+    // descrivere l'HTML altrui.
     files: ["supabase/functions/**/*.ts"],
     languageOptions: {
       globals: { ...globals.denoBuiltin, ...globals.browser },

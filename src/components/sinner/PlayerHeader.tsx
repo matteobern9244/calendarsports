@@ -3,34 +3,41 @@ import { cn } from "@/lib/utils";
 import { Ruler, Weight, Hand, MapPin, UserRound, Trophy } from "lucide-react";
 
 export interface SlamResultProp {
-  best: string | null;
+  best?: string | null;
   years: number[];
   raw: string;
 }
 
+/**
+ * Le props ammettono `null` oltre a `undefined` perche' e' cosi' che
+ * arrivano: l'infobox di Wikipedia non ha coach ne' mano di gioco, e
+ * l'edge function serve `null` invece di omettere la chiave. Finche' il
+ * confine API restituiva `any` la differenza non si vedeva, e queste
+ * firme erano piu' strette dei dati che ricevevano davvero.
+ */
 export interface PlayerHeaderProps {
   name: string;
-  ranking: number | null;
+  ranking?: number | null;
   rankingDate?: string | null;
   careerHigh?: number | null;
-  nationality?: string;
-  height?: string;
-  weight?: string;
-  birthPlace?: string;
-  plays?: string;
-  coach?: string;
+  nationality?: string | null;
+  height?: string | null;
+  weight?: string | null;
+  birthPlace?: string | null;
+  plays?: string | null;
+  coach?: string | null;
   seasonRecord?: string | null;
   seasonTitles?: number | null;
-  prizeMoney?: string;
-  photoUrl?: string;
-  source?: string;
+  prizeMoney?: string | null;
+  photoUrl?: string | null;
+  source?: string | null;
   statsUpdatedAt?: string | null;
   slamResults?: {
-    australianOpen: SlamResultProp | null;
-    rolandGarros: SlamResultProp | null;
-    wimbledon: SlamResultProp | null;
-    usOpen: SlamResultProp | null;
-    tourFinals: SlamResultProp | null;
+    australianOpen?: SlamResultProp | null;
+    rolandGarros?: SlamResultProp | null;
+    wimbledon?: SlamResultProp | null;
+    usOpen?: SlamResultProp | null;
+    tourFinals?: SlamResultProp | null;
   } | null;
 }
 

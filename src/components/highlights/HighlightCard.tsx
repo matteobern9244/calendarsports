@@ -2,15 +2,11 @@ import { motion } from "framer-motion";
 import { Play, SquarePlay } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateIT, formatRelativeIT, toRomeDate } from "@/lib/dateUtils";
+import type { HighlightItem } from "@/lib/api/schemas";
 
-export interface HighlightItem {
-  videoId: string;
-  title: string;
-  publishedAt: string;
-  source: string;
-  url: string;
-  thumbnailUrl: string;
-}
+// Il tipo e' quello del confine API: ricopiarlo qui significherebbe avere
+// due descrizioni dello stesso payload, libere di divergere.
+export type { HighlightItem };
 
 interface HighlightCardProps {
   item: HighlightItem;

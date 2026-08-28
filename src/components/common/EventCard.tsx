@@ -8,7 +8,9 @@ interface EventCardProps {
   sport: string;
   sportColor?: string;
   title: string;
-  subtitle?: string;
+  /** Ammette `null`: molte fonti servono il sottotitolo assente come
+   *  `null` invece di omettere il campo. */
+  subtitle?: string | null;
   date: string;
   time?: string;
   /** ISO date string of the event start, used for live countdown */

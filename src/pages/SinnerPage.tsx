@@ -9,6 +9,7 @@ import UnavailableExternalSource from "@/components/common/UnavailableExternalSo
 import OfflineFallback from "@/components/common/OfflineFallback";
 import PlayerHeader from "@/components/sinner/PlayerHeader";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import type { TennisMatch } from "@/lib/api/schemas";
 import { getCurrentSinnerSeason } from "@/lib/currentSeason";
 import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useSportsData";
 import { tennisApi } from "@/lib/api/sportsApi";
@@ -58,13 +59,9 @@ export default function SinnerPage() {
   // Compatibilita' di forma: il backend ora restituisce
   // `{ items, pagination }`, ma per sicurezza accettiamo anche il
   // vecchio shape `MatchRow[]` (es. cache stale o fallback).
-  const resultItems: any[] = Array.isArray(results) ? results : (results?.items ?? []);
-  const resultsPagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  } | null = !Array.isArray(results) && results?.pagination ? results.pagination : null;
+  const resultItems: TennisMatch[] = Array.isArray(results) ? results : (results?.items ?? []);
+  const resultsPagination =
+    !Array.isArray(results) && results?.pagination ? results.pagination : null;
 
   // Prefetch della pagina successiva: appena i dati della pagina
   // corrente arrivano e sappiamo quante pagine totali esistono,
@@ -168,7 +165,7 @@ export default function SinnerPage() {
             (() => {
               const { items: orderedResults, highlightIndex } = prioritizeNextUpcoming(
                 resultItems,
-                (result: any) => result.date,
+                (result) => result.date,
               );
               // Quando React Query sta gia' fetchando una nuova pagina ma
               // sta ancora mostrando i dati precedenti (`placeholderData`),
@@ -208,7 +205,7 @@ export default function SinnerPage() {
                       animate="show"
                       variants={{ show: { transition: { staggerChildren: 0.08 } } }}
                     >
-                      {orderedResults.map((r: any, i: number) => (
+                      {orderedResults.map((r, i) => (
                         <EventCard
                           key={i}
                           sport={r.tournament || "ATP"}
@@ -324,7 +321,7 @@ export default function SinnerPage() {
           )}
           {schedule && schedule.length > 0 && (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {schedule.map((t: any, i: number) => (
+              {schedule.map((t, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 12 }}

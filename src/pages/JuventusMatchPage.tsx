@@ -15,6 +15,7 @@ import TeamLogo from "@/components/common/TeamLogo";
 import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import { useJuventusCalendar } from "@/hooks/useSportsData";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
+import { matchesOf, toNumber, type FootballCalendar, type FootballMatch } from "@/lib/api/schemas";
 import { formatJuventusDateTime } from "@/lib/dateUtils";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 
@@ -28,20 +29,14 @@ const COMPETITION_COLORS: Record<string, string> = {
 };
 
 /**
- * Estrae l'elenco partite accettando entrambe le forme che l'edge function
- * puo' restituire: array nudo (richiesta senza paginazione) o inviluppo
- * `{ items }` (richiesta con `page`/`pageSize`, o cache di una vista paginata).
+ * `matchesOf` accetta entrambe le forme che l'edge function puo'
+ * restituire (array nudo, o inviluppo `{ items }` quando la richiesta
+ * porta `page`/`pageSize`) e vive con gli schemi del confine API, dove la
+ * doppia forma e' descritta una volta sola.
  */
-function matchesOf(calendar: unknown): any[] {
-  if (Array.isArray(calendar)) return calendar;
-  const items = (calendar as { items?: unknown } | undefined)?.items;
-  return Array.isArray(items) ? items : [];
-}
-
-function findMatch(calendar: unknown, matchId: string) {
+function findMatch(calendar: FootballCalendar | undefined, matchId: string) {
   return (
-    matchesOf(calendar).find((m: any) => {
-      if (m?.id == null) return false;
+    matchesOf(calendar).find((m) => {
       const id = String(m.id);
       if (id === "" || id === "undefined" || id === "null") return false;
       return id === matchId;
@@ -132,16 +127,16 @@ export default function JuventusMatchPage() {
   return <MatchDetail match={foundMatch} onRetry={() => calendarQuery.refetch()} />;
 }
 
-function MatchDetail({ match, onRetry }: { match: any; onRetry: () => void }) {
+function MatchDetail({ match, onRetry }: { match: FootballMatch; onRetry: () => void }) {
   const isFinished = match.status === "FullTime";
   const isJuveHome = match.homeTeam?.toLowerCase().includes("juventus");
   const { date: dateStr, time: timeStr, full: fullStr } = formatJuventusDateTime(match.date);
   const compColor = COMPETITION_COLORS[match.competition] || "";
 
-  const juveGoals = isJuveHome ? match.homeScore : match.awayScore;
-  const oppGoals = isJuveHome ? match.awayScore : match.homeScore;
+  const juveGoals = toNumber(isJuveHome ? match.homeScore : match.awayScore);
+  const oppGoals = toNumber(isJuveHome ? match.awayScore : match.homeScore);
   const juveResult = useMemo(() => {
-    if (!isFinished) return null;
+    if (!isFinished || juveGoals === null || oppGoals === null) return null;
     if (juveGoals > oppGoals) return "V" as const;
     if (juveGoals < oppGoals) return "S" as const;
     return "P" as const;

@@ -5,6 +5,7 @@ import ErrorState from "@/components/common/ErrorState";
 import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import type { F1Race } from "@/lib/api/schemas";
 import { getCurrentF1Season } from "@/lib/currentSeason";
 import {
   useF1Calendar,
@@ -54,7 +55,7 @@ export default function Formula1Page() {
     error: conError,
   } = useF1ConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
-  const [selectedRace, setSelectedRace] = useState<any | null>(null);
+  const [selectedRace, setSelectedRace] = useState<F1Race | null>(null);
 
   // Fallback offline: nessuna sezione ha dati in cache e siamo offline
   if (!isOnline && calError && !calendar && drvError && !drivers && conError && !constructors) {
@@ -127,7 +128,7 @@ export default function Formula1Page() {
             (() => {
               const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
                 calendar,
-                (race: any) => race.date,
+                (race) => race.date,
               );
               return (
                 <motion.div
@@ -136,7 +137,7 @@ export default function Formula1Page() {
                   animate="show"
                   variants={{ show: { transition: { staggerChildren: 0.05 } } }}
                 >
-                  {orderedCalendar.map((r: any, idx: number) => (
+                  {orderedCalendar.map((r, idx) => (
                     <EventCard
                       key={r.round}
                       sport={`Round ${r.round}`}
@@ -226,7 +227,7 @@ export default function Formula1Page() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {drivers.map((d: any) => (
+                  {drivers.map((d) => (
                     <TableRow key={d.position}>
                       <TableCell className="font-heading font-bold">{d.position}</TableCell>
                       <TableCell>
@@ -335,7 +336,7 @@ export default function Formula1Page() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {constructors.map((c: any) => (
+                  {constructors.map((c) => (
                     <TableRow key={c.position}>
                       <TableCell className="font-heading font-bold">{c.position}</TableCell>
                       <TableCell>

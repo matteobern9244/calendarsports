@@ -34,21 +34,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { footballApi } from "@/lib/api/sportsApi";
+import { paginatedCalendarOf, toNumber, type FootballMatch } from "@/lib/api/schemas";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import TeamLogo from "@/components/common/TeamLogo";
 import { Sparkles } from "lucide-react";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
 
 const PAGE_SIZE = 12;
-
-type PaginatedCalendar = {
-  items: any[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  nextUpcomingIndex: number;
-};
 
 function buildPageList(current: number, total: number): (number | "ellipsis")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -96,7 +88,7 @@ export default function JuventusPage() {
   } = useJuventusCalendar(season, page, PAGE_SIZE, upcomingOnly);
   const { isOnline } = useOnlineStatus();
 
-  const calendar = calendarData as PaginatedCalendar | undefined;
+  const calendar = paginatedCalendarOf(calendarData);
 
   // Determine the page that contains the global "next upcoming" match so we
   // can always show the NextMatchCard, even if the user navigates away from
@@ -112,8 +104,8 @@ export default function JuventusPage() {
     nextOnCurrentPage || nextMatchPage === null ? undefined : PAGE_SIZE,
     upcomingOnly,
   );
-  const nextMatchCalendar = nextMatchData as PaginatedCalendar | undefined;
-  const nextMatch: any = (() => {
+  const nextMatchCalendar = paginatedCalendarOf(nextMatchData);
+  const nextMatch: FootballMatch | null = (() => {
     if (!calendar || nextMatchPage === null) return null;
     if (nextOnCurrentPage) {
       const localIdx = calendar.nextUpcomingIndex - (calendar.page - 1) * calendar.pageSize;
@@ -379,7 +371,7 @@ export default function JuventusPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {standings.map((s: any) => {
+                  {standings.map((s) => {
                     const isJuve = s.team?.toLowerCase().includes("juventus");
                     return (
                       <TableRow
@@ -425,7 +417,10 @@ export default function JuventusPage() {
                         <TableCell className="text-center">{s.draws}</TableCell>
                         <TableCell className="text-center">{s.losses}</TableCell>
                         <TableCell className="text-center hidden sm:table-cell">
-                          {s.goalDiff > 0 ? `+${s.goalDiff}` : s.goalDiff}
+                          {(() => {
+                            const diff = toNumber(s.goalDiff);
+                            return diff !== null && diff > 0 ? `+${diff}` : diff;
+                          })()}
                         </TableCell>
                         <TableCell
                           className={cn(
@@ -523,20 +518,21 @@ export default function JuventusPage() {
                     animate="show"
                     variants={{ show: { transition: { staggerChildren: 0.05 } } }}
                   >
-                    {orderedCalendar.map((m: any, i: number) => {
+                    {orderedCalendar.map((m, i) => {
                       const isFinished = m.status === "FullTime";
                       const isJuveHome = m.homeTeam?.toLowerCase().includes("juventus");
                       const opponent = isJuveHome ? m.awayTeam : m.homeTeam;
                       const opponentLogo = isJuveHome ? m.awayLogo : m.homeLogo;
-                      const juveGoals = isJuveHome ? m.homeScore : m.awayScore;
-                      const oppGoals = isJuveHome ? m.awayScore : m.homeScore;
-                      const result = isFinished
-                        ? juveGoals > oppGoals
-                          ? "V"
-                          : juveGoals < oppGoals
-                            ? "S"
-                            : "P"
-                        : null;
+                      const juveGoals = toNumber(isJuveHome ? m.homeScore : m.awayScore);
+                      const oppGoals = toNumber(isJuveHome ? m.awayScore : m.homeScore);
+                      const result =
+                        isFinished && juveGoals !== null && oppGoals !== null
+                          ? juveGoals > oppGoals
+                            ? "V"
+                            : juveGoals < oppGoals
+                              ? "S"
+                              : "P"
+                          : null;
                       const resultColor =
                         result === "V"
                           ? "text-green-500"

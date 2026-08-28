@@ -5,7 +5,7 @@ import type { HighlightSport } from "@/lib/api/sportsApi";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
-import HighlightCard, { type HighlightItem } from "./HighlightCard";
+import HighlightCard from "./HighlightCard";
 
 interface HighlightsSectionProps {
   sport: HighlightSport;
@@ -26,7 +26,7 @@ export default function HighlightsSection({
   limit = 12,
 }: HighlightsSectionProps) {
   const { data, isLoading, error, refetch } = useHighlights(sport, limit);
-  const items = (data ?? []) as HighlightItem[];
+  const items = data ?? [];
 
   // L'edge function ritorna meta.playlistUrl ma `data` qui è solo l'array.
   // Costruiamo l'URL playlist dal primo videoId? No: usiamo i playlist id pubblici noti

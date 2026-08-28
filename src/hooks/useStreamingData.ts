@@ -5,6 +5,33 @@ import {
   type StreamingFamilyId,
   type StreamingProviderId,
 } from "@/lib/api/sportsApi";
+import type {
+  AvailableProvider,
+  CastMember,
+  CreditsPayload,
+  ReleaseDetailsPayload,
+  ReleaseItem,
+  ReleasesItalyPayload,
+  ReleasesPayload,
+  TvChannel,
+  TvFamilyPayload,
+  TvProgram,
+} from "@/lib/api/schemas";
+
+// I tipi dei payload vivono con gli altri schemi del confine API; qui
+// restano riesportati perche' mezzo src li importa da questo modulo.
+export type {
+  AvailableProvider,
+  CastMember,
+  CreditsPayload,
+  ReleaseDetailsPayload,
+  ReleaseItem,
+  ReleasesItalyPayload,
+  ReleasesPayload,
+  TvChannel,
+  TvFamilyPayload,
+  TvProgram,
+};
 
 export const STREAMING_FAMILIES: { id: StreamingFamilyId; label: string }[] = [
   { id: "rai", label: "RAI" },
@@ -20,130 +47,6 @@ export const STREAMING_PROVIDERS: { id: StreamingProviderId; label: string }[] =
   { id: "disney", label: "Disney+" },
   { id: "hbo", label: "HBO Max" },
 ];
-
-export interface TvProgram {
-  start: string;
-  end: string;
-  title: string;
-  genre?: string;
-  description?: string;
-}
-
-export interface TvChannel {
-  id: string;
-  name: string;
-  logo: string | null;
-  number?: number;
-  programs: TvProgram[];
-}
-
-export interface TvFamilyPayload {
-  family: StreamingFamilyId;
-  familyLabel: string;
-  date: string;
-  channels: TvChannel[];
-  programsAvailable: boolean;
-}
-
-export interface AvailableProvider {
-  id: number;
-  key: StreamingProviderId | string | null;
-  name: string;
-  logo: string | null;
-  type: "flatrate" | "free" | "ads";
-}
-
-export interface ReleaseItem {
-  tmdbId: number;
-  type: "movie" | "tv";
-  title: string;
-  releaseDate: string;
-  poster: string | null;
-  overview: string;
-  voteAverage: number | null;
-  deepLink: string | null;
-  /** Anno YYYY estratto dalla release date, null se mancante. */
-  year?: number | null;
-  /** Generi TMDB localizzati in italiano (label testuali). */
-  genres?: string[];
-  /** Provider IT disponibili (flatrate/free/ads), max ~5. */
-  availableProviders?: AvailableProvider[];
-  /** Link JustWatch generale del titolo (results.IT.link da TMDB). */
-  justWatchLink?: string | null;
-  /** Popolarità TMDB grezza (per ordinamento client lato vista). */
-  popularity?: number;
-}
-
-export interface ReleasesPayload {
-  provider: StreamingProviderId;
-  providerLabel: string;
-  providerHomepage?: string;
-  date: string;
-  dateFrom: string;
-  dateTo: string;
-  effectiveFrom?: string;
-  effectiveTo?: string;
-  widenedWindow?: boolean;
-  items: ReleaseItem[];
-  configured: boolean;
-}
-
-export interface ReleasesItalyPayload {
-  region: "IT";
-  dateFrom: string;
-  dateTo: string;
-  effectiveFrom?: string;
-  effectiveTo?: string;
-  widenedWindow?: boolean;
-  /** True quando la finestra date non ha prodotto risultati e il backend
-   *  ripiega sulle uscite più recenti del provider (senza vincolo data). */
-  fallbackRecent?: boolean;
-  provider: StreamingProviderId | null;
-  kind: "movie" | "tv" | "all";
-  sort: "release" | "popularity";
-  genreId: number | null;
-  items: ReleaseItem[];
-  configured: boolean;
-}
-
-export interface CastMember {
-  id: number;
-  name: string;
-  character: string;
-  profile: string | null;
-}
-
-export interface CreditsPayload {
-  type: "movie" | "tv";
-  id: string;
-  cast: CastMember[];
-  configured: boolean;
-}
-
-export interface ReleaseDetailsPayload {
-  type: "movie" | "tv";
-  id: string;
-  title: string;
-  originalTitle: string | null;
-  releaseDate: string;
-  year: number | null;
-  poster: string | null;
-  backdrop: string | null;
-  overview: string;
-  voteAverage: number | null;
-  voteCount: number;
-  runtime: number | null;
-  numberOfSeasons: number | null;
-  numberOfEpisodes: number | null;
-  genres: string[];
-  directors: string[];
-  creators: string[];
-  cast: CastMember[];
-  trailerYouTubeKey: string | null;
-  availableProviders: AvailableProvider[];
-  justWatchLink: string | null;
-  configured: boolean;
-}
 
 export function useTvByFamily(family: StreamingFamilyId) {
   return useQuery<TvFamilyPayload>({

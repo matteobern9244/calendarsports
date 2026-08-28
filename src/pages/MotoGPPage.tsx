@@ -5,19 +5,14 @@ import ErrorState from "@/components/common/ErrorState";
 import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import type { MotoGPEvent } from "@/lib/api/schemas";
 import { getCurrentMotoGPSeason } from "@/lib/currentSeason";
 import {
   useMotoGPCalendar,
   useMotoGPStandings,
   useMotoGPConstructorStandings,
 } from "@/hooks/useSportsData";
-import {
-  formatDateIT,
-  formatTimeIT,
-  getEventStatus,
-  prioritizeNextUpcoming,
-  toRomeDate,
-} from "@/lib/dateUtils";
+import { formatDateIT, getEventStatus, prioritizeNextUpcoming, toRomeDate } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -62,7 +57,7 @@ export default function MotoGPPage() {
     refetch: csRefetch,
   } = useMotoGPConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<MotoGPEvent | null>(null);
 
   if (!isOnline && calError && !calendar && stError && !standings && csError && !constructors) {
     return (
@@ -135,10 +130,9 @@ export default function MotoGPPage() {
             (() => {
               const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
                 calendar,
-                (event: any) => event.date || event.date_start,
+                (event) => event.date_start,
                 undefined,
-                (event: any) =>
-                  event.date_end ? `${event.date_end}T23:59:59Z` : event.date || event.date_start,
+                (event) => (event.date_end ? `${event.date_end}T23:59:59Z` : event.date_start),
               );
               return (
                 <motion.div
@@ -147,12 +141,10 @@ export default function MotoGPPage() {
                   animate="show"
                   variants={{ show: { transition: { staggerChildren: 0.05 } } }}
                 >
-                  {orderedCalendar.map((e: any, i: number) => {
-                    const startDate = e.date || e.date_start;
+                  {orderedCalendar.map((e, i) => {
+                    const startDate = e.date_start;
                     const endDate = e.date_end;
-                    const location = [e.circuit, e.location || e.venue, e.city, e.country]
-                      .filter(Boolean)
-                      .join(" · ");
+                    const location = [e.circuit, e.location, e.country].filter(Boolean).join(" · ");
                     // `toRomeDate` normalizza ISO "naive" come UTC (policy
                     // condivisa con le altre pagine sportive). I confronti
                     // sono in millisecondi assoluti quindi indipendenti dal
@@ -172,9 +164,7 @@ export default function MotoGPPage() {
                           : nowMs >= startMs
                             ? "in_corso"
                             : "prossimo"
-                        : startDate
-                          ? getEventStatus(startDate)
-                          : "prossimo";
+                        : getEventStatus(startDate);
 
                     return (
                       <EventCard
@@ -182,9 +172,8 @@ export default function MotoGPPage() {
                         sport={e.round ? `Round ${e.round}` : "MotoGP"}
                         title={e.name}
                         subtitle={location}
-                        date={startDate ? formatDateIT(startDate) : "—"}
-                        time={e.time ? formatTimeIT(e.time, startDate) : undefined}
-                        startDate={e.time && startDate ? `${startDate}T${e.time}` : startDate}
+                        date={formatDateIT(startDate)}
+                        startDate={startDate}
                         endDate={endDate ? `${endDate}T23:59:59Z` : undefined}
                         status={status}
                         highlight={i === highlightIndex}
@@ -196,7 +185,6 @@ export default function MotoGPPage() {
                             Weekend di gara fino al {formatDateIT(endDate)}
                           </p>
                         )}
-                        {e.result && <p className="text-sm text-muted-foreground">{e.result}</p>}
                       </EventCard>
                     );
                   })}
@@ -252,7 +240,7 @@ export default function MotoGPPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {standings.map((s: any) => (
+                  {standings.map((s) => (
                     <TableRow key={s.position}>
                       <TableCell className="font-heading font-bold">{s.position}</TableCell>
                       <TableCell>
@@ -360,7 +348,7 @@ export default function MotoGPPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {constructors.map((c: any) => (
+                  {constructors.map((c) => (
                     <TableRow key={c.position}>
                       <TableCell className="font-heading font-bold">{c.position}</TableCell>
                       <TableCell>
@@ -407,19 +395,14 @@ export default function MotoGPPage() {
         title={selectedEvent?.name ?? ""}
         subtitle={
           selectedEvent
-            ? [
-                selectedEvent.circuit,
-                selectedEvent.location || selectedEvent.venue,
-                selectedEvent.city,
-                selectedEvent.country,
-              ]
+            ? [selectedEvent.circuit, selectedEvent.location, selectedEvent.country]
                 .filter(Boolean)
                 .join(" · ")
             : undefined
         }
         sessions={
           selectedEvent?.sessions?.length
-            ? selectedEvent.sessions.map((s: any) => ({
+            ? selectedEvent.sessions.map((s) => ({
                 label: s.label,
                 date: s.date,
                 primary: s.type === "RAC",

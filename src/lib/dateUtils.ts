@@ -131,7 +131,7 @@ export function prioritizeNextUpcoming<T>(
 }
 
 /** Format UTC time string (HH:mm:ssZ) to Italian local time */
-export function formatTimeIT(timeStr?: string | null, dateStr?: string): string {
+export function formatTimeIT(timeStr?: string | null, dateStr?: string | null): string {
   if (!timeStr) return "";
   try {
     const rawTime = timeStr.trim();

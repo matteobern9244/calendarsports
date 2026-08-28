@@ -61,26 +61,21 @@ e decidere in base all'esito.
 
 ## Priorità media
 
-### I payload delle edge function arrivano come `any`
+### Il confine streaming è dichiarato, ma non verificato
 
-`callEdgeFunction` in [`src/lib/api/sportsApi.ts`](../src/lib/api/sportsApi.ts)
-ritorna `json.data` senza tipo, quindi ogni pagina che la consuma lavora su
-`any`: sono venticinque punti, sparsi fra `JuventusPage`, `SinnerPage`,
-`Index`, `MotoGPPage`, `Formula1Page` e `JuventusMatchPage`. Un campo
-rinominato a monte non produce nessun errore di compilazione: produce
-`undefined` a schermo.
+Da quando `callEdgeFunction` valida i payload con gli schemi di
+[`src/lib/api/schemas.ts`](../src/lib/api/schemas.ts), le cinque azioni
+sportive controllano davvero cosa ricevono. Le cinque azioni di
+`streaming-tv` e `streaming-releases` no: passano da `declaredOnly`, che
+tipizza e basta. È lo stesso grado di garanzia di prima — nessuno — ma ora è
+scritto e si trova con un grep invece di nascondersi dentro `any`.
 
-È anche il motivo per cui `@typescript-eslint/no-explicit-any` resta spenta in
-`eslint.config.js`: riaccenderla senza aver tipizzato il confine
-significherebbe venticinque `eslint-disable`.
+Serve: schemi ricavati da quello che le due edge function producono davvero
+(TMDB per le uscite, palinsesti per la TV), non dalle interfacce scritte a
+mano, che potrebbero già essere in ritardo sul codice.
 
-Serve: schemi al confine, derivati dai payload già tipizzati in
-`e2e/support/mockSportsApi.ts`, e `callEdgeFunction<T>` che li applica.
-**Nota**: `zod` è stato rimosso dalle dipendenze durante l'audit perché non lo
-importava nessuno, quindi il primo passo è reinstallarlo.
-
-**Costo**: medio. **Perché ora**: è il confine fra codice controllato e dati
-altrui, l'unico punto dove la tipizzazione compra qualcosa di reale.
+**Costo**: medio. **Perché ora**: `StreamingPage` è la pagina più grande del
+progetto e la sola dove un campo rinominato a monte non fa rumore.
 
 ### Il calendario ricalcola tutto a ogni render
 
