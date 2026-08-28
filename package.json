@@ -12,6 +12,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc -b",
     "preview": "vite preview",
     "test": "vitest run",
@@ -24,7 +26,11 @@
     "verify": "bun run typecheck && bun run lint && bun run check:italian && bun run check:tz-juventus && bun run test && bun run build"
   },
   "lint-staged": {
-    "*.{ts,tsx}": "eslint --max-warnings=0 --no-warn-ignored"
+    "*.{ts,tsx}": [
+      "eslint --max-warnings=0 --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.{js,mjs,cjs,json,css,md,yml,yaml}": "prettier --write"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -63,6 +69,8 @@
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^6.1.0",
     "eslint": "^10.9.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-prettier": "5.5.6",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.5",
     "globals": "^17.4.0",
@@ -70,6 +78,7 @@
     "jsdom": "^30.0.1",
     "lint-staged": "^17.3.0",
     "lovable-tagger": "^1.3.3",
+    "prettier": "3.9.6",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.68.0",

@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+playwright-report
+test-results
+bun.lock
+*.tsbuildinfo
+
+# Stato locale dei plugin per agenti AI: non e' codice del progetto.
+.remember
+
+# File generato dalla CLI Supabase: viene ri-sincronizzato da upstream e non
+# deve divergere per motivi di formattazione.
+src/integrations/supabase/types.ts
