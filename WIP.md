@@ -15,7 +15,7 @@ Misurato, non ricordato:
 
 ```text
 bun run verify   → exit 0 (typecheck, lint, italiano, fuso, test, build)
-bun run test     → 206 test su 19 file, tutti verdi
+bun run test     → 208 test su 20 file, tutti verdi
 bun run test:e2e → 4 test verdi
 bun audit        → No vulnerabilities found
 bun outdated     → solo typescript 5.9.3 (fermo di proposito, vedi sotto)
@@ -74,6 +74,15 @@ pagine derivano da li'. Spariti i 25 `any` di `src/`,
 cinque azioni streaming, che passano da `declaredOnly`: e' la voce nuova del
 ROADMAP che ha sostituito quella chiusa.
 
+**Fase 6.1 — memoizzazioni.** `useCalendarEvents` restituiva un array
+nuovo a ogni render: il tick da 60 secondi di `CalendarPage` rifaceva
+l'espansione, il filtro e l'ordinamento di ~350 eventi e invalidava a
+cascata le quattro `useMemo` della pagina. In `TonightTvList` la memo
+dipendeva da `[tvQueries]`, cioe' dall'array che `useQueries` ricrea a
+ogni render: ora l'aggregazione e' la sua `combine`, una funzione di
+modulo. Hoistati i formatter `Intl`: misurato in Chromium, costruirne uno
+per data costa 13,9 ms ogni 350 date contro 0,20 ms riusandolo.
+
 **Fase 4 — struttura agentica e documentazione.** `.claude/` versionata,
 AGENTS.md ridotto da 302 a 115 righe in forma di router, CLAUDE.md sottile,
 cinque playbook in `docs/agent-playbook/`, i documenti tecnici
@@ -82,12 +91,11 @@ di Dependabot per npm.
 
 ## Da fare — riprendere da qui
 
-### 1. Fase 6, i tre task rimasti
+### 1. Fase 6, i due task rimasti
 
-La prima è una voce a **priorità media** di [`docs/ROADMAP.md`](docs/ROADMAP.md),
-le altre due a priorità bassa e media; ognuna ha lì costo e motivazione scritti.
+Sono voci di [`docs/ROADMAP.md`](docs/ROADMAP.md), a priorità bassa e media;
+ognuna ha lì costo e motivazione scritti.
 
-- **Memoizzazioni** — voce «Il calendario ricalcola tutto a ogni render».
 - **Componenti giganti.** `StreamingPage` (828 righe), `TonightTvList` (760),
   `JuventusPage` (631), `CalendarPage` (601). Da estrarre per gradi: prima gli
   hook di derivazione, poi i presentazionali, poi un `SportPageShell` che
@@ -125,13 +133,14 @@ Changelog e nota di rilascio. La versione attuale è `2.7.0` in `package.json` e
 serie `2.6.x`, che manca dal changelog pur avendo già una nota in
 `docs/releases/`.
 
-**Da non perdere**: sette voci sono state cancellate da `docs/ROADMAP.md` perché
+**Da non perdere**: otto voci sono state cancellate da `docs/ROADMAP.md` perché
 realizzate, e la regola del ROADMAP dice che si spostano nel changelog. Vanno
 quindi raccontate nella sezione 2.8.0: code splitting per route con
 `ErrorBoundary` dentro `Layout`; chiavi di cache in una fabbrica sola; test
 delle edge function eseguiti davvero; Prettier obbligatorio; lint esteso alle
-tre aree scoperte; un solo workflow CI che lancia il gate locale; payload delle edge function
-validati al confine con `no-explicit-any` riaccesa.
+tre aree scoperte; un solo workflow CI che lancia il gate locale; payload delle
+edge function validati al confine con `no-explicit-any` riaccesa; calendario e
+scheda TV che non ricalcolano più tutto a ogni render.
 
 ## Cose scoperte durante il lavoro che vale la pena ricordare
 
@@ -180,5 +189,16 @@ validati al confine con `no-explicit-any` riaccesa.
   scritte a mano a valle: `useQuery<TvFamilyPayload>` era un cast travestito
   da tipo, e quattro campi letti da `MotoGPPage` non esistevano da nessuna
   parte.
+- **Costruire un `Intl.DateTimeFormat` costa ~70 volte la sua `format`.**
+  Misurato in Chromium: 13,9 ms contro 0,20 ms per 350 date. Erano dieci
+  righe innocue dentro `toRomeYMD`, chiamata una volta per evento del
+  calendario, cioè ~14 ms di thread bloccato a ogni render della pagina.
+  I formatter vanno costruiti a livello di modulo.
+- **Un mock che ignora un'opzione della libreria collauda una libreria che
+  non esiste.** I due `vi.mock("@tanstack/react-query")` di `TonightTvList`
+  implementavano `useQueries` senza `combine`: finché nessuno la usava
+  sembravano fedeli. Venti test sono diventati rossi appena il componente
+  ha iniziato a usarla — il che è il comportamento giusto, ma dice che il
+  mock descriveva le nostre abitudini, non il contratto.
 - `App.tsx` monta ancora **due** sistemi di toast, Sonner e quello Radix. Il
   piano (Task 6.6) prevedeva di tenere solo Sonner: non è stato fatto.
