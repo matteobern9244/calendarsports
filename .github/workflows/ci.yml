@@ -1,6 +1,12 @@
-name: CI Pull Request
+name: CI
 
+# Un solo workflow per i due casi: push su `develop` e pull request verso
+# `develop` o `main`. Prima erano due file quasi identici, e ogni modifica al
+# gate andava ricopiata in tutti e due.
 on:
+  push:
+    branches:
+      - develop
   pull_request:
     branches:
       - develop
@@ -10,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-pr-main-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,26 +41,14 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Typecheck
-        run: bun run typecheck
-
-      - name: Lint
-        run: bun run lint
-
-      - name: Italian UI guard
-        run: bun run check:italian
-
-      - name: Rome timezone guard (Juventus)
-        run: bun run check:tz-juventus
-
-      - name: Unit tests
-        run: bun run test
-
-      - name: Build
+      # Un solo comando, lo stesso che gira in locale prima di consegnare.
+      # Elencare qui i singoli anelli li farebbe divergere dal gate locale
+      # senza che nessuno se ne accorga.
+      - name: Verify
         env:
           VITE_SUPABASE_URL: http://127.0.0.1:54321
           VITE_SUPABASE_PUBLISHABLE_KEY: test-anon-key
-        run: bun run build
+        run: bun run verify
 
   e2e:
     name: e2e
@@ -87,7 +81,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report-pr-main
+          name: playwright-report
           path: |
             playwright-report
             test-results

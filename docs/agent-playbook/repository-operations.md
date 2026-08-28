@@ -62,17 +62,21 @@ che `bun outdated` mostra ferma, ed è ferma di proposito.
 
 ### La CI è un gate, non un rapporto
 
-Due workflow, `CI Develop` (push su `develop`) e `CI Pull Request` (PR verso
-`develop` e `main`), entrambi con due job:
+Un workflow solo, `CI` (`.github/workflows/ci.yml`), su push a `develop` e su
+PR verso `develop` e `main`, con due job:
 
-- `quality`: typecheck → lint → `check:italian` → `check:tz-juventus` → test →
-  build;
+- `quality`: un unico passo, `bun run verify`;
 - `e2e`: Playwright su Chromium, con report caricato come artifact solo in caso
   di fallimento.
 
-`bun run verify` in locale esegue gli stessi anelli del job `quality`. Se aggiungi
-un controllo alla CI, aggiungilo anche a `verify`: due elenchi che divergono
-significano che uno dei due smette di essere il gate.
+Il job `quality` lancia `bun run verify` e basta, di proposito: elencare i
+singoli anelli nel workflow li farebbe divergere dal gate locale senza che
+nessuno se ne accorga. Se aggiungi un controllo, lo aggiungi a `verify` e la
+CI lo prende da sola.
+
+`Enable PR Auto Merge` si aggancia a questo workflow **per nome**, con
+`workflow_run`. Se rinomini `CI`, rinominalo anche li': un nome sbagliato non
+produce un errore, produce un trigger che non scatta mai.
 
 Lo script `lint` porta `--max-warnings=0`. Un avviso deve fallire come un errore:
 altrimenti se ne accumulano a centinaia, la CI li stampa e passa lo stesso.

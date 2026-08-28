@@ -3,7 +3,11 @@ name: Enable PR Auto Merge
 on:
   workflow_run:
     workflows:
-      - CI Pull Request
+      # Rinominato da 'CI Pull Request' quando i due workflow CI sono stati
+      # unificati in `ci.yml`. Se cambia il nome li', va cambiato anche qui:
+      # `workflow_run` aggancia per nome, e un nome sbagliato non e' un
+      # errore, e' un trigger che non scatta mai.
+      - CI
       - Guard Main Source
     types:
       - completed

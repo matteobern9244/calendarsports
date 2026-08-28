@@ -19,12 +19,19 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Enforce develop as source branch for main
+        # Il nome del branch arriva da chi apre la PR: interpolarlo dentro lo
+        # script con `${{ }}` lo farebbe sostituire nel testo prima che la
+        # shell lo legga, e un branch chiamato ad arte eseguirebbe comandi
+        # arbitrari nel runner. Passato come variabile d'ambiente, resta un
+        # dato.
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          if [ "${{ github.head_ref }}" = "develop" ]; then
+          if [ "$HEAD_REF" = "develop" ]; then
             echo "Source branch is develop. Guard passed."
             exit 0
           fi
 
           echo "::error title=Invalid source branch::Only pull requests from develop to main are allowed."
-          echo "Current source branch: ${{ github.head_ref }}"
+          echo "Current source branch: $HEAD_REF"
           exit 1
