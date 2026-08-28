@@ -15,7 +15,7 @@ Misurato, non ricordato:
 
 ```text
 bun run verify   → exit 0 (typecheck, lint, italiano, fuso, test, build)
-bun run test     → 187 test su 17 file, tutti verdi
+bun run test     → 206 test su 19 file, tutti verdi
 bun run test:e2e → 4 test verdi
 bun audit        → No vulnerabilities found
 bun outdated     → solo typescript 5.9.3 (fermo di proposito, vedi sotto)
@@ -67,6 +67,13 @@ pura è uscita in moduli importabili senza far partire `Deno.serve`. I due
 workflow CI sono diventati uno. Aggiunti tre guardiani sul tooling in
 `src/test/tooling/`.
 
+**Fase 6.3 — tipizzazione dei payload al confine.** `callEdgeFunction` valida
+ogni risposta con uno schema zod (`src/lib/api/schemas.ts`) e i tipi delle
+pagine derivano da li'. Spariti i 25 `any` di `src/`,
+`@typescript-eslint/no-explicit-any` e' di nuovo accesa. Restano fuori le
+cinque azioni streaming, che passano da `declaredOnly`: e' la voce nuova del
+ROADMAP che ha sostituito quella chiusa.
+
 **Fase 4 — struttura agentica e documentazione.** `.claude/` versionata,
 AGENTS.md ridotto da 302 a 115 righe in forma di router, CLAUDE.md sottile,
 cinque playbook in `docs/agent-playbook/`, i documenti tecnici
@@ -75,16 +82,11 @@ di Dependabot per npm.
 
 ## Da fare — riprendere da qui
 
-### 1. Fase 6, i quattro task rimasti
+### 1. Fase 6, i tre task rimasti
 
-Le prime due sono voci a **priorità media** di [`docs/ROADMAP.md`](docs/ROADMAP.md),
+La prima è una voce a **priorità media** di [`docs/ROADMAP.md`](docs/ROADMAP.md),
 le altre due a priorità bassa e media; ognuna ha lì costo e motivazione scritti.
 
-- **Tipizzazione dei payload API** — voce «I payload delle edge function
-  arrivano come `any`». Primo passo: reinstallare `zod`, rimosso durante la
-  Fase 2 perché non lo importava nessuno. Chiudendo questa si può riaccendere
-  `@typescript-eslint/no-explicit-any`, oggi spenta con la motivazione scritta
-  accanto in `eslint.config.js`.
 - **Memoizzazioni** — voce «Il calendario ricalcola tutto a ogni render».
 - **Componenti giganti.** `StreamingPage` (828 righe), `TonightTvList` (760),
   `JuventusPage` (631), `CalendarPage` (601). Da estrarre per gradi: prima gli
@@ -123,12 +125,13 @@ Changelog e nota di rilascio. La versione attuale è `2.7.0` in `package.json` e
 serie `2.6.x`, che manca dal changelog pur avendo già una nota in
 `docs/releases/`.
 
-**Da non perdere**: sei voci sono state cancellate da `docs/ROADMAP.md` perché
+**Da non perdere**: sette voci sono state cancellate da `docs/ROADMAP.md` perché
 realizzate, e la regola del ROADMAP dice che si spostano nel changelog. Vanno
 quindi raccontate nella sezione 2.8.0: code splitting per route con
 `ErrorBoundary` dentro `Layout`; chiavi di cache in una fabbrica sola; test
 delle edge function eseguiti davvero; Prettier obbligatorio; lint esteso alle
-tre aree scoperte; un solo workflow CI che lancia il gate locale.
+tre aree scoperte; un solo workflow CI che lancia il gate locale; payload delle edge function
+validati al confine con `no-explicit-any` riaccesa.
 
 ## Cose scoperte durante il lavoro che vale la pena ricordare
 
@@ -167,5 +170,15 @@ tre aree scoperte; un solo workflow CI che lancia il gate locale.
 - **Le e2e non coprono il rischio visivo.** Per Tailwind 4 sono state verificate
   a schermo Home, Juventus, Streaming, Calendario, F1 e Sinner in tema chiaro e
   scuro. Qualunque intervento sullo stile va verificato allo stesso modo.
+- **Un campo che si chiama `constructor` non e' mai davvero opzionale.** zod
+  legge i campi con `value[key]`, che attraversa la catena dei prototipi: su
+  ogni oggetto uscito da `JSON.parse` quella chiave esiste e vale una
+  funzione. La classifica costruttori MotoGP si sarebbe svuotata in silenzio.
+  L'ha trovato una e2e, non il typecheck.
+- **`any` al confine non lascia senza tipo soltanto i payload.** Essendo
+  assegnabile a qualunque cosa, rendeva non verificate anche le annotazioni
+  scritte a mano a valle: `useQuery<TvFamilyPayload>` era un cast travestito
+  da tipo, e quattro campi letti da `MotoGPPage` non esistevano da nessuna
+  parte.
 - `App.tsx` monta ancora **due** sistemi di toast, Sonner e quello Radix. Il
   piano (Task 6.6) prevedeva di tenere solo Sonner: non è stato fatto.
