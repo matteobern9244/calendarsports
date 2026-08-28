@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
+import prettierRecommended from "eslint-plugin-prettier/recommended";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
@@ -11,6 +12,11 @@ export default tseslint.config(
       // Stato locale dei plugin per agenti AI: non e' codice del progetto e non
       // deve comparire fra gli errori di lint.
       ".remember",
+      // Artefatti di Playwright.
+      "playwright-report",
+      "test-results",
+      // Generato dalla CLI Supabase: si ri-sincronizza da upstream.
+      "src/integrations/supabase/types.ts",
     ],
   },
   {
@@ -27,7 +33,16 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        // Il prefisso `_` e' la deroga esplicita: dice al lettore che il
+        // parametro esiste per posizione e non viene usato di proposito.
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
+      // Resta spenta finche' non e' chiusa la tipizzazione dei payload al
+      // confine delle edge function (voce "Tipizzazione dei payload API" in
+      // docs/ROADMAP.md): oggi ci sono 25 `any` nelle pagine, ed e' quel
+      // lavoro a doverli togliere, non un `eslint-disable` per ciascuno.
       "@typescript-eslint/no-explicit-any": "off",
       "no-restricted-imports": [
         "error",
@@ -71,4 +86,42 @@ export default tseslint.config(
       "no-restricted-imports": "off",
     },
   },
+  {
+    // Script di verifica e file di configurazione: girano su Node, non nel
+    // browser. Prima di questo blocco non erano coperti da nessuna regola.
+    files: ["scripts/**/*.{js,mjs}", "*.config.{js,ts}", "eslint.config.js"],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: globals.node,
+    },
+  },
+  {
+    // Test end-to-end: girano in Node sotto Playwright, non nel browser.
+    files: ["e2e/**/*.ts"],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
+  {
+    // Edge function: runtime Deno, non browser. `Deno`, `Response` e `fetch`
+    // esistono, `document` e `window` no.
+    //
+    // `no-explicit-any` resta spenta anche qui: i payload delle fonti a monte
+    // sono JSON non tipizzato e la tipizzazione al confine e' un lavoro a se',
+    // tracciato in docs/ROADMAP.md.
+    files: ["supabase/functions/**/*.ts"],
+    languageOptions: {
+      globals: { ...globals.denoBuiltin, ...globals.browser },
+    },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
+  // Prettier per ultimo: spegne le regole di stile che confliggono e
+  // trasforma ogni differenza di formattazione in un errore di lint.
+  // Deve restare l'ultimo elemento della flat config.
+  prettierRecommended,
 );

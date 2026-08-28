@@ -236,32 +236,10 @@ async function tmdbCredits(kind: "movie" | "tv", id: string, apiKey: string): Pr
   return await res.json();
 }
 
-// Verifica che il titolo sia effettivamente disponibile in abbonamento (flatrate)
-// sul provider richiesto in regione IT al momento della query. TMDB Discover
-// puo' restituire match basati su finestre storiche: questa chiamata conferma
-// la disponibilita' corrente. Ritorna anche il deep link JustWatch (results.IT.link)
-// se presente, da usare come destinazione "Vai a {provider}" sul titolo specifico.
-async function tmdbItemProviderInfoIT(
-  kind: "movie" | "tv",
-  id: number,
-  providerId: number,
-  apiKey: string,
-): Promise<{ available: boolean; deepLink: string | null }> {
-  try {
-    const info = await tmdbItemProvidersFullIT(kind, id, apiKey);
-    const available = info.flatrate.some((p) => p.provider_id === providerId);
-    const deepLink = available && info.link ? info.link : null;
-    return { available, deepLink };
-  } catch (_err) {
-    return { available: false, deepLink: null };
-  }
-}
-
 /**
  * Recupera l'intero blocco /watch/providers IT per un titolo, con cache di
  * 1h. Restituisce flatrate/free/ads + link JustWatch generale del titolo.
- * Usato sia dalla validazione legacy che dall'arricchimento di new-italy
- * e details.
+ * Usato dall'arricchimento di new-italy e details.
  */
 async function tmdbItemProvidersFullIT(
   kind: "movie" | "tv",

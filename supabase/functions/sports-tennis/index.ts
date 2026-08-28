@@ -195,29 +195,6 @@ function parseItalianDateInline(s: string): string | null {
   return `${m[3]}-${mm}-${m[1].padStart(2, "0")}`;
 }
 
-function parseDateText(s: string): string | null {
-  // "16 August 2001" or "13 April 2026"
-  const m = s.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
-  if (!m) return null;
-  const months: Record<string, string> = {
-    january: "01",
-    february: "02",
-    march: "03",
-    april: "04",
-    may: "05",
-    june: "06",
-    july: "07",
-    august: "08",
-    september: "09",
-    october: "10",
-    november: "11",
-    december: "12",
-  };
-  const mm = months[m[2].toLowerCase()];
-  if (!mm) return null;
-  return `${m[3]}-${mm}-${m[1].padStart(2, "0")}`;
-}
-
 // ----- Player info -----------------------------------------------------
 // Foto principale dall'infobox IT (US Open 2025, cropped)
 const PHOTO_URL =
@@ -401,10 +378,6 @@ function parseTournamentHeader(cellHtml: string): {
   const text = stripTags(cellHtml);
   // Patterns inside header cell:
   // "Australian Open Melbourne, Australia Grand Slam tournament Hard, outdoor 18 January – 1 February 2026"
-  const lines = text.split(
-    /(?<=Australia|France|Italy|USA|Spain|Germany|Austria|UK|China|Canada|Qatar|UAE)\s|(?:Tournament|Hard|Clay|Grass|Hard \(Indoor\))/,
-  );
-  // simpler approach: regex on date range
   const dateRangeRe = /(\d{1,2})\s+([A-Za-z]+)(?:\s*[–-]\s*(\d{1,2})\s+([A-Za-z]+))?\s+(\d{4})/;
   const dr = text.match(dateRangeRe);
   let date: string | null = null;

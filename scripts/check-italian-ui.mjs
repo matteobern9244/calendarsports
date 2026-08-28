@@ -12,7 +12,8 @@
  *    da CLI shadcn re-introducono inglese, ma non vogliamo rompere il
  *    workflow di rigenerazione.
  *  - File *.test.* e *.spec.* esclusi.
- *  - Commenti // e /* *​/ vengono strippati prima del match.
+ *  - I commenti, sia di linea sia di blocco, vengono strippati prima
+ *    del match.
  *  - Solo regex JSX-text e attributi UI vengono analizzati: non è un
  *    parser AST completo, ma copre il 95% dei casi reali.
  *
@@ -295,7 +296,7 @@ function extractCandidates(src) {
     const value = m[1].trim();
     if (!value) continue;
     if (!/[A-Za-zÀ-ÿ]/.test(value)) continue;
-    if (/[;=()\[\]{}|&`$"\\]/.test(value)) continue;
+    if (/[;=()[\]{}|&`$"\\]/.test(value)) continue;
     // scarta frammenti che iniziano con minuscola+lettere senza spazi e
     // sembrano identificatori (es. "currentYear", "props")
     if (!/\s/.test(value) && /^[a-z][A-Za-z0-9_]*$/.test(value)) continue;
@@ -376,10 +377,6 @@ function extractCandidates(src) {
   }
 
   return candidates;
-}
-
-function isAsciiOnly(s) {
-  return /^[\x00-\x7F]*$/.test(s);
 }
 
 function tokens(value) {
