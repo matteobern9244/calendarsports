@@ -15,7 +15,7 @@ Misurato, non ricordato:
 
 ```text
 bun run verify   → exit 0 (typecheck, lint, italiano, fuso, test, build)
-bun run test     → 208 test su 20 file, tutti verdi
+bun run test     → 216 test su 21 file, tutti verdi
 bun run test:e2e → 4 test verdi
 bun audit        → No vulnerabilities found
 bun outdated     → solo typescript 5.9.3 (fermo di proposito, vedi sotto)
@@ -83,6 +83,18 @@ ogni render: ora l'aggregazione e' la sua `combine`, una funzione di
 modulo. Hoistati i formatter `Intl`: misurato in Chromium, costruirne uno
 per data costa 13,9 ms ogni 350 date contro 0,20 ms riusandolo.
 
+**Fase 6.2a — la sezione a tre stati.** `DataSection`
+(`src/components/common/DataSection.tsx`, 103 righe, 8 test) ha assorbito le
+dieci copie della terna `LoadingState` / `ErrorState` /
+`UnavailableExternalSource`. La fonte esterna di ogni sezione si dichiara una
+volta invece di tre (`ExternalSource`: `href`, `label`, `loadingLabel`
+opzionale), e la condizione «non ci sono dati» vive in un `isEmpty` solo invece
+che in due espressioni che dovevano restare negazioni esatte. Migrate tutte e
+quattro le pagine: Formula1 430→409, MotoGP 427→408, Sinner 378→363, Juventus
+715→712. Due difetti trovati durante la migrazione, entrambi corretti e in
+changelog: il «Riprova» mancante sulla scheda Costruttori F1 e `Date.now()` in
+render dentro `MotoGPPage`.
+
 **Fase 4 — struttura agentica e documentazione.** `.claude/` versionata,
 AGENTS.md ridotto da 302 a 115 righe in forma di router, CLAUDE.md sottile,
 cinque playbook in `docs/agent-playbook/`, i documenti tecnici
@@ -96,37 +108,33 @@ di Dependabot per npm.
 Sono voci di [`docs/ROADMAP.md`](docs/ROADMAP.md), a priorità bassa e media;
 ognuna ha lì costo e motivazione scritti.
 
-- **Componenti giganti — si riparte da qui, dal `SportPageShell`.** Deciso
-  di cominciare dal guscio trasversale invece che dal file più grande:
-  tocca quattro pagine insieme ed è coperto dalle e2e che le visitano
-  tutte. Conteggi misurati il 28 agosto 2026: `TonightTvList` 802 righe,
-  `StreamingPage` 788, `JuventusPage` 715, `CalendarPage` 695,
-  `Formula1Page` 430, `MotoGPPage` 427, `SinnerPage` 378.
+- **Componenti giganti — la terna è fatta, si riparte dai file più
+  grandi.** Conteggi misurati il 31 agosto 2026: `TonightTvList` 802
+  righe, `StreamingPage` 788, `JuventusPage` 712, `CalendarPage` 695,
+  `Formula1Page` 409, `MotoGPPage` 408, `SinnerPage` 363.
 
-  Il guscio ripetuto in `Formula1Page`, `MotoGPPage`, `SinnerPage` e
-  `JuventusPage` è fatto di tre pezzi distinti, ed è utile non
-  confonderli:
+  Del guscio trasversale restano solo i due pezzi esterni — guardiano
+  offline e intestazione con le tab, ~50 righe in tutto su quattro
+  pagine. Sono descritti nella voce del ROADMAP e **non sono la
+  prossima mossa**: rendono molto meno per riga toccata di quanto
+  abbiano reso i dieci `TabsContent`.
 
-  1. **Il guardiano offline**, identico in tutte e quattro: un `if`
-     che verifica «nessuna sezione ha dati _e_ tutte sono in errore _e_
-     siamo offline», e ritorna `OfflineFallback` dentro il solito
-     `div.container.py-8.sm:py-12`. Vale ~12 righe per pagina.
-  2. **L'intestazione con le tab**: stesso contenitore, `SectionHeader`
-     dentro un `div.mb-2`, `Tabs` con `TabsList` e i trigger che
-     ripetono la stessa classe. Vale ~15 righe per pagina — attenzione,
-     `SinnerPage` usa una `TabsList` più semplice delle altre tre.
-  3. **La terna `LoadingState` / `ErrorState` /
-     `UnavailableExternalSource`** dentro ogni `TabsContent`, con i
-     medesimi tre link esterni ripetuti in ciascuno dei tre stati.
+  La prossima mossa è `StreamingPage` (788 righe: dieci stati locali,
+  la serializzazione dei filtri nell'URL, tre sotto-componenti definiti
+  in fondo al file, quattro tabelle di dati inline) oppure
+  `TonightTvList` (802), e va fatta **per estrazioni successive**, non
+  in un colpo solo.
 
-  **La resa vera è nel terzo pezzo, non nei primi due.** I primi due si
-  ripetono quattro volte (una per pagina); la terna si ripete **dieci**
-  volte, perché sta dentro ogni singola tab: tre in `Formula1Page` e
-  `MotoGPPage`, due in `SinnerPage` e `JuventusPage`, a 25-30 righe
-  l'una. Un `SportPageShell` che unifichi solo il guscio esterno
-  toglierebbe una cinquantina di righe in tutto; è la sezione a tre
-  stati il componente che ne vale centinaia. Conviene quindi partire da
-  quella e trattare il guscio come il contorno.
+  **Attenzione: quella rete di sicurezza lì non c'è.** La migrazione
+  della terna è stata coperta dalla e2e di navigazione, che attraversa
+  davvero tutte e dieci le sezioni toccate (Sinner risultati e tornei,
+  Juventus calendario e classifica, i tre tab F1, i tre tab MotoGP) e
+  ne verifica il contenuto. `StreamingPage` invece **non è visitata da
+  nessuna e2e**, e `TonightTvList` ne ha una sola, sul separatore fra
+  famiglie. In più i due `vi.mock("@tanstack/react-query")` di
+  `TonightTvList` descrivono le nostre abitudini e non il contratto
+  della libreria (vedi sotto). Prima di tagliare quei due file conviene
+  costruire la rete, non dopo.
 
 - **PWA e accessibilità** — voce «L'app installata non funziona offline», più le
   tre correzioni puntuali di a11y elencate nel piano (riga TV focusabile ma non
@@ -169,6 +177,10 @@ delle edge function eseguiti davvero; Prettier obbligatorio; lint esteso alle
 tre aree scoperte; un solo workflow CI che lancia il gate locale; payload delle
 edge function validati al confine con `no-explicit-any` riaccesa; calendario e
 scheda TV che non ricalcolano più tutto a ogni render.
+
+La sezione `[Unreleased]` di `changelog.md` **non è più vuota**: contiene già
+le tre voci di `DataSection` (il «Riprova» F1, il clock MotoGP, il componente
+comune). Vanno assorbite nella 2.8.0, non riscritte da capo.
 
 ## Cose scoperte durante il lavoro che vale la pena ricordare
 
@@ -228,5 +240,29 @@ scheda TV che non ricalcolano più tutto a ogni render.
   sembravano fedeli. Venti test sono diventati rossi appena il componente
   ha iniziato a usarla — il che è il comportamento giusto, ma dice che il
   mock descriveva le nostre abitudini, non il contratto.
+- **Il linter vede solo il codice che riesce a leggere.** `MotoGPPage`
+  chiamava `Date.now()` durante il render da mesi, con `verify` verde:
+  `react-hooks/purity` non entrava nell'IIFE finché questo stava in fondo a
+  una catena `calendar && calendar.length > 0 && (() => {...})()`. Tolta la
+  catena — la condizione è passata dentro `isEmpty` — la regola ha visto il
+  codice ed è diventata rossa al primo lint. Il refactor non ha introdotto il
+  difetto: lo ha reso raggiungibile. Vale la pena aspettarselo ogni volta che
+  si semplifica un'espressione condizionale complicata.
+- **La duplicazione qui non costava righe, costava deriva.** Le dieci copie
+  della terna erano già divergenti in due punti — un `onRetry` mancante e un
+  ordine dei blocchi diverso da tab a tab — senza che niente fallisse. Il
+  guadagno in righe della `DataSection` è modesto (~60 sulle quattro pagine,
+  contro 103 righe di componente nuovo più 145 di test): il guadagno vero è
+  che ora quei due difetti sarebbero impossibili da scrivere.
+- **I `children` di un componente si valutano anche quando non vengono
+  resi.** In `DataSection` il contenuto è JSX, quindi le `map` e gli IIFE
+  dentro girano pure quando `isEmpty` è vero e React li scarta. Qui è
+  irrilevante — si mappa un array vuoto — ma se un giorno un contenuto
+  diventasse costoso la soluzione è una render prop, non spostare la
+  condizione fuori.
+- Nei quattro file sportivi le URL delle fonti F1 contengono **`2025`
+  scritto a mano** (`.../racing/2025`, `.../results/2025/drivers`) mentre
+  `season` viene da `getCurrentF1Season()`. Precede questo lavoro e non è
+  stato toccato, ma è un link alla stagione sbagliata appena l'anno gira.
 - `App.tsx` monta ancora **due** sistemi di toast, Sonner e quello Radix. Il
   piano (Task 6.6) prevedeva di tenere solo Sonner: non è stato fatto.
