@@ -82,23 +82,36 @@ changelog, e questo è quel passaggio.
   Se l'invio fallisce la riga viene cancellata, così il giro successivo può
   riprovare invece di saltare la notifica per sempre. Logica in
   `supabase/functions/push-dispatcher/dedupe.ts`, otto test.
-- **Due migration correttive, scritte e verificate contro il database reale ma
-  non ancora applicate** — applicarle tocca la produzione e non passa da qui:
-  - `20260831193000_revoke_pg_net_from_client_roles.sql` toglie ad `anon` e
-    `authenticated` l'`EXECUTE` sulle dodici funzioni di `pg_net`. Verificando
-    sul database è emerso che la diagnosi in circolazione era sbagliata nel
-    punto che conta: `pg_net` **non è rilocabile**, quindi le sue funzioni
-    stanno nello schema `net` e non in `extensions`, dove la migration del 23
-    maggio credeva di installarle. Chi avesse cercato lì non avrebbe trovato
-    niente. La revoca legge dal catalogo invece di elencare a mano.
-  - `20260831193100_cron_dispatch_secret_from_vault.sql` rende rieseguibile il
-    job cron (`cron.unschedule` di un job inesistente solleva, quindi oggi
-    quella migration fallisce su un database vuoto) e sposta il segreto nel
-    Vault, estraendolo dal job stesso: si applica **senza perdere notifiche**,
-    perché il valore non cambia.
+- **Il segreto del dispatcher non è più nel corpo del job cron.** Applicata la
+  migration `20260831193100_cron_dispatch_secret_from_vault.sql`: il valore vive
+  nel Vault e il job lo legge a ogni esecuzione. Applicata senza perdere
+  notifiche, perché il segreto è stato **estratto dal job stesso** invece che
+  rigenerato — verificato con un'uguaglianza fra i due valori, non a occhio.
+  La migration è anche rieseguibile su un database vuoto, cosa che quella del
+  23 maggio non era (`cron.unschedule` di un job inesistente solleva).
 
-  La rotazione di `DISPATCH_SECRET` resta da fare e richiede la dashboard
-  Supabase. Vedi [`docs/SECURITY.md`](docs/SECURITY.md).
+  **La rotazione vera resta da fare** e richiede la dashboard Supabase: finché
+  non è fatta, il valore in chiaro nella migration del 23 maggio — quindi su
+  GitHub — è ancora valido. La procedura in quattro passi è in fondo alla
+  migration.
+
+- **Il dispatcher andava in timeout nove giri su dieci, e nessuno poteva
+  saperlo.** Emerso applicando la migration e leggendo `net._http_response`:
+  65 richieste su 72 finivano in timeout a 5000 ms, il default di `pg_net`, e
+  solo 7 arrivavano a leggere una risposta (200, `{"ok":true}`). Il difetto è
+  precedente ed è silenzioso per costruzione — `cron.job_run_details` segna
+  `succeeded`, perché l'SQL è andato a buon fine: è la richiesta HTTP a essere
+  stata mollata. Il job ora dichiara `timeout_milliseconds := 120000`.
+- **La revoca di `pg_net` non è applicabile, e lo sappiamo per averla
+  provata.** Il `REVOKE` non ha sollevato errori e non ha cambiato niente: le
+  funzioni appartengono a `supabase_admin`, le migration girano come
+  `postgres`, e un `REVOKE` da chi non è owner emette un warning e prosegue.
+  La revoca corretta sarebbe da `PUBLIC` — è da lì che `anon` eredita — ma
+  fermerebbe le notifiche, perché nella stessa ACL non compare `postgres`, il
+  ruolo del job cron. Il rischio reale è misurato dall'esterno con la anon
+  key: `net` non è fra gli schemi esposti da PostgREST e `public` non contiene
+  nessuna funzione da cui rimbalzare. La migration è stata **svuotata e
+  lasciata come nota**, perché nessuno riscriva la stessa fra sei mesi.
 
 ### Added
 

@@ -35,7 +35,20 @@
 -- dispatcher risponde 401, e va fatta quando qualcuno la sta guardando.
 --
 -- ===========================================================================
--- STATO VERIFICATO SUL DATABASE REALE IL 31 AGOSTO 2026
+-- APPLICATA il 31 agosto 2026, e verificata dopo
+-- ===========================================================================
+--   * `dispatch_secret` e' nel Vault, e il suo valore **coincide** con quello
+--     che era nel corpo del job (confrontato con una uguaglianza, non a occhio);
+--   * il job `push-dispatcher-every-5-min` e' stato ricreato: attivo, ogni
+--     cinque minuti, owner `postgres`, e il suo corpo non contiene piu' nessuna
+--     stringa esadecimale lunga;
+--   * il corpo legge `vault.decrypted_secrets`, e la sottoquery restituisce
+--     davvero 194 caratteri invece di NULL - che era il modo silenzioso in cui
+--     questa migration poteva fallire, lasciando il job a mandare un header
+--     vuoto e il dispatcher a rispondere 401.
+--
+-- ===========================================================================
+-- STATO PRIMA DELL'APPLICAZIONE
 -- ===========================================================================
 --   * `supabase_vault` installata, schema `vault`, 0 segreti presenti;
 --   * `pg_cron` installata in `pg_catalog`, 1 job attivo
@@ -125,7 +138,18 @@ SELECT cron.schedule(
         WHERE name = 'dispatch_secret'
       )
     ),
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    -- Il default di `pg_net` e' 5000 ms, e non basta: misurato il 31 agosto
+    -- 2026 su `net._http_response`, 65 giri su 72 finivano in timeout e solo
+    -- 7 arrivavano a leggere una risposta (200, `{"ok":true}`). Il dispatcher
+    -- interroga tre sport e impagina il calendario Juventus fino a trenta
+    -- pagine: cinque secondi non gli bastano quasi mai.
+    --
+    -- Il difetto e' precedente a questa migration ed e' particolarmente
+    -- silenzioso: `cron.job_run_details` segna comunque `succeeded`, perche'
+    -- l'SQL e' andato a buon fine — e' la richiesta HTTP ad essere stata
+    -- mollata. Chi guardasse solo il cron non vedrebbe niente.
+    timeout_milliseconds := 120000
   );
   $job$
 );

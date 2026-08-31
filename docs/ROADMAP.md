@@ -17,36 +17,48 @@ chi le aveva viste.
 
 ## Priorità alta
 
-### Due migration scritte, nessuna applicata
+### La revoca di `pg_net` non è applicabile, e ora sappiamo perché
 
-Il lavoro di codice è fatto; manca l'applicazione, che tocca il database di
-produzione e non passa da qui.
+Provata sul progetto reale il 31 agosto 2026: il `REVOKE` **non ha sollevato
+errori e non ha cambiato niente**. Le funzioni appartengono a `supabase_admin`,
+le migration girano come `postgres`, e in PostgreSQL un `REVOKE` da chi non è
+owner emette un warning e prosegue.
 
-**`20260831193000_revoke_pg_net_from_client_roles.sql`** toglie ad `anon` e
-`authenticated` l'accesso alle funzioni di `pg_net`.
+E la revoca corretta — da `PUBLIC`, perché è da lì che `anon` eredita —
+**fermerebbe le notifiche**: nella stessa ACL non compare `postgres`, che è il
+ruolo del job cron.
 
-> La diagnosi originale di questa voce era imprecisa e va corretta, perché
-> manderebbe a cercare nel posto sbagliato: **`pg_net` non è rilocabile**.
-> Nonostante la migration del 23 maggio l'abbia installata
-> `WITH SCHEMA extensions`, le sue funzioni vivono nello schema `net`.
-> Verificato sul database reale il 31 agosto 2026: dodici funzioni in `net`,
-> `anon` e `authenticated` con `EXECUTE` su tutte e `USAGE` su entrambi gli
-> schemi.
->
-> Quanto è grave davvero, misurato e non supposto: lo schema `public` non
-> contiene **nessuna** funzione e PostgREST non espone `net`, quindi oggi il
-> privilegio non ha una porta da cui essere usato. È difesa in profondità, non
-> un buco aperto — ma basterebbe una `SECURITY DEFINER` in `public` perché lo
-> diventasse, e quel permesso non serve a nessuno.
+Il rischio reale è misurato: con la anon key, `POST /rest/v1/rpc/http_post`
+risponde 404 e forzando lo schema PostgREST risponde «Only the following
+schemas are exposed: public, graphql_public». Lo schema `net` non ha una porta
+e `public` non contiene funzioni da cui rimbalzare.
 
-**`20260831193100_cron_dispatch_secret_from_vault.sql`** rende il job cron
-rieseguibile (`cron.unschedule` di un job inesistente solleva, quindi oggi
-quella migration fallisce su un database nuovo) e sposta il segreto nel Vault.
-Non cambia il valore: lo estrae dal job stesso, quindi si applica **senza
-perdere nessuna notifica**.
+**Cosa resta da sorvegliare**, e si verifica da qui: che `public` non acquisti
+funzioni `SECURITY DEFINER`, e che gli schemi esposti restino `public` e
+`graphql_public`. Il ragionamento completo è in
+`supabase/migrations/20260831193000_revoke_pg_net_from_client_roles.sql`, che è
+stata svuotata e lasciata come nota.
 
-**Costo**: applicarle. **Perché ora**: sono scritte e verificate contro lo
-schema reale; finché restano file non proteggono niente.
+**Costo**: richiede `supabase_admin`, che i progetti non hanno.
+
+### Il dispatcher va in timeout nove volte su dieci
+
+Trovato applicando la migration del Vault e guardando `net._http_response`:
+nella finestra conservata, **65 giri su 72 finiscono in timeout** e solo 7
+leggono una risposta — 200, `{"ok":true}`. Il default di `pg_net` è 5000 ms e
+il dispatcher interroga tre sport impaginando il calendario Juventus fino a
+trenta pagine.
+
+È un difetto particolarmente silenzioso: `cron.job_run_details` segna
+`succeeded`, perché l'SQL è andato — è la richiesta HTTP a essere stata
+mollata. Chi guardasse solo il cron non vedrebbe niente.
+
+Il job è stato ricreato con `timeout_milliseconds := 120000`. **Resta da
+verificare** che il dispatcher rientri in quella finestra, e da capire se
+riduca il lavoro: trenta sotto-richieste a `sports-football` a ogni giro, ogni
+cinque minuti, sono molte per una funzione che poi non manda quasi mai niente.
+
+**Costo**: basso per la misura, medio per la riduzione del lavoro.
 
 ### Rotazione del segreto del dispatcher
 

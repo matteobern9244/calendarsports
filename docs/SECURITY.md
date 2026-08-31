@@ -45,11 +45,39 @@ usato. È difesa in profondità, non un buco aperto. Basterebbe però una funzio
 `SECURITY DEFINER` in `public`, o un cambio negli schemi esposti, perché
 diventasse metà di una primitiva SSRF con il database come mittente.
 
-La correzione è scritta e **non ancora applicata**:
-`supabase/migrations/20260831193000_revoke_pg_net_from_client_roles.sql`.
-Revoca solo ciò che appartiene a `pg_net`, letto dal catalogo, invece
-dell'intero schema `extensions`, dove vivono anche pgcrypto, uuid-ossp e
-pg_stat_statements.
+**La revoca non è applicabile, e l'abbiamo scoperto provandoci.** Il 31 agosto
+2026 la migration è stata eseguita davvero sul progetto: non ha sollevato
+errori e non ha cambiato niente. Rileggendo i privilegi dopo, `anon` poteva
+ancora eseguire tutte e dodici le funzioni.
+
+Due ragioni, entrambe verificate:
+
+1. **Le funzioni appartengono a `supabase_admin`.** Le migration girano come
+   `postgres`, che non è superuser né membro di quel ruolo. In PostgreSQL un
+   `REVOKE` fatto da chi non è owner né ha `GRANT OPTION` emette un warning e
+   prosegue: nessun errore, nessun effetto. È il modo peggiore in cui una
+   migration può sbagliare — applicata, sembra riuscita.
+2. **La revoca corretta fermerebbe le notifiche.** L'ACL reale è
+   `=X/supabase_admin`: il grantee vuoto significa `PUBLIC`, e `anon` non ha
+   nessun grant diretto — eredita da lì. Ma nella stessa ACL non compare
+   `postgres`, che è il ruolo con cui gira il job cron del dispatcher.
+   Revocare da `PUBLIC` senza prima concedere esplicitamente a `postgres`
+   spegnerebbe le push, e anche quel `GRANT` richiede di essere owner.
+
+**Il rischio reale, misurato dall'esterno** con la anon key pubblica:
+`POST /rest/v1/rpc/http_post` risponde 404, e forzando `Accept-Profile: net`
+PostgREST risponde `PGRST106 — Only the following schemas are exposed: public,
+graphql_public`. Lo schema `net` non è raggiungibile dall'API e `public` non
+contiene nessuna funzione da cui rimbalzare: il privilegio c'è e non ha una
+porta.
+
+Resta difesa in profondità mancante, non un buco aperto. Le due condizioni che
+lo terrebbero tale sono verificabili da qui e vanno tenute d'occhio: `public`
+senza funzioni, e nessuno schema esposto oltre a `public` e `graphql_public`.
+Il ragionamento completo è dentro
+`supabase/migrations/20260831193000_revoke_pg_net_from_client_roles.sql`, che
+è stata svuotata e lasciata come nota proprio perché nessuno riscriva la stessa
+migration fra sei mesi.
 
 ## Esposizione delle edge function
 
@@ -94,7 +122,7 @@ autenticazione.
 
 La correzione è in due pezzi, ed è importante non confonderli.
 
-**Pezzo uno, scritto e non applicato.**
+**Pezzo uno, applicato il 31 agosto 2026.**
 `supabase/migrations/20260831193100_cron_dispatch_secret_from_vault.sql` sposta
 il segreto dal corpo del job al Vault e fa leggere al job il valore a ogni
 esecuzione. Non cambia il valore: lo **estrae dal job stesso**, quindi si può
@@ -110,10 +138,14 @@ toccare il job. La procedura in quattro passi è in fondo a quella migration.
 Finché il pezzo due non è fatto, **il valore su GitHub resta valido**. Il pezzo
 uno da solo non è una mitigazione: è il prerequisito che la rende facile.
 
-Stato verificato il 31 agosto 2026: il Vault esiste (`supabase_vault`, schema
-`vault`) e contiene zero segreti; il job `push-dispatcher-every-5-min` è attivo,
-gira come `postgres` ogni cinque minuti, e il suo corpo contiene ancora
-l'header in chiaro.
+Stato dopo l'applicazione, verificato il 31 agosto 2026: `dispatch_secret` è
+nel Vault e il suo valore **coincide** con quello che era nel job (confrontato
+con un'uguaglianza, non a occhio); il job è stato ricreato, è attivo, gira come
+`postgres` ogni cinque minuti, e il suo corpo non contiene più nessuna stringa
+esadecimale lunga. La sottoquery che legge il Vault restituisce davvero 194
+caratteri e non `NULL` — che era il modo silenzioso in cui questa migration
+poteva fallire, lasciando il job a mandare un header vuoto e il dispatcher a
+rispondere 401.
 
 ## Segreti e variabili
 
