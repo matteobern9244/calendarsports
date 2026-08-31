@@ -90,6 +90,16 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   `react-hooks/purity`: la regola non arrivava dentro l'IIFE finche' questo era
   in fondo a una catena `dati && dati.length > 0 && (...)`.
 
+### Removed
+
+- **Un solo sistema di toast.** `App.tsx` ne montava due, Sonner e quello
+  Radix di shadcn. Verificato prima di togliere: **nessun file** importava
+  `useToast`, quindi il `<Toaster />` Radix era montato e non riceveva mai
+  niente — tutte le notifiche passano da `sonner`. Rimossi
+  `components/ui/toaster.tsx`, `components/ui/toast.tsx` e
+  `hooks/use-toast.ts`. Bundle principale 550,23 kB → 534,78 kB (gzip 173,01
+  → 168,51).
+
 ### Changed
 
 - Le quattro pagine sportive (`Formula1Page`, `MotoGPPage`, `SinnerPage`,
