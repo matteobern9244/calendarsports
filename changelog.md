@@ -9,7 +9,65 @@ Le voci sotto riportate distinguono tra modifiche **verificate** e storico Git
 **non normalizzato**. Quando una modifica tocca fonti dati fragili, scraping,
 dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
+> Le sezioni **2.6.0, 2.6.1 e 2.6.2** sono state ricostruite il 31 agosto 2026
+> dallo storico Git: mancavano del tutto, pur essendo versioni realmente
+> rilasciate. Le date e il contenuto vengono dai commit che spostano
+> `src/lib/version.ts` e dai diff fra un bump e l'altro, non dalla memoria. La
+> 2.6.2 aveva già la sua nota in `docs/releases/`; le altre due no, e i loro
+> commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
+> cambiati**, non le intenzioni di chi li ha cambiati.
+
 ## [Unreleased]
+
+_(nessuna voce aperta)_
+
+## [2.8.0] — Audit completo: sicurezza, PWA offline, accessibilità (2026-08-31)
+
+Bump applicativo `2.7.0` → `2.8.0` esposto da `src/lib/version.ts` e
+`package.json`. Nota di rilascio:
+[`docs/releases/2.8.0-audit-completo.md`](docs/releases/2.8.0-audit-completo.md).
+
+Questa versione raccoglie un audit completo del repository, svolto per fasi fra
+il 26 e il 31 agosto 2026. Le voci qui sotto includono anche otto lavori
+chiusi durante l'audit che erano stati tolti da `docs/ROADMAP.md` senza passare
+di qui: la regola del ROADMAP dice che una voce realizzata si sposta nel
+changelog, e questo è quel passaggio.
+
+### Infrastruttura e qualità (lavori dell'audit non ancora raccontati)
+
+- **Code splitting per route.** Nove pagine arrivano con `lazy()`, con un
+  `ErrorBoundary` dentro `Layout` chiavato sul pathname: un errore in una
+  pagina non porta giù l'intera applicazione, e cambiare rotta lo azzera.
+- **Le chiavi di cache nascono da una fabbrica sola** (`src/lib/queryKeys.ts`),
+  invece di essere scritte a mano in ogni hook.
+- **I test delle edge function girano davvero, e sul codice vero.** Due file
+  ricopiavano a mano la logica di produzione e un terzo verificava le proprie
+  fixture senza mai chiamare la funzione, perché `index.ts` invoca
+  `Deno.serve` a livello di modulo. Appena hanno importato la funzione vera
+  uno è diventato rosso: la `GENRE_WHITELIST` ricopiata si era fermata a sei
+  generi mentre quella di produzione ne ha decine. La cura non è un mock, è
+  spostare la logica pura in un modulo che all'import non fa niente.
+- **Prettier è un errore di lint**, ultimo elemento della flat config: la
+  formattazione non si discute più in review.
+- **Il lint copre `scripts/**`, `e2e/**` e `supabase/functions/**`**, che non
+  erano analizzati da nessuna regola. Estenderlo ha trovato otto problemi
+  reali in dieci minuti, fra cui uno zero-width space nascosto dentro un
+  commento e due parser di date abbandonati.
+- **Un solo workflow CI**, che lancia `bun run verify` invece dell'elenco dei
+  suoi anelli: due elenchi separati divergono, ed è così che una CI smette di
+  essere un gate.
+- **I payload delle edge function sono validati al confine** con schemi zod
+  (`src/lib/api/schemas.ts`), e `@typescript-eslint/no-explicit-any` è di
+  nuovo accesa. `any` al confine non lasciava senza tipo soltanto i payload:
+  essendo assegnabile a qualunque cosa rendeva non verificate anche le
+  annotazioni scritte a mano a valle, e quattro campi letti da `MotoGPPage`
+  non esistevano da nessuna parte.
+- **Calendario e scheda TV non ricalcolano più tutto a ogni render.**
+  `useCalendarEvents` restituiva un array nuovo a ogni render, quindi il tick
+  da 60 secondi rifaceva espansione, filtro e ordinamento di ~350 eventi; in
+  `TonightTvList` la memo dipendeva dall'array che `useQueries` ricrea ogni
+  volta. Hoistati anche i formatter `Intl`: misurato in Chromium, costruirne
+  uno per data costa 13,9 ms ogni 350 date contro 0,20 ms riusandolo.
 
 ### Security
 
@@ -158,6 +216,62 @@ Bump applicativo `2.6.2` → `2.7.0` esposto da `src/lib/version.ts` e
 
 Nota: la sezione dipende da scraping Sky Sport; struttura e disponibilita' dei
 widget possono cambiare senza preavviso.
+
+## [2.6.2] — Notifiche push in fuso italiano (2026-05-17)
+
+Bump applicativo `2.6.1` → `2.6.2`. Nota di rilascio:
+[`docs/releases/2.6.2-push-notifiche-rome-timezone.md`](docs/releases/2.6.2-push-notifiche-rome-timezone.md).
+
+### Fixed
+
+- `push-dispatcher` tratta le date evento con la policy condivisa: ISO naive
+  come UTC, uscita sempre in `Europe/Rome`. Lo scheduling non usa più
+  `Date.parse()` diretto ma `toEventTimestampMs`, che toglie la dipendenza
+  implicita dal fuso del runtime.
+- Il calcolo della stagione lato dispatcher usa il giorno italiano, per
+  evitare il salto a cavallo della mezzanotte UTC (soprattutto Juventus).
+
+### Added
+
+- Il payload Web Push porta l'orario italiano già formattato nel corpo
+  («alle 21:00»), più i metadati `eventDateTime` e
+  `eventTimeZone: Europe/Rome`.
+- `supabase/functions/push-dispatcher/timezone.test.ts`: ISO naive, ora legale,
+  ora solare, offset espliciti dei provider, stagione sul giorno di Roma.
+
+## [2.6.1] — Sky Sport cambia formato, il calendario regge (2026-05-16)
+
+Bump applicativo `2.6.0` → `2.6.1`.
+
+### Fixed
+
+- `sports-football` legge il nuovo formato dei widget Sky (2026), in cui i dati
+  arrivano come JSON dentro
+  `<script type="application/json" data-props="true">`. Il vecchio attributo
+  `model='...'` resta come fallback: la funzione prova prima il formato nuovo e
+  ripiega sul vecchio, così la pagina Juventus regge entrambi.
+
+Nota: la sezione dipende da scraping Sky Sport, e questa voce è la prova che il
+formato cambia senza preavviso.
+
+## [2.6.0] — Notifiche push (2026-05-06)
+
+Bump applicativo `2.5.0` → `2.6.0`.
+
+### Added
+
+- **Notifiche push per gli eventi sportivi**, con anticipo scelto dall'utente.
+  L'intera catena entra in questa versione:
+  - `public/sw.js` — service worker che riceve la push e apre l'app al click;
+  - `src/lib/pushClient.ts` e `src/hooks/usePushNotifications.ts` — permesso,
+    iscrizione, disiscrizione lato browser;
+  - il pannello preferenze, da cui si attivano le notifiche e si scelgono gli
+    anticipi;
+  - tre edge function: `push-vapid-key` (chiave pubblica), `push-subscribe`
+    (iscrizione) e `push-dispatcher` (invio, protetto da segreto condiviso e
+    invocato da un job cron);
+  - le tabelle `push_subscriptions` e `push_sent_log`, con RLS attiva e
+    nessuna policy permissiva: solo la service role vi accede.
 
 ## [2.5.0] — Calendario: vista Agenda + filtri sport (2026-05-04)
 
