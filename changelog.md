@@ -11,7 +11,32 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
-_(nessuna voce aperta)_
+### Fixed
+
+- **Formula 1, scheda Costruttori: torna il pulsante «Riprova».** Era l'unica
+  delle dieci sezioni sportive il cui stato di errore non offriva alcun modo di
+  ritentare: `refetch` non era nemmeno destrutturato dall'hook. Chi incontrava
+  un errore lì poteva solo cambiare scheda o ricaricare la pagina. Trovato
+  unificando le dieci copie della terna caricamento/errore/fonte-vuota.
+- **MotoGP, stato dei weekend di gara: letto dal clock condiviso.** Il calcolo
+  di «in corso» / «completato» chiamava `Date.now()` durante il render, quindi
+  dipendeva da _quando_ React ridisegnava invece che dall'orario. Ora usa
+  `useNowMinute()`, che legge lo stesso clock come store esterno con snapshot
+  stabile. Il difetto esisteva da prima ed era invisibile a
+  `react-hooks/purity`: la regola non arrivava dentro l'IIFE finche' questo era
+  in fondo a una catena `dati && dati.length > 0 && (...)`.
+
+### Changed
+
+- Le quattro pagine sportive (`Formula1Page`, `MotoGPPage`, `SinnerPage`,
+  `JuventusPage`) montano un componente comune `DataSection` al posto delle
+  dieci copie di `LoadingState` / `ErrorState` / `UnavailableExternalSource`.
+  La fonte esterna di ogni sezione si dichiara **una volta** invece di tre, e
+  la condizione «non ci sono dati» esiste in un punto solo invece che in due
+  espressioni che dovevano restare negazioni esatte l'una dell'altra.
+  Nessuna classe CSS e' cambiata in nessuna delle quattro pagine (verificato
+  confrontando l'insieme dei `className` prima e dopo: 195 occorrenze, zero
+  differenze).
 
 ## [2.7.0] — Juventus: tutte le competizioni, niente stagioni passate (2026-08-18)
 

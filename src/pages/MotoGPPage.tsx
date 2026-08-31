@@ -1,9 +1,8 @@
 import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
-import LoadingState from "@/components/common/LoadingState";
-import ErrorState from "@/components/common/ErrorState";
-import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
+import DataSection, { type ExternalSource } from "@/components/common/DataSection";
 import OfflineFallback from "@/components/common/OfflineFallback";
+import { useNowMinute } from "@/hooks/useNow";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { MotoGPEvent } from "@/lib/api/schemas";
 import { getCurrentMotoGPSeason } from "@/lib/currentSeason";
@@ -27,6 +26,24 @@ import TeamLogo from "@/components/common/TeamLogo";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
 import RaceDetailsDialog, { type RaceSession } from "@/components/common/RaceDetailsDialog";
 import { useState } from "react";
+
+const CALENDAR_SOURCE: ExternalSource = {
+  href: "https://www.motogp.com/it/calendar",
+  label: "Vedi calendario su MotoGP.com",
+  loadingLabel: "Scopri ora su MotoGP.com",
+};
+
+const RIDERS_SOURCE: ExternalSource = {
+  href: "https://www.motogp.com/it/world-standing/motogp",
+  label: "Vedi classifica piloti su MotoGP.com",
+  loadingLabel: "Scopri ora su MotoGP.com",
+};
+
+const CONSTRUCTORS_SOURCE: ExternalSource = {
+  href: "https://www.motogp.com/it/world-standing/motogp/constructor",
+  label: "Vedi classifica costruttori su MotoGP.com",
+  loadingLabel: "Scopri ora su MotoGP.com",
+};
 
 const MOTOGP_CONSTRUCTOR_COLORS: Record<string, { border: string; bg: string }> = {
   ducati: { border: "hsl(var(--brand-ducati))", bg: "hsl(var(--brand-ducati) / 0.08)" },
@@ -57,6 +74,10 @@ export default function MotoGPPage() {
     refetch: csRefetch,
   } = useMotoGPConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
+  // Letto dal clock condiviso invece che con `Date.now()`: lo stato di
+  // ogni weekend di gara si calcola in render, e in render `Date.now()`
+  // e' impuro (`react-hooks/purity`).
+  const nowMs = useNowMinute();
   const [selectedEvent, setSelectedEvent] = useState<MotoGPEvent | null>(null);
 
   if (!isOnline && calError && !calendar && stError && !standings && csError && !constructors) {
@@ -99,37 +120,23 @@ export default function MotoGPPage() {
         </TabsList>
 
         <TabsContent value="calendario">
-          {calLoading && (
-            <LoadingState
-              message="Caricamento calendario MotoGP..."
-              externalLink="https://www.motogp.com/it/calendar"
-              externalLabel="Scopri ora su MotoGP.com"
-            />
-          )}
-          {calError && (
-            <ErrorState
-              message={`Calendario MotoGP ${season} non disponibile`}
-              detail="La nostra fonte dati non sta rispondendo correttamente. Puoi riprovare oppure consultare il calendario ufficiale MotoGP mentre risolviamo il problema."
-              onRetry={() => calRefetch()}
-              externalLink="https://www.motogp.com/it/calendar"
-              externalLabel="Vedi calendario su MotoGP.com"
-              ctaHint="Tocca qui per consultare il calendario ufficiale ora"
-            />
-          )}
-          {!calLoading && !calError && (!calendar || calendar.length === 0) && (
-            <UnavailableExternalSource
-              title={`Calendario MotoGP ${season}`}
-              description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale MotoGP qui sotto per consultare tutte le tappe del Mondiale, gli orari delle sessioni (libere, qualifiche, Sprint e gara) e i circuiti su cui si correrà."
-              externalLink="https://www.motogp.com/it/calendar"
-              externalLabel="Vedi calendario su MotoGP.com"
-              ctaHint="Tocca qui per orari Sprint e gara"
-            />
-          )}
-          {calendar &&
-            calendar.length > 0 &&
-            (() => {
+          <DataSection
+            isLoading={calLoading}
+            error={calError}
+            isEmpty={!calendar?.length}
+            source={CALENDAR_SOURCE}
+            loadingMessage="Caricamento calendario MotoGP..."
+            errorMessage={`Calendario MotoGP ${season} non disponibile`}
+            errorDetail="La nostra fonte dati non sta rispondendo correttamente. Puoi riprovare oppure consultare il calendario ufficiale MotoGP mentre risolviamo il problema."
+            errorCtaHint="Tocca qui per consultare il calendario ufficiale ora"
+            onRetry={() => calRefetch()}
+            emptyTitle={`Calendario MotoGP ${season}`}
+            emptyDescription="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale MotoGP qui sotto per consultare tutte le tappe del Mondiale, gli orari delle sessioni (libere, qualifiche, Sprint e gara) e i circuiti su cui si correrà."
+            emptyCtaHint="Tocca qui per orari Sprint e gara"
+          >
+            {(() => {
               const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
-                calendar,
+                calendar ?? [],
                 (event) => event.date_start,
                 undefined,
                 (event) => (event.date_end ? `${event.date_end}T23:59:59Z` : event.date_start),
@@ -155,7 +162,6 @@ export default function MotoGPPage() {
                     // L'evento e' "in corso" fino alla fine del giorno
                     // dell'ultima sessione (weekend di gara MotoGP).
                     const endMs = endMsRaw != null ? endMsRaw + 24 * 60 * 60 * 1000 - 1 : startMs;
-                    const nowMs = Date.now();
 
                     const status =
                       Number.isFinite(startMs) && Number.isFinite(endMs)
@@ -191,36 +197,24 @@ export default function MotoGPPage() {
                 </motion.div>
               );
             })()}
+          </DataSection>
         </TabsContent>
 
         <TabsContent value="piloti">
-          {stLoading && (
-            <LoadingState
-              message="Caricamento classifica piloti..."
-              externalLink="https://www.motogp.com/it/world-standing/motogp"
-              externalLabel="Scopri ora su MotoGP.com"
-            />
-          )}
-          {stError && (
-            <ErrorState
-              message={`Classifica piloti MotoGP ${season} non disponibile`}
-              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta la classifica piloti ufficiale aggiornata gara dopo gara su MotoGP.com."
-              onRetry={() => stRefetch()}
-              externalLink="https://www.motogp.com/it/world-standing/motogp"
-              externalLabel="Vedi classifica piloti su MotoGP.com"
-              ctaHint="Tocca qui per la classifica piloti ufficiale"
-            />
-          )}
-          {!stLoading && !stError && (!standings || standings.length === 0) && (
-            <UnavailableExternalSource
-              title={`Classifica Piloti ${season}`}
-              description="La classifica piloti del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale MotoGP qui sotto per consultare la graduatoria aggiornata, con punti, vittorie e prestazioni di ogni pilota della classe regina."
-              externalLink="https://www.motogp.com/it/world-standing/motogp"
-              externalLabel="Vedi classifica piloti su MotoGP.com"
-              ctaHint="Tocca qui per punti e vittorie"
-            />
-          )}
-          {standings && standings.length > 0 && (
+          <DataSection
+            isLoading={stLoading}
+            error={stError}
+            isEmpty={!standings?.length}
+            source={RIDERS_SOURCE}
+            loadingMessage="Caricamento classifica piloti..."
+            errorMessage={`Classifica piloti MotoGP ${season} non disponibile`}
+            errorDetail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta la classifica piloti ufficiale aggiornata gara dopo gara su MotoGP.com."
+            errorCtaHint="Tocca qui per la classifica piloti ufficiale"
+            onRetry={() => stRefetch()}
+            emptyTitle={`Classifica Piloti ${season}`}
+            emptyDescription="La classifica piloti del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale MotoGP qui sotto per consultare la graduatoria aggiornata, con punti, vittorie e prestazioni di ogni pilota della classe regina."
+            emptyCtaHint="Tocca qui per punti e vittorie"
+          >
             <div className="rounded-xl border border-border overflow-hidden">
               <Table>
                 <TableHeader>
@@ -240,7 +234,7 @@ export default function MotoGPPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {standings.map((s) => (
+                  {(standings ?? []).map((s) => (
                     <TableRow key={s.position}>
                       <TableCell className="font-heading font-bold">{s.position}</TableCell>
                       <TableCell>
@@ -301,37 +295,24 @@ export default function MotoGPPage() {
                 </TableBody>
               </Table>
             </div>
-          )}
+          </DataSection>
         </TabsContent>
 
         <TabsContent value="costruttori">
-          {csLoading && (
-            <LoadingState
-              message="Caricamento classifica costruttori..."
-              externalLink="https://www.motogp.com/it/world-standing/motogp/constructor"
-              externalLabel="Scopri ora su MotoGP.com"
-            />
-          )}
-          {csError && (
-            <ErrorState
-              message={`Classifica costruttori MotoGP ${season} non disponibile`}
-              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta la classifica costruttori ufficiale su MotoGP.com."
-              onRetry={() => csRefetch()}
-              externalLink="https://www.motogp.com/it/world-standing/motogp/constructor"
-              externalLabel="Vedi classifica costruttori su MotoGP.com"
-              ctaHint="Tocca qui per la classifica costruttori ufficiale"
-            />
-          )}
-          {!csLoading && !csError && (!constructors || constructors.length === 0) && (
-            <UnavailableExternalSource
-              title={`Classifica Costruttori ${season}`}
-              description="La classifica costruttori del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale MotoGP qui sotto per consultare la graduatoria delle case motociclistiche, con punti totali e vittorie."
-              externalLink="https://www.motogp.com/it/world-standing/motogp/constructor"
-              externalLabel="Vedi classifica costruttori su MotoGP.com"
-              ctaHint="Tocca qui per la graduatoria delle case"
-            />
-          )}
-          {constructors && constructors.length > 0 && (
+          <DataSection
+            isLoading={csLoading}
+            error={csError}
+            isEmpty={!constructors?.length}
+            source={CONSTRUCTORS_SOURCE}
+            loadingMessage="Caricamento classifica costruttori..."
+            errorMessage={`Classifica costruttori MotoGP ${season} non disponibile`}
+            errorDetail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta la classifica costruttori ufficiale su MotoGP.com."
+            errorCtaHint="Tocca qui per la classifica costruttori ufficiale"
+            onRetry={() => csRefetch()}
+            emptyTitle={`Classifica Costruttori ${season}`}
+            emptyDescription="La classifica costruttori del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale MotoGP qui sotto per consultare la graduatoria delle case motociclistiche, con punti totali e vittorie."
+            emptyCtaHint="Tocca qui per la graduatoria delle case"
+          >
             <div className="rounded-xl border border-border overflow-hidden">
               <Table>
                 <TableHeader>
@@ -348,7 +329,7 @@ export default function MotoGPPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {constructors.map((c) => (
+                  {(constructors ?? []).map((c) => (
                     <TableRow key={c.position}>
                       <TableCell className="font-heading font-bold">{c.position}</TableCell>
                       <TableCell>
@@ -380,7 +361,7 @@ export default function MotoGPPage() {
                 </TableBody>
               </Table>
             </div>
-          )}
+          </DataSection>
         </TabsContent>
 
         <TabsContent value="highlights">

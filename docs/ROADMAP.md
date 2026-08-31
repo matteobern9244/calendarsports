@@ -93,14 +93,25 @@ come se non lo fosse.
 
 ## Priorità bassa
 
-### Le pagine sport ripetono lo stesso guscio
+### Le pagine sport ripetono ancora il guscio esterno
 
-`Formula1Page`, `MotoGPPage`, `SinnerPage` e `JuventusPage` ripetono ognuna il
-guardiano offline, la stessa struttura di `Tabs` e la stessa terna
-`LoadingState` / `ErrorState` / `UnavailableExternalSource`. Un componente
-`SportPageShell` toglierebbe qualche centinaio di righe.
+La parte interna è fatta: la terna `LoadingState` / `ErrorState` /
+`UnavailableExternalSource`, che si ripeteva dieci volte (una per scheda), vive
+ora in `src/components/common/DataSection.tsx`.
 
-**Costo**: medio. **Perché non ora**: è pulizia, non correttezza.
+Resta il contorno, ripetuto quattro volte, una per pagina:
+
+- il **guardiano offline** — lo stesso `if` che verifica «nessuna sezione ha
+  dati _e_ tutte sono in errore _e_ siamo offline» e ritorna `OfflineFallback`
+  dentro `div.container.py-8.sm:py-12`, ~12 righe per pagina;
+- l'**intestazione con le tab** — stesso contenitore, `SectionHeader` dentro un
+  `div.mb-2`, `Tabs` con `TabsList` e trigger che ripetono la stessa classe,
+  ~15 righe per pagina. `SinnerPage` usa una `TabsList` più semplice delle
+  altre tre.
+
+**Costo**: basso. **Perché non ora**: sono ~50 righe in tutto, contro le
+centinaia che valeva la terna. È pulizia, non correttezza, e il guadagno per
+riga toccata è molto più basso di quello appena incassato.
 
 ### `StreamingPage` fa troppe cose
 

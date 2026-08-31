@@ -3,9 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
-import LoadingState from "@/components/common/LoadingState";
-import ErrorState from "@/components/common/ErrorState";
-import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
+import DataSection, { type ExternalSource } from "@/components/common/DataSection";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import PlayerHeader from "@/components/sinner/PlayerHeader";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -26,6 +24,18 @@ import { cn } from "@/lib/utils";
 // functions/sports-tennis`, action `results`) accetta `pageSize`
 // arbitrario, quindi non serve allineamento server-side.
 const RESULTS_PAGE_SIZE = 4;
+
+const RESULTS_SOURCE: ExternalSource = {
+  href: "https://www.atptour.com/en/players/jannik-sinner/s0ag/overview",
+  label: "Vedi risultati su ATP Tour",
+  loadingLabel: "Scopri ora su ATP Tour",
+};
+
+const SCHEDULE_SOURCE: ExternalSource = {
+  href: "https://www.atptour.com/en/players/jannik-sinner/s0ag/player-activity",
+  label: "Vedi calendario su ATP Tour",
+  loadingLabel: "Scopri ora su ATP Tour",
+};
 
 export default function SinnerPage() {
   const season = getCurrentSinnerSeason();
@@ -135,34 +145,21 @@ export default function SinnerPage() {
         </TabsList>
 
         <TabsContent value="risultati">
-          {resLoading && (
-            <LoadingState
-              message="Caricamento risultati..."
-              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/overview"
-              externalLabel="Scopri ora su ATP Tour"
-            />
-          )}
-          {resError && (
-            <ErrorState
-              message={`Risultati stagione ${season} non disponibili`}
-              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta lo storico ufficiale dei match di Jannik Sinner sul sito ATP Tour."
-              onRetry={() => resRefetch()}
-              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/overview"
-              externalLabel="Vedi risultati su ATP Tour"
-              ctaHint="Tocca qui per i punteggi set per set ufficiali"
-            />
-          )}
-          {!resLoading && !resError && resultItems.length === 0 && (
-            <UnavailableExternalSource
-              title={`Risultati stagione ${season}`}
-              description="I risultati dei match di Jannik Sinner per questa stagione non sono ancora stati pubblicati dalla nostra fonte. Apri il profilo ufficiale ATP qui sotto per consultare lo storico completo delle partite, i punteggi set per set e le statistiche aggiornate."
-              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/overview"
-              externalLabel="Vedi risultati su ATP Tour"
-              ctaHint="Tocca qui per i punteggi set per set"
-            />
-          )}
-          {resultItems.length > 0 &&
-            (() => {
+          <DataSection
+            isLoading={resLoading}
+            error={resError}
+            isEmpty={resultItems.length === 0}
+            source={RESULTS_SOURCE}
+            loadingMessage="Caricamento risultati..."
+            errorMessage={`Risultati stagione ${season} non disponibili`}
+            errorDetail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta lo storico ufficiale dei match di Jannik Sinner sul sito ATP Tour."
+            errorCtaHint="Tocca qui per i punteggi set per set ufficiali"
+            onRetry={() => resRefetch()}
+            emptyTitle={`Risultati stagione ${season}`}
+            emptyDescription="I risultati dei match di Jannik Sinner per questa stagione non sono ancora stati pubblicati dalla nostra fonte. Apri il profilo ufficiale ATP qui sotto per consultare lo storico completo delle partite, i punteggi set per set e le statistiche aggiornate."
+            emptyCtaHint="Tocca qui per i punteggi set per set"
+          >
+            {(() => {
               const { items: orderedResults, highlightIndex } = prioritizeNextUpcoming(
                 resultItems,
                 (result) => result.date,
@@ -290,38 +287,26 @@ export default function SinnerPage() {
                 </>
               );
             })()}
+          </DataSection>
         </TabsContent>
 
         <TabsContent value="tornei">
-          {schLoading && (
-            <LoadingState
-              message="Caricamento programma..."
-              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/player-activity"
-              externalLabel="Scopri ora su ATP Tour"
-            />
-          )}
-          {schError && (
-            <ErrorState
-              message={`Calendario tornei ${season} non disponibile`}
-              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta il programma ufficiale dei tornei di Jannik Sinner sul sito ATP Tour."
-              onRetry={() => schRefetch()}
-              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/player-activity"
-              externalLabel="Vedi calendario su ATP Tour"
-              ctaHint="Tocca qui per il programma tornei ufficiale"
-            />
-          )}
-          {!schLoading && !schError && (!schedule || schedule.length === 0) && (
-            <UnavailableExternalSource
-              title={`Calendario tornei ${season}`}
-              description="Il calendario dei tornei di Jannik Sinner per questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale ATP qui sotto per consultare il programma completo del circuito, le sedi di gioco e gli appuntamenti aggiornati."
-              externalLink="https://www.atptour.com/en/players/jannik-sinner/s0ag/player-activity"
-              externalLabel="Vedi calendario su ATP Tour"
-              ctaHint="Tocca qui per il programma completo"
-            />
-          )}
-          {schedule && schedule.length > 0 && (
+          <DataSection
+            isLoading={schLoading}
+            error={schError}
+            isEmpty={!schedule?.length}
+            source={SCHEDULE_SOURCE}
+            loadingMessage="Caricamento programma..."
+            errorMessage={`Calendario tornei ${season} non disponibile`}
+            errorDetail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta il programma ufficiale dei tornei di Jannik Sinner sul sito ATP Tour."
+            errorCtaHint="Tocca qui per il programma tornei ufficiale"
+            onRetry={() => schRefetch()}
+            emptyTitle={`Calendario tornei ${season}`}
+            emptyDescription="Il calendario dei tornei di Jannik Sinner per questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale ATP qui sotto per consultare il programma completo del circuito, le sedi di gioco e gli appuntamenti aggiornati."
+            emptyCtaHint="Tocca qui per il programma completo"
+          >
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {schedule.map((t, i) => (
+              {(schedule ?? []).map((t, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 12 }}
@@ -370,7 +355,7 @@ export default function SinnerPage() {
                 </motion.div>
               ))}
             </div>
-          )}
+          </DataSection>
         </TabsContent>
       </Tabs>
     </div>

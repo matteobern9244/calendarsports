@@ -1,8 +1,6 @@
 import SectionHeader from "@/components/common/SectionHeader";
 import EventCard from "@/components/common/EventCard";
-import LoadingState from "@/components/common/LoadingState";
-import ErrorState from "@/components/common/ErrorState";
-import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
+import DataSection, { type ExternalSource } from "@/components/common/DataSection";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { F1Race } from "@/lib/api/schemas";
@@ -35,6 +33,24 @@ import HighlightsSection from "@/components/highlights/HighlightsSection";
 import RaceDetailsDialog, { type RaceSession } from "@/components/common/RaceDetailsDialog";
 import { useState } from "react";
 
+const CALENDAR_SOURCE: ExternalSource = {
+  href: "https://www.formula1.com/en/racing/2025",
+  label: "Vedi calendario su Formula1.com",
+  loadingLabel: "Scopri ora su Formula1.com",
+};
+
+const DRIVERS_SOURCE: ExternalSource = {
+  href: "https://www.formula1.com/en/results/2025/drivers",
+  label: "Vedi classifica piloti su Formula1.com",
+  loadingLabel: "Scopri ora su Formula1.com",
+};
+
+const CONSTRUCTORS_SOURCE: ExternalSource = {
+  href: "https://www.formula1.com/en/results/2025/team",
+  label: "Vedi classifica costruttori su Formula1.com",
+  loadingLabel: "Scopri ora su Formula1.com",
+};
+
 export default function Formula1Page() {
   const season = getCurrentF1Season();
   const {
@@ -53,6 +69,7 @@ export default function Formula1Page() {
     data: constructors,
     isLoading: conLoading,
     error: conError,
+    refetch: conRefetch,
   } = useF1ConstructorStandings(season);
   const { isOnline } = useOnlineStatus();
   const [selectedRace, setSelectedRace] = useState<F1Race | null>(null);
@@ -97,37 +114,23 @@ export default function Formula1Page() {
         </TabsList>
 
         <TabsContent value="calendario">
-          {calLoading && (
-            <LoadingState
-              message="Caricamento calendario F1..."
-              externalLink="https://www.formula1.com/en/racing/2025"
-              externalLabel="Scopri ora su Formula1.com"
-            />
-          )}
-          {calError && (
-            <ErrorState
-              message={`Calendario F1 ${season} non disponibile`}
-              detail="La nostra fonte dati non sta rispondendo correttamente. Puoi riprovare oppure consultare il calendario ufficiale Formula 1 mentre risolviamo il problema."
-              onRetry={() => calRefetch()}
-              externalLink="https://www.formula1.com/en/racing/2025"
-              externalLabel="Vedi calendario su Formula1.com"
-              ctaHint="Tocca qui per consultare il calendario ufficiale ora"
-            />
-          )}
-          {!calLoading && !calError && (!calendar || calendar.length === 0) && (
-            <UnavailableExternalSource
-              title={`Calendario F1 ${season}`}
-              description="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale Formula 1 qui sotto per consultare tutte le tappe del Mondiale, gli orari delle sessioni (prove libere, qualifiche e gara) e i circuiti su cui si correrà."
-              externalLink="https://www.formula1.com/en/racing/2025"
-              externalLabel="Vedi calendario su Formula1.com"
-              ctaHint="Tocca qui per orari e circuiti del Mondiale"
-            />
-          )}
-          {calendar &&
-            calendar.length > 0 &&
-            (() => {
+          <DataSection
+            isLoading={calLoading}
+            error={calError}
+            isEmpty={!calendar?.length}
+            source={CALENDAR_SOURCE}
+            loadingMessage="Caricamento calendario F1..."
+            errorMessage={`Calendario F1 ${season} non disponibile`}
+            errorDetail="La nostra fonte dati non sta rispondendo correttamente. Puoi riprovare oppure consultare il calendario ufficiale Formula 1 mentre risolviamo il problema."
+            errorCtaHint="Tocca qui per consultare il calendario ufficiale ora"
+            onRetry={() => calRefetch()}
+            emptyTitle={`Calendario F1 ${season}`}
+            emptyDescription="Il calendario dei Gran Premi di questa stagione non è ancora disponibile dalla nostra fonte. Apri il sito ufficiale Formula 1 qui sotto per consultare tutte le tappe del Mondiale, gli orari delle sessioni (prove libere, qualifiche e gara) e i circuiti su cui si correrà."
+            emptyCtaHint="Tocca qui per orari e circuiti del Mondiale"
+          >
+            {(() => {
               const { items: orderedCalendar, highlightIndex } = prioritizeNextUpcoming(
-                calendar,
+                calendar ?? [],
                 (race) => race.date,
               );
               return (
@@ -184,27 +187,24 @@ export default function Formula1Page() {
                 </motion.div>
               );
             })()}
+          </DataSection>
         </TabsContent>
 
         <TabsContent value="piloti">
-          {drvLoading && (
-            <LoadingState
-              message="Caricamento classifica piloti..."
-              externalLink="https://www.formula1.com/en/results/2025/drivers"
-              externalLabel="Scopri ora su Formula1.com"
-            />
-          )}
-          {drvError && (
-            <ErrorState
-              message={`Classifica piloti F1 ${season} non disponibile`}
-              detail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta la classifica ufficiale aggiornata gara dopo gara su Formula1.com."
-              onRetry={() => drvRefetch()}
-              externalLink="https://www.formula1.com/en/results/2025/drivers"
-              externalLabel="Vedi classifica piloti su Formula1.com"
-              ctaHint="Tocca qui per la classifica piloti ufficiale"
-            />
-          )}
-          {drivers && drivers.length > 0 && (
+          <DataSection
+            isLoading={drvLoading}
+            error={drvError}
+            isEmpty={!drivers?.length}
+            source={DRIVERS_SOURCE}
+            loadingMessage="Caricamento classifica piloti..."
+            errorMessage={`Classifica piloti F1 ${season} non disponibile`}
+            errorDetail="La nostra fonte dati non risponde in questo momento. Riprova oppure consulta la classifica ufficiale aggiornata gara dopo gara su Formula1.com."
+            errorCtaHint="Tocca qui per la classifica piloti ufficiale"
+            onRetry={() => drvRefetch()}
+            emptyTitle={`Classifica Piloti ${season}`}
+            emptyDescription="La classifica piloti del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Formula 1 qui sotto per consultare la graduatoria aggiornata gara dopo gara, con punti, vittorie e podi di ogni pilota."
+            emptyCtaHint="Tocca qui per punti, vittorie e podi"
+          >
             <div className="rounded-xl border border-border overflow-hidden">
               <Table>
                 <TableHeader>
@@ -227,7 +227,7 @@ export default function Formula1Page() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {drivers.map((d) => (
+                  {(drivers ?? []).map((d) => (
                     <TableRow key={d.position}>
                       <TableCell className="font-heading font-bold">{d.position}</TableCell>
                       <TableCell>
@@ -287,36 +287,24 @@ export default function Formula1Page() {
                 </TableBody>
               </Table>
             </div>
-          )}
-          {!drvLoading && !drvError && (!drivers || drivers.length === 0) && (
-            <UnavailableExternalSource
-              title={`Classifica Piloti ${season}`}
-              description="La classifica piloti del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Formula 1 qui sotto per consultare la graduatoria aggiornata gara dopo gara, con punti, vittorie e podi di ogni pilota."
-              externalLink="https://www.formula1.com/en/results/2025/drivers"
-              externalLabel="Vedi classifica piloti su Formula1.com"
-              ctaHint="Tocca qui per punti, vittorie e podi"
-            />
-          )}
+          </DataSection>
         </TabsContent>
 
         <TabsContent value="costruttori">
-          {conLoading && (
-            <LoadingState
-              message="Caricamento classifica costruttori..."
-              externalLink="https://www.formula1.com/en/results/2025/team"
-              externalLabel="Scopri ora su Formula1.com"
-            />
-          )}
-          {conError && (
-            <ErrorState
-              message={`Classifica costruttori F1 ${season} non disponibile`}
-              detail="La nostra fonte dati non risponde in questo momento. Puoi consultare la classifica costruttori ufficiale aggiornata sul sito Formula 1."
-              externalLink="https://www.formula1.com/en/results/2025/team"
-              externalLabel="Vedi classifica costruttori su Formula1.com"
-              ctaHint="Tocca qui per la classifica costruttori ufficiale"
-            />
-          )}
-          {constructors && constructors.length > 0 && (
+          <DataSection
+            isLoading={conLoading}
+            error={conError}
+            isEmpty={!constructors?.length}
+            source={CONSTRUCTORS_SOURCE}
+            loadingMessage="Caricamento classifica costruttori..."
+            errorMessage={`Classifica costruttori F1 ${season} non disponibile`}
+            errorDetail="La nostra fonte dati non risponde in questo momento. Puoi riprovare oppure consultare la classifica costruttori ufficiale aggiornata sul sito Formula 1."
+            errorCtaHint="Tocca qui per la classifica costruttori ufficiale"
+            onRetry={() => conRefetch()}
+            emptyTitle={`Classifica Costruttori ${season}`}
+            emptyDescription="La classifica costruttori del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Formula 1 qui sotto per consultare la graduatoria delle scuderie, con punti totali, vittorie e prestazioni dei team."
+            emptyCtaHint="Tocca qui per la graduatoria delle scuderie"
+          >
             <div className="rounded-xl border border-border overflow-hidden">
               <Table>
                 <TableHeader>
@@ -336,7 +324,7 @@ export default function Formula1Page() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {constructors.map((c) => (
+                  {(constructors ?? []).map((c) => (
                     <TableRow key={c.position}>
                       <TableCell className="font-heading font-bold">{c.position}</TableCell>
                       <TableCell>
@@ -362,16 +350,7 @@ export default function Formula1Page() {
                 </TableBody>
               </Table>
             </div>
-          )}
-          {!conLoading && !conError && (!constructors || constructors.length === 0) && (
-            <UnavailableExternalSource
-              title={`Classifica Costruttori ${season}`}
-              description="La classifica costruttori del Mondiale di questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Formula 1 qui sotto per consultare la graduatoria delle scuderie, con punti totali, vittorie e prestazioni dei team."
-              externalLink="https://www.formula1.com/en/results/2025/team"
-              externalLabel="Vedi classifica costruttori su Formula1.com"
-              ctaHint="Tocca qui per la graduatoria delle scuderie"
-            />
-          )}
+          </DataSection>
         </TabsContent>
 
         <TabsContent value="highlights">
