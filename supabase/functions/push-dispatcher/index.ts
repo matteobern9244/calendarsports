@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import webpush from "https://esm.sh/web-push@3.6.7";
 import { dispatcherConfig } from "./env.ts";
+import { deliverOnce, supabaseSentLogStore } from "./dedupe.ts";
 import {
   ROME_TIME_ZONE,
   formatRomeEventDateTime,
@@ -190,6 +191,7 @@ Deno.serve(async (req) => {
   }
 
   const sb = createClient(supabaseUrl, serviceRoleKey);
+  const sentLog = supabaseSentLogStore(sb);
 
   const [f1, motogp, juve] = await Promise.all([loadF1(), loadMotoGP(), loadJuventus()]);
   const events: EventItem[] = [...f1, ...motogp, ...juve].filter(
@@ -221,18 +223,6 @@ Deno.serve(async (req) => {
         return t !== null && t >= targetMs - WINDOW_MS && t <= targetMs;
       });
       for (const ev of due) {
-        const { data: existing } = await sb
-          .from("push_sent_log")
-          .select("id")
-          .eq("subscription_id", sub.id)
-          .eq("event_id", ev.id)
-          .eq("lead_time", leadMin)
-          .maybeSingle();
-        if (existing) {
-          skipped++;
-          continue;
-        }
-
         const eventTime = formatRomeEventTime(ev.date);
         const eventDateTime = formatRomeEventDateTime(ev.date);
         const dayLabel = formatRomeDayLabel(ev.date);
@@ -258,20 +248,23 @@ Deno.serve(async (req) => {
           eventDateTime,
           eventTimeZone: ROME_TIME_ZONE,
         });
+        // Il posto in `push_sent_log` si prende PRIMA di inviare: e' la
+        // scrittura, non una lettura precedente, a decidere chi manda. Vedi
+        // `dedupe.ts` per il perche'.
+        const slot = { subscriptionId: sub.id, eventId: ev.id, leadTime: leadMin };
         try {
-          await webpush.sendNotification(
-            {
-              endpoint: sub.endpoint,
-              keys: { p256dh: sub.p256dh, auth: sub.auth },
-            },
-            payload,
+          const outcome = await deliverOnce(sentLog, slot, () =>
+            webpush.sendNotification(
+              {
+                endpoint: sub.endpoint,
+                keys: { p256dh: sub.p256dh, auth: sub.auth },
+              },
+              payload,
+            ),
           );
-          await sb.from("push_sent_log").insert({
-            subscription_id: sub.id,
-            event_id: ev.id,
-            lead_time: leadMin,
-          });
-          sent++;
+          if (outcome === "sent") sent++;
+          else if (outcome === "skipped") skipped++;
+          else errors++;
         } catch (e: any) {
           const code = e?.statusCode;
           if (code === 404 || code === 410) {

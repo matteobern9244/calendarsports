@@ -11,6 +11,37 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
+### Security
+
+- **Il dispatcher non può più mandare la stessa notifica due volte.** Il
+  controllo era `SELECT` → invia → `INSERT`: fra la lettura e la scrittura c'è
+  una finestra in cui una seconda esecuzione legge «non ancora inviata» e
+  invia di nuovo. Il cron scatta ogni cinque minuti mentre la finestra di
+  selezione è di sei, quindi le esecuzioni si sovrappongono di proposito e la
+  finestra veniva imboccata davvero. Ora il posto si prende **scrivendo**
+  (`INSERT ... ON CONFLICT DO NOTHING RETURNING id`): il vincolo `UNIQUE` che
+  esisteva già in tabella decide chi manda, prima dell'invio invece che dopo.
+  Se l'invio fallisce la riga viene cancellata, così il giro successivo può
+  riprovare invece di saltare la notifica per sempre. Logica in
+  `supabase/functions/push-dispatcher/dedupe.ts`, otto test.
+- **Due migration correttive, scritte e verificate contro il database reale ma
+  non ancora applicate** — applicarle tocca la produzione e non passa da qui:
+  - `20260831193000_revoke_pg_net_from_client_roles.sql` toglie ad `anon` e
+    `authenticated` l'`EXECUTE` sulle dodici funzioni di `pg_net`. Verificando
+    sul database è emerso che la diagnosi in circolazione era sbagliata nel
+    punto che conta: `pg_net` **non è rilocabile**, quindi le sue funzioni
+    stanno nello schema `net` e non in `extensions`, dove la migration del 23
+    maggio credeva di installarle. Chi avesse cercato lì non avrebbe trovato
+    niente. La revoca legge dal catalogo invece di elencare a mano.
+  - `20260831193100_cron_dispatch_secret_from_vault.sql` rende rieseguibile il
+    job cron (`cron.unschedule` di un job inesistente solleva, quindi oggi
+    quella migration fallisce su un database vuoto) e sposta il segreto nel
+    Vault, estraendolo dal job stesso: si applica **senza perdere notifiche**,
+    perché il valore non cambia.
+
+  La rotazione di `DISPATCH_SECRET` resta da fare e richiede la dashboard
+  Supabase. Vedi [`docs/SECURITY.md`](docs/SECURITY.md).
+
 ### Fixed
 
 - **Formula 1, scheda Costruttori: torna il pulsante «Riprova».** Era l'unica

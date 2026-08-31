@@ -17,47 +17,53 @@ chi le aveva viste.
 
 ## Priorità alta
 
+### Due migration scritte, nessuna applicata
+
+Il lavoro di codice è fatto; manca l'applicazione, che tocca il database di
+produzione e non passa da qui.
+
+**`20260831193000_revoke_pg_net_from_client_roles.sql`** toglie ad `anon` e
+`authenticated` l'accesso alle funzioni di `pg_net`.
+
+> La diagnosi originale di questa voce era imprecisa e va corretta, perché
+> manderebbe a cercare nel posto sbagliato: **`pg_net` non è rilocabile**.
+> Nonostante la migration del 23 maggio l'abbia installata
+> `WITH SCHEMA extensions`, le sue funzioni vivono nello schema `net`.
+> Verificato sul database reale il 31 agosto 2026: dodici funzioni in `net`,
+> `anon` e `authenticated` con `EXECUTE` su tutte e `USAGE` su entrambi gli
+> schemi.
+>
+> Quanto è grave davvero, misurato e non supposto: lo schema `public` non
+> contiene **nessuna** funzione e PostgREST non espone `net`, quindi oggi il
+> privilegio non ha una porta da cui essere usato. È difesa in profondità, non
+> un buco aperto — ma basterebbe una `SECURITY DEFINER` in `public` perché lo
+> diventasse, e quel permesso non serve a nessuno.
+
+**`20260831193100_cron_dispatch_secret_from_vault.sql`** rende il job cron
+rieseguibile (`cron.unschedule` di un job inesistente solleva, quindi oggi
+quella migration fallisce su un database nuovo) e sposta il segreto nel Vault.
+Non cambia il valore: lo estrae dal job stesso, quindi si applica **senza
+perdere nessuna notifica**.
+
+**Costo**: applicarle. **Perché ora**: sono scritte e verificate contro lo
+schema reale; finché restano file non proteggono niente.
+
 ### Rotazione del segreto del dispatcher
 
-`DISPATCH_SECRET` è scritto in chiaro nella migration
-`20260523084606_*.sql`, presente nella storia di Git e su GitHub. È l'unica
-autenticazione di `push-dispatcher`. Va considerato compromesso: chi legge il
-repository può far partire notifiche a tutti gli iscritti.
+`DISPATCH_SECRET` è scritto in chiaro nella migration `20260523084606_*.sql`,
+presente nella storia di Git e su GitHub. È l'unica autenticazione di
+`push-dispatcher`. Va considerato compromesso: chi legge il repository può far
+partire notifiche a tutti gli iscritti.
 
-Serve: ruotare il valore nei secrets di Supabase, ricreare il job cron leggendo il
-segreto dal Vault invece di inlinearlo, e rendere idempotente la migration
-(`cron.unschedule` di un job inesistente solleva, quindi oggi quella migration
-fallisce su un database nuovo).
+La migration del Vault qui sopra è il **prerequisito**, non la soluzione:
+sposta il segreto in un posto dove si può cambiare senza ricreare il job, ma
+non lo cambia. La rotazione vera richiede la dashboard Supabase, perché il
+secret della edge function non è raggiungibile da SQL. La procedura in quattro
+passi è scritta in fondo a quella migration.
 
 **Costo**: basso come codice, ma richiede accesso alla dashboard Supabase.
-**Perché ora**: è l'unico problema di sicurezza del progetto con un impatto reale.
-Dettagli in [`SECURITY.md`](SECURITY.md).
-
-### Lo schema `extensions` è accessibile ad `anon`
-
-La migration che installa `pg_net` concede `USAGE` sullo schema `extensions` a
-`anon` e `authenticated`. Postgres concede `EXECUTE` alle nuove funzioni a
-`PUBLIC` per default: è la metà mancante di una primitiva SSRF, in cui un chiamante
-non autenticato potrebbe far partire richieste HTTP dal database.
-
-Serve: `REVOKE USAGE ON SCHEMA extensions FROM anon, authenticated` e
-`REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA extensions FROM PUBLIC`.
-
-**Costo**: basso. **Perché ora**: `anon` non ha nessuna ragione legittima di avere
-quel permesso in questo progetto.
-
-### Le notifiche possono partire doppie
-
-`push-dispatcher` verifica di non aver già inviato con una `SELECT` e poi scrive
-con una `INSERT`. Il cron scatta ogni cinque minuti mentre la finestra di
-selezione è di sei: le esecuzioni si sovrappongono di proposito. Due esecuzioni
-concorrenti possono superare entrambe il controllo, inviare entrambe, e la
-seconda `INSERT` fallisce — ma il suo errore viene scartato senza guardarlo.
-
-Serve: scrivere prima di inviare, con `upsert(..., { ignoreDuplicates: true })`,
-e decidere in base all'esito.
-
-**Costo**: basso. **Perché ora**: produce notifiche doppie sui dispositivi reali.
+**Perché ora**: è l'unico problema di sicurezza del progetto con un impatto
+reale. Dettagli in [`SECURITY.md`](SECURITY.md).
 
 ## Priorità media
 
