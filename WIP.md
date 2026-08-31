@@ -21,9 +21,10 @@ bun audit        → No vulnerabilities found
 bun outdated     → solo typescript 5.9.3 (fermo di proposito, vedi sotto)
 ```
 
-La versione è **2.8.0**: l'audit è chiuso lato codice. Quello che resta non è
-codice da scrivere, è **roba da applicare a mano sul progetto Supabase** — vedi
-«Quello che serve te», qui sotto.
+La versione è **2.8.0** e l'audit è chiuso. Le due migration sono state
+**applicate** sul progetto il 31 agosto 2026, e applicarle ha smentito una
+delle due: vedi «Quello che serve te». L'unica cosa bloccante rimasta è la
+rotazione del segreto del dispatcher, che richiede la dashboard.
 
 Il tree è pulito. La CI **non è ancora stata eseguita** sulla nuova
 configurazione: `ci.yml` sostituisce i due workflow precedenti e va guardata al
@@ -147,26 +148,37 @@ di Dependabot per npm.
 
 ## Da fare — riprendere da qui
 
-### 1. Quello che serve te: applicare, non scrivere
+### 1. Quello che serve te: la rotazione del segreto
 
 È l'unica cosa **bloccante** rimasta, ed è l'unico problema di sicurezza del
-progetto con un impatto reale. Il codice c'è; tocca il database di produzione,
-e questo non passa da qui.
+progetto con un impatto reale.
 
-1. **Applicare `20260831193000_revoke_pg_net_from_client_roles.sql`.** Rischio
-   basso, reversibile con un `GRANT`. Verificato sul database reale: `anon` e
-   `authenticated` hanno oggi `EXECUTE` su tutte e dodici le funzioni di
-   `pg_net`, `net.http_post` compresa.
-2. **Applicare `20260831193100_cron_dispatch_secret_from_vault.sql`.** Non
-   cambia il segreto — lo estrae dal job stesso — quindi si applica senza
-   perdere notifiche.
-3. **Ruotare `DISPATCH_SECRET`.** La procedura in quattro passi è in fondo a
-   quella migration. Serve la dashboard: il secret della edge function non è
-   raggiungibile da SQL.
+Il resto è fatto: le migration sono state applicate sul progetto il 31 agosto
+2026, e il segreto **non è più nel corpo del job cron** — vive nel Vault, e il
+job lo legge a ogni esecuzione. Il valore però **non è cambiato**: è stato
+estratto dal job stesso, di proposito, perché rigenerarlo avrebbe fermato le
+notifiche. Quindi il valore in chiaro nella migration del 23 maggio, che è su
+GitHub, **è ancora valido**.
 
-Finché il passo 3 non è fatto, il valore che sta su GitHub **è ancora valido**.
-I passi 1 e 2 non sono una mitigazione: sono il prerequisito che rende il passo
-3 una query e un incolla.
+Restano tre passi, e servono la dashboard Supabase:
+
+1. generare un valore nuovo:
+   `SELECT replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');`
+2. scriverlo nel Vault con `vault.update_secret(...)` — il job lo prende al
+   giro successivo, non va ricreato;
+3. incollare lo **stesso** valore nel secret `DISPATCH_SECRET` del progetto
+   (Project Settings → Edge Functions → Secrets) e ridistribuire
+   `push-dispatcher`.
+
+Fra il passo 2 e il passo 3 il dispatcher risponde 401 e non parte nessuna
+notifica: è la finestra giusta in cui fallire. La procedura completa è in fondo
+a `supabase/migrations/20260831193100_cron_dispatch_secret_from_vault.sql`.
+
+**La revoca di `pg_net` non è invece applicabile**, e lo sappiamo per averla
+provata: le funzioni appartengono a `supabase_admin` e le migration girano come
+`postgres`, quindi il `REVOKE` è un no-op silenzioso. Il perché, e perché la
+revoca «corretta» fermerebbe le notifiche, sono scritti nella migration
+`20260831193000_*.sql`, svuotata e lasciata come nota.
 
 ### 2. Componenti giganti, quello che resta
 
@@ -269,6 +281,20 @@ Sono in [`docs/ROADMAP.md`](docs/ROADMAP.md) con costo e motivazione:
   sembravano fedeli. Venti test sono diventati rossi appena il componente
   ha iniziato a usarla — il che è il comportamento giusto, ma dice che il
   mock descriveva le nostre abitudini, non il contratto.
+- **Una migration che non ha i privilegi non fallisce: riesce e non fa
+  niente.** Il `REVOKE` su `pg_net` è stato applicato davvero, non ha sollevato
+  errori, e i privilegi erano esattamente dov'erano. In PostgreSQL un `REVOKE`
+  da chi non è owner né ha `GRANT OPTION` emette un warning e prosegue. È il
+  modo peggiore in cui una migration può sbagliare: il file finisce nella
+  cartella, il changelog dichiara il problema chiuso, e non è cambiato niente.
+  L'unica difesa è **rileggere i privilegi dopo**, che è ciò che ha fatto
+  emergere il problema.
+- **`cron.job_run_details` dice `succeeded` anche quando la richiesta HTTP è
+  stata mollata.** Segna l'esito dell'SQL, non quello della chiamata: con
+  `net.http_post` l'SQL riesce sempre, perché accoda e basta. La verità sta in
+  `net._http_response`, ed era che 65 giri su 72 finivano in timeout a 5
+  secondi. Il dispatcher sembrava funzionare da mesi guardando il posto
+  sbagliato.
 - **Il linter vede solo il codice che riesce a leggere.** `MotoGPPage`
   chiamava `Date.now()` durante il render da mesi, con `verify` verde:
   `react-hooks/purity` non entrava nell'IIFE finché questo stava in fondo a
