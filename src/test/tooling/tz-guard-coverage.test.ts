@@ -50,6 +50,26 @@ describe("Copertura del guardiano sul fuso", () => {
     }
   });
 
+  it("guarda anche src/lib, non solo le pagine e tre cartelle di componenti", () => {
+    // La logica sulle date migra volentieri dalle pagine a `src/lib`, ed e'
+    // giusto che lo faccia: e' li' che si testa senza montare un componente.
+    // Se il guardiano non la segue, il refactor che la sposta la toglie di
+    // fatto dal controllo, e il controllo resta verde.
+    const dirs = script.match(/const TARGET_DIRS = \[([^\]]*)\]/)?.[1] ?? "";
+    expect(dirs).toContain('"src/lib"');
+  });
+
+  it("l'esenzione resta su dateUtils e sui test, e non si allarga", () => {
+    // `dateUtils.ts` e' esente perche' *implementa* la policy: e' il posto
+    // dove `new Date(stringa)` deve stare. E' una ragione che non si
+    // generalizza, quindi la lista non deve crescere in silenzio.
+    const blocco = script.match(/const EXEMPT = \[([^\]]*)\]/)?.[1] ?? "";
+    const voci = blocco.split(",").filter((v) => v.trim().length > 0);
+    expect(voci).toHaveLength(2);
+    expect(blocco).toContain("dateUtils");
+    expect(blocco).toContain("test");
+  });
+
   it("il guardiano ammette la costruzione esplicitamente UTC", () => {
     // `new Date(Date.UTC(...))` riceve un numero: e' la forma corretta, e
     // segnalarla insegnerebbe a spargere `@tz-ignore` su codice giusto.

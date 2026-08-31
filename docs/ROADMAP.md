@@ -138,8 +138,11 @@ filtri (`src/lib/streamingFilters.ts`, con i test dell'andata e ritorno) e i
 tre sotto-componenti che stavano in fondo al file. Restano dentro dieci stati
 locali e le tabelle di rendering.
 
-In fila: `TonightTvList` 802 righe, `CalendarPage` 695. Conteggi verificati il
-31 agosto 2026.
+`CalendarPage` è scesa da 712 a 620: fuori `buildMonthGrid` e le date in fuso
+italiano, in `src/lib/calendarGrid.ts`, con dodici test che prima non
+esistevano.
+
+In fila resta `TonightTvList`, 808 righe. Conteggio verificato il 31 agosto 2026.
 
 **Prima del taglio, la rete.** Per `StreamingPage` è servita una e2e sul
 deep-link, e non è un dettaglio di processo: la serializzazione dell'indirizzo

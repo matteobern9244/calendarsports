@@ -118,6 +118,12 @@ bottoni evento del calendario, `aria-pressed` sui filtri a pillola.
 **Fase 6.6 — un solo sistema di toast.** Rimosso quello Radix, che era montato
 e non riceveva mai niente. Bundle 550,23 → 534,78 kB.
 
+**Fase 6.2c — `CalendarPage` 712 → 620 righe.** Fuori `buildMonthGrid` e le
+date in fuso italiano, in `src/lib/calendarGrid.ts`, con dodici test che prima
+non esistevano: la griglia del mese era aritmetica non verificata da niente.
+Nell'occasione il guardiano del fuso è stato esteso a `src/lib/`, che non
+guardava: la logica sulle date che si estrae per testarla usciva dal controllo.
+
 **Fase 6.2b — `StreamingPage` 788 → 588 righe.** Fuori la serializzazione dei
 filtri (`src/lib/streamingFilters.ts`, undici test fra cui l'andata e ritorno)
 e i tre sotto-componenti. Costruita prima la e2e sul deep-link, che non
@@ -159,7 +165,7 @@ I passi 1 e 2 non sono una mitigazione: sono il prerequisito che rende il passo
 ### 2. Componenti giganti, quello che resta
 
 Conteggi misurati il 31 agosto 2026: `TonightTvList` 808 righe,
-`CalendarPage` 712, `JuventusPage` 712, `StreamingPage` 588,
+`JuventusPage` 712, `CalendarPage` 620, `StreamingPage` 588,
 `JuventusMatchPage` 426, `Formula1Page` 409, `MotoGPPage` 408,
 `SinnerPage` 363.
 
@@ -174,10 +180,12 @@ Per i due prossimi la rete manca allo stesso modo:
 - `TonightTvList` ha **una** e2e (il separatore fra famiglie) e due
   `vi.mock("@tanstack/react-query")` che descrivono le nostre abitudini invece
   del contratto della libreria (vedi sotto).
-- `CalendarPage` ha `CalendarPage.a11y.test.tsx`, che copre i nomi accessibili
-  e nient'altro, e nessuna e2e. Le fixture e2e usano date nel **2099**, quindi
-  il calendario aperto sul mese corrente è vuoto: una e2e utile richiede
-  fixture con date relative a oggi.
+- `CalendarPage` ha perso 92 righe — `buildMonthGrid` e le date in fuso
+  italiano sono in `src/lib/calendarGrid.ts` con dodici test — ma quello che
+  resta dentro è JSX, e lì la rete non c'è: `CalendarPage.a11y.test.tsx` copre
+  i nomi accessibili e nient'altro, e non esiste una e2e. Le fixture e2e usano
+  date nel **2099**, quindi il calendario aperto sul mese corrente è vuoto:
+  una e2e utile richiede fixture con date relative a oggi.
 
 Del guscio trasversale delle pagine sportive restano i due pezzi esterni —
 guardiano offline e intestazione con le tab, ~50 righe su quattro pagine.

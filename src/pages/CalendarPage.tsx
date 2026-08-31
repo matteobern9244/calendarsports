@@ -1,4 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  MONTH_LABELS,
+  WEEKDAY_LABELS,
+  buildMonthGrid,
+  formatDayHeaderIT,
+  romeDayKey,
+  romeHHMM,
+  romeHHMMFromDate,
+  toRomeYMD,
+  ymdKey,
+  type RomeYMD,
+} from "@/lib/calendarGrid";
 import { Link } from "react-router";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,103 +35,6 @@ import { toRomeDate, formatDateTimeIT } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 
 // Etichette IT per settimane e mesi (no date-fns/locale per zero-dipendenze)
-const WEEKDAY_LABELS = ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"] as const;
-const MONTH_LABELS = [
-  "Gennaio",
-  "Febbraio",
-  "Marzo",
-  "Aprile",
-  "Maggio",
-  "Giugno",
-  "Luglio",
-  "Agosto",
-  "Settembre",
-  "Ottobre",
-  "Novembre",
-  "Dicembre",
-] as const;
-
-type RomeYMD = { y: number; m: number; d: number };
-
-// I tre formatter della pagina vivono qui e non dentro le funzioni che li
-// usano. Costruire un `Intl.DateTimeFormat` e' la parte cara dell'API:
-// `toRomeYMD` ne costruiva uno per evento (~350 a mese) e `romeHHMM`, che
-// passava da `toLocaleTimeString`, due per evento visibile.
-const ROME_YMD_FMT = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Europe/Rome",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-const ROME_HHMM_FMT = new Intl.DateTimeFormat("it-IT", {
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "Europe/Rome",
-  hour12: false,
-});
-
-const ROME_DAY_HEADER_FMT = new Intl.DateTimeFormat("it-IT", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  timeZone: "Europe/Rome",
-});
-
-/** Estrae anno/mese/giorno della data in fuso `Europe/Rome`. */
-function toRomeYMD(date: Date): RomeYMD {
-  const [y, m, d] = ROME_YMD_FMT.format(date).split("-").map(Number);
-  return { y, m, d };
-}
-
-/** Chiave `YYYY-MM-DD` in fuso Rome per indicizzare gli eventi per giorno. */
-function romeDayKey(iso: string): string | null {
-  const d = toRomeDate(iso);
-  if (!d) return null;
-  const { y, m, d: day } = toRomeYMD(d);
-  return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-/** HH:MM in fuso Rome dalla data ISO. */
-function romeHHMM(iso: string): string {
-  const d = toRomeDate(iso);
-  if (!d) return "";
-  return ROME_HHMM_FMT.format(d);
-}
-
-/** Costruisce la matrice 6x7 di giorni del mese visualizzato (lunedì=primo). */
-function buildMonthGrid(year: number, monthIndex0: number): RomeYMD[][] {
-  // monthIndex0: 0..11
-  const firstOfMonth = new Date(Date.UTC(year, monthIndex0, 1));
-  // JS Date.getUTCDay(): 0=Dom..6=Sab. Trasformiamo in 0=Lun..6=Dom.
-  const firstWeekday = (firstOfMonth.getUTCDay() + 6) % 7;
-  const startUtc = new Date(Date.UTC(year, monthIndex0, 1 - firstWeekday));
-  const weeks: RomeYMD[][] = [];
-  for (let w = 0; w < 6; w++) {
-    const row: RomeYMD[] = [];
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(
-        Date.UTC(
-          startUtc.getUTCFullYear(),
-          startUtc.getUTCMonth(),
-          startUtc.getUTCDate() + w * 7 + i,
-        ),
-      );
-      row.push({
-        y: day.getUTCFullYear(),
-        m: day.getUTCMonth() + 1,
-        d: day.getUTCDate(),
-      });
-    }
-    weeks.push(row);
-  }
-  return weeks;
-}
-
-function ymdKey(c: RomeYMD): string {
-  return `${c.y}-${String(c.m).padStart(2, "0")}-${String(c.d).padStart(2, "0")}`;
-}
-
 const SPORT_DOT: Record<CalendarItem["sport"], string> = {
   juventus: "bg-[hsl(var(--sport-juventus))]",
   f1: "bg-[hsl(var(--sport-f1))]",
@@ -166,13 +81,6 @@ function loadView(): ViewMode {
 }
 
 /** Header giorno IT lungo, capitalizzato (es. "Sabato 7 Giugno"). */
-function formatDayHeaderIT(c: RomeYMD): string {
-  // Costruiamo una data UTC a mezzogiorno per evitare drift cross-DST
-  const d = new Date(Date.UTC(c.y, c.m - 1, c.d, 12, 0, 0));
-  const s = ROME_DAY_HEADER_FMT.format(d);
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 export default function CalendarPage() {
   const today = useMemo(() => toRomeYMD(new Date()), []);
   const [view, setView] = useState<RomeYMD>(today);
@@ -253,7 +161,7 @@ export default function CalendarPage() {
 
   // Con il formatter a modulo la formattazione costa quanto leggere una
   // variabile: la `useMemo` che la avvolgeva non serve piu'.
-  const lastSyncLabel = lastSyncAt ? ROME_HHMM_FMT.format(lastSyncAt) : null;
+  const lastSyncLabel = lastSyncAt ? romeHHMMFromDate(lastSyncAt) : null;
 
   return (
     <div className="container py-4 sm:py-6 space-y-4">

@@ -34,10 +34,22 @@ const TARGETS = [
   "src/pages/CalendarPage.tsx",
 ];
 const TARGET_DIRS = [
+  "src/lib",
   "src/components/home",
   "src/components/streaming",
   "src/components/highlights",
 ];
+
+// Un solo file e' esente, e per una ragione che non si generalizza:
+// `dateUtils.ts` **implementa** la policy. E' il posto dove `new Date(stringa)`
+// deve stare, perche' e' li' che la stringa viene prima normalizzata a UTC.
+// Guardarlo con la regola che esso stesso realizza segnalerebbe come difetto
+// la sua unica ragione di esistere.
+//
+// I file di test sono esclusi perche' costruiscono di proposito date in forme
+// scorrette, per verificare che il codice di produzione le regga: sono i casi
+// del test, non il comportamento dell'app.
+const EXEMPT = [/^src\/lib\/dateUtils\.ts$/, /\.test\.(tsx?|jsx?)$/];
 
 const PATTERN = /\.(toLocaleTimeString|toLocaleDateString)\s*\(/g;
 // `new Date(` seguito da qualcosa: vietato. `new Date()` vuoto: permesso.
@@ -71,7 +83,10 @@ async function collectFiles() {
   for (const dir of TARGET_DIRS) {
     files.push(...(await walk(path.join(ROOT, dir))));
   }
-  return files;
+  return files.filter((full) => {
+    const rel = path.relative(ROOT, full).split(path.sep).join("/");
+    return !EXEMPT.some((re) => re.test(rel));
+  });
 }
 
 function findViolations(src) {

@@ -160,6 +160,20 @@ changelog, e questo è quel passaggio.
 
 ### Changed
 
+- **`CalendarPage` scende da 712 a 620 righe**, e la matematica del calendario
+  ha finalmente dei test. `buildMonthGrid` e le funzioni di data in fuso
+  italiano vivono in `src/lib/calendarGrid.ts` con dodici test: griglia sempre
+  6×7, settimana che comincia di lunedì (la conversione da `getUTCDay()`, che
+  conta da domenica, è quella che si sbaglia di un giorno), cambio d'anno in
+  testa e in coda, 29 febbraio, e la proprietà che ogni cella disti
+  esattamente 24 ore dalla precedente anche attraverso il cambio dell'ora.
+- **Il guardiano del fuso guarda anche `src/lib/`.** Guardava le pagine e tre
+  cartelle di componenti: la logica sulle date che migra in `src/lib` — cioè
+  proprio quella che si estrae per poterla testare — usciva dal controllo, e il
+  controllo restava verde. Unica esenzione, motivata, `dateUtils.ts`, che
+  **implementa** la policy ed è il posto dove `new Date(stringa)` deve stare;
+  più i file di test, che costruiscono date scorrette di proposito. Due test in
+  `src/test/tooling/` sorvegliano che quell'esenzione non si allarghi.
 - **`StreamingPage` scende da 788 a 588 righe.** La serializzazione dei filtri
   nell'indirizzo esce in `src/lib/streamingFilters.ts` come coppia di funzioni
   pure (`readFilters` / `writeFilters`) con undici test, fra cui la proprietà
