@@ -15,11 +15,15 @@ Misurato, non ricordato:
 
 ```text
 bun run verify   → exit 0 (typecheck, lint, italiano, fuso, test, build)
-bun run test     → 216 test su 21 file, tutti verdi
-bun run test:e2e → 4 test verdi
+bun run test     → 239 test su 24 file, tutti verdi
+bun run test:e2e → 6 test verdi (uno va davvero offline)
 bun audit        → No vulnerabilities found
 bun outdated     → solo typescript 5.9.3 (fermo di proposito, vedi sotto)
 ```
+
+La versione è **2.8.0**: l'audit è chiuso lato codice. Quello che resta non è
+codice da scrivere, è **roba da applicare a mano sul progetto Supabase** — vedi
+«Quello che serve te», qui sotto.
 
 Il tree è pulito. La CI **non è ancora stata eseguita** sulla nuova
 configurazione: `ci.yml` sostituisce i due workflow precedenti e va guardata al
@@ -95,6 +99,34 @@ quattro le pagine: Formula1 430→409, MotoGP 427→408, Sinner 378→363, Juven
 changelog: il «Riprova» mancante sulla scheda Costruttori F1 e `Date.now()` in
 render dentro `MotoGPPage`.
 
+**Fase 5 — sicurezza, la parte che si poteva fare da qui.** Il dedupe del
+dispatcher è atomico: il posto in `push_sent_log` si prende **scrivendo**
+(`INSERT ... ON CONFLICT DO NOTHING RETURNING id`) invece di leggere e poi
+scrivere, e se l'invio fallisce la riga viene cancellata. Logica in
+`dedupe.ts`, otto test. Scritte due migration correttive — revoca di `pg_net`
+ai ruoli client, e job cron rieseguibile con il segreto nel Vault — **verificate
+in lettura contro il database di produzione ma non applicate**.
+
+**Fase 6.4 — PWA.** Il service worker ha un handler `fetch`: documento a
+rete-prima-cache-poi, `/assets/` a cache-prima. Icone `any` e `maskable`
+separate. Verificato da una e2e che va offline davvero.
+
+**Fase 6.5 — accessibilità.** Quattro correzioni: riga TV non più focusabile a
+vuoto, `aria-disabled` sulle frecce di paginazione, nomi accessibili sui
+bottoni evento del calendario, `aria-pressed` sui filtri a pillola.
+
+**Fase 6.6 — un solo sistema di toast.** Rimosso quello Radix, che era montato
+e non riceveva mai niente. Bundle 550,23 → 534,78 kB.
+
+**Fase 6.2b — `StreamingPage` 788 → 588 righe.** Fuori la serializzazione dei
+filtri (`src/lib/streamingFilters.ts`, undici test fra cui l'andata e ritorno)
+e i tre sotto-componenti. Costruita prima la e2e sul deep-link, che non
+c'era.
+
+**Fase 7 — chiusura.** Versione 2.8.0, sezione nel changelog, nota in
+`docs/releases/2.8.0-audit-completo.md`, e recuperata la serie 2.6.x che
+mancava dal changelog.
+
 **Fase 4 — struttura agentica e documentazione.** `.claude/` versionata,
 AGENTS.md ridotto da 302 a 115 righe in forma di router, CLAUDE.md sottile,
 cinque playbook in `docs/agent-playbook/`, i documenti tecnici
@@ -103,84 +135,65 @@ di Dependabot per npm.
 
 ## Da fare — riprendere da qui
 
-### 1. Fase 6, i due task rimasti
+### 1. Quello che serve te: applicare, non scrivere
 
-Sono voci di [`docs/ROADMAP.md`](docs/ROADMAP.md), a priorità bassa e media;
-ognuna ha lì costo e motivazione scritti.
+È l'unica cosa **bloccante** rimasta, ed è l'unico problema di sicurezza del
+progetto con un impatto reale. Il codice c'è; tocca il database di produzione,
+e questo non passa da qui.
 
-- **Componenti giganti — la terna è fatta, si riparte dai file più
-  grandi.** Conteggi misurati il 31 agosto 2026: `TonightTvList` 802
-  righe, `StreamingPage` 788, `JuventusPage` 712, `CalendarPage` 695,
-  `Formula1Page` 409, `MotoGPPage` 408, `SinnerPage` 363.
+1. **Applicare `20260831193000_revoke_pg_net_from_client_roles.sql`.** Rischio
+   basso, reversibile con un `GRANT`. Verificato sul database reale: `anon` e
+   `authenticated` hanno oggi `EXECUTE` su tutte e dodici le funzioni di
+   `pg_net`, `net.http_post` compresa.
+2. **Applicare `20260831193100_cron_dispatch_secret_from_vault.sql`.** Non
+   cambia il segreto — lo estrae dal job stesso — quindi si applica senza
+   perdere notifiche.
+3. **Ruotare `DISPATCH_SECRET`.** La procedura in quattro passi è in fondo a
+   quella migration. Serve la dashboard: il secret della edge function non è
+   raggiungibile da SQL.
 
-  Del guscio trasversale restano solo i due pezzi esterni — guardiano
-  offline e intestazione con le tab, ~50 righe in tutto su quattro
-  pagine. Sono descritti nella voce del ROADMAP e **non sono la
-  prossima mossa**: rendono molto meno per riga toccata di quanto
-  abbiano reso i dieci `TabsContent`.
+Finché il passo 3 non è fatto, il valore che sta su GitHub **è ancora valido**.
+I passi 1 e 2 non sono una mitigazione: sono il prerequisito che rende il passo
+3 una query e un incolla.
 
-  La prossima mossa è `StreamingPage` (788 righe: dieci stati locali,
-  la serializzazione dei filtri nell'URL, tre sotto-componenti definiti
-  in fondo al file, quattro tabelle di dati inline) oppure
-  `TonightTvList` (802), e va fatta **per estrazioni successive**, non
-  in un colpo solo.
+### 2. Componenti giganti, quello che resta
 
-  **Attenzione: quella rete di sicurezza lì non c'è.** La migrazione
-  della terna è stata coperta dalla e2e di navigazione, che attraversa
-  davvero tutte e dieci le sezioni toccate (Sinner risultati e tornei,
-  Juventus calendario e classifica, i tre tab F1, i tre tab MotoGP) e
-  ne verifica il contenuto. `StreamingPage` invece **non è visitata da
-  nessuna e2e**, e `TonightTvList` ne ha una sola, sul separatore fra
-  famiglie. In più i due `vi.mock("@tanstack/react-query")` di
-  `TonightTvList` descrivono le nostre abitudini e non il contratto
-  della libreria (vedi sotto). Prima di tagliare quei due file conviene
-  costruire la rete, non dopo.
+Conteggi misurati il 31 agosto 2026: `TonightTvList` 808 righe,
+`CalendarPage` 712, `JuventusPage` 712, `StreamingPage` 588,
+`JuventusMatchPage` 426, `Formula1Page` 409, `MotoGPPage` 408,
+`SinnerPage` 363.
 
-- **PWA e accessibilità** — voce «L'app installata non funziona offline», più le
-  tre correzioni puntuali di a11y elencate nel piano (riga TV focusabile ma non
-  interattiva, `aria-disabled` mancante su `PagerNav`, nomi accessibili sui
-  bottoni evento del calendario).
+**Prima del taglio, la rete.** È la lezione di `StreamingPage`, e non è
+processo per il processo: quella pagina non era visitata da nessuna e2e, e la
+parte che poteva rompersi in silenzio era la serializzazione dei filtri
+nell'indirizzo — la UI avrebbe continuato a funzionare ignorando l'URL. La e2e
+sul deep-link è venuta prima dell'estrazione, non dopo.
 
-### 2. Fase 5 — richiede te
+Per i due prossimi la rete manca allo stesso modo:
 
-Non è stata eseguita di proposito: tocca il database di produzione, e AGENTS.md
-dice di non modificare Supabase senza richiesta esplicita. Tutto è documentato
-in [`docs/SECURITY.md`](docs/SECURITY.md) e in cima a
-[`docs/ROADMAP.md`](docs/ROADMAP.md).
+- `TonightTvList` ha **una** e2e (il separatore fra famiglie) e due
+  `vi.mock("@tanstack/react-query")` che descrivono le nostre abitudini invece
+  del contratto della libreria (vedi sotto).
+- `CalendarPage` ha `CalendarPage.a11y.test.tsx`, che copre i nomi accessibili
+  e nient'altro, e nessuna e2e. Le fixture e2e usano date nel **2099**, quindi
+  il calendario aperto sul mese corrente è vuoto: una e2e utile richiede
+  fixture con date relative a oggi.
 
-- **Rotazione di `DISPATCH_SECRET`** (serve la dashboard Supabase). Il valore è
-  in chiaro nella migration `20260523084606_*.sql`, è nella storia di Git e su
-  GitHub, ed è l'unica autenticazione di `push-dispatcher`. Va considerato
-  compromesso. Riscrivere la storia di `main` non è praticabile con la
-  sincronizzazione Lovable attiva: è la rotazione a neutralizzarlo.
-- `REVOKE USAGE ON SCHEMA extensions FROM anon, authenticated` — `pg_net`
-  raggiungibile da `anon` è metà di una primitiva SSRF.
-- Migration del cron **idempotente**: oggi `cron.unschedule` di un job
-  inesistente solleva, quindi quella migration fallisce su un database nuovo.
-- Dedupe atomico nel dispatcher: scrivere prima di inviare con
-  `ignoreDuplicates`, invece di `SELECT` e poi `INSERT` con l'errore scartato.
-  Produce notifiche doppie sui dispositivi reali.
+Del guscio trasversale delle pagine sportive restano i due pezzi esterni —
+guardiano offline e intestazione con le tab, ~50 righe su quattro pagine.
+Priorità bassa e resa bassa: la terna interna valeva centinaia di righe, questo
+no.
 
-### 3. Fase 7 — chiusura
+### 3. Voci nuove aperte durante il lavoro
 
-Changelog e nota di rilascio. La versione attuale è `2.7.0` in `package.json` e
-`src/lib/version.ts`; l'audit merita una `2.8.0` con la sua sezione in
-`changelog.md` e la nota in `docs/releases/2.8.0-*.md`. Da recuperare anche la
-serie `2.6.x`, che manca dal changelog pur avendo già una nota in
-`docs/releases/`.
+Sono in [`docs/ROADMAP.md`](docs/ROADMAP.md) con costo e motivazione:
 
-**Da non perdere**: otto voci sono state cancellate da `docs/ROADMAP.md` perché
-realizzate, e la regola del ROADMAP dice che si spostano nel changelog. Vanno
-quindi raccontate nella sezione 2.8.0: code splitting per route con
-`ErrorBoundary` dentro `Layout`; chiavi di cache in una fabbrica sola; test
-delle edge function eseguiti davvero; Prettier obbligatorio; lint esteso alle
-tre aree scoperte; un solo workflow CI che lancia il gate locale; payload delle
-edge function validati al confine con `no-explicit-any` riaccesa; calendario e
-scheda TV che non ricalcolano più tutto a ogni render.
-
-La sezione `[Unreleased]` di `changelog.md` **non è più vuota**: contiene già
-le tre voci di `DataSection` (il «Riprova» F1, il clock MotoGP, il componente
-comune). Vanno assorbite nella 2.8.0, non riscritte da capo.
+- i font restano su `fonts.gstatic.com`, quindi offline non arrivano;
+- «+N altri» nel calendario apre il quinto evento invece di mostrare gli altri
+  (l'`aria-label` ora dice la verità, l'azione no);
+- le URL delle fonti F1 hanno `2025` scritto a mano mentre `season` è dinamico;
+- il confine streaming è dichiarato ma non validato (`declaredOnly`);
+- `push_sent_log` cresce senza retention.
 
 ## Cose scoperte durante il lavoro che vale la pena ricordare
 
