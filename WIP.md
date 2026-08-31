@@ -1,323 +1,246 @@
-# WIP — audit completo, punto di ripresa
+# Prompt — finire il refactoring dei componenti giganti
 
-Lavoro in corso sul branch `develop`. Questo file esiste per poter riprendere a
-freddo: dice cosa è stato fatto, cosa resta, e dove ricominciare esattamente.
+> Questo file **è un prompt**, non un diario. Incollalo come primo messaggio in
+> una sessione nuova. Descrive un lavoro che si può portare a termine in una
+> sessione sola, e contiene le trappole già pagate una volta: leggerle costa
+> due minuti, riscoprirle è costato ore.
+>
+> Lo stato del progetto al 31 agosto 2026 — audit chiuso, versione 2.8.0 — è in
+> [`changelog.md`](changelog.md). Quello che resta aperto e **non** riguarda
+> questo lavoro (in primis la rotazione di `DISPATCH_SECRET`, che è bloccante e
+> di sicurezza) vive in [`docs/ROADMAP.md`](docs/ROADMAP.md) e
+> [`docs/SECURITY.md`](docs/SECURITY.md). Non serve rileggerli per fare questo.
 
-Il piano completo da cui nasce il lavoro si chiama **«Audit completo
-calendarsports — Piano di implementazione»** e vive fuori dal repository, in
-`~/.claude/plans/fai-un-audit-completo-splendid-rainbow.md`. Contiene le sette
-fasi con i task numerati citati qui sotto, la matrice delle dipendenze verificate
-sul registro npm e la tabella dei rischi per ogni cluster di aggiornamento.
+---
 
-## Stato verificato al momento dell'interruzione
+## Il compito
 
-Misurato, non ricordato:
+Chiudi il refactoring dei componenti giganti di `calendarsports`, sul branch
+`develop`. Tre cose, in quest'ordine:
+
+1. **`JuventusPage.tsx`** (712 righe, il file più grande del progetto).
+2. **Il guscio ripetuto** delle quattro pagine sportive (~50 righe su quattro
+   file).
+3. **Il secondo giro** su `StreamingPage`, `TonightTvList` e `CalendarPage`,
+   già accorciate ma non finite.
+
+Non è un lavoro di conteggio righe. L'obiettivo è che **la logica che si può
+sbagliare in silenzio stia in moduli puri con dei test**, e che il JSX resti
+JSX. Dove tagliare non fa guadagnare verificabilità, non tagliare.
+
+---
+
+## Prima di toccare qualsiasi cosa
+
+Leggi [`AGENTS.md`](AGENTS.md): è il contratto, e la sua tabella «Come scegliere
+la guida» dice quale playbook è obbligatorio per l'area toccata. Per questo
+lavoro serve
+[`docs/agent-playbook/architecture-and-boundaries.md`](docs/agent-playbook/architecture-and-boundaries.md).
+
+Quattro regole che questo lavoro tocca da vicino:
+
+- **TDD.** Il test si scrive prima e si guarda fallire. Qui non è cerimonia:
+  serve a dimostrare che l'estrazione non ha cambiato comportamento.
+- **Non fare commit, push, merge o PR se non ti viene chiesto.** Se te lo
+  chiedono: solo l'identità Git già configurata, nessun `--author`, nessun
+  trailer, nessuna firma dell'agente.
+- **Mai lavorare su `main`**, che è sincronizzato con Lovable.
+- **Zero avvisi.** Se il lavoro ne produce, sistemarli fa parte del lavoro: non
+  è un follow-up.
+
+Il gate è `bun run verify`, più `bun run test:e2e` per la navigazione. Verdi a
+ogni commit, non solo alla fine.
+
+---
+
+## Il metodo, che qui non è negoziabile: prima la rete, poi il taglio
+
+La regola è nata sul campo. `StreamingPage` non era visitata da **nessuna**
+e2e, e la parte che poteva rompersi era la serializzazione dei filtri
+nell'indirizzo: la UI avrebbe continuato a funzionare ignorando l'URL, e un
+link condiviso avrebbe riportato a uno stato diverso da quello che chi l'ha
+copiato stava guardando. Nessun test l'avrebbe visto. La e2e sul deep-link è
+venuta **prima** dell'estrazione.
+
+Quindi, per ogni file: chiediti **cosa si romperebbe senza fare rumore** e
+copri quello per primo. Non «aggiungi test», ma: individua l'unica cosa che
+fallirebbe in silenzio e mettila sotto osservazione.
+
+---
+
+## 1. `JuventusPage.tsx` — 712 righe
+
+**La rete c'è già, ed è buona.** Le e2e la attraversano in profondità:
+`e2e/app.spec.ts` la visita nel test di navigazione (calendario, badge
+emittente, scheda Classifica) e ha un test dedicato al dettaglio partita,
+raggiunto sia dal calendario sia per id diretto sia con un id inesistente. È il
+motivo per cui viene per prima: si può tagliare subito.
+
+Cosa c'è dentro, in ordine di valore:
+
+- **`buildPageList(current, total)`** (riga ~56). Aritmetica di paginazione con
+  gli ellissi, **zero test**. È il candidato migliore di tutto il lavoro:
+  la classica funzione che sbaglia di uno ai bordi — pagina 1, ultima pagina,
+  meno di 7 pagine, esattamente 7, 8 — senza che nessuno se ne accorga.
+  Portala in `src/lib/` con i suoi test **prima** di toccare il JSX.
+- **La card «Prossima Partita»** (riga ~232, `{nextMatch && ...}`): un centinaio
+  di righe di JSX dentro un IIFE. Diventa un componente in
+  `src/components/juventus/`.
+- **La tabella classifica** (dentro `TabsContent value="classifica"`, riga ~332)
+  e **il blocco calendario con la sua paginazione** (riga ~450): due componenti.
+- `COMPETITION_COLORS` e `PAGE_SIZE`: costanti, seguono chi le usa.
+
+**Un dettaglio da non appiattire**: nel tab calendario `DataSection` riceve
+`isEmpty={!calendar?.items.length}` ma `isLoading={calLoading && !calendar}`.
+Non è una svista — serve a tenere i dati in pagina mentre arriva la successiva.
+Se sposti quel blocco, portati dietro le condizioni così come sono.
+
+## 2. Il guscio ripetuto delle quattro pagine sportive
+
+`Formula1Page`, `MotoGPPage`, `SinnerPage` e `JuventusPage` ripetono due pezzi.
+
+- **Il guardiano offline**: lo stesso `if` — «nessuna sezione ha dati _e_ tutte
+  sono in errore _e_ siamo offline» → `OfflineFallback` dentro
+  `div.container.py-8.sm:py-12`. Sta a `Formula1Page.tsx:78`,
+  `MotoGPPage.tsx:83`, `SinnerPage.tsx:96`, `JuventusPage.tsx:194`.
+  **Le quattro condizioni non sono identiche**: ognuna elenca le proprie
+  sezioni, e Sinner include anche `!playerInfo`. Un componente che accetta una
+  lista di `{ data, error }` più un `onRetry` le copre tutte senza appiattirle.
+- **L'intestazione con le tab**: `SectionHeader` dentro `div.mb-2`, poi `Tabs`
+  con `TabsList` e i trigger con la stessa classe. **`SinnerPage` usa una
+  `TabsList` più semplice delle altre tre** (niente `flex-wrap h-auto gap-1
+p-1`): o la parametrizzi o la lasci fuori, ma non uniformarla in silenzio —
+  sarebbe un cambiamento visivo che nessuno ha chiesto.
+
+Resa attesa: una cinquantina di righe. È poco, ed è il motivo per cui viene
+**dopo** `JuventusPage`. Se il tempo stringe, è questo il pezzo da sacrificare.
+
+## 3. Secondo giro sui tre file già accorciati
+
+Solo se i primi due sono chiusi e verdi.
+
+- **`TonightTvList.tsx`** (661): la scelta del programma principale per canale
+  — quella con `overlapsPrimeWindow`, `primeWindowOverlapMinutes`, la soglia
+  `MIN_DURATION = 40` e i tie-break — è ancora dentro una `useMemo` nel
+  componente. È logica di selezione con criteri impliciti e merita di stare in
+  `src/lib/tonightTv.ts`, dove i suoi vicini hanno già nove test.
+  **Ma lì la rete è più debole che altrove**: una sola e2e, sul separatore fra
+  famiglie. I test unitari sono trenta, ma passano tutti da un
+  `vi.mock("@tanstack/react-query")` (in `TonightTvList.test.tsx` e in
+  `TonightTvList.overlap.test.tsx`). Quei mock **oggi implementano `combine`** e
+  dichiarano di rispettare il contratto reale — furono corretti quando il
+  componente iniziò a usarla, e venti test diventarono rossi in quel momento.
+  Il punto resta: un mock descrive il contratto **per quanto ne sappiamo**, e
+  se l'estrazione tocca un'altra opzione di `useQueries` sarà di nuovo muto.
+  Verifica cosa il mock implementa davvero prima di appoggiartici.
+- **`CalendarPage.tsx`** (620): vista mese e vista agenda sono due componenti
+  dentro una funzione sola. **Nessuna e2e la visita**, e le fixture e2e usano
+  date nel **2099**: aperta sul mese corrente la pagina è vuota, quindi una e2e
+  utile richiede fixture con date relative a oggi ed è un lavoro a sé.
+- **`StreamingPage.tsx`** (588): restano dieci stati locali e quattro tabelle
+  di rendering. La rete c'è (e2e sul deep-link). Valore basso: è già leggibile.
+
+---
+
+## Trappole già pagate — leggile, non riscoprirle
+
+- **Il linter vede solo il codice che riesce a leggere.** `MotoGPPage` chiamava
+  `Date.now()` in render da mesi con `verify` verde: `react-hooks/purity` non
+  entrava nell'IIFE finché stava in fondo a una catena
+  `dati && dati.length > 0 && (...)`. Semplificata la condizione, la regola ha
+  visto il codice ed è diventata rossa. **Aspettati che succeda di nuovo**: il
+  refactor non introduce quei difetti, li rende raggiungibili. Sono difetti
+  veri: si correggono, non si zittiscono.
+- **I `children` di un componente si valutano anche quando non vengono resi.**
+  Passare JSX a un componente che poi lo scarta esegue comunque le `map` e gli
+  IIFE dentro. Oggi è irrilevante (array vuoti), ma se estrai qualcosa di
+  costoso la soluzione è una render prop, non spostare la condizione fuori.
+- **Il guardiano del fuso ha una lista di file.** Copre `src/pages/*` (elenco a
+  mano in `scripts/check-rome-tz.mjs`), `src/lib` e tre cartelle di componenti.
+  **Se crei una cartella nuova sotto `src/components/` che manipola date, il
+  guardiano non la guarda e resta verde**: aggiungila a `TARGET_DIRS`. Due test
+  in `src/test/tooling/tz-guard-coverage.test.ts` sorvegliano la lista e le
+  esenzioni.
+- **`new Date(stringa)` è vietato**, `new Date(Date.UTC(...))` no. Un ISO senza
+  `Z` vale UTC: usa `toRomeDate` da `@/lib/dateUtils`.
+- **Costruire un `Intl.DateTimeFormat` costa circa settanta volte la sua
+  `format`**, quindi va a livello di modulo. Il difetto è già ricomparso due
+  volte dopo essere stato corretto una: controlla ogni formatter che sposti.
+- **Su macOS il filesystem è case-insensitive.** Due moduli che differiscono
+  solo per maiuscole collidono in locale e sono distinti su Linux in CI. È già
+  successo.
+- **Dopo una sostituzione massiva rilancia subito `tsc`.** Il codemod di
+  Tailwind rinominò il _valore_ della prop `variant="outline"` in
+  `"outline-solid"` su quattro bottoni: non lo videro né il lint né la build.
+- **Le e2e non coprono il rischio visivo.** Se tocchi lo stile va guardato a
+  schermo, in tema chiaro e scuro. Se **non** lo tocchi, dimostralo invece di
+  affermarlo: confronta l'insieme dei `className` prima e dopo. Sulle quattro
+  pagine sportive furono 195 occorrenze e zero differenze — per quel rischio è
+  una prova più forte di uno screenshot.
+
+---
+
+## Dove va cosa
+
+Dalla struttura di `src/`, che il playbook rende vincolante:
+
+- `src/lib/` — logica pura, senza React. È il posto per tutto ciò che vuoi
+  testare senza montare un componente. **È qui che sta il valore.**
+- `src/components/common/` — componenti trasversali riusabili.
+- `src/components/<dominio>/` — componenti di un'area (`streaming/`, `home/`,
+  `sinner/`, `highlights/`; per il punto 1 servirà `juventus/`).
+- `src/components/ui/` — **generati dalla CLI shadcn, non si scrivono a mano.**
+- Una pagina non importa da un'altra pagina. Se due pagine vogliono la stessa
+  cosa, quella cosa scende in `common/` o in `lib/`.
+
+Precedenti da imitare, tutti nati da questo stesso lavoro:
+`src/lib/streamingFilters.ts` (168 righe, 11 test, con la proprietà di andata e
+ritorno fra `readFilters` e `writeFilters`), `src/lib/calendarGrid.ts` (118, 12
+test), `src/lib/tonightTv.ts` (182, 9 test),
+`src/components/common/DataSection.tsx` (103, 8 test).
+
+---
+
+## Stato di partenza, misurato il 31 agosto 2026
 
 ```text
-bun run verify   → exit 0 (typecheck, lint, italiano, fuso, test, build)
-bun run test     → 239 test su 24 file, tutti verdi
-bun run test:e2e → 6 test verdi (uno va davvero offline)
-bun audit        → No vulnerabilities found
-bun outdated     → solo typescript 5.9.3 (fermo di proposito, vedi sotto)
+bun run verify   → exit 0
+bun run test     → 262 test su 26 file
+bun run test:e2e → 6 test
 ```
 
-La versione è **2.8.0** e l'audit è chiuso. Le due migration sono state
-**applicate** sul progetto il 31 agosto 2026, e applicarle ha smentito una
-delle due: vedi «Quello che serve te». L'unica cosa bloccante rimasta è la
-rotazione del segreto del dispatcher, che richiede la dashboard.
+| File                                    | Righe |
+| --------------------------------------- | ----- |
+| `src/pages/JuventusPage.tsx`            | 712   |
+| `src/components/home/TonightTvList.tsx` | 661   |
+| `src/pages/CalendarPage.tsx`            | 620   |
+| `src/pages/StreamingPage.tsx`           | 588   |
+| `src/pages/JuventusMatchPage.tsx`       | 426   |
+| `src/pages/Formula1Page.tsx`            | 409   |
+| `src/pages/MotoGPPage.tsx`              | 408   |
+| `src/pages/SinnerPage.tsx`              | 363   |
 
-Il tree è pulito. La CI **non è ancora stata eseguita** sulla nuova
-configurazione: `ci.yml` sostituisce i due workflow precedenti e va guardata al
-primo push.
+Le sei e2e di `e2e/app.spec.ts`: navigazione fra tutte le sezioni, stato di
+caricamento F1, separatore di Stasera in TV, dettaglio partita Juventus, PWA
+offline, deep-link streaming.
 
-## Decisioni prese, da non rimettere in discussione
+---
 
-- **Bun** è il package manager, un solo lockfile `bun.lock`.
-- **Vite 8** con `@vitejs/plugin-react` (il plugin SWC si ferma a Vite 7).
-- **Tailwind 4**, configurazione nel blocco `@theme` di `src/index.css`. Non
-  esiste più `tailwind.config.ts`.
-- **react-router 8**, importato da `react-router` (lo shim `react-router-dom` si
-  è fermato alla 7 ed è stato rimosso).
-- **TypeScript resta sulla 5.9.** `typescript-eslint` dichiara
-  `typescript <6.1.0`: la 7 spegnerebbe il linting type-aware. È l'unica voce
-  che `bun outdated` mostra ferma, ed è ferma per questa ragione.
-- **`.env` è tracciato** di proposito: serve a Lovable e contiene solo valori
-  pubblici.
-- **`tailwindcss-animate` non diventa `tw-animate-css`**: funziona via `@plugin`
-  e le circa cento classi di animazione in uso non sono coperte da test.
-- **Prettier è un errore di lint**, ultimo elemento della flat config. La
-  formattazione non si discute più in review.
-- **La CI lancia `bun run verify`**, non l'elenco dei suoi anelli: due elenchi
-  separati divergono, ed è così che una CI smette di essere un gate.
+## Quando hai finito
 
-## Fasi chiuse
+- `bun run verify` **e** `bun run test:e2e` verdi.
+- `changelog.md` aggiornato sotto `[Unreleased]` per ogni cambiamento
+  percepibile. Un refactor puro non lo è: se non cambia niente per chi usa
+  l'app, dillo e non inventare una voce.
+- `docs/ROADMAP.md`: la voce «Quello che resta dei componenti giganti» va
+  ristretta o cancellata. La regola del ROADMAP è che una voce realizzata si
+  sposta nel changelog e sparisce da lì.
+- **Riscrivi questo file.** Se il lavoro è chiuso, `WIP.md` va cancellato dal
+  repository, non lasciato a raccontare un compito che non esiste più. Se resta
+  qualcosa, riscrivilo come prompt per la sessione dopo, con lo stesso taglio:
+  cosa fare, cosa è già stato pagato, dove sono le trappole.
 
-**Fase 0 — baseline verde.** La CI era rossa da aprile. Rimossa una funzione
-segnaposto mai chiamata che portava l'unico `@ts-ignore`; le fixture e2e ora
-replicano il contratto di paginazione reale delle edge function, che è ciò che
-faceva morire JuventusPage nell'ErrorBoundary.
-
-**Fase 1 — igiene e Bun.** Un lockfile solo, `husky` e `lint-staged` fuori da
-`dependencies`, quattro file morti rimossi, `.env` tracciato.
-
-**Fase 2 — dipendenze.** Tutti i cluster completati. Oltre agli aggiornamenti,
-29 componenti shadcn irraggiungibili e 26 dipendenze orfane sono stati **rimossi
-invece che aggiornati**.
-
-**Fase 3 — toolchain di qualità.** Prettier configurato, formattazione globale
-in un commit isolato, poi reso obbligatorio. Lint esteso a `scripts/**`,
-`e2e/**` e `supabase/functions/**`, che non erano analizzati da nessuna regola.
-I tre test delle edge function ora girano davvero, e sul codice vero: la logica
-pura è uscita in moduli importabili senza far partire `Deno.serve`. I due
-workflow CI sono diventati uno. Aggiunti tre guardiani sul tooling in
-`src/test/tooling/`.
-
-**Fase 6.3 — tipizzazione dei payload al confine.** `callEdgeFunction` valida
-ogni risposta con uno schema zod (`src/lib/api/schemas.ts`) e i tipi delle
-pagine derivano da li'. Spariti i 25 `any` di `src/`,
-`@typescript-eslint/no-explicit-any` e' di nuovo accesa. Restano fuori le
-cinque azioni streaming, che passano da `declaredOnly`: e' la voce nuova del
-ROADMAP che ha sostituito quella chiusa.
-
-**Fase 6.1 — memoizzazioni.** `useCalendarEvents` restituiva un array
-nuovo a ogni render: il tick da 60 secondi di `CalendarPage` rifaceva
-l'espansione, il filtro e l'ordinamento di ~350 eventi e invalidava a
-cascata le quattro `useMemo` della pagina. In `TonightTvList` la memo
-dipendeva da `[tvQueries]`, cioe' dall'array che `useQueries` ricrea a
-ogni render: ora l'aggregazione e' la sua `combine`, una funzione di
-modulo. Hoistati i formatter `Intl`: misurato in Chromium, costruirne uno
-per data costa 13,9 ms ogni 350 date contro 0,20 ms riusandolo.
-
-**Fase 6.2a — la sezione a tre stati.** `DataSection`
-(`src/components/common/DataSection.tsx`, 103 righe, 8 test) ha assorbito le
-dieci copie della terna `LoadingState` / `ErrorState` /
-`UnavailableExternalSource`. La fonte esterna di ogni sezione si dichiara una
-volta invece di tre (`ExternalSource`: `href`, `label`, `loadingLabel`
-opzionale), e la condizione «non ci sono dati» vive in un `isEmpty` solo invece
-che in due espressioni che dovevano restare negazioni esatte. Migrate tutte e
-quattro le pagine: Formula1 430→409, MotoGP 427→408, Sinner 378→363, Juventus
-715→712. Due difetti trovati durante la migrazione, entrambi corretti e in
-changelog: il «Riprova» mancante sulla scheda Costruttori F1 e `Date.now()` in
-render dentro `MotoGPPage`.
-
-**Fase 5 — sicurezza, la parte che si poteva fare da qui.** Il dedupe del
-dispatcher è atomico: il posto in `push_sent_log` si prende **scrivendo**
-(`INSERT ... ON CONFLICT DO NOTHING RETURNING id`) invece di leggere e poi
-scrivere, e se l'invio fallisce la riga viene cancellata. Logica in
-`dedupe.ts`, otto test. Scritte due migration correttive — revoca di `pg_net`
-ai ruoli client, e job cron rieseguibile con il segreto nel Vault — **verificate
-in lettura contro il database di produzione ma non applicate**.
-
-**Fase 6.4 — PWA.** Il service worker ha un handler `fetch`: documento a
-rete-prima-cache-poi, `/assets/` a cache-prima. Icone `any` e `maskable`
-separate. Verificato da una e2e che va offline davvero.
-
-**Fase 6.5 — accessibilità.** Quattro correzioni: riga TV non più focusabile a
-vuoto, `aria-disabled` sulle frecce di paginazione, nomi accessibili sui
-bottoni evento del calendario, `aria-pressed` sui filtri a pillola.
-
-**Fase 6.6 — un solo sistema di toast.** Rimosso quello Radix, che era montato
-e non riceveva mai niente. Bundle 550,23 → 534,78 kB.
-
-**Fase 6.2d — `TonightTvList` 808 → 661 righe.** `combineTvHighlights` e i
-predicati della prima serata in `src/lib/tonightTv.ts`, con nove test diretti
-invece che attraverso i mock di React Query. Nell'occasione è emerso che
-`TvProgram.end` era dichiarato obbligatorio mentre il codice lo tratta da
-sempre come opzionale.
-
-**Fase 6.2c — `CalendarPage` 712 → 620 righe.** Fuori `buildMonthGrid` e le
-date in fuso italiano, in `src/lib/calendarGrid.ts`, con dodici test che prima
-non esistevano: la griglia del mese era aritmetica non verificata da niente.
-Nell'occasione il guardiano del fuso è stato esteso a `src/lib/`, che non
-guardava: la logica sulle date che si estrae per testarla usciva dal controllo.
-
-**Fase 6.2b — `StreamingPage` 788 → 588 righe.** Fuori la serializzazione dei
-filtri (`src/lib/streamingFilters.ts`, undici test fra cui l'andata e ritorno)
-e i tre sotto-componenti. Costruita prima la e2e sul deep-link, che non
-c'era.
-
-**Fase 7 — chiusura.** Versione 2.8.0, sezione nel changelog, nota in
-`docs/releases/2.8.0-audit-completo.md`, e recuperata la serie 2.6.x che
-mancava dal changelog.
-
-**Fase 4 — struttura agentica e documentazione.** `.claude/` versionata,
-AGENTS.md ridotto da 302 a 115 righe in forma di router, CLAUDE.md sottile,
-cinque playbook in `docs/agent-playbook/`, i documenti tecnici
-(ARCHITECTURE, DATA_SOURCES, SECURITY, CONTRIBUTING, ROADMAP), Renovate al posto
-di Dependabot per npm.
-
-## Da fare — riprendere da qui
-
-### 1. Quello che serve te: la rotazione del segreto
-
-È l'unica cosa **bloccante** rimasta, ed è l'unico problema di sicurezza del
-progetto con un impatto reale.
-
-Il resto è fatto: le migration sono state applicate sul progetto il 31 agosto
-2026, e il segreto **non è più nel corpo del job cron** — vive nel Vault, e il
-job lo legge a ogni esecuzione. Il valore però **non è cambiato**: è stato
-estratto dal job stesso, di proposito, perché rigenerarlo avrebbe fermato le
-notifiche. Quindi il valore in chiaro nella migration del 23 maggio, che è su
-GitHub, **è ancora valido**.
-
-Restano tre passi, e servono la dashboard Supabase:
-
-1. generare un valore nuovo:
-   `SELECT replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');`
-2. scriverlo nel Vault con `vault.update_secret(...)` — il job lo prende al
-   giro successivo, non va ricreato;
-3. incollare lo **stesso** valore nel secret `DISPATCH_SECRET` del progetto
-   (Project Settings → Edge Functions → Secrets) e ridistribuire
-   `push-dispatcher`.
-
-Fra il passo 2 e il passo 3 il dispatcher risponde 401 e non parte nessuna
-notifica: è la finestra giusta in cui fallire. La procedura completa è in fondo
-a `supabase/migrations/20260831193100_cron_dispatch_secret_from_vault.sql`.
-
-**La revoca di `pg_net` non è invece applicabile**, e lo sappiamo per averla
-provata: le funzioni appartengono a `supabase_admin` e le migration girano come
-`postgres`, quindi il `REVOKE` è un no-op silenzioso. Il perché, e perché la
-revoca «corretta» fermerebbe le notifiche, sono scritti nella migration
-`20260831193000_*.sql`, svuotata e lasciata come nota.
-
-### 2. Componenti giganti, quello che resta
-
-Conteggi misurati il 31 agosto 2026: `JuventusPage` 712,
-`TonightTvList` 661, `CalendarPage` 620, `StreamingPage` 588,
-`JuventusMatchPage` 426, `Formula1Page` 409, `MotoGPPage` 408,
-`SinnerPage` 363.
-
-**Prima del taglio, la rete.** È la lezione di `StreamingPage`, e non è
-processo per il processo: quella pagina non era visitata da nessuna e2e, e la
-parte che poteva rompersi in silenzio era la serializzazione dei filtri
-nell'indirizzo — la UI avrebbe continuato a funzionare ignorando l'URL. La e2e
-sul deep-link è venuta prima dell'estrazione, non dopo.
-
-Per i due prossimi la rete manca allo stesso modo:
-
-- `TonightTvList` ha perso 147 righe: `combineTvHighlights` e i predicati
-  della prima serata sono in `src/lib/tonightTv.ts` con nove test diretti, che
-  **non** passano da `vi.mock("@tanstack/react-query")`. Quello che resta è
-  JSX, e lì la rete è ancora una sola e2e (il separatore fra famiglie) più i
-  due mock di cui sopra.
-- `CalendarPage` ha perso 92 righe — `buildMonthGrid` e le date in fuso
-  italiano sono in `src/lib/calendarGrid.ts` con dodici test — ma quello che
-  resta dentro è JSX, e lì la rete non c'è: `CalendarPage.a11y.test.tsx` copre
-  i nomi accessibili e nient'altro, e non esiste una e2e. Le fixture e2e usano
-  date nel **2099**, quindi il calendario aperto sul mese corrente è vuoto:
-  una e2e utile richiede fixture con date relative a oggi.
-
-Del guscio trasversale delle pagine sportive restano i due pezzi esterni —
-guardiano offline e intestazione con le tab, ~50 righe su quattro pagine.
-Priorità bassa e resa bassa: la terna interna valeva centinaia di righe, questo
-no.
-
-### 3. Voci nuove aperte durante il lavoro
-
-Sono in [`docs/ROADMAP.md`](docs/ROADMAP.md) con costo e motivazione:
-
-- i font restano su `fonts.gstatic.com`, quindi offline non arrivano;
-- «+N altri» nel calendario apre il quinto evento invece di mostrare gli altri
-  (l'`aria-label` ora dice la verità, l'azione no);
-- le URL delle fonti F1 hanno `2025` scritto a mano mentre `season` è dinamico;
-- il confine streaming è dichiarato ma non validato (`declaredOnly`);
-- `push_sent_log` cresce senza retention.
-
-## Cose scoperte durante il lavoro che vale la pena ricordare
-
-- **Un test-copia è peggio di nessun test: è verde e sbagliato.** Due file di
-  test ricopiavano a mano la logica delle edge function e un terzo verificava
-  le proprie fixture senza mai chiamare la funzione, perché `index.ts`
-  chiama `Deno.serve` a livello di modulo e importarlo da un test farebbe
-  partire un server. Appena i test hanno importato la funzione vera, uno è
-  diventato rosso: la `GENRE_WHITELIST` ricopiata si era fermata a sei generi
-  mentre quella di produzione ne ha decine. La cura non è un mock, è spostare
-  la logica pura in un modulo che all'import non fa niente.
-- **Un guardiano con una lista scritta a mano non fallisce mai: guarda sempre
-  meno codice.** `check-rome-tz.mjs` aveva una lista di file, e `CalendarPage`
-  non c'era. Ora un test in `src/test/tooling/` verifica il contrario: che ogni
-  pagina che manipola date sia nella lista.
-- **`new Date(Date.UTC(...))` è corretto e non va zittito.** Riceve un numero,
-  non una stringa. Il guardiano del fuso ora lo riconosce, invece di farsi
-  mettere a tacere da `@tz-ignore` su codice giusto.
-- Estendere il lint a cartelle mai coperte ha trovato otto problemi reali in
-  dieci minuti, fra cui uno zero-width space nascosto dentro `/* */` in
-  `check-italian-ui.mjs` e due parser di date abbandonati.
-- Il codemod di Tailwind ha rinominato anche il **valore della prop**
-  `variant="outline"` in `"outline-solid"` su quattro bottoni, trattandolo come
-  una classe CSS. Non l'ha visto né il lint né la build: l'ha trovato `tsc`
-  quando è stato attivato `strict`. Dopo un codemod, rilanciare subito il
-  typecheck.
-- Su macOS il filesystem è case-insensitive: due moduli che differiscono solo
-  per maiuscole collidono in locale e sono distinti su Linux in CI. È già
-  successo con `PreferencesPanelContext.tsx` e `preferencesPanelContext.ts`.
-- La lockfile rimasta indietro inchiodava i pacchetti transitivi a versioni
-  vecchie: `bun audit` riportava 29 vulnerabilità che sono sparite tutte con un
-  `bun install` da zero.
-- Il wrapper del Toaster leggeva il tema da `next-themes`, che questa app non
-  monta: i toast uscivano chiari sopra l'interfaccia scura. Le e2e sono basate
-  sul testo e non lo vedevano; è stato trovato guardando uno screenshot.
-- **Le e2e non coprono il rischio visivo.** Per Tailwind 4 sono state verificate
-  a schermo Home, Juventus, Streaming, Calendario, F1 e Sinner in tema chiaro e
-  scuro. Qualunque intervento sullo stile va verificato allo stesso modo.
-- **Un campo che si chiama `constructor` non e' mai davvero opzionale.** zod
-  legge i campi con `value[key]`, che attraversa la catena dei prototipi: su
-  ogni oggetto uscito da `JSON.parse` quella chiave esiste e vale una
-  funzione. La classifica costruttori MotoGP si sarebbe svuotata in silenzio.
-  L'ha trovato una e2e, non il typecheck.
-- **`any` al confine non lascia senza tipo soltanto i payload.** Essendo
-  assegnabile a qualunque cosa, rendeva non verificate anche le annotazioni
-  scritte a mano a valle: `useQuery<TvFamilyPayload>` era un cast travestito
-  da tipo, e quattro campi letti da `MotoGPPage` non esistevano da nessuna
-  parte.
-- **Costruire un `Intl.DateTimeFormat` costa ~70 volte la sua `format`.**
-  Misurato in Chromium: 13,9 ms contro 0,20 ms per 350 date. Erano dieci
-  righe innocue dentro `toRomeYMD`, chiamata una volta per evento del
-  calendario, cioè ~14 ms di thread bloccato a ogni render della pagina.
-  I formatter vanno costruiti a livello di modulo.
-- **Un mock che ignora un'opzione della libreria collauda una libreria che
-  non esiste.** I due `vi.mock("@tanstack/react-query")` di `TonightTvList`
-  implementavano `useQueries` senza `combine`: finché nessuno la usava
-  sembravano fedeli. Venti test sono diventati rossi appena il componente
-  ha iniziato a usarla — il che è il comportamento giusto, ma dice che il
-  mock descriveva le nostre abitudini, non il contratto.
-- **Una migration che non ha i privilegi non fallisce: riesce e non fa
-  niente.** Il `REVOKE` su `pg_net` è stato applicato davvero, non ha sollevato
-  errori, e i privilegi erano esattamente dov'erano. In PostgreSQL un `REVOKE`
-  da chi non è owner né ha `GRANT OPTION` emette un warning e prosegue. È il
-  modo peggiore in cui una migration può sbagliare: il file finisce nella
-  cartella, il changelog dichiara il problema chiuso, e non è cambiato niente.
-  L'unica difesa è **rileggere i privilegi dopo**, che è ciò che ha fatto
-  emergere il problema.
-- **`cron.job_run_details` dice `succeeded` anche quando la richiesta HTTP è
-  stata mollata.** Segna l'esito dell'SQL, non quello della chiamata: con
-  `net.http_post` l'SQL riesce sempre, perché accoda e basta. La verità sta in
-  `net._http_response`, ed era che 65 giri su 72 finivano in timeout a 5
-  secondi. Il dispatcher sembrava funzionare da mesi guardando il posto
-  sbagliato.
-- **Il linter vede solo il codice che riesce a leggere.** `MotoGPPage`
-  chiamava `Date.now()` durante il render da mesi, con `verify` verde:
-  `react-hooks/purity` non entrava nell'IIFE finché questo stava in fondo a
-  una catena `calendar && calendar.length > 0 && (() => {...})()`. Tolta la
-  catena — la condizione è passata dentro `isEmpty` — la regola ha visto il
-  codice ed è diventata rossa al primo lint. Il refactor non ha introdotto il
-  difetto: lo ha reso raggiungibile. Vale la pena aspettarselo ogni volta che
-  si semplifica un'espressione condizionale complicata.
-- **La duplicazione qui non costava righe, costava deriva.** Le dieci copie
-  della terna erano già divergenti in due punti — un `onRetry` mancante e un
-  ordine dei blocchi diverso da tab a tab — senza che niente fallisse. Il
-  guadagno in righe della `DataSection` è modesto (~60 sulle quattro pagine,
-  contro 103 righe di componente nuovo più 145 di test): il guadagno vero è
-  che ora quei due difetti sarebbero impossibili da scrivere.
-- **I `children` di un componente si valutano anche quando non vengono
-  resi.** In `DataSection` il contenuto è JSX, quindi le `map` e gli IIFE
-  dentro girano pure quando `isEmpty` è vero e React li scarta. Qui è
-  irrilevante — si mappa un array vuoto — ma se un giorno un contenuto
-  diventasse costoso la soluzione è una render prop, non spostare la
-  condizione fuori.
-- Nei quattro file sportivi le URL delle fonti F1 contengono **`2025`
-  scritto a mano** (`.../racing/2025`, `.../results/2025/drivers`) mentre
-  `season` viene da `getCurrentF1Season()`. Precede questo lavoro e non è
-  stato toccato, ma è un link alla stagione sbagliata appena l'anno gira.
-- `App.tsx` monta ancora **due** sistemi di toast, Sonner e quello Radix. Il
-  piano (Task 6.6) prevedeva di tenere solo Sonner: non è stato fatto.
+Nel resoconto finale indica i file modificati, le verifiche eseguite e il loro
+esito, **i limiti della verifica**, i rischi residui e i follow-up. Distingui
+azione tentata, azione riuscita e risultato verificato: non dichiarare «fatto»
+senza aver guardato l'esito.
