@@ -539,11 +539,17 @@ function TonightTvList() {
                           </li>
                         );
                       })()}
+                    {/* Nessun `tabIndex` e nessun `cursor-pointer`: la riga
+                        non ha un'azione. Averli significava fermare il tab su
+                        ognuna delle decine di righe del palinsesto senza
+                        niente da attivare, e mostrare col puntatore una
+                        promessa che non esisteva. In una `role="table"` le
+                        righe non vanno comunque nel tab order: gli screen
+                        reader hanno i propri comandi di navigazione. */}
                     <li
                       role="row"
                       aria-rowindex={ariaRowIndex}
-                      tabIndex={0}
-                      className="group px-3 py-4 text-sm outline-hidden transition-colors hover:bg-primary/10 focus-visible:bg-primary/15 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset cursor-pointer sm:contents"
+                      className="group px-3 py-4 text-sm transition-colors hover:bg-primary/10 sm:contents"
                     >
                       {/* Desktop/Tablet: celle grid (display:contents sul li) */}
                       {(() => {

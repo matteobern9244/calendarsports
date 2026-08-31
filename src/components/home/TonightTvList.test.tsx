@@ -123,6 +123,16 @@ describe("TonightTvList accessibilità", () => {
     expect(duraMatches.length).toBeGreaterThan(0);
   });
 
+  it("non mette le righe programma nel percorso da tastiera", () => {
+    render(<TonightTvList />);
+    // Le righe avevano `tabIndex={0}` e nessun `onClick`: il tab si fermava
+    // su ognuna delle decine di righe del palinsesto senza niente da
+    // attivare. In una `role="table"` le righe non vanno comunque nel tab
+    // order — gli screen reader hanno i propri comandi di navigazione.
+    const focusable = screen.getAllByRole("row").filter((r) => r.hasAttribute("tabindex"));
+    expect(focusable).toEqual([]);
+  });
+
   it("annuncia la cella ora con etichetta parlata 'Inizio alle HH:MM[, fine alle HH:MM]'", () => {
     render(<TonightTvList />);
     const oraCells = screen.getAllByLabelText(

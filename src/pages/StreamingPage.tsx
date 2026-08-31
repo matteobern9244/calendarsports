@@ -745,17 +745,26 @@ function PagerNav({
   onChange: (p: number) => void;
 }) {
   const pages = Array.from({ length: pageCount }, (_, i) => i + 1);
+  // `pointer-events-none` toglie il puntatore e basta: il link resta nel tab
+  // order e resta attivabile con Invio. Servono anche `aria-disabled`, che lo
+  // dichiara agli screen reader, e `tabIndex={-1}`, che lo toglie davvero dal
+  // percorso da tastiera. La guardia negli `onClick` impediva gia' il salto
+  // fuori intervallo, ma non impediva al controllo di mentire.
+  const atFirst = page === 1;
+  const atLast = page === pageCount;
   return (
     <Pagination>
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious
             href="#"
+            aria-disabled={atFirst}
+            tabIndex={atFirst ? -1 : undefined}
             onClick={(e) => {
               e.preventDefault();
               if (page > 1) onChange(page - 1);
             }}
-            className={cn(page === 1 && "pointer-events-none opacity-50")}
+            className={cn(atFirst && "pointer-events-none opacity-50")}
           />
         </PaginationItem>
         {pages.map((p) => (
@@ -775,11 +784,13 @@ function PagerNav({
         <PaginationItem>
           <PaginationNext
             href="#"
+            aria-disabled={atLast}
+            tabIndex={atLast ? -1 : undefined}
             onClick={(e) => {
               e.preventDefault();
               if (page < pageCount) onChange(page + 1);
             }}
-            className={cn(page === pageCount && "pointer-events-none opacity-50")}
+            className={cn(atLast && "pointer-events-none opacity-50")}
           />
         </PaginationItem>
       </PaginationContent>

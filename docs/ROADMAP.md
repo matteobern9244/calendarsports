@@ -83,19 +83,31 @@ mano, che potrebbero già essere in ritardo sul codice.
 **Costo**: medio. **Perché ora**: `StreamingPage` è la pagina più grande del
 progetto e la sola dove un campo rinominato a monte non fa rumore.
 
-### L'app installata non funziona offline
+### I font si perdono, offline
 
-`public/sw.js` gestisce solo le notifiche push: non ha un handler `fetch`, quindi
-nessuna cache. `OfflineFallback` e `OfflineIndicator` coprono solo il caso in cui
-l'app è già aperta. Aprire la PWA senza rete mostra la pagina d'errore del
-browser.
+Il service worker adesso c'è e copre documento, `/assets/` e le risorse di
+root. Restano fuori i font di Google (`fonts.gstatic.com`), che sono
+cross-origin: offline l'app si apre ma ripiega sui font di sistema.
 
-Nella stessa voce: il manifest dichiara una sola icona 512×512 usata sia come
-`any` sia come `maskable`, senza la zona di sicurezza richiesta, quindi su Android
-l'icona viene ritagliata.
+Serve: ospitare i font nel progetto invece di prenderli da un CDN. È anche una
+questione di privacy e di una richiesta di rete in meno all'avvio.
 
-**Costo**: medio. **Perché ora**: l'app si dichiara installabile e si comporta
-come se non lo fosse.
+**Costo**: basso. **Perché non ora**: l'app resta leggibile e usabile; è un
+degrado estetico, non funzionale.
+
+### Il bottone «+N altri» del calendario non fa quello che dice
+
+Nella vista mese, quando un giorno ha più di quattro eventi compare «+N
+altri». Il testo promette di mostrare gli altri; il codice fa
+`setSelectedEvent(dayEvents[4])`, cioè apre il dettaglio del quinto e basta.
+
+Trovato correggendo i nomi accessibili: l'`aria-label` ora dice la verità
+sull'azione, ma l'azione resta quella sbagliata.
+
+Serve: aprire l'elenco del giorno, o passare alla vista agenda filtrata su
+quel giorno.
+
+**Costo**: basso.
 
 ## Priorità bassa
 

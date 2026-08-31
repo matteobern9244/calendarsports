@@ -451,7 +451,15 @@ export default function CalendarPage() {
                       return (
                         <button
                           key={ev.id}
+                          type="button"
                           onClick={() => setSelectedEvent(ev)}
+                          // Il nome accessibile dev'essere una frase, non la
+                          // somma degli span: letti di fila davano
+                          // "21:00 F1: Imola (Gara)" senza dire che il bottone
+                          // apre qualcosa. E lo stato "concluso" era affidato
+                          // al solo `line-through`, che uno screen reader non
+                          // vede.
+                          aria-label={`${romeHHMM(ev.date)} ${SPORT_LABEL[ev.sport]}: ${ev.shortLabel} (${ev.context})${past ? ", concluso" : ""}. Apri i dettagli`}
                           className={cn(
                             "group flex items-start gap-1 text-left text-[11px] leading-tight px-1 py-0.5 rounded hover:bg-muted/50 transition-colors",
                             past && "opacity-50 grayscale line-through",
@@ -477,7 +485,14 @@ export default function CalendarPage() {
                     })}
                     {hidden > 0 && (
                       <button
+                        type="button"
                         onClick={() => setSelectedEvent(dayEvents[4])}
+                        // Il testo visibile dice "+N altri" ma il bottone apre
+                        // il dettaglio del quinto evento, non una lista.
+                        // L'etichetta accessibile parte dal testo visibile
+                        // (WCAG 2.5.3) e poi dice cosa succede davvero,
+                        // invece di lasciare che sia una sorpresa.
+                        aria-label={`+${hidden} altri: apri i dettagli di ${dayEvents[4].shortLabel}`}
                         className="text-[11px] text-muted-foreground hover:text-foreground px-1"
                       >
                         +{hidden} altri
@@ -526,7 +541,9 @@ export default function CalendarPage() {
                       return (
                         <li key={ev.id}>
                           <button
+                            type="button"
                             onClick={() => setSelectedEvent(ev)}
+                            aria-label={`${romeHHMM(ev.date)} ${SPORT_LABEL[ev.sport]}: ${ev.shortLabel} (${ev.context})${past ? ", concluso" : ""}. Apri i dettagli`}
                             className={cn(
                               "w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-muted/40",
                               past && "opacity-50 grayscale",

@@ -121,3 +121,58 @@ test("dettaglio partita Juventus: raggiungibile dal calendario e con id diretto"
   await page.goto("/juventus/partite/partita-che-non-esiste");
   await expect(page.getByText("Partita non trovata nel calendario")).toBeVisible();
 });
+
+test("PWA: l'app si apre senza rete grazie al service worker", async ({ page, context }) => {
+  // Niente mock qui di proposito. La domanda non e' "i dati arrivano", ma
+  // "il documento arriva quando la rete non c'e'": e' l'unica cosa che
+  // separa una PWA installabile da una che mostra la pagina d'errore del
+  // browser appena si apre senza connessione.
+  const failedLocalAssets: string[] = [];
+  page.on("requestfailed", (r) => {
+    const { origin, pathname } = new URL(r.url());
+    // Solo le nostre risorse: i font di Google e le API Supabase sono
+    // cross-origin e devono fallire, offline.
+    if (origin.includes("127.0.0.1") && (pathname.startsWith("/assets/") || pathname === "/")) {
+      failedLocalAssets.push(pathname);
+    }
+  });
+
+  await page.goto("/");
+
+  // Il service worker deve aver preso il controllo di *questa* pagina prima
+  // di staccare la rete: `ready` dice che e' attivo, `controller` che sta
+  // gia' intercettando le richieste di questo client.
+  await page.waitForFunction(
+    async () => {
+      await navigator.serviceWorker.ready;
+      return navigator.serviceWorker.controller !== null;
+    },
+    undefined,
+    { timeout: 15_000 },
+  );
+
+  await context.setOffline(true);
+  await page.reload();
+
+  // L'app shell c'e': la navigazione principale e' renderizzata, quindi il
+  // documento e i suoi asset sono usciti dalla cache e React ha montato.
+  await expect(page.getByRole("link", { name: "JUVENTUS" })).toBeVisible();
+
+  // E non e' solo il guscio: le sezioni della home sono montate, cioe' i
+  // chunk JavaScript sono arrivati davvero.
+  await expect(page.getByRole("heading", { name: "Stasera in TV" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Prossimi Eventi" })).toBeVisible();
+
+  // Nessuna risorsa locale e' rimasta per strada: se un solo chunk fosse
+  // sfuggito alla cache, React non avrebbe montato e le due attese sopra
+  // sarebbero gia' fallite — questa lo dice esplicitamente invece di
+  // lasciarlo dedurre.
+  expect(failedLocalAssets).toEqual([]);
+
+  // Non verifichiamo qui `OfflineIndicator`. Sotto l'emulazione di rete di
+  // Playwright `navigator.onLine` resta `true`, quindi il banner non compare:
+  // e' un limite dello strumento, non dell'app, e asserirlo renderebbe il
+  // test una misura di Playwright invece che del service worker.
+
+  await context.setOffline(false);
+});

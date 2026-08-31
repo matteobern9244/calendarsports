@@ -42,8 +42,41 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   La rotazione di `DISPATCH_SECRET` resta da fare e richiede la dashboard
   Supabase. Vedi [`docs/SECURITY.md`](docs/SECURITY.md).
 
+### Added
+
+- **L'app installata si apre senza rete.** `public/sw.js` gestiva solo le
+  notifiche push: nessun handler `fetch`, quindi nessuna cache, e aprire la
+  PWA offline mostrava la pagina d'errore del browser. Ora il documento va a
+  rete-prima-cache-poi (mai il contrario: con cache-first una `index.html`
+  vecchia resterebbe servita per sempre, ed è l'unico file senza hash nel
+  nome) e gli asset di `/assets/` a cache-prima, perché l'hash nel nome li
+  rende immutabili. Le chiamate alle edge function restano **fuori** dalla
+  cache di proposito: la scadenza dei dati la conosce React Query, e un
+  service worker che li memorizzasse mostrerebbe classifiche vecchie senza
+  dirlo.
+- **Icona maskable vera.** Il manifest dichiarava una sola icona usata sia
+  come `any` sia come `maskable`, per giunta dichiarata `512x512` mentre il
+  file era `1024x1024`. Su Android la maschera circolare tagliava il testo e
+  mostrava il bordo bianco agli angoli. Ora ci sono `icon-192`, `icon-512`
+  (`any`) e `icon-maskable-512`, quest'ultima su fondo pieno `#0B1A33` con il
+  contenuto dentro la zona di sicurezza.
+
 ### Fixed
 
+- **Accessibilità, tre correzioni puntuali.**
+  - _Stasera in TV_: ogni riga del palinsesto aveva `tabIndex={0}` e
+    `cursor-pointer` senza alcun `onClick`. Il tab si fermava su decine di
+    righe senza niente da attivare, e il puntatore prometteva un'azione
+    inesistente. In una `role="table"` le righe non vanno comunque nel
+    percorso da tastiera: gli screen reader hanno i propri comandi.
+  - _Streaming, paginazione_: le frecce disabilitate erano `<a href="#">` con
+    solo `pointer-events-none`, che non tocca la tastiera. Restavano nel tab
+    order e attivabili con Invio, senza dichiarare `aria-disabled`. Ora
+    dichiarano lo stato e escono dal percorso da tastiera.
+  - _Calendario_: i bottoni evento avevano come nome accessibile la somma
+    degli span — diceva cosa c'è scritto, non che il controllo apre qualcosa —
+    e lo stato «concluso» era affidato al solo `line-through`, invisibile a
+    chi ascolta. Ora hanno un `aria-label` esplicito e `type="button"`.
 - **Formula 1, scheda Costruttori: torna il pulsante «Riprova».** Era l'unica
   delle dieci sezioni sportive il cui stato di errore non offriva alcun modo di
   ritentare: `refetch` non era nemmeno destrutturato dall'hook. Chi incontrava
