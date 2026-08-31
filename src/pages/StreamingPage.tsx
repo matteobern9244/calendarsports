@@ -18,14 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import SectionHeader from "@/components/common/SectionHeader";
 import LoadingState from "@/components/common/LoadingState";
 import EmptyState from "@/components/common/EmptyState";
@@ -34,16 +26,30 @@ import OfflineFallback from "@/components/common/OfflineFallback";
 import ReleaseDetailDialog from "@/components/streaming/ReleaseDetailDialog";
 import ReleaseCountdownBadge from "@/components/streaming/ReleaseCountdownBadge";
 import {
-  STREAMING_FAMILIES,
   STREAMING_PROVIDERS,
   useReleasesItaly,
   useTvByFamily,
   type ReleaseItem,
   type TvChannel,
 } from "@/hooks/useStreamingData";
+import FamilySelector from "@/components/streaming/FamilySelector";
+import ItalyProviderFilter from "@/components/streaming/ItalyProviderFilter";
+import PagerNav from "@/components/streaming/PagerNav";
+import {
+  GENRES,
+  KINDS,
+  RANGES,
+  formatHour,
+  readFilters,
+  writeFilters,
+  type KindId,
+  type RangeId,
+  type SortId,
+  type StreamingTab,
+} from "@/lib/streamingFilters";
 import type { StreamingFamilyId, StreamingProviderId } from "@/lib/api/sportsApi";
 import { cn } from "@/lib/utils";
-import { todayRomeISO, addDaysISO, formatDateIT, toRomeDate } from "@/lib/dateUtils";
+import { todayRomeISO, addDaysISO, formatDateIT } from "@/lib/dateUtils";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -56,109 +62,23 @@ const NO_ITEMS: ReleaseItem[] = [];
 const CHANNELS_PER_PAGE = 6;
 const RELEASES_PER_PAGE = 8;
 
-type RangeId = "7d" | "30d" | "90d";
-type KindId = "all" | "movie" | "tv";
-type SortId = "release" | "popularity";
-
-// Le "Nuove uscite" usano TMDB Discover filtrando per primary_release_date
-// (film) / first_air_date (serie) e per provider IT. TMDB non espone una data
-// di "platform add", quindi finestre da 1-7 giorni sono spesso vuote.
-// Default 30 giorni: copre la finestra realistica di novita' indicizzate.
-// daysBack = 0 per i range "futuri", >0 per la finestra estesa.
-const RANGES: { id: RangeId; label: string; daysBack: number; daysFwd: number }[] = [
-  { id: "7d", label: "Prossimi 7 giorni", daysBack: 0, daysFwd: 7 },
-  { id: "30d", label: "Prossimi 30 giorni", daysBack: 0, daysFwd: 30 },
-  { id: "90d", label: "Finestra estesa", daysBack: 30, daysFwd: 60 },
-];
-
-const KINDS: { id: KindId; label: string }[] = [
-  { id: "all", label: "Tutti" },
-  { id: "movie", label: "Film" },
-  { id: "tv", label: "Serie" },
-];
-
-// Selezione minima di generi TMDB più richiesti, label IT.
-// L'id segue la mappa ufficiale TMDB (movie + tv condividono molti id base).
-const GENRES: { id: number | null; label: string }[] = [
-  { id: null, label: "Tutti i generi" },
-  { id: 28, label: "Azione" },
-  { id: 12, label: "Avventura" },
-  { id: 16, label: "Animazione" },
-  { id: 35, label: "Commedia" },
-  { id: 80, label: "Crime" },
-  { id: 99, label: "Documentario" },
-  { id: 18, label: "Drammatico" },
-  { id: 10751, label: "Famiglia" },
-  { id: 14, label: "Fantasy" },
-  { id: 27, label: "Horror" },
-  { id: 9648, label: "Mistero" },
-  { id: 10749, label: "Romantico" },
-  { id: 878, label: "Sci-Fi" },
-  { id: 53, label: "Thriller" },
-];
-
-function formatHour(iso: string): string {
-  const d = toRomeDate(iso);
-  if (!d) return "—";
-  return new Intl.DateTimeFormat("it-IT", {
-    timeZone: "Europe/Rome",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(d);
-}
-
-function isFamily(value: string | null): value is StreamingFamilyId {
-  return !!value && STREAMING_FAMILIES.some((f) => f.id === value);
-}
-
-function isProvider(value: string | null): value is StreamingProviderId {
-  return !!value && STREAMING_PROVIDERS.some((p) => p.id === value);
-}
-
-function isRange(value: string | null): value is RangeId {
-  return !!value && RANGES.some((r) => r.id === value);
-}
-
-function isKind(value: string | null): value is KindId {
-  return !!value && KINDS.some((k) => k.id === value);
-}
-
-function isSort(value: string | null): value is SortId {
-  return value === "release" || value === "popularity";
-}
-
 export default function StreamingPage() {
   const [params, setParams] = useSearchParams();
 
-  const initialTab = params.get("tab") === "releases" ? "releases" : "tv";
-  const [tab, setTab] = useState<"tv" | "releases">(initialTab);
+  // Letto una volta sola, in un inizializzatore pigro: serve a dare il valore
+  // di partenza agli stati, e rifarlo a ogni render sarebbe lavoro buttato.
+  const [initial] = useState(() => readFilters(params));
 
-  const initialFamily = isFamily(params.get("family"))
-    ? (params.get("family") as StreamingFamilyId)
-    : "rai";
-  const initialRange = isRange(params.get("range")) ? (params.get("range") as RangeId) : "7d";
-  const initialKind = isKind(params.get("kind")) ? (params.get("kind") as KindId) : "all";
-  const initialPage = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
-  const initialSort: SortId = isSort(params.get("sort"))
-    ? (params.get("sort") as SortId)
-    : "release";
-  const initialGenreParam = params.get("genre");
-  const initialGenre: number | null =
-    initialGenreParam && /^\d+$/.test(initialGenreParam) ? parseInt(initialGenreParam, 10) : null;
-  const initialItalyProvider: StreamingProviderId | "all" = isProvider(params.get("itProvider"))
-    ? (params.get("itProvider") as StreamingProviderId)
-    : "all";
-
-  const [family, setFamily] = useState<StreamingFamilyId>(initialFamily);
-  const [range, setRange] = useState<RangeId>(initialRange);
-  const [kindFilter, setKindFilter] = useState<KindId>(initialKind);
-  const [page, setPage] = useState<number>(initialPage);
+  const [tab, setTab] = useState<StreamingTab>(initial.tab);
+  const [family, setFamily] = useState<StreamingFamilyId>(initial.family);
+  const [range, setRange] = useState<RangeId>(initial.range);
+  const [kindFilter, setKindFilter] = useState<KindId>(initial.kind);
+  const [page, setPage] = useState<number>(initial.page);
   const [selected, setSelected] = useState<ReleaseItem | null>(null);
-  const [sort, setSort] = useState<SortId>(initialSort);
-  const [genre, setGenre] = useState<number | null>(initialGenre);
+  const [sort, setSort] = useState<SortId>(initial.sort);
+  const [genre, setGenre] = useState<number | null>(initial.genre);
   const [italyProvider, setItalyProvider] = useState<StreamingProviderId | "all">(
-    initialItalyProvider,
+    initial.italyProvider,
   );
   const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
   const { isOnline } = useOnlineStatus();
@@ -174,19 +94,10 @@ export default function StreamingPage() {
 
   // Sync URL state
   useEffect(() => {
-    const next = new URLSearchParams();
-    next.set("tab", tab);
-    if (tab === "tv") {
-      next.set("family", family);
-    } else {
-      if (italyProvider !== "all") next.set("itProvider", italyProvider);
-      if (sort !== "release") next.set("sort", sort);
-      if (genre !== null) next.set("genre", String(genre));
-      if (range !== "7d") next.set("range", range);
-      if (kindFilter !== "all") next.set("kind", kindFilter);
-    }
-    if (page > 1) next.set("page", String(page));
-    setParams(next, { replace: true });
+    setParams(
+      writeFilters({ tab, family, range, kind: kindFilter, sort, genre, italyProvider, page }),
+      { replace: true },
+    );
   }, [tab, family, range, kindFilter, page, setParams, italyProvider, sort, genre]);
 
   // Reset della pagina quando cambiano i filtri.
@@ -459,6 +370,9 @@ export default function StreamingPage() {
                   key={k.id}
                   size="sm"
                   variant={kindFilter === k.id ? "default" : "outline"}
+                  // La selezione era comunicata dal solo colore del bottone:
+                  // `aria-pressed` la dichiara anche a chi non lo vede.
+                  aria-pressed={kindFilter === k.id}
                   onClick={() => setKindFilter(k.id)}
                   className={cn(
                     "rounded-full font-heading uppercase tracking-wider text-xs",
@@ -670,130 +584,5 @@ export default function StreamingPage() {
         onClose={() => setSelected(null)}
       />
     </div>
-  );
-}
-
-function FamilySelector({
-  value,
-  onChange,
-}: {
-  value: StreamingFamilyId;
-  onChange: (v: StreamingFamilyId) => void;
-}) {
-  return (
-    <div className="-mx-4 px-4 overflow-x-auto">
-      <div className="flex gap-2 min-w-max">
-        {STREAMING_FAMILIES.map((f) => (
-          <Button
-            key={f.id}
-            size="sm"
-            variant={value === f.id ? "default" : "outline"}
-            onClick={() => onChange(f.id)}
-            className={cn(
-              "rounded-full font-heading uppercase tracking-wider text-xs",
-              value === f.id && "shadow-md",
-            )}
-          >
-            {f.label}
-          </Button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ItalyProviderFilter({
-  value,
-  onChange,
-}: {
-  value: StreamingProviderId | "all";
-  onChange: (v: StreamingProviderId | "all") => void;
-}) {
-  const options: { id: StreamingProviderId | "all"; label: string }[] = [
-    { id: "all", label: "Tutti" },
-    ...STREAMING_PROVIDERS,
-  ];
-  return (
-    <div className="-mx-4 px-4 overflow-x-auto">
-      <div className="flex gap-2 min-w-max">
-        {options.map((p) => (
-          <Button
-            key={p.id}
-            size="sm"
-            variant={value === p.id ? "default" : "outline"}
-            onClick={() => onChange(p.id)}
-            className={cn(
-              "rounded-full font-heading uppercase tracking-wider text-xs",
-              value === p.id && "shadow-md",
-            )}
-          >
-            {p.label}
-          </Button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PagerNav({
-  page,
-  pageCount,
-  onChange,
-}: {
-  page: number;
-  pageCount: number;
-  onChange: (p: number) => void;
-}) {
-  const pages = Array.from({ length: pageCount }, (_, i) => i + 1);
-  // `pointer-events-none` toglie il puntatore e basta: il link resta nel tab
-  // order e resta attivabile con Invio. Servono anche `aria-disabled`, che lo
-  // dichiara agli screen reader, e `tabIndex={-1}`, che lo toglie davvero dal
-  // percorso da tastiera. La guardia negli `onClick` impediva gia' il salto
-  // fuori intervallo, ma non impediva al controllo di mentire.
-  const atFirst = page === 1;
-  const atLast = page === pageCount;
-  return (
-    <Pagination>
-      <PaginationContent>
-        <PaginationItem>
-          <PaginationPrevious
-            href="#"
-            aria-disabled={atFirst}
-            tabIndex={atFirst ? -1 : undefined}
-            onClick={(e) => {
-              e.preventDefault();
-              if (page > 1) onChange(page - 1);
-            }}
-            className={cn(atFirst && "pointer-events-none opacity-50")}
-          />
-        </PaginationItem>
-        {pages.map((p) => (
-          <PaginationItem key={p}>
-            <PaginationLink
-              href="#"
-              isActive={p === page}
-              onClick={(e) => {
-                e.preventDefault();
-                onChange(p);
-              }}
-            >
-              {p}
-            </PaginationLink>
-          </PaginationItem>
-        ))}
-        <PaginationItem>
-          <PaginationNext
-            href="#"
-            aria-disabled={atLast}
-            tabIndex={atLast ? -1 : undefined}
-            onClick={(e) => {
-              e.preventDefault();
-              if (page < pageCount) onChange(page + 1);
-            }}
-            className={cn(atLast && "pointer-events-none opacity-50")}
-          />
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
   );
 }

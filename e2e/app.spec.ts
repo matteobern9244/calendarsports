@@ -176,3 +176,26 @@ test("PWA: l'app si apre senza rete grazie al service worker", async ({ page, co
 
   await context.setOffline(false);
 });
+
+test("streaming: i filtri sopravvivono all'URL, in lettura e in scrittura", async ({ page }) => {
+  await installSportsApiMocks(page);
+
+  // Deep-link in lettura: la pagina deve *partire* dallo stato scritto
+  // nell'indirizzo, non dai suoi default. E' la parte fragile di
+  // StreamingPage, e la sola che un refactor puo' rompere in silenzio: la UI
+  // continuerebbe a funzionare, solo ignorando l'indirizzo.
+  await page.goto("/streaming?tab=tv&family=mediaset");
+  await expect(page.getByRole("tab", { name: /TV stasera/i })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByRole("button", { name: "Mediaset", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  // E in scrittura: cambiare famiglia deve finire nell'indirizzo, altrimenti
+  // il link condiviso riporta a uno stato diverso da quello che si vedeva.
+  await page.getByRole("button", { name: "RAI", exact: true }).click();
+  await expect(page).toHaveURL(/family=rai/);
+});

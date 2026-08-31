@@ -102,6 +102,24 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Changed
 
+- **`StreamingPage` scende da 788 a 588 righe.** La serializzazione dei filtri
+  nell'indirizzo esce in `src/lib/streamingFilters.ts` come coppia di funzioni
+  pure (`readFilters` / `writeFilters`) con undici test, fra cui la proprietà
+  che conta: **l'andata e ritorno**. È la parte di quella pagina che può
+  rompersi senza che si veda — la UI continuerebbe a funzionare ignorando
+  l'indirizzo, e un link condiviso riporterebbe a uno stato diverso da quello
+  che si stava guardando. I tre sotto-componenti definiti in fondo al file
+  (`FamilySelector`, `ItalyProviderFilter`, `PagerNav`) sono ora in
+  `src/components/streaming/`. Prima del taglio è stata costruita la rete che
+  mancava: una e2e che verifica il deep-link in lettura e in scrittura.
+- **`formatHour` costruiva un `Intl.DateTimeFormat` a ogni chiamata**, cioè
+  una volta per programma del palinsesto. È lo stesso difetto già corretto in
+  `toRomeYMD` ad agosto, sopravvissuto qui: costruire un formatter costa circa
+  settanta volte la sua `format`. Ora è a livello di modulo.
+- **I filtri a pillola dichiarano `aria-pressed`.** Famiglia TV, piattaforma e
+  tipo comunicavano la selezione con il solo colore del bottone: chi usa uno
+  screen reader non aveva modo di sapere quale filtro fosse attivo.
+
 - Le quattro pagine sportive (`Formula1Page`, `MotoGPPage`, `SinnerPage`,
   `JuventusPage`) montano un componente comune `DataSection` al posto delle
   dieci copie di `LoadingState` / `ErrorState` / `UnavailableExternalSource`.

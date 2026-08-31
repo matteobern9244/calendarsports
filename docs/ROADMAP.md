@@ -131,15 +131,25 @@ Resta il contorno, ripetuto quattro volte, una per pagina:
 centinaia che valeva la terna. È pulizia, non correttezza, e il guadagno per
 riga toccata è molto più basso di quello appena incassato.
 
-### `StreamingPage` fa troppe cose
+### `TonightTvList` e `CalendarPage` sono i prossimi in fila
 
-788 righe: dieci stati locali, la serializzazione dei filtri nell'URL, tre
-sotto-componenti definiti in fondo al file e quattro tabelle di dati inline.
-`TonightTvList` (802) e `CalendarPage` (695) sono i successivi in fila.
-Conteggi verificati il 28 agosto 2026.
+`StreamingPage` è scesa da 788 a 588 righe: fuori la serializzazione dei
+filtri (`src/lib/streamingFilters.ts`, con i test dell'andata e ritorno) e i
+tre sotto-componenti che stavano in fondo al file. Restano dentro dieci stati
+locali e le tabelle di rendering.
 
-**Costo**: medio-alto. **Perché non ora**: va fatto per estrazioni successive, non
-in un colpo solo.
+In fila: `TonightTvList` 802 righe, `CalendarPage` 695. Conteggi verificati il
+31 agosto 2026.
+
+**Prima del taglio, la rete.** Per `StreamingPage` è servita una e2e sul
+deep-link, e non è un dettaglio di processo: la serializzazione dell'indirizzo
+è la parte che si rompe senza far rumore, perché la UI continua a funzionare
+ignorando l'URL. `TonightTvList` ha una sola e2e (il separatore fra famiglie)
+e due `vi.mock("@tanstack/react-query")` che descrivono le nostre abitudini
+invece del contratto della libreria.
+
+**Costo**: medio-alto. **Perché non ora**: va fatto per estrazioni successive,
+non in un colpo solo.
 
 ### `push_sent_log` cresce senza limite
 
