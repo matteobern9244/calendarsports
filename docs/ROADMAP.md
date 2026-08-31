@@ -131,7 +131,7 @@ Resta il contorno, ripetuto quattro volte, una per pagina:
 centinaia che valeva la terna. È pulizia, non correttezza, e il guadagno per
 riga toccata è molto più basso di quello appena incassato.
 
-### `TonightTvList` e `CalendarPage` sono i prossimi in fila
+### Quello che resta dei componenti giganti
 
 `StreamingPage` è scesa da 788 a 588 righe: fuori la serializzazione dei
 filtri (`src/lib/streamingFilters.ts`, con i test dell'andata e ritorno) e i
@@ -142,7 +142,12 @@ locali e le tabelle di rendering.
 italiano, in `src/lib/calendarGrid.ts`, con dodici test che prima non
 esistevano.
 
-In fila resta `TonightTvList`, 808 righe. Conteggio verificato il 31 agosto 2026.
+`TonightTvList` è scesa da 808 a 661: fuori `combineTvHighlights` e i predicati
+della prima serata, in `src/lib/tonightTv.ts`, con nove test diretti che non
+passano più da `vi.mock("@tanstack/react-query")`.
+
+Resta dentro il JSX di tutte e tre: tabelle, viste mobile, paginazioni.
+Conteggi verificati il 31 agosto 2026.
 
 **Prima del taglio, la rete.** Per `StreamingPage` è servita una e2e sul
 deep-link, e non è un dettaglio di processo: la serializzazione dell'indirizzo

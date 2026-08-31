@@ -118,6 +118,12 @@ bottoni evento del calendario, `aria-pressed` sui filtri a pillola.
 **Fase 6.6 — un solo sistema di toast.** Rimosso quello Radix, che era montato
 e non riceveva mai niente. Bundle 550,23 → 534,78 kB.
 
+**Fase 6.2d — `TonightTvList` 808 → 661 righe.** `combineTvHighlights` e i
+predicati della prima serata in `src/lib/tonightTv.ts`, con nove test diretti
+invece che attraverso i mock di React Query. Nell'occasione è emerso che
+`TvProgram.end` era dichiarato obbligatorio mentre il codice lo tratta da
+sempre come opzionale.
+
 **Fase 6.2c — `CalendarPage` 712 → 620 righe.** Fuori `buildMonthGrid` e le
 date in fuso italiano, in `src/lib/calendarGrid.ts`, con dodici test che prima
 non esistevano: la griglia del mese era aritmetica non verificata da niente.
@@ -164,8 +170,8 @@ I passi 1 e 2 non sono una mitigazione: sono il prerequisito che rende il passo
 
 ### 2. Componenti giganti, quello che resta
 
-Conteggi misurati il 31 agosto 2026: `TonightTvList` 808 righe,
-`JuventusPage` 712, `CalendarPage` 620, `StreamingPage` 588,
+Conteggi misurati il 31 agosto 2026: `JuventusPage` 712,
+`TonightTvList` 661, `CalendarPage` 620, `StreamingPage` 588,
 `JuventusMatchPage` 426, `Formula1Page` 409, `MotoGPPage` 408,
 `SinnerPage` 363.
 
@@ -177,9 +183,11 @@ sul deep-link è venuta prima dell'estrazione, non dopo.
 
 Per i due prossimi la rete manca allo stesso modo:
 
-- `TonightTvList` ha **una** e2e (il separatore fra famiglie) e due
-  `vi.mock("@tanstack/react-query")` che descrivono le nostre abitudini invece
-  del contratto della libreria (vedi sotto).
+- `TonightTvList` ha perso 147 righe: `combineTvHighlights` e i predicati
+  della prima serata sono in `src/lib/tonightTv.ts` con nove test diretti, che
+  **non** passano da `vi.mock("@tanstack/react-query")`. Quello che resta è
+  JSX, e lì la rete è ancora una sola e2e (il separatore fra famiglie) più i
+  due mock di cui sopra.
 - `CalendarPage` ha perso 92 righe — `buildMonthGrid` e le date in fuso
   italiano sono in `src/lib/calendarGrid.ts` con dodici test — ma quello che
   resta dentro è JSX, e lì la rete non c'è: `CalendarPage.a11y.test.tsx` copre

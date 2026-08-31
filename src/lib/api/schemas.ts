@@ -477,7 +477,15 @@ export const highlightsSchema = tolerantArray(highlightItemSchema, "highlights-y
 
 export interface TvProgram {
   start: string;
-  end: string;
+  /**
+   * Opzionale perche' la fonte non sempre lo comunica, ed e' il codice a
+   * saperlo: `combineTvHighlights` fa `Boolean(p.end)` e in mancanza non
+   * mostra nessuna durata, invece di inventarne una. Il tipo lo dichiarava
+   * obbligatorio, cioe' prometteva al chiamante qualcosa che il payload non
+   * garantisce — ed essendo `declaredOnly`, senza validazione a runtime,
+   * nessuno lo avrebbe smentito.
+   */
+  end?: string;
   title: string;
   genre?: string;
   description?: string;

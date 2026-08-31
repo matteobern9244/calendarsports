@@ -160,6 +160,18 @@ changelog, e questo è quel passaggio.
 
 ### Changed
 
+- **`TonightTvList` scende da 808 a 661 righe**, e la sua logica smette di
+  dipendere da un mock. `combineTvHighlights` e i predicati della fascia di
+  prima serata vivono in `src/lib/tonightTv.ts` con nove test **diretti**:
+  prima erano verificabili solo montando il componente con due
+  `vi.mock("@tanstack/react-query")`, e quei mock descrivevano le nostre
+  abitudini invece del contratto della libreria — uno implementava `useQueries`
+  senza `combine`, e finché nessuno la usava sembrava fedele.
+- **`TvProgram.end` era dichiarato obbligatorio e non lo è.** Il codice lo
+  sapeva già (`Boolean(p.end)`, e in mancanza non mostra nessuna durata invece
+  di inventarne una); il tipo prometteva al chiamante qualcosa che il payload
+  non garantisce. Essendo `declaredOnly`, senza validazione a runtime, nessuno
+  lo avrebbe smentito.
 - **`CalendarPage` scende da 712 a 620 righe**, e la matematica del calendario
   ha finalmente dei test. `buildMonthGrid` e le funzioni di data in fuso
   italiano vivono in `src/lib/calendarGrid.ts` con dodici test: griglia sempre
