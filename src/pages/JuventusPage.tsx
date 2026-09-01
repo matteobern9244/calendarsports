@@ -1,42 +1,21 @@
-import { cn } from "@/lib/utils";
-import EventCountdown from "@/components/common/EventCountdown";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import DataSection, { type ExternalSource } from "@/components/common/DataSection";
 import LandingSpinner from "@/components/common/LandingSpinner";
 import SectionHeader from "@/components/common/SectionHeader";
 import OfflineFallback from "@/components/common/OfflineFallback";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { getCurrentJuventusSeason } from "@/lib/currentSeason";
-import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
-import { formatJuventusDateTime } from "@/lib/dateUtils";
-import { motion } from "framer-motion";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { useEffect, useState } from "react";
-import { Link } from "react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { footballApi } from "@/lib/api/sportsApi";
-import { paginatedCalendarOf, toNumber, type FootballMatch } from "@/lib/api/schemas";
-import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
-import TeamLogo from "@/components/common/TeamLogo";
-import { Sparkles } from "lucide-react";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
+import CalendarList from "@/components/juventus/CalendarList";
+import NextMatchCard from "@/components/juventus/NextMatchCard";
+import StandingsTable from "@/components/juventus/StandingsTable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
+import { paginatedCalendarOf } from "@/lib/api/schemas";
+import { footballApi } from "@/lib/api/sportsApi";
+import { getCurrentJuventusSeason } from "@/lib/currentSeason";
+import { pageOfIndex, pickNextMatch } from "@/lib/juventusCalendar";
+import { queryKeys } from "@/lib/queryKeys";
 
 const PAGE_SIZE = 12;
 
@@ -51,27 +30,6 @@ const STANDINGS_SOURCE: ExternalSource = {
 const SCHEDULE_SOURCE: ExternalSource = {
   href: "https://sport.sky.it/calcio/serie-a/squadre/juventus",
   label: "Vedi calendario su Sky Sport",
-};
-
-function buildPageList(current: number, total: number): (number | "ellipsis")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const pages: (number | "ellipsis")[] = [1];
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-  if (start > 2) pages.push("ellipsis");
-  for (let i = start; i <= end; i++) pages.push(i);
-  if (end < total - 1) pages.push("ellipsis");
-  pages.push(total);
-  return pages;
-}
-
-const COMPETITION_COLORS: Record<string, string> = {
-  "Serie A":
-    "bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] border-[hsl(var(--gold))]/40",
-  "Champions League":
-    "bg-[hsl(var(--accent))]/20 text-[hsl(var(--accent))] dark:text-[hsl(var(--accent-foreground))] border-[hsl(var(--accent))]/40",
-  "Coppa Italia":
-    "bg-[hsl(var(--secondary))]/15 text-[hsl(var(--secondary))] dark:text-[hsl(var(--gold))] border-[hsl(var(--secondary))]/40",
 };
 
 export default function JuventusPage() {
@@ -101,13 +59,9 @@ export default function JuventusPage() {
 
   const calendar = paginatedCalendarOf(calendarData);
 
-  // Determine the page that contains the global "next upcoming" match so we
-  // can always show the NextMatchCard, even if the user navigates away from
-  // that page.
-  const nextMatchPage =
-    calendar && typeof calendar.nextUpcomingIndex === "number" && calendar.nextUpcomingIndex >= 0
-      ? Math.floor(calendar.nextUpcomingIndex / PAGE_SIZE) + 1
-      : null;
+  // La pagina che contiene la "prossima partita" globale, per mostrare la
+  // card anche quando chi guarda si e' spostato su un'altra pagina.
+  const nextMatchPage = calendar ? pageOfIndex(calendar.nextUpcomingIndex, PAGE_SIZE) : null;
   const nextOnCurrentPage = calendar && nextMatchPage !== null && nextMatchPage === calendar.page;
   const { data: nextMatchData, isLoading: nextMatchLoading } = useJuventusCalendar(
     season,
@@ -115,19 +69,12 @@ export default function JuventusPage() {
     nextOnCurrentPage || nextMatchPage === null ? undefined : PAGE_SIZE,
     upcomingOnly,
   );
-  const nextMatchCalendar = paginatedCalendarOf(nextMatchData);
-  const nextMatch: FootballMatch | null = (() => {
-    if (!calendar || nextMatchPage === null) return null;
-    if (nextOnCurrentPage) {
-      const localIdx = calendar.nextUpcomingIndex - (calendar.page - 1) * calendar.pageSize;
-      return calendar.items[localIdx] ?? null;
-    }
-    if (nextMatchCalendar && nextMatchCalendar.page === nextMatchPage) {
-      const localIdx = calendar.nextUpcomingIndex - (nextMatchPage - 1) * PAGE_SIZE;
-      return nextMatchCalendar.items[localIdx] ?? null;
-    }
-    return null;
-  })();
+  const nextMatch = pickNextMatch({
+    calendar,
+    nextMatchPage,
+    nextMatchCalendar: paginatedCalendarOf(nextMatchData),
+    pageSize: PAGE_SIZE,
+  });
 
   // Smart landing: al primo caricamento ci si posiziona sulla pagina che
   // contiene la prossima partita. Fatto in render invece che in un effect:
@@ -154,7 +101,7 @@ export default function JuventusPage() {
     if (totalPages > 0 && currentPage + 1 <= totalPages) {
       const next = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["juventus", "calendar", season, next, PAGE_SIZE, upcomingOnly],
+        queryKey: queryKeys.juventus.calendar(season, next, PAGE_SIZE, upcomingOnly),
         queryFn: () => footballApi.getCalendar(season, next, PAGE_SIZE, upcomingOnly),
         staleTime: 5 * 60 * 1000,
       });
@@ -170,7 +117,7 @@ export default function JuventusPage() {
       (totalPages === 0 || nextMatchPage <= totalPages)
     ) {
       queryClient.prefetchQuery({
-        queryKey: ["juventus", "calendar", season, nextMatchPage, PAGE_SIZE, upcomingOnly],
+        queryKey: queryKeys.juventus.calendar(season, nextMatchPage, PAGE_SIZE, upcomingOnly),
         queryFn: () => footballApi.getCalendar(season, nextMatchPage, PAGE_SIZE, upcomingOnly),
         staleTime: 5 * 60 * 1000,
       });
@@ -229,92 +176,7 @@ export default function JuventusPage() {
         <SectionHeader title="Juventus" />
       </div>
 
-      {nextMatch &&
-        (() => {
-          const isJuveHome = nextMatch.homeTeam?.toLowerCase().includes("juventus");
-          const opponent = isJuveHome ? nextMatch.awayTeam : nextMatch.homeTeam;
-          const opponentLogo = isJuveHome ? nextMatch.awayLogo : nextMatch.homeLogo;
-          const { date: dateStr, time: timeStr } = formatJuventusDateTime(nextMatch.date);
-          const compColor = COMPETITION_COLORS[nextMatch.competition] || "";
-          return (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className={cn(
-                "relative mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--gold))]/40",
-                "bg-linear-to-br from-[hsl(var(--gold))]/15 via-card to-[hsl(var(--navy))]/20",
-                "shadow-[0_18px_44px_-22px_hsl(var(--gold)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]",
-              )}
-            >
-              <Link
-                to={`/juventus/partite/${encodeURIComponent(nextMatch.id ?? "")}`}
-                aria-label={`Apri dettaglio ${isJuveHome ? "Juventus vs " + opponent : opponent + " vs Juventus"}`}
-                className="block px-5 py-5 sm:px-6 sm:py-6 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
-              >
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--gold))] to-transparent opacity-80"
-                />
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="h-4 w-4 text-[hsl(var(--gold))]" aria-hidden="true" />
-                  <span className="font-heading text-[10px] tracking-[0.2em] uppercase text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-bold">
-                    Prossima Partita
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0 h-4 border",
-                      compColor,
-                    )}
-                  >
-                    {nextMatch.competition}
-                  </Badge>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <TeamLogo src={opponentLogo} name={opponent} size={48} shape="circle" />
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground font-heading uppercase tracking-wider">
-                        {isJuveHome ? "Juventus vs" : `${opponent} @`}
-                      </p>
-                      <p className="text-xl sm:text-2xl font-heading font-bold text-foreground truncate">
-                        {isJuveHome ? opponent : "Juventus"}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {dateStr}
-                        {timeStr ? ` · ${timeStr}` : ""}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-start sm:items-end gap-2">
-                    {nextMatch.broadcaster && (
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {nextMatch.broadcaster.split(" | ").map((b: string) => {
-                          const { className } = getBroadcasterStyle(b);
-                          return (
-                            <span
-                              key={b}
-                              className={cn(
-                                "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
-                                className,
-                              )}
-                            >
-                              {b.trim()}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {nextMatch.date && (
-                      <EventCountdown startDate={nextMatch.date} onRetry={() => calRefetch()} />
-                    )}
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
-          );
-        })()}
+      {nextMatch && <NextMatchCard match={nextMatch} onRetry={() => calRefetch()} />}
 
       <Tabs defaultValue="calendario" className="w-full">
         <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
@@ -344,110 +206,17 @@ export default function JuventusPage() {
             emptyDescription="La classifica della Serie A per questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Sky Sport qui sotto per consultare la graduatoria aggiornata, con punti, vittorie, pareggi e differenza reti di tutte le squadre del campionato."
             emptyCtaHint="Tocca qui per la graduatoria completa"
           >
-            <div className="rounded-xl border border-border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-12 font-heading text-xs tracking-wider uppercase">
-                      Pos
-                    </TableHead>
-                    <TableHead className="font-heading text-xs tracking-wider uppercase">
-                      Squadra
-                    </TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
-                      G
-                    </TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
-                      V
-                    </TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
-                      N
-                    </TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
-                      P
-                    </TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase hidden sm:table-cell">
-                      DR
-                    </TableHead>
-                    <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
-                      Pts
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(standings ?? []).map((s) => {
-                    const isJuve = s.team?.toLowerCase().includes("juventus");
-                    return (
-                      <TableRow
-                        key={s.position}
-                        className={cn(
-                          isJuve &&
-                            "relative bg-linear-to-r from-[hsl(var(--gold))]/20 via-[hsl(var(--gold))]/8 to-transparent border-l-4 border-[hsl(var(--gold))] hover:bg-linear-to-r hover:from-[hsl(var(--gold))]/25 hover:via-[hsl(var(--gold))]/10 hover:to-transparent",
-                        )}
-                      >
-                        <TableCell
-                          className={cn(
-                            "font-heading font-bold",
-                            isJuve &&
-                              "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] text-base",
-                          )}
-                        >
-                          {s.position}
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            isJuve
-                              ? "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-heading font-bold text-base"
-                              : "font-semibold",
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <TeamLogo
-                              src={s.logoUrl}
-                              name={s.team}
-                              size={isJuve ? 28 : 20}
-                              shape="circle"
-                              className={
-                                isJuve
-                                  ? "ring-2 ring-[hsl(var(--gold))]/60 ring-offset-1 ring-offset-background"
-                                  : undefined
-                              }
-                            />
-                            {s.team}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">{s.played}</TableCell>
-                        <TableCell className="text-center">{s.wins}</TableCell>
-                        <TableCell className="text-center">{s.draws}</TableCell>
-                        <TableCell className="text-center">{s.losses}</TableCell>
-                        <TableCell className="text-center hidden sm:table-cell">
-                          {(() => {
-                            const diff = toNumber(s.goalDiff);
-                            return diff !== null && diff > 0 ? `+${diff}` : diff;
-                          })()}
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            "text-center font-bold",
-                            isJuve &&
-                              "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-heading text-base",
-                          )}
-                        >
-                          {s.points}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-              <div className="p-3 border-t border-border text-center">
-                <p className="text-[10px] text-muted-foreground">Fonte: Sky Sport Italia</p>
-              </div>
-            </div>
+            <StandingsTable standings={standings ?? []} />
           </DataSection>
         </TabsContent>
 
         <TabsContent value="calendario">
+          {/*
+            `isLoading` e `isEmpty` guardano cose diverse di proposito:
+            `calendar` resta in mano (placeholderData) mentre arriva la
+            pagina successiva, e in quel momento i dati devono restare in
+            pagina invece di lasciare il posto allo spinner.
+          */}
           <DataSection
             isLoading={calLoading && !calendar}
             error={calError}
@@ -462,244 +231,14 @@ export default function JuventusPage() {
             emptyDescription="Il calendario delle partite Juventus per questa stagione non è ancora disponibile dalla nostra fonte. Apri la pagina ufficiale Sky Sport qui sotto per consultare tutti gli appuntamenti del club bianconero, con giornate, orari e competizioni (Serie A, Coppa Italia, Champions League)."
             emptyCtaHint="Tocca qui per tutte le partite bianconere"
           >
-            {calendar &&
-              (() => {
-                const items = calendar.items;
-                const pageStart = (calendar.page - 1) * calendar.pageSize;
-                // The "Prossima" highlight is on the global next upcoming match — show it
-                // only when the current page actually contains it.
-                const highlightIndex =
-                  calendar.nextUpcomingIndex >= pageStart &&
-                  calendar.nextUpcomingIndex < pageStart + items.length
-                    ? calendar.nextUpcomingIndex - pageStart
-                    : -1;
-                const orderedCalendar = items;
-                const rangeStart = pageStart + 1;
-                const rangeEnd = pageStart + items.length;
-                const pageList = buildPageList(calendar.page, calendar.totalPages);
-                return (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground font-heading uppercase tracking-wider">
-                      <span>
-                        Partite {rangeStart}–{rangeEnd} di {calendar.total}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 rounded-full border border-border p-0.5">
-                          <button
-                            type="button"
-                            onClick={() => changeFilter(true)}
-                            aria-pressed={upcomingOnly}
-                            className={`rounded-full px-2.5 py-1 transition-colors ${upcomingOnly ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                          >
-                            Prossime
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => changeFilter(false)}
-                            aria-pressed={!upcomingOnly}
-                            className={`rounded-full px-2.5 py-1 transition-colors ${!upcomingOnly ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                          >
-                            Tutte
-                          </button>
-                        </div>
-                        <span className="hidden sm:inline">
-                          Pagina {calendar.page} / {calendar.totalPages}
-                        </span>
-                      </div>
-                    </div>
-                    <motion.div
-                      className="grid gap-3 sm:grid-cols-2"
-                      initial="hidden"
-                      animate="show"
-                      variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-                    >
-                      {orderedCalendar.map((m, i) => {
-                        const isFinished = m.status === "FullTime";
-                        const isJuveHome = m.homeTeam?.toLowerCase().includes("juventus");
-                        const opponent = isJuveHome ? m.awayTeam : m.homeTeam;
-                        const opponentLogo = isJuveHome ? m.awayLogo : m.homeLogo;
-                        const juveGoals = toNumber(isJuveHome ? m.homeScore : m.awayScore);
-                        const oppGoals = toNumber(isJuveHome ? m.awayScore : m.homeScore);
-                        const result =
-                          isFinished && juveGoals !== null && oppGoals !== null
-                            ? juveGoals > oppGoals
-                              ? "V"
-                              : juveGoals < oppGoals
-                                ? "S"
-                                : "P"
-                            : null;
-                        const resultColor =
-                          result === "V"
-                            ? "text-green-500"
-                            : result === "S"
-                              ? "text-red-500"
-                              : "text-yellow-500";
-                        const { date: dateStr, time: timeStr } = formatJuventusDateTime(m.date);
-                        const isNext = i === highlightIndex;
-                        const compColor = COMPETITION_COLORS[m.competition] || "";
-
-                        return (
-                          <motion.div
-                            key={m.id ?? `${m.competition}-${m.date}-${m.homeTeam}-${m.awayTeam}`}
-                            variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
-                            whileHover={{ y: -3 }}
-                            className={cn(
-                              "group relative rounded-2xl border bg-card",
-                              "transition-[box-shadow,border-color,transform] duration-300 ease-out",
-                              "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
-                              "hover:shadow-[0_16px_36px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
-                              isNext
-                                ? "border-[hsl(var(--gold))]/60 ring-1 ring-[hsl(var(--gold))]/25 hover:border-[hsl(var(--gold))]/80"
-                                : "border-[hsl(var(--gold))]/20 hover:border-[hsl(var(--gold))]/55",
-                            )}
-                          >
-                            <Link
-                              to={`/juventus/partite/${encodeURIComponent(m.id ?? "")}`}
-                              aria-label={`Apri dettaglio ${m.homeTeam} vs ${m.awayTeam}`}
-                              className="flex items-center gap-3 px-4 py-3.5 rounded-2xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                            >
-                              <span
-                                aria-hidden="true"
-                                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
-                              />
-                              <span
-                                aria-hidden="true"
-                                className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_top,hsl(var(--gold)/0.10),transparent_60%)]"
-                              />
-                              {isNext && (
-                                <span className="absolute -top-2.5 left-4 z-10 rounded-full bg-linear-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--gold)/0.6)]">
-                                  Prossima
-                                </span>
-                              )}
-                              <div className="relative z-1 shrink-0 w-8">
-                                <span className="text-xs text-muted-foreground font-heading">
-                                  {m.competition === "Serie A"
-                                    ? `G${m.matchday}`
-                                    : m.matchday
-                                      ? `R${m.matchday}`
-                                      : "—"}
-                                </span>
-                              </div>
-                              <div className="relative z-1 flex items-center gap-2 flex-1 min-w-0">
-                                <TeamLogo
-                                  src={opponentLogo}
-                                  name={opponent}
-                                  size={24}
-                                  shape="circle"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-semibold truncate text-foreground">
-                                    {isJuveHome ? "vs" : "@"} {opponent}
-                                  </p>
-                                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                                    <Badge
-                                      variant="outline"
-                                      className={cn(
-                                        "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0 h-4 border",
-                                        compColor,
-                                      )}
-                                    >
-                                      {m.competition}
-                                    </Badge>
-                                    <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                                      {dateStr} · {timeStr}
-                                    </span>
-                                    {m.broadcaster && (
-                                      <span className="inline-flex items-center gap-1 flex-wrap">
-                                        {m.broadcaster.split(" | ").map((b: string) => {
-                                          const { className } = getBroadcasterStyle(b);
-                                          return (
-                                            <span
-                                              key={b}
-                                              className={cn(
-                                                "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border",
-                                                className,
-                                              )}
-                                            >
-                                              {b.trim()}
-                                            </span>
-                                          );
-                                        })}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="relative z-1 shrink-0 text-right flex flex-col items-end gap-1">
-                                {isFinished ? (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-heading font-bold">
-                                      {m.homeScore} - {m.awayScore}
-                                    </span>
-                                    <span className={`text-xs font-bold ${resultColor}`}>
-                                      {result}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">—</span>
-                                )}
-                                {!isFinished && m.date && <EventCountdown startDate={m.date} />}
-                              </div>
-                            </Link>
-                          </motion.div>
-                        );
-                      })}
-                    </motion.div>
-                    {calendar.totalPages > 1 && (
-                      <Pagination>
-                        <PaginationContent className="flex-wrap justify-center gap-1">
-                          <PaginationItem>
-                            <PaginationPrevious
-                              href="#"
-                              aria-disabled={calendar.page <= 1}
-                              className={cn(calendar.page <= 1 && "pointer-events-none opacity-50")}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                if (calendar.page > 1) goToPage(calendar.page - 1);
-                              }}
-                            />
-                          </PaginationItem>
-                          {pageList.map((p, idx) =>
-                            p === "ellipsis" ? (
-                              <PaginationItem key={`e-${idx}`}>
-                                <PaginationEllipsis />
-                              </PaginationItem>
-                            ) : (
-                              <PaginationItem key={p}>
-                                <PaginationLink
-                                  href="#"
-                                  isActive={p === calendar.page}
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    goToPage(p);
-                                  }}
-                                >
-                                  {p}
-                                </PaginationLink>
-                              </PaginationItem>
-                            ),
-                          )}
-                          <PaginationItem>
-                            <PaginationNext
-                              href="#"
-                              aria-disabled={calendar.page >= calendar.totalPages}
-                              className={cn(
-                                calendar.page >= calendar.totalPages &&
-                                  "pointer-events-none opacity-50",
-                              )}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                if (calendar.page < calendar.totalPages)
-                                  goToPage(calendar.page + 1);
-                              }}
-                            />
-                          </PaginationItem>
-                        </PaginationContent>
-                      </Pagination>
-                    )}
-                  </div>
-                );
-              })()}
+            {calendar && (
+              <CalendarList
+                calendar={calendar}
+                upcomingOnly={upcomingOnly}
+                onChangeFilter={changeFilter}
+                onGoToPage={goToPage}
+              />
+            )}
           </DataSection>
         </TabsContent>
 
