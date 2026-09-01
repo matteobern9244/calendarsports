@@ -30,6 +30,25 @@ function pagineConDate(): string[] {
     .filter((rel) => USA_DATE.test(readFileSync(join(ROOT, rel), "utf8")));
 }
 
+function cartelleSorvegliate(): string[] {
+  const blocco = script.match(/const TARGET_DIRS = \[([^\]]*)\]/)?.[1] ?? "";
+  return [...blocco.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+}
+
+/** Le cartelle di componenti in cui almeno un file di produzione manipola date. */
+function cartelleComponentiConDate(): string[] {
+  const base = join(ROOT, "src/components");
+  return readdirSync(base, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && e.name !== "ui") // shadcn: generati, non nostri
+    .map((e) => e.name)
+    .filter((dir) =>
+      readdirSync(join(base, dir))
+        .filter((nome) => /\.tsx?$/.test(nome) && !nome.includes(".test."))
+        .some((nome) => USA_DATE.test(readFileSync(join(base, dir, nome), "utf8"))),
+    )
+    .map((dir) => `src/components/${dir}`);
+}
+
 describe("Copertura del guardiano sul fuso", () => {
   it("ogni pagina che manipola date e' nella lista sorvegliata", () => {
     const sorvegliate = listaSorvegliata();
@@ -47,6 +66,20 @@ describe("Copertura del guardiano sul fuso", () => {
     );
     for (const sorvegliata of listaSorvegliata()) {
       expect(esistenti, `TARGETS cita ${sorvegliata}, che non esiste`).toContain(sorvegliata);
+    }
+  });
+
+  it("ogni cartella di componenti che manipola date e' fra quelle sorvegliate", () => {
+    // Le cartelle si aggiungono a mano a TARGET_DIRS, e una cartella nuova
+    // nasce scoperta: `src/components/juventus` e' nata cosi' durante il
+    // refactoring, e `src/components/sinner` era scoperta da mesi con un
+    // `new Date(stringa)` dentro.
+    const sorvegliate = cartelleSorvegliate();
+    for (const cartella of cartelleComponentiConDate()) {
+      expect(
+        sorvegliate,
+        `${cartella} manipola date ma non e' in TARGET_DIRS di scripts/check-rome-tz.mjs`,
+      ).toContain(cartella);
     }
   });
 
