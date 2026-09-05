@@ -199,3 +199,47 @@ test("streaming: i filtri sopravvivono all'URL, in lettura e in scrittura", asyn
   await page.getByRole("button", { name: "RAI", exact: true }).click();
   await expect(page).toHaveURL(/family=rai/);
 });
+
+test("calendario: la vista mese e la vista agenda mostrano gli eventi delle tre fonti", async ({
+  page,
+}) => {
+  // Le fixture vivono nel maggio 2099 e la pagina si apre sul mese
+  // corrente: senza fissare l'orologio il calendario sarebbe vuoto e il
+  // test verificherebbe soltanto che la pagina non esplode.
+  await page.clock.setFixedTime(new Date("2099-05-05T10:00:00Z"));
+  await installSportsApiMocks(page);
+
+  await page.goto("/calendario");
+
+  await expect(page.getByRole("heading", { level: 1, name: /Maggio 2099/i })).toBeVisible();
+
+  // Le tre fonti finiscono nella stessa griglia: e' il solo posto
+  // dell'app dove Juventus, F1 e MotoGP compaiono insieme.
+  await expect(page.getByRole("button", { name: /Juventus: @ Inter/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /MotoGP: Gara \(Francia\)/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /F1: Gara \(Imola\)/ })).toBeVisible();
+
+  // Il filtro per sport toglie una fonte sola.
+  await page.getByRole("button", { name: "F1", exact: true }).click();
+  await expect(page.getByRole("button", { name: /F1: Gara \(Imola\)/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Juventus: @ Inter/ })).toBeVisible();
+  await page.getByRole("button", { name: "F1", exact: true }).click();
+  await expect(page.getByRole("button", { name: /F1: Gara \(Imola\)/ })).toBeVisible();
+
+  // La vista agenda mostra gli stessi eventi in forma di elenco. Il nome
+  // accessibile la' e' composto diversamente — «Juventus @ Inter» invece
+  // di «Juventus: @ Inter» — e questo test lo fissa com'e' oggi.
+  await page.getByRole("tab", { name: "Agenda" }).click();
+  await expect(page.getByRole("button", { name: /Juventus @ Inter/ })).toBeVisible();
+
+  // La navigazione cambia davvero i dati mostrati, non solo
+  // l'intestazione. Il controllo usa il Gran Premio di Monaco, di fine
+  // maggio: la griglia di aprile arriva a coprire i primi giorni di
+  // maggio per completare l'ultima settimana, e un evento del 3 maggio
+  // resterebbe visibile anche da li'.
+  await page.getByRole("tab", { name: "Mese" }).click();
+  await expect(page.getByRole("button", { name: /F1: Gara \(Monaco\)/ })).toBeVisible();
+  await page.getByLabel("Mese precedente").click();
+  await expect(page.getByRole("heading", { level: 1, name: /Aprile 2099/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /F1: Gara \(Monaco\)/ })).toHaveCount(0);
+});
