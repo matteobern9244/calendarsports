@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import AgendaView from "@/components/calendar/AgendaView";
+import DayEventsDialog from "@/components/calendar/DayEventsDialog";
 import MonthGrid from "@/components/calendar/MonthGrid";
 import MonthList from "@/components/calendar/MonthList";
 import { SPORT_BADGE, SPORT_DOT, SPORT_LABEL } from "@/components/calendar/sportStyles";
@@ -67,6 +68,9 @@ export default function CalendarPage() {
   const today = useMemo(() => toRomeYMD(new Date()), []);
   const [view, setView] = useState<RomeYMD>(today);
   const [selectedEvent, setSelectedEvent] = useState<CalendarItem | null>(null);
+  // Il giorno di cui e' aperto l'elenco completo, non i suoi eventi: cosi'
+  // l'elenco resta agganciato ai filtri anche a dialogo aperto.
+  const [openDay, setOpenDay] = useState<RomeYMD | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(() => loadView());
   const [enabled, setEnabled] = useState<Record<CalendarSport, boolean>>(() => loadFilters());
 
@@ -299,6 +303,7 @@ export default function CalendarPage() {
           eventsByDay={eventsByDay}
           isPast={isPast}
           onSelect={setSelectedEvent}
+          onOpenDay={setOpenDay}
         />
       )}
 
@@ -325,6 +330,18 @@ export default function CalendarPage() {
           monthLabel={monthLabel}
         />
       )}
+
+      {/* Elenco completo di un giorno, dietro «+N altri» della griglia */}
+      <DayEventsDialog
+        day={openDay}
+        events={openDay ? (eventsByDay.get(ymdKey(openDay)) ?? []) : []}
+        isPast={isPast}
+        onSelect={(ev) => {
+          setOpenDay(null);
+          setSelectedEvent(ev);
+        }}
+        onClose={() => setOpenDay(null)}
+      />
 
       {/* Dialog dettaglio evento */}
       <Dialog open={!!selectedEvent} onOpenChange={(o) => !o && setSelectedEvent(null)}>

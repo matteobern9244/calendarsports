@@ -91,27 +91,6 @@ questione di privacy e di una richiesta di rete in meno all'avvio.
 **Costo**: basso. **Perché non ora**: l'app resta leggibile e usabile; è un
 degrado estetico, non funzionale.
 
-### Il bottone «+N altri» del calendario non fa quello che dice
-
-Nella vista mese, quando un giorno ha più di quattro eventi compare «+N
-altri». Il testo promette di mostrare gli altri; il codice fa
-`setSelectedEvent(dayEvents[4])`, cioè apre il dettaglio del quinto e basta.
-
-Trovato correggendo i nomi accessibili: l'`aria-label` ora dice la verità
-sull'azione, ma l'azione resta quella sbagliata.
-
-Serve: aprire l'elenco del giorno, o passare alla vista agenda filtrata su
-quel giorno.
-
-Da quando la griglia è un componente a sé, un test in
-`src/components/calendar/MonthGrid.test.tsx` fissa il comportamento
-attuale — clic su «+1 altri» → si apre il quinto evento — proprio perché
-si veda se cambia senza che nessuno l'abbia deciso. Chi corregge il
-difetto deve aggiornare quel test: è il segno che la correzione è
-avvenuta, non un ostacolo.
-
-**Costo**: basso.
-
 ## Priorità bassa
 
 ### Quello che resta dei componenti giganti

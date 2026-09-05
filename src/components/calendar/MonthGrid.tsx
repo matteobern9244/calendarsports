@@ -16,11 +16,14 @@ interface MonthGridProps {
   isPast: (iso: string) => boolean;
   /** Apre il dettaglio dell'evento. */
   onSelect: (event: CalendarItem) => void;
+  /** Chiede l'elenco completo di un giorno: e' cosa fa «+N altri». */
+  onOpenDay: (day: RomeYMD) => void;
 }
 
 /**
  * La griglia mensile, da `md` in su. Mostra al massimo quattro eventi per
- * giorno; il resto finisce dietro «+N altri».
+ * giorno; il resto finisce dietro «+N altri», che apre l'elenco del
+ * giorno. Sotto `md` c'e' `MonthList`, che non tronca niente.
  */
 export default function MonthGrid({
   grid,
@@ -29,6 +32,7 @@ export default function MonthGrid({
   eventsByDay,
   isPast,
   onSelect,
+  onOpenDay,
 }: MonthGridProps) {
   return (
     <div className="hidden md:block rounded-xl border border-border/60 bg-card/60 backdrop-blur-xs overflow-hidden">
@@ -113,13 +117,10 @@ export default function MonthGrid({
                 {hidden > 0 && (
                   <button
                     type="button"
-                    onClick={() => onSelect(dayEvents[4])}
-                    // Il testo visibile dice "+N altri" ma il bottone apre
-                    // il dettaglio del quinto evento, non una lista.
+                    onClick={() => onOpenDay(cell)}
                     // L'etichetta accessibile parte dal testo visibile
-                    // (WCAG 2.5.3) e poi dice cosa succede davvero,
-                    // invece di lasciare che sia una sorpresa.
-                    aria-label={`+${hidden} altri: apri i dettagli di ${dayEvents[4].shortLabel}`}
+                    // (WCAG 2.5.3) e poi dice cosa succede davvero.
+                    aria-label={`+${hidden} altri: mostra tutti i ${dayEvents.length} eventi del giorno`}
                     className="text-[11px] text-muted-foreground hover:text-foreground px-1"
                   >
                     +{hidden} altri

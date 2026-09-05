@@ -21,6 +21,13 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Corretto
 
+- **«+N altri» nel calendario adesso mostra davvero gli altri.** Nella
+  vista mese, un giorno con più di quattro eventi chiude il resto dietro
+  quel bottone: il testo prometteva gli altri e il codice apriva il
+  dettaglio del quinto, uno solo, scelto dalla posizione in elenco. Ora
+  apre l'elenco completo del giorno, da cui si sceglie. La vista sotto
+  `md` non era interessata: lì gli eventi si vedevano già tutti.
+
 - **La data del ranking di Sinner seguiva il fuso di chi guardava.** La
   scheda giocatore la formattava con `new Date(iso)` e senza `timeZone`:
   dall'Italia il risultato coincideva, a ovest di Greenwich mostrava il

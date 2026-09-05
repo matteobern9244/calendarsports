@@ -20,6 +20,7 @@ const evento = (id: string, over: Partial<CalendarItem> = {}): CalendarItem => (
 
 function renderGrid(eventi: CalendarItem[], isPast: (iso: string) => boolean = () => false) {
   const onSelect = vi.fn();
+  const onOpenDay = vi.fn();
   render(
     <MonthGrid
       grid={buildMonthGrid(2099, 4)}
@@ -28,9 +29,10 @@ function renderGrid(eventi: CalendarItem[], isPast: (iso: string) => boolean = (
       eventsByDay={new Map([[ymdKey(GIORNO), eventi]])}
       isPast={isPast}
       onSelect={onSelect}
+      onOpenDay={onOpenDay}
     />,
   );
-  return onSelect;
+  return { onSelect, onOpenDay };
 }
 
 describe("MonthGrid", () => {
@@ -54,7 +56,7 @@ describe("MonthGrid", () => {
   });
 
   it("il click apre il dettaglio di quell'evento", () => {
-    const onSelect = renderGrid([evento("a"), evento("b", { shortLabel: "vs Inter" })]);
+    const { onSelect } = renderGrid([evento("a"), evento("b", { shortLabel: "vs Inter" })]);
     fireEvent.click(screen.getByRole("button", { name: /vs Inter/ }));
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect.mock.calls[0][0].id).toBe("b");
@@ -62,18 +64,27 @@ describe("MonthGrid", () => {
 
   it("mostra quattro eventi per giorno e conta gli altri", () => {
     const cinque = ["a", "b", "c", "d", "e"].map((id) => evento(id, { shortLabel: `Gara ${id}` }));
-    const onSelect = renderGrid(cinque);
+    renderGrid(cinque);
     expect(screen.getByRole("button", { name: /Gara d/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Gara e.*Apri i dettagli/ })).toBeNull();
+    expect(screen.getByText("+1 altri")).toBeInTheDocument();
+  });
 
-    // Il bottone dice «+1 altri» ma apre il dettaglio del quinto evento,
-    // non l'elenco del giorno: l'etichetta accessibile lo dichiara invece
-    // di lasciarlo come sorpresa. Il difetto e' noto e sta in
-    // `docs/ROADMAP.md`; qui e' fissato com'e' oggi, per accorgersi se
-    // cambia senza che nessuno l'abbia deciso.
-    const altri = screen.getByRole("button", { name: "+1 altri: apri i dettagli di Gara e" });
-    fireEvent.click(altri);
-    expect(onSelect.mock.calls[0][0].id).toBe("e");
+  it("«+N altri» chiede l'elenco del giorno, non il quinto evento", () => {
+    // Fino al 5 settembre 2026 questo bottone faceva `onSelect(dayEvents[4])`:
+    // il testo prometteva gli altri e ne apriva uno solo. Il test che
+    // fissava quel comportamento e' questo, riscritto — era li' apposta
+    // per obbligare chi correggeva il difetto a passare di qui.
+    const cinque = ["a", "b", "c", "d", "e"].map((id) => evento(id, { shortLabel: `Gara ${id}` }));
+    const { onSelect, onOpenDay } = renderGrid(cinque);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "+1 altri: mostra tutti i 5 eventi del giorno" }),
+    );
+
+    expect(onOpenDay).toHaveBeenCalledTimes(1);
+    expect(onOpenDay.mock.calls[0][0]).toEqual(GIORNO);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it("i giorni degli altri mesi restano in griglia", () => {
