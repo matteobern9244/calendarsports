@@ -43,46 +43,67 @@ stata svuotata e lasciata come nota.
 
 **Costo**: richiede `supabase_admin`, che i progetti non hanno.
 
-### Il dispatcher fa molto lavoro per mandare pochissimo
+### Il dispatcher: il codice c'è, il deploy no
 
-Il timeout **non è più un problema, ed è misurato**. Il 31 agosto 2026, su
-`net._http_response`, 65 giri su 72 finivano in timeout. Ricontrollato il 5
-settembre dopo il passaggio a `timeout_milliseconds := 120000`: **72 giri su
-72, tutti 200, zero timeout, zero errori.** Quella metà è chiusa.
+**Scritto, testato e su `main` — non distribuito.** Commit `5e1d794`. Finché
+non viene ridistribuito, in produzione gira la versione vecchia: questa voce
+resta aperta per il deploy, non per il codice.
 
-Resta la seconda, e adesso ha dei numeri veri. Fra il 31 agosto e il 5
-settembre il dispatcher ha fatto **1404 giri e ha mandato 10 notifiche**: lo
-0,7%.
+Il problema misurato: fra il 31 agosto e il 5 settembre 2026 il dispatcher ha
+fatto **1404 giri per mandare 10 notifiche**, lo 0,7%, ricaricando l'intera
+stagione della Juventus a ogni giro — **sei chiamate a monte**, quattro a
+`sports-football` più una a `sports-f1` e una a `sports-motogp`.
 
-**Correzione a una cifra che girava in questi documenti**: «trenta pagine a
-ogni giro» era sbagliato. `Math.min(total, 30)` è un tetto, non una misura, e
-non viene mai raggiunto: `sports-football` per la stagione 2026 risponde
-`total: 47`, `pageSize: 12`, **`totalPages: 4`**. Il dispatcher fa quindi 4
-richieste a `sports-football`, più una a `sports-f1` e una a `sports-motogp`:
-**sei chiamate a monte per giro**, circa ottomila in cinque giorni per dieci
-notifiche.
+La correzione fa due cose che funzionano solo insieme: `upcoming=1`, che
+`sports-football` offriva già e nessuno usava, fa scartare a monte le partite
+già giocate; l'uscita anticipata (`calendarWindow.ts`, otto test) smette di
+chiedere pagine appena la data letta supera `now + 1440 min`. Da sola la
+seconda sarebbe inutile per metà stagione — il calendario è ordinato per data
+crescente, quindi a maggio ci sarebbero trenta partite passate davanti.
 
-Resta sproporzionato, ma di un ordine di grandezza meno di quanto si
-raccontava. La strada praticabile è **prendere meno dati**: fermare
-l'impaginazione quando le partite superano `now + 1440 min + finestra`, invece
-di scorrere tutte le pagine. Il calendario è ordinato per data, quindi è una
-condizione di uscita, non un filtro.
+**La misura che dirà se il deploy è arrivato**, da fare dopo:
 
-**Non «girare meno spesso», almeno non da sola.** Questa voce lo suggeriva, ed
-era sbagliato. La condizione di invio in `index.ts:221-224` prende un evento
-solo se il giro cade dentro `[t − preavviso, t − preavviso + 6 min]`: la
-finestra è larga sei minuti, quindi **l'intervallo del cron non può
-superarla**. Simulato il 5 settembre 2026 su una giornata intera, minuto per
-minuto e per tutti e tre i preavvisi: `*/5` e `*/6` non perdono niente,
-`*/10` perde il **30% delle notifiche**, in silenzio. Passare a dieci minuti
-richiede quindi di portare `WINDOW_MS` ad almeno dieci minuti nel codice, e
-ricade nello stesso blocco: ridistribuire la edge function. `*/6` funziona
-senza toccare il codice e risparmierebbe un giro su sei, ma consuma tutto il
-margine rimasto fra intervallo e finestra: non vale il rischio.
+| Segnale                                          | Prima | Atteso dopo |
+| ------------------------------------------------ | ----- | ----------- |
+| `eventsConsidered` nella risposta del dispatcher | 339   | ~304        |
+| invocazioni orarie di `sports-football`          | ~43   | ~12         |
 
-**Costo**: medio, e richiede di poter ridistribuire la edge function.
-**Perché non è urgente**: nessuno se ne accorge, e da quando il timeout è a
-120 secondi non fa più fallire niente.
+Il primo si legge in `net._http_response`, il secondo nella pagina Edge
+functions del progetto.
+
+**Come si distribuisce, e come no.** Verificato il 6 settembre 2026: allineare
+`main` e pubblicare da Lovable **non ridistribuisce le edge function** — dopo
+la pubblicazione la pagina della funzione segnava ancora «Last updated 16
+giorni fa» e `eventsConsidered` era invariato su due giri. La pagina Edge
+functions è di sola lettura: offre _Copy URL_, _View logs_, _View code_, e
+nessun pulsante di deploy. Serve la CLI Supabase — che su questa macchina non
+è installata, come non lo è Docker:
+
+```
+supabase functions deploy push-dispatcher --project-ref jxijruuclgskxlbqittk
+```
+
+**Costo**: basso, ormai è solo il deploy. **Perché non è urgente**: nessuno se
+ne accorge, e da quando il timeout è a 120 secondi non fa fallire niente.
+
+### Non far girare il cron meno spesso senza toccare il codice
+
+Sta qui perché è la trappola in cui questi documenti erano già caduti, e
+qualcuno la riproporrà.
+
+La condizione di invio in `push-dispatcher/index.ts` prende un evento solo se
+il giro cade dentro `[t − preavviso, t − preavviso + WINDOW_MS]`. La finestra
+non è un margine attorno all'evento: è l'ampiezza dell'unico intervallo in cui
+un giro riesce a vederlo. Quindi **è l'intervallo del cron a non poter
+superare la finestra**, non il contrario, e i preavvisi non c'entrano —
+spostano la finestra, non la allargano.
+
+Simulato il 5 settembre 2026 su una giornata intera, minuto per minuto, per
+tutti e tre i preavvisi: `*/5` e `*/6` non perdono niente, **`*/10` perde 432
+notifiche su 1440, il 30%**, senza un errore da nessuna parte. Passare a dieci
+minuti richiede di portare `WINDOW_MS` ad almeno dieci minuti nel codice.
+`*/6` funzionerebbe senza toccare niente e risparmierebbe un giro su sei, ma
+consuma tutto il margine fra intervallo e finestra: scartato.
 
 ## Priorità bassa
 
