@@ -84,4 +84,24 @@ describe("SportTabs", () => {
     expect(intestazione.compareDocumentPosition(inserto)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(inserto.compareDocumentPosition(schede)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
+
+  it("`afterTabs` sta dopo le schede, ma dentro il contenitore di pagina", () => {
+    // E' il posto dei dialoghi di dettaglio gara di F1 e MotoGP: stanno
+    // fuori da ogni scheda, e spostarli dentro `Tabs` cambierebbe il DOM
+    // senza motivo.
+    render(
+      <SportTabs
+        title="Formula 1"
+        defaultValue="calendario"
+        tabs={TABS}
+        afterTabs={<p>Dettaglio gara</p>}
+      >
+        <TabsContent value="calendario">Le gare</TabsContent>
+      </SportTabs>,
+    );
+    const coda = screen.getByText("Dettaglio gara");
+    const schede = screen.getByRole("tablist");
+    expect(schede.compareDocumentPosition(coda)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(coda.closest("[data-slot='tabs']")).toBeNull();
+  });
 });

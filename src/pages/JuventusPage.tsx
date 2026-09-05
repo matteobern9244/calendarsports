@@ -2,22 +2,29 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import DataSection, { type ExternalSource } from "@/components/common/DataSection";
 import LandingSpinner from "@/components/common/LandingSpinner";
-import SectionHeader from "@/components/common/SectionHeader";
-import OfflineFallback from "@/components/common/OfflineFallback";
+import OfflinePageFallback from "@/components/common/OfflinePageFallback";
+import SportTabs from "@/components/common/SportTabs";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
 import CalendarList from "@/components/juventus/CalendarList";
 import NextMatchCard from "@/components/juventus/NextMatchCard";
 import StandingsTable from "@/components/juventus/StandingsTable";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
 import { paginatedCalendarOf } from "@/lib/api/schemas";
 import { footballApi } from "@/lib/api/sportsApi";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
 import { pageOfIndex, pickNextMatch } from "@/lib/juventusCalendar";
+import { allSectionsUnavailable } from "@/lib/offlineSections";
 import { queryKeys } from "@/lib/queryKeys";
 
 const PAGE_SIZE = 12;
+
+const TABS = [
+  { value: "calendario", label: "Calendario" },
+  { value: "classifica", label: "Classifica" },
+  { value: "highlights", label: "Highlights" },
+] as const;
 
 // Le due sezioni Juventus non offrono il link a Sky Sport durante il
 // caricamento (nessun `loadingLabel`): lo propongono solo quando c'e'
@@ -138,16 +145,21 @@ export default function JuventusPage() {
     setPage(p);
   };
 
-  if (!isOnline && stError && !standings && calError && !calendarData) {
+  // Il calendario entra con `calendarData` grezzo, non con `calendar`
+  // validato: e' quello che la condizione guardava prima, e un payload
+  // che non passa lo schema non e' un'assenza di rete.
+  const sezioni = [
+    { data: standings, error: stError },
+    { data: calendarData, error: calError },
+  ];
+  if (!isOnline && allSectionsUnavailable(sezioni)) {
     return (
-      <div className="container py-8 sm:py-12">
-        <OfflineFallback
-          onRetry={() => {
-            stRefetch();
-            calRefetch();
-          }}
-        />
-      </div>
+      <OfflinePageFallback
+        onRetry={() => {
+          stRefetch();
+          calRefetch();
+        }}
+      />
     );
   }
 
@@ -171,81 +183,66 @@ export default function JuventusPage() {
   }
 
   return (
-    <div className="container py-8 sm:py-12">
-      <div className="mb-2">
-        <SectionHeader title="Juventus" />
-      </div>
+    <SportTabs
+      title="Juventus"
+      defaultValue="calendario"
+      tabs={TABS}
+      beforeTabs={nextMatch && <NextMatchCard match={nextMatch} onRetry={() => calRefetch()} />}
+    >
+      <TabsContent value="classifica">
+        <DataSection
+          isLoading={stLoading}
+          error={stError}
+          isEmpty={!standings?.length}
+          source={STANDINGS_SOURCE}
+          loadingMessage="Caricamento classifica Serie A da Sky Sport..."
+          errorMessage={`Classifica Serie A ${season} non disponibile`}
+          errorDetail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la classifica ufficiale aggiornata su Sky Sport."
+          errorCtaHint="Tocca qui per la graduatoria ufficiale ora"
+          onRetry={() => stRefetch()}
+          emptyTitle={`Classifica Serie A ${season}`}
+          emptyDescription="La classifica della Serie A per questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Sky Sport qui sotto per consultare la graduatoria aggiornata, con punti, vittorie, pareggi e differenza reti di tutte le squadre del campionato."
+          emptyCtaHint="Tocca qui per la graduatoria completa"
+        >
+          <StandingsTable standings={standings ?? []} />
+        </DataSection>
+      </TabsContent>
 
-      {nextMatch && <NextMatchCard match={nextMatch} onRetry={() => calRefetch()} />}
-
-      <Tabs defaultValue="calendario" className="w-full">
-        <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="calendario" className="font-heading text-xs tracking-wider uppercase">
-            Calendario
-          </TabsTrigger>
-          <TabsTrigger value="classifica" className="font-heading text-xs tracking-wider uppercase">
-            Classifica
-          </TabsTrigger>
-          <TabsTrigger value="highlights" className="font-heading text-xs tracking-wider uppercase">
-            Highlights
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="classifica">
-          <DataSection
-            isLoading={stLoading}
-            error={stError}
-            isEmpty={!standings?.length}
-            source={STANDINGS_SOURCE}
-            loadingMessage="Caricamento classifica Serie A da Sky Sport..."
-            errorMessage={`Classifica Serie A ${season} non disponibile`}
-            errorDetail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la classifica ufficiale aggiornata su Sky Sport."
-            errorCtaHint="Tocca qui per la graduatoria ufficiale ora"
-            onRetry={() => stRefetch()}
-            emptyTitle={`Classifica Serie A ${season}`}
-            emptyDescription="La classifica della Serie A per questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Sky Sport qui sotto per consultare la graduatoria aggiornata, con punti, vittorie, pareggi e differenza reti di tutte le squadre del campionato."
-            emptyCtaHint="Tocca qui per la graduatoria completa"
-          >
-            <StandingsTable standings={standings ?? []} />
-          </DataSection>
-        </TabsContent>
-
-        <TabsContent value="calendario">
-          {/*
+      <TabsContent value="calendario">
+        {/*
             `isLoading` e `isEmpty` guardano cose diverse di proposito:
             `calendar` resta in mano (placeholderData) mentre arriva la
             pagina successiva, e in quel momento i dati devono restare in
             pagina invece di lasciare il posto allo spinner.
           */}
-          <DataSection
-            isLoading={calLoading && !calendar}
-            error={calError}
-            isEmpty={!calendar?.items.length}
-            source={SCHEDULE_SOURCE}
-            loadingMessage="Caricamento calendario da Sky Sport..."
-            errorMessage={`Calendario Juventus ${season} non disponibile`}
-            errorDetail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la pagina ufficiale Juventus su Sky Sport per consultare tutti gli appuntamenti."
-            errorCtaHint="Tocca qui per tutte le partite bianconere"
-            onRetry={() => calRefetch()}
-            emptyTitle={`Calendario Juventus ${season}`}
-            emptyDescription="Il calendario delle partite Juventus per questa stagione non è ancora disponibile dalla nostra fonte. Apri la pagina ufficiale Sky Sport qui sotto per consultare tutti gli appuntamenti del club bianconero, con giornate, orari e competizioni (Serie A, Coppa Italia, Champions League)."
-            emptyCtaHint="Tocca qui per tutte le partite bianconere"
-          >
-            {calendar && (
-              <CalendarList
-                calendar={calendar}
-                upcomingOnly={upcomingOnly}
-                onChangeFilter={changeFilter}
-                onGoToPage={goToPage}
-              />
-            )}
-          </DataSection>
-        </TabsContent>
+        <DataSection
+          isLoading={calLoading && !calendar}
+          error={calError}
+          isEmpty={!calendar?.items.length}
+          source={SCHEDULE_SOURCE}
+          loadingMessage="Caricamento calendario da Sky Sport..."
+          errorMessage={`Calendario Juventus ${season} non disponibile`}
+          errorDetail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la pagina ufficiale Juventus su Sky Sport per consultare tutti gli appuntamenti."
+          errorCtaHint="Tocca qui per tutte le partite bianconere"
+          onRetry={() => calRefetch()}
+          emptyTitle={`Calendario Juventus ${season}`}
+          emptyDescription="Il calendario delle partite Juventus per questa stagione non è ancora disponibile dalla nostra fonte. Apri la pagina ufficiale Sky Sport qui sotto per consultare tutti gli appuntamenti del club bianconero, con giornate, orari e competizioni (Serie A, Coppa Italia, Champions League)."
+          emptyCtaHint="Tocca qui per tutte le partite bianconere"
+        >
+          {calendar && (
+            <CalendarList
+              calendar={calendar}
+              upcomingOnly={upcomingOnly}
+              onChangeFilter={changeFilter}
+              onGoToPage={goToPage}
+            />
+          )}
+        </DataSection>
+      </TabsContent>
 
-        <TabsContent value="highlights">
-          <HighlightsSection sport="juventus" accentVar="gold" />
-        </TabsContent>
-      </Tabs>
-    </div>
+      <TabsContent value="highlights">
+        <HighlightsSection sport="juventus" accentVar="gold" />
+      </TabsContent>
+    </SportTabs>
   );
 }

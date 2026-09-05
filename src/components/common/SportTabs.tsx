@@ -23,6 +23,12 @@ interface SportTabsProps {
   listClassName?: string;
   /** Contenuto fra intestazione e schede: la scheda giocatore di Sinner. */
   beforeTabs?: ReactNode;
+  /**
+   * Contenuto dopo le schede, dentro il contenitore di pagina: i dialoghi
+   * di dettaglio gara di F1 e MotoGP, che non appartengono a nessuna
+   * scheda.
+   */
+  afterTabs?: ReactNode;
   /** I `TabsContent`, uno per scheda. */
   children: ReactNode;
 }
@@ -42,6 +48,7 @@ export default function SportTabs({
   tabs,
   listClassName,
   beforeTabs,
+  afterTabs,
   children,
 }: SportTabsProps) {
   return (
@@ -67,6 +74,8 @@ export default function SportTabs({
 
         {children}
       </Tabs>
+
+      {afterTabs}
     </div>
   );
 }
