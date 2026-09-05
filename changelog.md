@@ -19,6 +19,28 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
+### Sicurezza
+
+- **Il segreto del dispatcher è stato ruotato, e quello vecchio non vale più.**
+  `DISPATCH_SECRET` era scritto in chiaro dentro la migration del 23 maggio
+  2026, quindi nella storia di Git e su un repository GitHub. Era l'**unica**
+  autenticazione di `push-dispatcher`: chi leggeva il repository poteva
+  invocarlo e mandare notifiche agli iscritti, ripetutamente. È rimasto valido
+  tre mesi e mezzo. Ruotato il 6 settembre 2026 alle 00:05, e verificato dal
+  giro successivo del cron: `200 {"ok":true}`, cioè il valore nel Vault e
+  quello nella edge function coincidono.
+
+  Riscrivere la storia di Git non era praticabile con la sincronizzazione
+  Lovable attiva, ed è il motivo per cui la correzione è la rotazione e non la
+  cancellazione: la migration resta leggibile, il valore che contiene non apre
+  più niente.
+
+  Una sola interruzione, il giro delle 22:05 UTC, con `500` — nella dashboard
+  un secret non si modifica, si cancella e si riaggiunge, e il cron è passato
+  in quei secondi. Nessuna notifica persa: non c'era niente in finestra. Il
+  dettaglio della manovra e la differenza fra il `500` e il `401` stanno in
+  [`docs/SECURITY.md`](docs/SECURITY.md).
+
 ### Corretto
 
 - **I font non si perdono più, offline.** Oswald e Inter arrivavano da

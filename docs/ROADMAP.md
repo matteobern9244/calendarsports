@@ -84,23 +84,6 @@ margine rimasto fra intervallo e finestra: non vale il rischio.
 **Perché non è urgente**: nessuno se ne accorge, e da quando il timeout è a
 120 secondi non fa più fallire niente.
 
-### Rotazione del segreto del dispatcher
-
-`DISPATCH_SECRET` è scritto in chiaro nella migration `20260523084606_*.sql`,
-presente nella storia di Git e su GitHub. È l'unica autenticazione di
-`push-dispatcher`. Va considerato compromesso: chi legge il repository può far
-partire notifiche a tutti gli iscritti.
-
-La migration del Vault qui sopra è il **prerequisito**, non la soluzione:
-sposta il segreto in un posto dove si può cambiare senza ricreare il job, ma
-non lo cambia. La rotazione vera richiede la dashboard Supabase, perché il
-secret della edge function non è raggiungibile da SQL. La procedura in quattro
-passi è scritta in fondo a quella migration.
-
-**Costo**: basso come codice, ma richiede accesso alla dashboard Supabase.
-**Perché ora**: è l'unico problema di sicurezza del progetto con un impatto
-reale. Dettagli in [`SECURITY.md`](SECURITY.md).
-
 ## Priorità bassa
 
 ### Quello che resta dei componenti giganti

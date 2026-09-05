@@ -151,10 +151,14 @@ possibile è spam di notifiche e consumo di quota.
 confrontato con la variabile d'ambiente `DISPATCH_SECRET`. È la sua **unica**
 autenticazione.
 
-> **Il valore di quel segreto è scritto in chiaro dentro la migration
+> **RUOTATO IL 6 SETTEMBRE 2026. Il valore esposto non è più valido.** Quanto
+> segue resta scritto perché descrive un rischio reale durato tre mesi e mezzo,
+> e perché la migration incriminata è ancora nella storia di Git.
+>
+> Il valore precedente era scritto in chiaro dentro la migration
 > `supabase/migrations/20260523084606_*.sql`, che è nella storia di Git e su un
-> repository GitHub.** Chi ha accesso in lettura al repository può invocare il
-> dispatcher: inviare notifiche a tutti gli iscritti attivi, ripetutamente, e
+> repository GitHub. Chi aveva accesso in lettura al repository poteva invocare
+> il dispatcher: inviare notifiche a tutti gli iscritti attivi, ripetutamente, e
 > far generare a ogni invocazione sei chiamate verso le funzioni sportive.
 >
 > Due cifre di questo paragrafo erano sbagliate, e sono state **misurate il 5
@@ -180,13 +184,38 @@ applicare senza perdere nessuna notifica. Rende anche il job rieseguibile —
 oggi `cron.unschedule` di un job inesistente solleva, quindi la migration del
 23 maggio fallisce su un database nuovo.
 
-**Pezzo due, la rotazione vera.** Richiede la dashboard: il secret
-`DISPATCH_SECRET` della edge function non è raggiungibile da SQL. Dopo il pezzo
-uno diventa `vault.update_secret(...)` più l'aggiornamento del secret, senza
-toccare il job. La procedura in quattro passi è in fondo a quella migration.
+**Pezzo due, la rotazione vera — eseguita il 6 settembre 2026, 00:05 CEST.**
+Il segreto della edge function non è raggiungibile da SQL, quindi la manovra è
+stata fatta a mano dalla dashboard, con la verifica dal connettore.
 
-Finché il pezzo due non è fatto, **il valore su GitHub resta valido**. Il pezzo
-uno da solo non è una mitigazione: è il prerequisito che la rende facile.
+Ordine seguito, che **inverte** quello scritto in fondo alla migration: prima la
+parte lenta (il secret nella dashboard), poi quella istantanea
+(`vault.update_secret`). Così la finestra di disallineamento dura secondi
+invece dei minuti che servono a incollare e salvare. È stata aperta subito dopo
+uno scatto del cron, per stare fra due giri.
+
+Stato verificato dopo:
+
+- `vault.secrets` per `dispatch_secret` ha `updated_at` (22:05:40 UTC) maggiore
+  di `created_at` (31 agosto): è la riga che dice se la rotazione è avvenuta.
+  Lunghezza passata da 194 a 64 caratteri — il generatore della procedura
+  concatena due UUID senza trattini, e 64 caratteri esadecimali restano
+  ampiamente sufficienti.
+- il giro delle 22:10 UTC ha risposto `200 {"ok":true}`: il valore nel Vault e
+  quello nella edge function coincidono.
+- **una sola interruzione, e non è stata un 401.** Il giro delle 22:05:00 ha
+  risposto `500 {"error":"Server misconfigured"}`, cioè il ramo che scatta
+  quando la variabile non esiste: nella dashboard il menu di un secret offre
+  solo _Delete_, quindi sostituirlo significa cancellarlo e riaggiungerlo, e il
+  cron è passato in quei secondi. Nessuna notifica persa: `sent: 0` su tutti i
+  giri della serata, non c'era niente in finestra.
+
+La distinzione fra i due errori conta e va ricordata: **500 significa segreto
+assente** e si risolve da sé appena il valore c'è; **401 significa segreto
+diverso**, cioè l'isolate ha in memoria il valore vecchio e serve
+ridistribuire. Qui non è mai comparso un 401: la funzione rilegge
+`Deno.env.get("DISPATCH_SECRET")` a ogni richiesta e ha ripreso il valore nuovo
+da sola.
 
 Stato dopo l'applicazione, verificato il 31 agosto 2026: `dispatch_secret` è
 nel Vault e il suo valore **coincide** con quello che era nel job (confrontato
