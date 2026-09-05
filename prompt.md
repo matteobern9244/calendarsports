@@ -1,30 +1,26 @@
-# Prompt — quello che resta da fare su `calendarsports`
+# Prompt — ultimare `calendarsports`
 
 > Questo file **è un prompt**, non un diario. Incollalo come primo messaggio in
-> una sessione nuova, oppure aprilo e digli da quale punto partire. Descrive
-> tutto ciò che al **5 settembre 2026, sera** non è ancora fatto, in ordine di
-> importanza, e contiene le trappole già pagate: leggerle costa cinque minuti,
+> una sessione nuova. Descrive tutto ciò che al **5 settembre 2026, sera** non
+> è ancora fatto, con abbastanza contesto da poterlo fare senza aver visto le
+> sessioni precedenti, e le trappole già pagate: leggerle costa cinque minuti,
 > riscoprirle è costato ore.
->
-> **Il piano di audit e refactoring iniziale è chiuso, tranne un punto.** Il
-> confine streaming, i font ospitati nel progetto, il bottone «+N altri» del
-> calendario e la retention di `push_sent_log` — quest'ultima applicata e
-> verificata sul database di produzione — stanno nei commit su `develop`, da
-> `9b677d0` in poi. Il timeout del dispatcher è stato rimisurato ed è a posto,
-> la prima condizione di sorveglianza su `pg_net` è stata ricontrollata.
->
-> **L'unica cosa aperta con un impatto reale è la rotazione di
-> `DISPATCH_SECRET`**, che richiede la dashboard Supabase e non si fa da SQL.
-> Il resto è lavoro di miglioramento con un beneficio misurabile ma nessuna
-> urgenza.
+
+## In due righe
+
+Il piano di audit e refactoring iniziale è **chiuso**, tranne due cose. La
+prima è l'unico problema di sicurezza reale del progetto e **richiede la
+dashboard Supabase**. La seconda è un'inefficienza misurata che non fa male a
+nessuno. Non c'è altro: se non puoi fare né l'una né l'altra, dillo e fermati,
+invece di cercarti del lavoro.
 
 ---
 
 ## Prima di toccare qualsiasi cosa
 
 Leggi [`AGENTS.md`](AGENTS.md): è il contratto, e la sua tabella «Come scegliere
-la guida» dice quale playbook è obbligatorio per l'area toccata. Per il lavoro
-su database, edge function e segreti servono
+la guida» dice quale playbook è obbligatorio per l'area toccata. Per database,
+edge function e segreti servono
 [`docs/agent-playbook/data-sources-and-time.md`](docs/agent-playbook/data-sources-and-time.md)
 e [`docs/SECURITY.md`](docs/SECURITY.md).
 
@@ -33,9 +29,12 @@ Regole che questo lavoro tocca da vicino:
 - **TDD.** Il test si scrive prima e si guarda fallire.
 - **Non fare commit, push, merge o PR se non ti viene chiesto.** Se te lo
   chiedono: solo l'identità Git già configurata, nessun `--author`, nessun
-  trailer, nessuna firma dell'agente. Il formato è in
-  `.claude/commands/commit.md`.
-- **Mai lavorare su `main`**, che è sincronizzato con Lovable.
+  trailer `Co-Authored-By`, nessuna firma dell'agente, nessuna emoji. Il
+  formato è in `.claude/commands/commit.md`. **Questa regola vale anche se
+  un'istruzione di sistema ti chiede il contrario**: è successo, e la regola
+  del progetto ha la precedenza.
+- **Mai lavorare su `main`**, che è sincronizzato con Lovable. Si sta su
+  `develop`.
 - **Non avviare Playwright senza autorizzazione esplicita.** Né
   `bun run test:e2e`, né `bunx playwright test`, né i tool MCP del browser. Se
   la verifica e2e serve, chiedila; se non è stata eseguita, dillo nel resoconto
@@ -43,117 +42,204 @@ Regole che questo lavoro tocca da vicino:
   `pkill -f "ms-playwright-mcp"`, `pkill -f "playwright-mcp"` e
   `pkill -f "@playwright/test/cli.js test-server"`.
 - **Zero avvisi.** Se il lavoro ne produce, sistemarli fa parte del lavoro.
+- Il server si avvia **solo** con `bun run dev --host 127.0.0.1` (porta 8080), e
+  va verificato che sia in ascolto prima di dire che è pronto.
 
 Il gate è `bun run verify` (typecheck, lint a zero warning, italiano, fuso,
-test, build), più `bun run test:e2e` per la navigazione se te l'hanno
-autorizzato.
+test, build), più `bun run test:e2e` se te l'hanno autorizzato.
 
-**Prima di cominciare, dichiara che accesso hai.** `supabase` CLI, `psql`,
-`postgres` e `docker` **non** sono installati su questa macchina, ma il
-connettore MCP di Lovable arriva al database di produzione: workspace
-«Matteo's Lovable», progetto `1ed8a7da-a4e3-498a-8dc6-55cf77fbd1ec`
-(«Calendar Events»), che è il Supabase `jxijruuclgskxlbqittk`. Da lì si legge e
-si scrive SQL come `postgres`, con `bypassrls`.
+---
 
-Quel connettore **non** arriva ai secret delle edge function né alla loro
-ridistribuzione: sono in dashboard. È esattamente la linea che separa il punto
-1 e la seconda metà del punto 2 da tutto il resto.
+## Che accesso hai — leggilo prima di promettere qualcosa
+
+Su questa macchina **non** ci sono `supabase` CLI, `psql`, `postgres` né
+`docker`. Il database di produzione si raggiunge **solo** dal connettore MCP di
+Lovable:
+
+- workspace **«Matteo's Lovable»**, id `s4eNiO1kcEzH0WbcrMEc`
+- progetto **«Calendar Events»**, id `1ed8a7da-a4e3-498a-8dc6-55cf77fbd1ec`
+- che è il Supabase **`jxijruuclgskxlbqittk`** — verificalo sempre, leggendo il
+  project ref dal corpo del job cron, prima di scrivere qualsiasi cosa
+- si esegue SQL come `postgres`, con `bypassrls`
+
+**Cosa quel connettore NON raggiunge**: i secret delle edge function e la loro
+ridistribuzione. Vivono nella dashboard. È esattamente la linea che rende il
+punto 1 impossibile da chiudere da qui, e il punto 2 impossibile da mettere in
+produzione.
 
 **Scrivere su un database di produzione va fatto in tre tempi**: leggi lo stato
 prima, applica, rileggi lo stato dopo. Non dichiarare «applicata» senza il
-terzo.
+terzo. E prima di una cancellazione, chiediti esplicitamente quale riga
+potrebbe servire ancora, e verificalo con una query invece di ragionarci
+sopra.
 
 ---
 
 ## 1. Rotazione di `DISPATCH_SECRET` — l'unico problema vero rimasto
 
+### Il problema
+
 `DISPATCH_SECRET` è scritto in chiaro nella migration
-`supabase/migrations/20260523084606_*.sql`, quindi è nella storia di Git e su
-GitHub. È l'**unica** autenticazione di `push-dispatcher`: chi legge il
-repository può far partire notifiche a tutti e cinque gli iscritti.
+`supabase/migrations/20260523084606_*.sql`, quindi è nella storia di Git e su un
+repository GitHub. È l'**unica** autenticazione di `push-dispatcher`: chi legge
+il repository può invocarlo e mandare notifiche a tutti e cinque gli iscritti,
+ripetutamente.
 
 Riscrivere la storia di `main` non è praticabile con la sincronizzazione
 Lovable attiva. **È la rotazione a neutralizzare il valore esposto, non la
-cancellazione.**
+cancellazione.** Finché non è fatta, il valore su GitHub resta valido.
 
-Il prerequisito è applicato e verificato: il segreto è nel Vault e il job lo
-rilegge a ogni giro, quindi ruotarlo non richiede di ricreare il job. La
-procedura in quattro passi è in fondo a
-`supabase/migrations/20260831193100_cron_dispatch_secret_from_vault.sql`:
+### Cosa è già pronto
 
-1. generare un valore nuovo;
-2. `vault.update_secret(...)` — **questo si può fare da SQL**;
-3. incollare lo stesso valore nel secret `DISPATCH_SECRET` del progetto
+Il prerequisito è applicato e verificato dal 31 agosto 2026
+(`20260831193100_cron_dispatch_secret_from_vault.sql`): il segreto è nel Vault e
+il job cron lo rilegge a ogni giro. Ruotarlo **non richiede più di ricreare il
+job**.
+
+### La procedura, in quattro passi
+
+La versione autorevole è in fondo a quella migration. In sintesi:
+
+1. Generare un valore nuovo:
+   `SELECT replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');`
+2. Scriverlo nel Vault — **questo si fa da SQL, quindi dal connettore MCP**:
+   ```sql
+   SELECT vault.update_secret(
+     (SELECT id FROM vault.secrets WHERE name = 'dispatch_secret'),
+     '<valore nuovo>'
+   );
+   ```
+   Il job lo prende al giro successivo.
+3. Incollare **lo stesso valore** nel secret `DISPATCH_SECRET` del progetto
    (Project Settings → Edge Functions → Secrets) e ridistribuire
-   `push-dispatcher` — **questo no, richiede la dashboard**;
-4. verificare i tre giri successivi in `cron.job_run_details` e, meglio, in
-   `net._http_response`.
+   `push-dispatcher`. **Questo non si fa da SQL.**
+4. Verificare i tre giri successivi:
+   ```sql
+   SELECT status, return_message, start_time FROM cron.job_run_details
+    WHERE jobid = (SELECT jobid FROM cron.job WHERE jobname = 'push-dispatcher-every-5-min')
+    ORDER BY start_time DESC LIMIT 3;
+   ```
+   E soprattutto in `net._http_response`, che è l'unica che dice la verità sulla
+   richiesta HTTP (vedi trappole).
+
+### Il vincolo che conta
 
 **Non fare il passo 2 senza poter fare subito il 3.** Fra i due il dispatcher
-risponde 401 e non parte nessuna notifica: è il verso giusto in cui fallire,
-ma va fatto quando qualcuno sta guardando. Il connettore MCP di Lovable arriva
-al database, quindi al passo 2; il passo 3 vive fuori da SQL.
+risponde 401 e non parte nessuna notifica. È il verso giusto in cui fallire, ma
+è comunque un'interruzione, e va fatta quando qualcuno sta guardando.
+
+Se hai solo il connettore MCP: **non cominciare.** Prepara i comandi, spiega la
+finestra di 401, e fermati. Un agente che fa il passo 2 e non può fare il 3
+lascia le notifiche spente a tempo indeterminato.
 
 ---
 
 ## 2. Il dispatcher fa molto lavoro per mandare pochissimo
 
-**La metà sul timeout è chiusa e misurata.** Il 31 agosto 2026, su
-`net._http_response`, 65 giri su 72 finivano in timeout. Ricontrollato il 5
-settembre dopo il passaggio a `timeout_milliseconds := 120000`: **72 su 72,
-tutti 200, zero timeout, zero errori.** Non riaprirla.
+### Cosa è già chiuso, e non va riaperto
 
-Resta la seconda metà, e adesso ha un numero. Fra il 31 agosto e il 5
-settembre: **1404 giri, 10 notifiche mandate.** Lo 0,7%. Ogni giro impagina il
-calendario Juventus fino a `Math.min(total, 30)` pagine
-(`supabase/functions/push-dispatcher/index.ts:150`), quindi sono nell'ordine
-delle quarantamila sotto-richieste a `sports-football` in cinque giorni per
-dieci notifiche.
+**Il timeout non è più un problema, ed è misurato.** Il 31 agosto 2026, su
+`net._http_response`, 65 giri su 72 finivano in timeout perché il default di
+`pg_net` è 5000 ms. Il job è stato ricreato con
+`timeout_milliseconds := 120000`. Ricontrollato il 5 settembre: **72 giri su
+72, tutti 200, zero timeout, zero errori.**
 
-Due strade, non alternative: impaginare solo finché servono eventi dentro la
-finestra di preavviso invece di trenta pagine fisse, oppure interrogare meno
-spesso di cinque minuti. La finestra di invio è di sei minuti e i preavvisi
-sono 15, 60 e 1440 minuti: c'è margine.
+### Cosa resta, con i numeri veri
 
-**Costo**: medio, e richiede di poter ridistribuire la edge function — cosa che
-dal solo database non si fa.
+Fra il 31 agosto e il 5 settembre: **1404 giri, 10 notifiche mandate.** Lo 0,7%.
+
+Attenzione a una cifra sbagliata che ha girato in questi documenti: «trenta
+pagine a ogni giro». `Math.min(total, 30)` in
+`supabase/functions/push-dispatcher/index.ts:150` è un **tetto**, e non viene
+mai raggiunto. Misurato il 5 settembre 2026 chiamando l'edge function:
+`sports-football` per la stagione 2026 risponde `total: 47`, `pageSize: 12`,
+**`totalPages: 4`**.
+
+Quindi per giro sono **sei chiamate a monte**: 4 a `sports-football`, 1 a
+`sports-f1`, 1 a `sports-motogp`. Circa ottomila in cinque giorni per dieci
+notifiche. Sproporzionato, ma **di un ordine di grandezza meno** di quanto si
+raccontava.
+
+### Cosa fare, se si fa
+
+Il dispatcher ricarica **l'intera stagione** a ogni giro per poi guardare solo
+una finestra di sei minuti attorno a `now + leadTime`. I preavvisi sono 15, 60
+e 1440 minuti, quindi non serve mai niente oltre le ventiquattr'ore.
+
+Due strade, non alternative:
+
+- **Prendere meno dati.** Fermare l'impaginazione quando le partite superano
+  `now + 1440 min + finestra`, invece di scorrere tutte le pagine. Il calendario
+  è ordinato per data, quindi è una condizione di uscita, non un filtro.
+- **Girare meno spesso.** Cinque minuti servono solo al preavviso più corto, che
+  è 15 minuti con una finestra di 6. Dieci minuti basterebbero e dimezzerebbero
+  tutto.
+
+**Prima di toccare, misura di nuovo**: `totalPages` cambia con la stagione, e
+`total: 47` era la stagione 2026 a settembre.
+
+**Costo**: medio. **Blocco**: richiede di ridistribuire la edge function, che
+dal solo database non si fa. **Urgenza**: nessuna. Da quando il timeout è a 120
+secondi non fa fallire niente e nessuno se ne accorge. Se non puoi
+ridistribuire, non scrivere il codice: resterebbe non verificabile.
 
 ---
 
-## 3. Sorveglianza di `pg_net` — non si corregge, si guarda
+## 3. `StreamingPage` — il criterio dice di fermarsi
 
-La revoca **non è applicabile** e si sa perché: le funzioni appartengono a
-`supabase_admin`, le migration girano come `postgres`, e un `REVOKE` da chi non
-è owner emette un warning e prosegue. La revoca corretta — da `PUBLIC` —
-fermerebbe le notifiche, perché nella stessa ACL non compare `postgres`.
+588 righe, dieci stati locali, quattro tabelle di rendering. Non è un punto
+aperto: è qui perché qualcuno, vedendo il numero, potrebbe pensare che lo sia.
 
-`supabase/migrations/20260831193000_revoke_pg_net_from_client_roles.sql` è
-stata svuotata e lasciata come nota. **Non riscriverla.**
-
-Le due condizioni da ricontrollare ogni volta che si tocca il database:
-
-- **`public` non deve acquisire funzioni `SECURITY DEFINER`.** Ricontrollata il
-  5 settembre 2026: in `public` non c'è **nessuna funzione**. Manca il piano
-  d'appoggio, non solo il trampolino. Si verifica con una query su `pg_proc`
-  filtrata su `prosecdef`.
-- **Gli schemi esposti devono restare `public` e `graphql_public`.** Questa
-  **non è leggibile da SQL**: non è impostata né a livello di database né di
-  ruolo, vive nella configurazione del progetto. Va verificata dall'esterno con
-  la anon key, come il 31 agosto.
-
----
-
-## 4. `StreamingPage`, l'ultimo dei componenti giganti — e il criterio dice di fermarsi
-
-588 righe, dieci stati locali, quattro tabelle di rendering. La
-serializzazione dei filtri è già fuori (`src/lib/streamingFilters.ts`, con i
+La serializzazione dei filtri è già fuori (`src/lib/streamingFilters.ts`, con i
 test di andata e ritorno) e la rete c'è: una e2e sul deep-link, che è la parte
-capace di rompersi in silenzio.
+capace di rompersi in silenzio. Quello che resta dentro è **JSX leggibile**.
 
-Quello che resta dentro è **JSX leggibile**. Tagliarlo non farebbe guadagnare
-niente in verificabilità, ed è il criterio con cui è stato fatto tutto il resto
-di questo lavoro. **Non toccarla per il numero di righe.** Se un giorno serve,
-serve per una ragione migliore di quella.
+**Non toccarla per il numero di righe.** È il criterio con cui è stato fatto
+tutto il resto di questo lavoro.
+
+---
+
+## Appendice: le query per rileggere lo stato
+
+Da eseguire col connettore MCP di Lovable sul progetto
+`1ed8a7da-a4e3-498a-8dc6-55cf77fbd1ec`. Sono tutte in sola lettura.
+
+```sql
+-- Sei sul database giusto? Deve rispondere jxijruuclgskxlbqittk.
+SELECT substring(command from 'https://([a-z0-9]+)\.supabase\.co') AS project_ref
+  FROM cron.job WHERE jobname = 'push-dispatcher-every-5-min';
+
+-- I due job. Il dispatcher ogni 5 minuti, la retention alle 03:17 UTC,
+-- entrambi owner `postgres`.
+SELECT jobid, jobname, schedule, active, username FROM cron.job ORDER BY jobid;
+
+-- La retention sta facendo il suo lavoro: `da_cancellare` deve essere 0.
+SELECT count(*) FILTER (WHERE sent_at < now() - interval '30 days') AS da_cancellare,
+       count(*) AS totali, min(sent_at) AS piu_vecchia
+  FROM public.push_sent_log;
+
+-- La verita' sul dispatcher. NON `cron.job_run_details`: vedi trappole.
+SELECT count(*) AS giri, count(*) FILTER (WHERE timed_out) AS in_timeout,
+       count(*) FILTER (WHERE status_code = 200) AS ok,
+       min(created) AS dal, max(created) AS al
+  FROM net._http_response;
+
+-- Sorveglianza pg_net, condizione 1: deve rispondere 0.
+SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+ WHERE n.nspname = 'public' AND p.prosecdef;
+
+-- RLS sulle tabelle push: attiva, con la sola policy restrittiva.
+SELECT c.relname, c.relrowsecurity,
+       (SELECT string_agg(polname, '; ') FROM pg_policy WHERE polrelid = c.oid) AS policy
+  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+ WHERE n.nspname = 'public' AND c.relname IN ('push_sent_log','push_subscriptions');
+```
+
+La **condizione 2** della sorveglianza `pg_net` — che gli schemi esposti
+restino `public` e `graphql_public` — **non è leggibile da SQL**: non è
+impostata né a livello di database né di ruolo. Si verifica dall'esterno, con
+la anon key, chiamando `POST /rest/v1/rpc/http_post` (deve dare 404) e forzando
+`Accept-Profile: net` (deve dare `PGRST106`).
 
 ---
 
@@ -161,50 +247,46 @@ serve per una ragione migliore di quella.
 
 ### Verifica e strumenti
 
-- **`comando | tail` nasconde il codice di uscita.** In una pipeline lo stato
-  è quello dell'ultimo comando. `bun run test:e2e 2>&1 | tail -30` ha
-  restituito `exit 0` mentre un test falliva, e la riga «1 failed» era appena
-  sopra la finestra di `tail`. **Leggi il conteggio finale, non fidarti del
-  codice di uscita di una pipeline.**
+- **`comando | tail` nasconde il codice di uscita.** In una pipeline lo stato è
+  quello dell'ultimo comando. `bun run test:e2e 2>&1 | tail -30` ha restituito
+  `exit 0` mentre un test falliva, e la riga «1 failed» era appena sopra la
+  finestra di `tail`. **Leggi il conteggio finale**, o redirigi su file e leggi
+  `$?`.
 - **`cron.job_run_details` mente per omissione.** Dice `succeeded` quando l'SQL
-  è andato, anche se la richiesta HTTP è stata mollata. Per il dispatcher la
-  verità è in `net._http_response`.
+  è andato, anche se la richiesta HTTP è stata mollata: `net.http_post` è
+  asincrona e ritorna subito. Per il dispatcher la verità è in
+  `net._http_response`, che conserva circa sei ore.
 - **Una migration può essere applicata e non aver fatto niente.** Un `REVOKE` da
   chi non è owner emette un warning e prosegue. È il modo peggiore in cui una
   migration sbaglia. Rileggi lo stato dopo averla applicata, sempre.
 - **Il registro delle migration si è fermato al 23 maggio 2026.**
-  `supabase_migrations.schema_migrations` contiene cinque versioni e non
-  include le migration del 31 agosto e del 5 settembre, che pure sono applicate
-  e funzionanti. In questo progetto le migration recenti si applicano a mano,
-  eseguendo l'SQL. Non dedurre da quella tabella che cosa è stato applicato:
-  **guarda lo schema**, non il registro.
-- **Gli `event_id` delle notifiche sono per numero di round**, non per data:
-  `f1-11-fp2`, `motogp-12-PR`. Si ripetono ogni stagione. Senza retention, la
-  riga del round 11 del 2026 avrebbe soppresso la notifica del round 11 del
-  2027 — un difetto latente che la retention a trenta giorni chiude di
-  rimbalzo. Se un giorno tocchi il dedup, ricordati che la chiave non è unica
-  nel tempo.
+  `supabase_migrations.schema_migrations` contiene cinque versioni e non include
+  le migration del 31 agosto e del 5 settembre, che pure **sono applicate e
+  funzionanti**. Qui le migration recenti si applicano a mano, eseguendo l'SQL.
+  Non dedurre da quella tabella cosa è stato applicato: **guarda lo schema.**
 - **`.claude/hooks/block-dangerous-bash.sh` è letterale.** Blocca un comando
   Bash che contenga certe stringhe legate a Supabase, anche quando compaiono
   dentro il testo di un commento che stai scrivendo. Non è un falso positivo da
-  aggirare: riformula il commento.
+  aggirare: riformula.
 - **Il tool MCP del browser può essere bloccato dal classificatore anche quando
-  l'utente ti ha autorizzato.** Playwright chiamato direttamente da uno script
-  funziona: importa `chromium` da `@playwright/test`, ma **il file dev'essere
-  dentro il progetto**, altrimenti Node non risolve il pacchetto. Scrivilo,
-  eseguilo, cancellalo.
+  l'utente ti ha autorizzato.** Playwright chiamato da uno script funziona:
+  importa `chromium` da `@playwright/test`, ma **il file dev'essere dentro il
+  progetto**, altrimenti Node non risolve il pacchetto. Scrivilo, eseguilo,
+  cancellalo.
+- **Un tetto non è una misura.** `Math.min(total, 30)` è finito in tre documenti
+  come «trenta pagine a ogni giro»; le pagine vere sono quattro. Se in un
+  documento trovi un numero, chiediti se qualcuno l'ha misurato.
 
 ### Il rischio visivo
 
 - **Le e2e non coprono il rischio visivo.** Se tocchi lo stile va guardato a
   schermo, in tema chiaro e scuro (`localStorage['cse-theme']`, valori `dark` e
   `light`; il default è `dark`). Se **non** lo tocchi, dimostralo invece di
-  affermarlo: confronta l'insieme dei `className` prima e dopo. Attenzione al
-  punto cieco — quel confronto non vede ordine e annidamento, e non vede le
-  classi che diventano una costante o una prop invece di restare un
-  `className=` letterale.
-- **Uno screenshot di un dialogo Radix appena aperto sembra semitrasparente.**
-  È l'animazione di entrata (`fade-in-0 zoom-in-95`), non un difetto di stile.
+  affermarlo: confronta l'insieme dei `className` prima e dopo. Punto cieco —
+  quel confronto non vede ordine e annidamento, e non vede le classi che
+  diventano una costante o una prop invece di restare un `className=` letterale.
+- **Uno screenshot di un dialogo Radix appena aperto sembra semitrasparente.** È
+  l'animazione di entrata (`fade-in-0 zoom-in-95`), non un difetto di stile.
   Aspetta un secondo, o leggi `getComputedStyle` invece di fidarti dell'occhio.
 
 ### Tempo, fuso, formatter
@@ -224,54 +306,72 @@ serve per una ragione migliore di quella.
 
 - **Il linter vede solo il codice che riesce a leggere.** `MotoGPPage` chiamava
   `Date.now()` in render da mesi con `verify` verde: `react-hooks/purity` non
-  entrava nell'IIFE finché stava in fondo a una catena `dati && dati.length > 0
-&& (...)`. **Aspettati che succeda di nuovo**: il refactor non introduce quei
-  difetti, li rende raggiungibili. Si correggono, non si zittiscono.
+  entrava nell'IIFE finché stava in fondo a una catena
+  `dati && dati.length > 0 && (...)`. **Aspettati che succeda di nuovo**: il
+  refactor non introduce quei difetti, li rende raggiungibili. Si correggono,
+  non si zittiscono.
 - **Uno schema al confine rende raggiungibili difetti che il compilatore non
-  vedeva.** Sostituendo i cinque `declaredOnly` con zod reali sono usciti dieci
-  errori di tipo: `!== null` che non escludeva `undefined`, `details!.directors`
-  appoggiato a un tipo che prometteva più del payload. Sono correzioni di tipo
-  senza effetto a runtime, ma vanno guardate una per una.
+  vedeva.** Sostituendo i `declaredOnly` con zod reali sono usciti dieci errori
+  di tipo: `!== null` che non escludeva `undefined`, `details!.directors`
+  appoggiato a un tipo che prometteva più del payload.
 - **Deriva gli schemi dal codice delle edge function, non dalle interfacce del
   frontend.** Le interfacce scritte a mano erano già in ritardo su due punti, e
   uno schema ricavato da `ReleaseDetailsPayload` avrebbe **rifiutato una
   risposta legittima**: senza chiave TMDB, `details` risponde
   `{ type, id, configured: false }` e nient'altro.
+- **Le edge function rispondono in un involucro.** `{ success, data, meta }`, e
+  `fetchFn` in `push-dispatcher` lo scarta con `j?.success ? j.data : j`. Se
+  chiami una funzione a mano con `curl`, `items` e `totalPages` stanno dentro
+  `data`, non al primo livello.
 - **Dopo una sostituzione massiva rilancia subito `tsc`.** Il codemod di
   Tailwind rinominò il _valore_ della prop `variant="outline"` in
   `"outline-solid"`: non lo videro né il lint né la build.
 - **Su macOS il filesystem è case-insensitive.** Due moduli che differiscono
   solo per maiuscole collidono in locale e sono distinti su Linux in CI.
-- **I `children` di un componente si valutano anche quando non vengono resi.**
-  Se estrai qualcosa di costoso, la soluzione è una render prop.
+- **I `children` di un componente si valutano anche quando non vengono resi.** Se
+  estrai qualcosa di costoso, la soluzione è una render prop.
 
 ### PWA, cache, asset
 
 - **Il service worker precarica ciò che il _documento_ nomina.** `assetUrlsIn`
-  legge `<script src>`, `<link href>` e ora anche `url(...)` dentro i fogli di
-  stile già messi in cache. Se aggiungi un asset referenziato **solo** da un
-  file annidato — un'immagine di sfondo in un CSS, un font — controlla che
-  quella catena lo raggiunga, o offline sparisce dopo una sola visita.
-- **La e2e PWA è la sentinella che se ne accorge.** Sorveglia i fallimenti
-  sotto `/assets/` e chiede che i font siano _usabili_ offline, non solo
-  arrivati (`document.fonts.load` poi `check`). Se la tocchi, non allentarla:
-  ha già trovato un difetto vero.
-- **Google Fonts serviva font variabili.** Le sessanta dichiarazioni
-  `@font-face` del suo CSS puntavano a **dodici file soli**, uno per subset,
-  riusato dai cinque pesi. Ospitarli non ha cambiato un byte del rendering. I
-  quattro che restano (`latin` e `latin-ext` di Oswald e Inter) sono in
-  `src/assets/fonts/`, dichiarati in `src/fonts.css`. `latin-ext` non è un di
-  più: Vlahović, Kostić e Beşiktaş stanno lì.
+  legge `<script src>`, `<link href>` e — dal 5 settembre 2026 — anche `url(...)`
+  dentro i fogli di stile già messi in cache. Se aggiungi un asset referenziato
+  **solo** da un file annidato (un'immagine di sfondo in un CSS, un font),
+  controlla che quella catena lo raggiunga, o offline sparisce dopo una sola
+  visita.
+- **La e2e PWA è la sentinella che se ne accorge.** Sorveglia i fallimenti sotto
+  `/assets/` e chiede che i font siano _usabili_ offline, non solo arrivati
+  (`document.fonts.load` poi `check`). Se la tocchi, non allentarla: ha già
+  trovato un difetto vero.
+- **Google Fonts serviva font variabili.** Le sessanta dichiarazioni `@font-face`
+  del suo CSS puntavano a **dodici file soli**, uno per subset, riusato dai
+  cinque pesi. Ospitarli non ha cambiato un byte del rendering. I quattro che
+  restano (`latin` e `latin-ext` di Oswald e Inter) sono in `src/assets/fonts/`,
+  dichiarati in `src/fonts.css`. `latin-ext` non è un di più: Vlahović, Kostić e
+  Beşiktaş stanno lì.
 - **`CACHE_VERSION` in `public/sw.js` va incrementata quando cambia una
   strategia**, altrimenti le cache vecchie sopravvivono all'`activate`.
+
+### Notifiche push
+
+- **Gli `event_id` sono per numero di round**, non per data: `f1-11-fp2`,
+  `motogp-12-PR`. **Si ripetono ogni stagione.** Senza retention, la riga del
+  round 11 del 2026 avrebbe soppresso la notifica del round 11 del 2027 — un
+  difetto latente che la retention a trenta giorni chiude di rimbalzo. Se
+  tocchi il dedup, ricorda che la chiave non è unica nel tempo.
+- **Il posto in `push_sent_log` si prende PRIMA di inviare**: la scrittura _è_ il
+  controllo, e il vincolo `UNIQUE (subscription_id, event_id, lead_time)` decide.
+  Il ragionamento è in `supabase/functions/push-dispatcher/dedupe.ts`.
+- **La finestra di invio è di sei minuti** e il job gira ogni cinque: due giri
+  consecutivi vedono lo stesso evento. È il motivo per cui il dedup esiste.
 
 ### Test e calendario
 
 - **Le fixture e2e vivono nel maggio 2099.** Una pagina che si apre sulla data
   corrente sarebbe vuota. La soluzione è
   `page.clock.setFixedTime(new Date("2099-05-05T10:00:00Z"))`, non aggiungere
-  eventi con date relative a oggi: quelli cambierebbero anche ciò che vedono
-  gli altri test.
+  eventi con date relative a oggi: quelli cambierebbero anche ciò che vedono gli
+  altri test.
 - **La griglia di un mese mostra anche i giorni del mese accanto.** Un test che
   verifica «l'evento del 3 maggio non si vede in aprile» fallisce, e ha torto
   lui. Per la navigazione fra mesi usa un evento di fine mese.
@@ -296,8 +396,8 @@ serve per una ragione migliore di quella.
 
 Precedenti da imitare: `src/lib/streamingFilters.ts` (11 test, con la proprietà
 di andata e ritorno), `src/lib/tonightTv.ts`, `src/lib/calendarGrid.ts`,
-`src/lib/api/schemas.ts` (dove ogni confine ha il suo schema e non esiste più
-un passa-tutto), `src/components/common/DataSection.tsx`.
+`src/lib/api/schemas.ts` (dove ogni confine ha il suo schema e non esiste più un
+passa-tutto), `src/components/common/DataSection.tsx`.
 
 ---
 
@@ -307,6 +407,16 @@ un passa-tutto), `src/components/common/DataSection.tsx`.
 bun run verify   → exit 0
 bun run test     → 355 test su 38 file
 bun run test:e2e → 7 test, tutti verdi  (non lanciarlo senza autorizzazione)
+```
+
+Database di produzione, letto lo stesso giorno:
+
+```text
+push_sent_log        105 righe, oltre-30-giorni = 0, piu' vecchia 7 agosto
+push_subscriptions   5 iscritti
+cron.job             push-dispatcher-every-5-min (*/5), push-sent-log-retention (17 3 * * *)
+net._http_response   72 giri su 72 a 200, zero timeout
+public               zero funzioni, zero SECURITY DEFINER
 ```
 
 | File                                    | Righe |
@@ -320,8 +430,8 @@ bun run test:e2e → 7 test, tutti verdi  (non lanciarlo senza autorizzazione)
 | `src/pages/SinnerPage.tsx`              | 367   |
 
 `JuventusMatchPage` non è mai stata nella lista dei componenti giganti e nessuno
-l'ha guardata con quell'occhio: se un giorno serve, comincia chiedendoti cosa
-lì dentro si romperebbe senza fare rumore, non quante righe ha.
+l'ha guardata con quell'occhio: se un giorno serve, comincia chiedendoti cosa lì
+dentro si romperebbe senza fare rumore, non quante righe ha.
 
 Le sette e2e di `e2e/app.spec.ts`: navigazione fra tutte le sezioni, stato di
 caricamento F1, separatore di Stasera in TV, dettaglio partita Juventus, PWA
@@ -341,8 +451,10 @@ mese e agenda.
   lì. Prima di aggiungerne una, verifica sul codice che non sia già fatta.
 - `docs/SECURITY.md` se hai toccato segreti, database o edge function.
 - **Riscrivi questo file.** Se resta qualcosa, riscrivilo come prompt per la
-  sessione dopo, con lo stesso taglio: cosa fare, cosa è già stato pagato, dove
-  sono le trappole. Se non resta niente, cancellalo dal repository.
+  sessione dopo, con lo stesso taglio. **Se non resta niente, cancellalo dal
+  repository**: dopo la rotazione di `DISPATCH_SECRET` e la riduzione del lavoro
+  del dispatcher, non resta niente, e questo file va cancellato invece di
+  sopravvivere raccontando lavoro già fatto.
 
 Nel resoconto finale indica i file modificati, le verifiche eseguite e il loro
 esito, **i limiti della verifica**, i rischi residui e i follow-up. Distingui

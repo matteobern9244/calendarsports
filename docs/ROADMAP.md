@@ -50,18 +50,27 @@ Il timeout **non è più un problema, ed è misurato**. Il 31 agosto 2026, su
 settembre dopo il passaggio a `timeout_milliseconds := 120000`: **72 giri su
 72, tutti 200, zero timeout, zero errori.** Quella metà è chiusa.
 
-Resta la seconda, e adesso ha un numero. Fra il 31 agosto e il 5 settembre il
-dispatcher ha fatto **1404 giri e ha mandato 10 notifiche**: lo 0,7%. Ogni
-giro impagina il calendario Juventus fino a trenta pagine, quindi sono
-nell'ordine delle quarantamila sotto-richieste a `sports-football` in cinque
-giorni per dieci notifiche.
+Resta la seconda, e adesso ha dei numeri veri. Fra il 31 agosto e il 5
+settembre il dispatcher ha fatto **1404 giri e ha mandato 10 notifiche**: lo
+0,7%.
 
-Serve: ridurre il lavoro per giro. Le strade sono due e non si escludono —
-impaginare solo finché servono eventi nella finestra di preavviso invece di
-trenta pagine fisse, oppure interrogare meno spesso. La prima è dentro
-`supabase/functions/push-dispatcher/index.ts:150`.
+**Correzione a una cifra che girava in questi documenti**: «trenta pagine a
+ogni giro» era sbagliato. `Math.min(total, 30)` è un tetto, non una misura, e
+non viene mai raggiunto: `sports-football` per la stagione 2026 risponde
+`total: 47`, `pageSize: 12`, **`totalPages: 4`**. Il dispatcher fa quindi 4
+richieste a `sports-football`, più una a `sports-f1` e una a `sports-motogp`:
+**sei chiamate a monte per giro**, circa ottomila in cinque giorni per dieci
+notifiche.
+
+Resta sproporzionato, ma di un ordine di grandezza meno di quanto si
+raccontava. Serve: prendere solo gli eventi dentro la finestra di preavviso
+invece dell'intera stagione a ogni giro, oppure interrogare meno spesso di
+cinque minuti — la finestra di invio è di sei minuti e i preavvisi sono 15, 60
+e 1440 minuti, quindi c'è margine.
 
 **Costo**: medio, e richiede di poter ridistribuire la edge function.
+**Perché non è urgente**: nessuno se ne accorge, e da quando il timeout è a
+120 secondi non fa più fallire niente.
 
 ### Rotazione del segreto del dispatcher
 
