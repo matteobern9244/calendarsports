@@ -2,14 +2,17 @@
 
 > Questo file **è un prompt**, non un diario. Incollalo come primo messaggio in
 > una sessione nuova, oppure aprilo e digli da quale punto partire. Descrive
-> tutto ciò che al **5 settembre 2026** non è ancora fatto, in ordine di
+> tutto ciò che al **5 settembre 2026, sera** non è ancora fatto, in ordine di
 > importanza, e contiene le trappole già pagate: leggerle costa cinque minuti,
 > riscoprirle è costato ore.
 >
-> Il refactoring dei componenti giganti, che occupava il vecchio `WIP.md`, è
-> **chiuso**: `JuventusPage`, il guscio comune delle quattro pagine sportive,
-> `CalendarPage` e la selezione di prima serata di `TonightTvList`. Il racconto
-> sta nei commit su `develop`, dal `424db47` in poi. Non riaprirlo.
+> **Quasi tutto ciò che si poteva fare da qui è stato fatto.** Il confine
+> streaming, i font ospitati nel progetto, il bottone «+N altri» del calendario
+> e la retention di `push_sent_log` sono chiusi e stanno nei commit su
+> `develop`, da `9b677d0` a `864f0d4`. Quello che resta ha una caratteristica
+> in comune, ed è la ragione per cui è rimasto: **richiede accesso al progetto
+> Supabase**, dashboard o database. Se non ce l'hai, il punto 5 è l'unico che
+> puoi davvero muovere, e non è codice.
 
 ---
 
@@ -38,215 +41,236 @@ Regole che questo lavoro tocca da vicino:
 - **Zero avvisi.** Se il lavoro ne produce, sistemarli fa parte del lavoro.
 
 Il gate è `bun run verify` (typecheck, lint a zero warning, italiano, fuso,
-test, build). `bun run test:e2e` è il gate della navigazione, ma **si chiede
-prima di lanciarlo**.
+test, build), più `bun run test:e2e` per la navigazione se te l'hanno
+autorizzato.
+
+**Prima di cominciare, dichiara che accesso hai.** I punti da 1 a 4 non si
+possono né fare né verificare senza il progetto Supabase, e non c'è modo di
+scoprirlo strada facendo: `supabase` CLI, `psql`, `postgres` e `docker` non
+sono installati su questa macchina. Se non hai accesso, dillo e passa al punto
+5, invece di produrre migration che nessuno può applicare.
 
 ---
 
-## 1. Rotazione di `DISPATCH_SECRET` — bloccante, e non è codice
+## 1. Applicare la migration di retention di `push_sent_log`
 
-È l'unico problema di sicurezza del progetto con impatto reale.
+`supabase/migrations/20260905184700_push_sent_log_retention.sql` **è scritta e
+non è mai stata eseguita.** È il lavoro più piccolo di questa lista e l'unico
+già pronto: serve solo qualcuno che possa applicarla e rileggere lo stato dopo.
+
+Cosa fa: una cancellazione immediata oltre i trenta giorni, più un job
+`pg_cron` giornaliero alle 03:17 UTC che la ripete. Non crea funzioni — il
+`DELETE` sta nel corpo del job, e il perché è al punto 4.
+
+Le query di controllo sono in fondo al file. La più importante è la seconda:
+subito dopo l'applicazione, `da_cancellare` deve essere `0`. Se non lo è, il
+`DELETE` non ha fatto quello che dice.
+
+**Costo**: minuti, se hai accesso. Impossibile, se non ce l'hai.
+
+---
+
+## 2. Rotazione di `DISPATCH_SECRET` — bloccante, e non è codice
+
 `DISPATCH_SECRET` è scritto in chiaro nella migration
-`supabase/migrations/20260523084606_*.sql`, che è nella storia di Git e su
+`supabase/migrations/20260523084606_*.sql`, quindi è nella storia di Git e su
 GitHub. È l'**unica** autenticazione di `push-dispatcher`: chi legge il
-repository può mandare notifiche a tutti gli iscritti, ripetutamente, e far
-generare a ogni invocazione una trentina di sotto-richieste verso
-`sports-football`.
+repository può far partire notifiche a tutti gli iscritti.
 
 Riscrivere la storia di `main` non è praticabile con la sincronizzazione
-Lovable attiva: **è la rotazione a neutralizzare il valore esposto**, non la
-cancellazione.
+Lovable attiva. **È la rotazione a neutralizzare il valore esposto, non la
+cancellazione.**
 
-Il prerequisito è già applicato (migration `20260831193100`, il segreto è nel
-Vault e il job lo rilegge a ogni giro). Resta la rotazione vera, che **richiede
-la dashboard Supabase** perché il secret della edge function non è raggiungibile
-da SQL. La procedura in quattro passi è in fondo a quella migration:
+Il prerequisito è già applicato (`20260831193100`): il segreto è nel Vault e il
+job lo rilegge a ogni giro, quindi ruotarlo non richiede più di ricreare il
+job. La procedura in quattro passi è in fondo a quella migration:
 
 1. generare un valore nuovo;
-2. `vault.update_secret(...)` — il job lo prende al giro successivo, non va
-   ricreato;
+2. `vault.update_secret(...)`;
 3. incollare lo stesso valore in Project Settings → Edge Functions → Secrets e
    ridistribuire `push-dispatcher`;
 4. verificare i tre giri successivi in `cron.job_run_details`.
 
-**Fra il passo 2 e il passo 3 il dispatcher risponde 401 e nessuna notifica
-parte**: è il verso giusto in cui fallire, ma vuol dire che la finestra va
-scelta, non subita.
+**Fra il passo 2 e il passo 3 il dispatcher risponde 401 e non parte nessuna
+notifica.** È il verso giusto in cui fallire, ma va fatto quando qualcuno sta
+guardando.
 
-**Cosa può fare un agente**: preparare i comandi, verificare l'esito, aggiornare
-`docs/SECURITY.md` e il changelog. **Cosa non può fare**: i passi in dashboard.
-Se non hai accesso, dillo e fermati qui invece di simulare progresso.
+Un agente può preparare i comandi, verificare l'esito, aggiornare
+`docs/SECURITY.md` e il changelog. **Non** può fare i passi in dashboard. Se
+non hai accesso, dillo e fermati qui invece di simulare progresso.
 
-## 2. Il dispatcher: verificare il timeout, poi ridurre il lavoro
+---
+
+## 3. Il dispatcher: verificare il timeout, poi ridurre il lavoro
 
 Misurato il 31 agosto 2026 su `net._http_response`: **65 giri su 72 finivano in
-timeout**, e solo 7 leggevano una risposta. Il difetto era silenzioso perché
-`cron.job_run_details` segnava `succeeded`: l'SQL era andato, era la richiesta
-HTTP a essere stata mollata.
+timeout**, e `cron.job_run_details` segnava `succeeded` perché l'SQL era andato
+— era la richiesta HTTP a essere stata mollata. Il job è stato ricreato con
+`timeout_milliseconds := 120000`.
 
-Il job è stato ricreato con `timeout_milliseconds := 120000`. **Restano due
-cose, e la prima è solo misura**:
+Restano due cose, in quest'ordine.
 
-- **Verificare che il dispatcher rientri davvero nella finestra.** Si guarda
-  `net._http_response` e `cron.job_run_details` sullo stesso intervallo, non
-  solo il secondo: è stato il secondo, da solo, a nascondere il difetto per
-  mesi.
-- **Ridurre il lavoro.** `supabase/functions/push-dispatcher/index.ts:150`
-  impagina il calendario Juventus fino a `Math.min(total, 30)` pagine, a ogni
-  giro, ogni cinque minuti, per una funzione che poi non manda quasi mai
-  niente. Le strade: chiedere solo le pagine che contengono partite entro la
-  finestra di anticipo, o tenere in cache il calendario fra un giro e l'altro.
-  Prima di scegliere, misura quanto costa oggi: senza il numero è
-  un'ottimizzazione a sentimento.
+**Verificare** che il dispatcher rientri davvero nella finestra. Si guarda
+`net._http_response` **e** `cron.job_run_details` sullo stesso intervallo: la
+prima dice se la risposta è arrivata, il secondo dice solo se l'SQL è partito.
 
-**Costo**: basso per la misura, medio per la riduzione.
+**Ridurre il lavoro.** `supabase/functions/push-dispatcher/index.ts:150`
+impagina il calendario Juventus fino a `Math.min(total, 30)` pagine a ogni
+giro, ogni cinque minuti, per una funzione che poi non manda quasi mai niente.
+Misura prima di scegliere: senza il numero, qualunque riduzione è un'ipotesi.
 
-## 3. Sorveglianza di `pg_net` — non si corregge, si guarda
+**Costo**: basso per la misura, medio per la riduzione. Entrambi richiedono
+accesso al database.
 
-La revoca **non è applicabile** e sappiamo perché: le funzioni appartengono a
-`supabase_admin`, le migration girano come `postgres`, e un `REVOKE` da chi non
-è owner emette un warning e prosegue — applicato, sembra riuscito. La revoca
-corretta, da `PUBLIC`, spegnerebbe le notifiche.
+---
 
-Oggi il privilegio c'è e **non ha una porta**: `net` non è esposto da PostgREST
-e `public` non contiene funzioni da cui rimbalzare. Le due condizioni che lo
-tengono innocuo sono verificabili da qui e vanno ricontrollate quando si tocca
-il database:
+## 4. Sorveglianza di `pg_net` — non si corregge, si guarda
 
-- `public` non deve acquistare funzioni `SECURITY DEFINER`;
-- gli schemi esposti devono restare `public` e `graphql_public`.
+La revoca **non è applicabile** e ora si sa perché: le funzioni appartengono a
+`supabase_admin`, le migration girano come `postgres`, e in PostgreSQL un
+`REVOKE` da chi non è owner emette un warning e prosegue. La revoca corretta —
+da `PUBLIC` — fermerebbe le notifiche, perché nella stessa ACL non compare
+`postgres`, che è il ruolo del job cron.
 
-Il ragionamento completo è dentro
-`supabase/migrations/20260831193000_revoke_pg_net_from_client_roles.sql`, che è
-stata **svuotata e lasciata come nota** proprio perché nessuno riscriva la
-stessa migration fra sei mesi. Non riscriverla.
+`supabase/migrations/20260831193000_revoke_pg_net_from_client_roles.sql` è
+stata svuotata e lasciata come nota. **Non riscriverla.**
 
-## 4. Il confine streaming è dichiarato, ma non verificato
+Restano due condizioni da ricontrollare ogni volta che si tocca il database:
 
-Da quando `callEdgeFunction` valida con gli schemi di
-[`src/lib/api/schemas.ts`](src/lib/api/schemas.ts), le cinque azioni sportive
-controllano davvero cosa ricevono. Le azioni di `streaming-tv` e
-`streaming-releases` no: passano da `declaredOnly`, che tipizza e basta — dieci
-occorrenze, ed è il debito residuo che un `grep declaredOnly` misura.
+- **`public` non deve acquisire funzioni `SECURITY DEFINER`.** Sarebbe il
+  trampolino che oggi manca per arrivare a `pg_net`. È anche il motivo per cui
+  la migration di retention non crea funzioni.
+- **Gli schemi esposti devono restare `public` e `graphql_public`.**
 
-Serve: schemi ricavati da quello che le due edge function **producono davvero**
-(TMDB per le uscite, palinsesti per la TV), non dalle interfacce scritte a mano,
-che potrebbero già essere in ritardo sul codice. Il modo di scoprirlo è leggere
-le funzioni in `supabase/functions/streaming-*`, non le `interface` del
-frontend.
+La metà verificabile senza database è già stata fatta il 5 settembre 2026:
+`grep -rniE "security definer" supabase/migrations/` trova solo il commento
+esplicativo dentro la migration svuotata. Nessuna migration crea funzioni
+`SECURITY DEFINER` in `public`. **La verifica sullo stato reale del database
+resta da fare.**
 
-**Costo**: medio. **Perché conta**: `StreamingPage` è la pagina dove un campo
-rinominato a monte non fa rumore.
+---
 
-## 5. I font si perdono, offline
+## 5. `StreamingPage`, l'ultimo dei componenti giganti — e il criterio dice di fermarsi
 
-`src/index.css:1` importa Oswald e Inter da `fonts.googleapis.com`. Il service
-worker copre documento, `/assets/` e le risorse di root, ma non il cross-origin:
-offline l'app si apre e ripiega sui font di sistema.
+588 righe, dieci stati locali, quattro tabelle di rendering. La
+serializzazione dei filtri è già fuori (`src/lib/streamingFilters.ts`, con i
+test di andata e ritorno) e la rete c'è: una e2e sul deep-link, che è la parte
+capace di rompersi in silenzio.
 
-Serve: ospitare i font nel progetto. È anche privacy e una richiesta di rete in
-meno all'avvio. **Attenzione al rischio visivo**: cambiando la fonte dei font si
-tocca ogni schermata, quindi qui gli screenshot in tema chiaro e scuro servono
-davvero — è uno dei pochi lavori dove il confronto delle classi CSS non prova
-niente.
-
-**Costo**: basso.
-
-## 6. Il bottone «+N altri» del calendario non fa quello che dice
-
-Vista mese, giorno con più di quattro eventi: compare «+N altri», il testo
-promette di mostrare gli altri, il codice apre il dettaglio del quinto e basta.
-
-Serve: aprire l'elenco del giorno, o passare alla vista agenda filtrata su quel
-giorno.
-
-**Il comportamento sbagliato è fissato da un test** in
-`src/components/calendar/MonthGrid.test.tsx`, apposta perché non cambi di
-nascosto. Chi corregge il difetto **deve aggiornare quel test**: è il segno che
-la correzione è avvenuta, non un ostacolo da aggirare.
-
-**Costo**: basso.
-
-## 7. `StreamingPage`, l'ultimo dei componenti giganti
-
-588 righe, dodici `useState` e quattro tabelle di rendering. La serializzazione
-dei filtri è già fuori (`src/lib/streamingFilters.ts`, con la proprietà di
-andata e ritorno) e la rete c'è: una e2e sul deep-link, che copre la parte
-capace di rompersi in silenzio — la UI continuerebbe a funzionare ignorando
-l'URL, e un link condiviso riporterebbe a uno stato diverso da quello copiato.
-
-**Il criterio con cui è stato fatto tutto il resto dice di fermarsi**: quello
-che resta dentro è JSX leggibile, e tagliarlo non farebbe guadagnare
-verificabilità. Se lo tocchi, che sia per un motivo migliore del conteggio
-righe — per esempio perché il punto 4 ha appena introdotto schemi veri e i
-componenti vanno riallineati.
-
-## 8. `push_sent_log` cresce senza limite
-
-Nessuna retention, nessun `DELETE` da nessuna parte. L'indice su `sent_at`
-esiste e non è usato da niente. Con pochi iscritti non è un problema oggi.
-
-Serve: una migration correttiva che cancelli le righe più vecchie di N giorni,
-eseguibile anche su un database vuoto. **Non riscrivere le migration già
-applicate.**
-
-**Costo**: basso.
+Quello che resta dentro è **JSX leggibile**. Tagliarlo non farebbe guadagnare
+niente in verificabilità, ed è il criterio con cui è stato fatto tutto il resto
+di questo lavoro. **Non toccarla per il numero di righe.** Se un giorno serve,
+serve per una ragione migliore di quella.
 
 ---
 
 ## Trappole già pagate — leggile, non riscoprirle
 
+### Verifica e strumenti
+
+- **`comando | tail` nasconde il codice di uscita.** In una pipeline lo stato
+  è quello dell'ultimo comando. `bun run test:e2e 2>&1 | tail -30` ha
+  restituito `exit 0` mentre un test falliva, e la riga «1 failed» era appena
+  sopra la finestra di `tail`. **Leggi il conteggio finale, non fidarti del
+  codice di uscita di una pipeline.**
 - **`cron.job_run_details` mente per omissione.** Dice `succeeded` quando l'SQL
   è andato, anche se la richiesta HTTP è stata mollata. Per il dispatcher la
   verità è in `net._http_response`.
 - **Una migration può essere applicata e non aver fatto niente.** Un `REVOKE` da
   chi non è owner emette un warning e prosegue. È il modo peggiore in cui una
   migration sbaglia. Rileggi lo stato dopo averla applicata, sempre.
-- **Il linter vede solo il codice che riesce a leggere.** `MotoGPPage` chiamava
-  `Date.now()` in render da mesi con `verify` verde: `react-hooks/purity` non
-  entrava nell'IIFE finché stava in fondo a una catena `dati && dati.length > 0
-&& (...)`. Semplificata la condizione, la regola ha visto il codice ed è
-  diventata rossa. **Aspettati che succeda di nuovo**: il refactor non
-  introduce quei difetti, li rende raggiungibili. Si correggono, non si
-  zittiscono.
-- **Il guardiano del fuso guarda solo le cartelle che gli sono state dette.**
-  `TARGET_DIRS` in `scripts/check-rome-tz.mjs` è una lista a mano, e una
-  cartella nuova nasce scoperta: `src/components/sinner` è rimasta fuori per
-  mesi con un `new Date(stringa)` dentro. Il meta-test in
-  `src/test/tooling/tz-guard-coverage.test.ts` sorveglia la lista, ma la sua
-  euristica cerca solo `new Date(` e `toLocale(Time|Date)String`: un file che
-  sbaglia il fuso in un altro modo non lo fa scattare.
+- **Il tool MCP del browser può essere bloccato dal classificatore anche quando
+  l'utente ti ha autorizzato.** Playwright chiamato direttamente da uno script
+  funziona: importa `chromium` da `@playwright/test`, ma **il file dev'essere
+  dentro il progetto**, altrimenti Node non risolve il pacchetto. Scrivilo,
+  eseguilo, cancellalo.
+
+### Il rischio visivo
+
+- **Le e2e non coprono il rischio visivo.** Se tocchi lo stile va guardato a
+  schermo, in tema chiaro e scuro (`localStorage['cse-theme']`, valori `dark` e
+  `light`; il default è `dark`). Se **non** lo tocchi, dimostralo invece di
+  affermarlo: confronta l'insieme dei `className` prima e dopo. Attenzione al
+  punto cieco — quel confronto non vede ordine e annidamento, e non vede le
+  classi che diventano una costante o una prop invece di restare un
+  `className=` letterale.
+- **Uno screenshot di un dialogo Radix appena aperto sembra semitrasparente.**
+  È l'animazione di entrata (`fade-in-0 zoom-in-95`), non un difetto di stile.
+  Aspetta un secondo, o leggi `getComputedStyle` invece di fidarti dell'occhio.
+
+### Tempo, fuso, formatter
+
 - **`new Date(stringa)` è vietato**, `new Date(Date.UTC(...))` no. Un ISO senza
   `Z` vale UTC: usa `toRomeDate` da `@/lib/dateUtils`.
 - **Costruire un `Intl.DateTimeFormat` costa circa settanta volte la sua
   `format`**, quindi va a livello di modulo. Il difetto è già ricomparso tre
   volte dopo essere stato corretto: controlla ogni formatter che sposti.
-- **I `children` di un componente si valutano anche quando non vengono resi.**
-  Passare JSX a un componente che poi lo scarta esegue comunque le `map` e gli
-  IIFE dentro. Se estrai qualcosa di costoso, la soluzione è una render prop.
-- **Su macOS il filesystem è case-insensitive.** Due moduli che differiscono
-  solo per maiuscole collidono in locale e sono distinti su Linux in CI.
+- **Il guardiano del fuso guarda solo le cartelle che gli sono state dette.**
+  `TARGET_DIRS` in `scripts/check-rome-tz.mjs` è una lista a mano, e una
+  cartella nuova nasce scoperta. Il meta-test in
+  `src/test/tooling/tz-guard-coverage.test.ts` sorveglia la lista, ma la sua
+  euristica cerca solo `new Date(` e `toLocale(Time|Date)String`.
+
+### Il linter, i tipi, il refactor
+
+- **Il linter vede solo il codice che riesce a leggere.** `MotoGPPage` chiamava
+  `Date.now()` in render da mesi con `verify` verde: `react-hooks/purity` non
+  entrava nell'IIFE finché stava in fondo a una catena `dati && dati.length > 0
+&& (...)`. **Aspettati che succeda di nuovo**: il refactor non introduce quei
+  difetti, li rende raggiungibili. Si correggono, non si zittiscono.
+- **Uno schema al confine rende raggiungibili difetti che il compilatore non
+  vedeva.** Sostituendo i cinque `declaredOnly` con zod reali sono usciti dieci
+  errori di tipo: `!== null` che non escludeva `undefined`, `details!.directors`
+  appoggiato a un tipo che prometteva più del payload. Sono correzioni di tipo
+  senza effetto a runtime, ma vanno guardate una per una.
+- **Deriva gli schemi dal codice delle edge function, non dalle interfacce del
+  frontend.** Le interfacce scritte a mano erano già in ritardo su due punti, e
+  uno schema ricavato da `ReleaseDetailsPayload` avrebbe **rifiutato una
+  risposta legittima**: senza chiave TMDB, `details` risponde
+  `{ type, id, configured: false }` e nient'altro.
 - **Dopo una sostituzione massiva rilancia subito `tsc`.** Il codemod di
   Tailwind rinominò il _valore_ della prop `variant="outline"` in
   `"outline-solid"`: non lo videro né il lint né la build.
-- **Le e2e non coprono il rischio visivo.** Se tocchi lo stile va guardato a
-  schermo, in tema chiaro e scuro. Se **non** lo tocchi, dimostralo invece di
-  affermarlo: confronta l'insieme dei `className` prima e dopo. Attenzione al
-  punto cieco — quel confronto non vede ordine e annidamento, e non vede le
-  classi che diventano una costante o una prop invece di restare un
-  `className=` letterale (succede estraendo un componente: vanno incluse nel
-  grep, o la differenza è finta).
+- **Su macOS il filesystem è case-insensitive.** Due moduli che differiscono
+  solo per maiuscole collidono in locale e sono distinti su Linux in CI.
+- **I `children` di un componente si valutano anche quando non vengono resi.**
+  Se estrai qualcosa di costoso, la soluzione è una render prop.
+
+### PWA, cache, asset
+
+- **Il service worker precarica ciò che il _documento_ nomina.** `assetUrlsIn`
+  legge `<script src>`, `<link href>` e ora anche `url(...)` dentro i fogli di
+  stile già messi in cache. Se aggiungi un asset referenziato **solo** da un
+  file annidato — un'immagine di sfondo in un CSS, un font — controlla che
+  quella catena lo raggiunga, o offline sparisce dopo una sola visita.
+- **La e2e PWA è la sentinella che se ne accorge.** Sorveglia i fallimenti
+  sotto `/assets/` e chiede che i font siano _usabili_ offline, non solo
+  arrivati (`document.fonts.load` poi `check`). Se la tocchi, non allentarla:
+  ha già trovato un difetto vero.
+- **Google Fonts serviva font variabili.** Le sessanta dichiarazioni
+  `@font-face` del suo CSS puntavano a **dodici file soli**, uno per subset,
+  riusato dai cinque pesi. Ospitarli non ha cambiato un byte del rendering. I
+  quattro che restano (`latin` e `latin-ext` di Oswald e Inter) sono in
+  `src/assets/fonts/`, dichiarati in `src/fonts.css`. `latin-ext` non è un di
+  più: Vlahović, Kostić e Beşiktaş stanno lì.
+- **`CACHE_VERSION` in `public/sw.js` va incrementata quando cambia una
+  strategia**, altrimenti le cache vecchie sopravvivono all'`activate`.
+
+### Test e calendario
+
 - **Le fixture e2e vivono nel maggio 2099.** Una pagina che si apre sulla data
-  corrente sarebbe vuota, e un test scritto senza accorgersene verificherebbe
-  solo che non esplode. La soluzione è `page.clock.setFixedTime(new
-Date("2099-05-05T10:00:00Z"))`, non aggiungere eventi con date relative a
-  oggi: quelli cambierebbero anche ciò che vedono gli altri test, a partire da
-  «Prossimi Eventi» in home.
+  corrente sarebbe vuota. La soluzione è
+  `page.clock.setFixedTime(new Date("2099-05-05T10:00:00Z"))`, non aggiungere
+  eventi con date relative a oggi: quelli cambierebbero anche ciò che vedono
+  gli altri test.
 - **La griglia di un mese mostra anche i giorni del mese accanto.** Un test che
   verifica «l'evento del 3 maggio non si vede in aprile» fallisce, e ha torto
   lui. Per la navigazione fra mesi usa un evento di fine mese.
 - **Le due viste del calendario compongono il nome accessibile in modo
   diverso**: «Juventus: @ Inter» nella griglia, «Juventus @ Inter» in agenda.
+- **Un dialogo Radix si monta in jsdom senza polyfill.** `src/test/setup.ts`
+  contiene solo `matchMedia`, e basta: vedi
+  `src/components/calendar/DayEventsDialog.test.tsx`.
 
 ---
 
@@ -263,18 +287,17 @@ Date("2099-05-05T10:00:00Z"))`, non aggiungere eventi con date relative a
 
 Precedenti da imitare: `src/lib/streamingFilters.ts` (11 test, con la proprietà
 di andata e ritorno), `src/lib/tonightTv.ts`, `src/lib/calendarGrid.ts`,
-`src/components/common/DataSection.tsx`, `src/components/common/SportTabs.tsx`
-(dove ogni prop opzionale esiste perché una pagina reale ne aveva bisogno, e ha
-un test che lo dimostra).
+`src/lib/api/schemas.ts` (dove ogni confine ha il suo schema e non esiste più
+un passa-tutto), `src/components/common/DataSection.tsx`.
 
 ---
 
-## Stato di partenza, misurato il 5 settembre 2026
+## Stato di partenza, misurato il 5 settembre 2026 (sera)
 
 ```text
 bun run verify   → exit 0
-bun run test     → 339 test su 37 file
-bun run test:e2e → 7 test   (non lanciarlo senza autorizzazione)
+bun run test     → 355 test su 38 file
+bun run test:e2e → 7 test, tutti verdi  (non lanciarlo senza autorizzazione)
 ```
 
 | File                                    | Righe |
@@ -284,7 +307,7 @@ bun run test:e2e → 7 test   (non lanciarlo senza autorizzazione)
 | `src/pages/JuventusMatchPage.tsx`       | 426   |
 | `src/pages/MotoGPPage.tsx`              | 396   |
 | `src/pages/Formula1Page.tsx`            | 393   |
-| `src/pages/CalendarPage.tsx`            | 371   |
+| `src/pages/CalendarPage.tsx`            | 388   |
 | `src/pages/SinnerPage.tsx`              | 367   |
 
 `JuventusMatchPage` non è mai stata nella lista dei componenti giganti e nessuno
@@ -293,7 +316,8 @@ lì dentro si romperebbe senza fare rumore, non quante righe ha.
 
 Le sette e2e di `e2e/app.spec.ts`: navigazione fra tutte le sezioni, stato di
 caricamento F1, separatore di Stasera in TV, dettaglio partita Juventus, PWA
-offline, deep-link streaming, calendario in vista mese e agenda.
+offline (documento, asset **e font**), deep-link streaming, calendario in vista
+mese e agenda.
 
 ---
 

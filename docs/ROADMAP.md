@@ -17,6 +17,18 @@ chi le aveva viste.
 
 ## Priorità alta
 
+### La retention di `push_sent_log` è scritta ma non applicata
+
+`supabase/migrations/20260905184700_push_sent_log_retention.sql` esiste dal 5
+settembre 2026 e **non è mai stata eseguita**: chi l'ha scritta non aveva
+accesso al database. Finché resta lì, la tabella continua a crescere come
+prima — il codice non è la correzione, l'applicazione lo è.
+
+Serve: applicarla e rileggere lo stato dopo. Le query di controllo sono in
+fondo al file; la seconda dice se il `DELETE` ha fatto quello che promette.
+
+**Costo**: minuti, con accesso al database. Impossibile, senza.
+
 ### La revoca di `pg_net` non è applicabile, e ora sappiamo perché
 
 Provata sul progetto reale il 31 agosto 2026: il `REVOKE` **non ha sollevato
