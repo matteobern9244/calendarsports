@@ -21,6 +21,26 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Corretto
 
+- **I font non si perdono più, offline.** Oswald e Inter arrivavano da
+  `fonts.googleapis.com`: il service worker non può mettere in cache una
+  risorsa cross-origin, quindi senza rete l'app si apriva ripiegando sui
+  font di sistema. Ora i file sono ospitati nel progetto, passano da
+  `/assets/` con l'hash nel nome e li copre la stessa cache di tutto il
+  resto. Sono gli **stessi file** che Google serviva, non altri: le sue
+  sessanta dichiarazioni `@font-face` puntavano a dodici file soli, uno
+  per subset. Di quei dodici restano i quattro che questa app può davvero
+  rendere — `latin` e `latin-ext`, che è dove stanno Vlahović e Beşiktaş.
+  In più: due connessioni in meno all'avvio, e nessun indirizzo IP dei
+  visitatori che arriva a Google.
+
+- **Il service worker precaricava tutto tranne i font.** Ricavava gli
+  asset da mettere in cache leggendo il documento, ma i font sono
+  nominati solo dentro il CSS: nessuno li vedeva passare, e chi apriva
+  l'app offline dopo una sola visita se li ritrovava mancanti. Ora, dopo
+  aver messo in cache i fogli di stile, cerca anche dentro quelli. Il
+  difetto non si vedeva finché i font erano su Google, perché quella è
+  un'origine che il service worker non tocca comunque.
+
 - **«+N altri» nel calendario adesso mostra davvero gli altri.** Nella
   vista mese, un giorno con più di quattro eventi chiude il resto dietro
   quel bottone: il testo prometteva gli altri e il codice apriva il

@@ -1,0 +1,91 @@
+/* ---------------------------------------------------------------------------
+ * I font, ospitati qui invece che su Google.
+ *
+ * Fino al 5 settembre 2026 questa era una riga sola: un `@import` da
+ * `fonts.googleapis.com`. Il service worker mette in cache il documento,
+ * `/assets/` e le risorse di root, ma non puo' toccare una risorsa
+ * cross-origin: offline l'app si apriva e ripiegava sui font di sistema.
+ * Da qui i file passano da `/assets/` con l'hash nel nome, quindi li copre
+ * la stessa regola di tutto il resto.
+ *
+ * E' anche una richiesta di rete in meno all'avvio — due, contando la
+ * connessione a `fonts.gstatic.com` che il CSS di Google apriva a sua volta —
+ * e nessun indirizzo IP dei visitatori che arriva a Google.
+ *
+ * I FILE SONO GLI STESSI. Google serviva gia' font variabili: le sessanta
+ * dichiarazioni `@font-face` del suo CSS puntavano a dodici file soli, uno
+ * per subset, riusato dai cinque pesi. Sono quei file, scaricati e verificati
+ * nella signature `wOF2`.
+ *
+ * Il peso e' dichiarato come intervallo `300 700` e non come cinque valori
+ * discreti, perche' e' quello che il file e' davvero: un asse continuo. Sui
+ * pesi che l'app usa — 400, 500, 600, 700 — il risultato coincide, e in piu'
+ * nessun peso intermedio puo' finire in grassetto sintetico per mancanza di
+ * una faccia che lo copra.
+ *
+ * ---------------------------------------------------------------------------
+ * PERCHE' SOLO `latin` E `latin-ext`, DEI CINQUE SUBSET CHE GOOGLE SERVIVA
+ * ---------------------------------------------------------------------------
+ *
+ * Con il CDN il costo dei subset inutili era zero: `unicode-range` fa si' che
+ * il browser scarichi solo quelli che i caratteri a schermo richiedono, e
+ * cirillico, greco e vietnamita non venivano mai chiesti. Ospitandoli qui
+ * il costo smette di essere zero, perche' il service worker li precarica
+ * tutti all'installazione: 306 kB invece di 184, di cui 122 mai usati.
+ *
+ * `latin` copre U+0000-00FF, quindi tutte le accentate italiane e anche
+ * `Räikkönen`. `latin-ext` serve davvero e non e' un di piu': `Vlahović`,
+ * `Kostić`, `Beşiktaş` stanno li'. Cirillico, greco e vietnamita no: le fonti
+ * sportive traslitterano, e un carattere fuori dai due intervalli qui sotto
+ * ripiega sul font di sistema per quel carattere soltanto.
+ * ------------------------------------------------------------------------- */
+
+/* Inter — latin-ext */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("./assets/fonts/inter-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* Inter — latin */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("./assets/fonts/inter-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Oswald — latin-ext */
+@font-face {
+  font-family: "Oswald";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("./assets/fonts/oswald-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* Oswald — latin */
+@font-face {
+  font-family: "Oswald";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("./assets/fonts/oswald-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}

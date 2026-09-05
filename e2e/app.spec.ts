@@ -130,8 +130,10 @@ test("PWA: l'app si apre senza rete grazie al service worker", async ({ page, co
   const failedLocalAssets: string[] = [];
   page.on("requestfailed", (r) => {
     const { origin, pathname } = new URL(r.url());
-    // Solo le nostre risorse: i font di Google e le API Supabase sono
-    // cross-origin e devono fallire, offline.
+    // Solo le nostre risorse: le API Supabase sono cross-origin e devono
+    // fallire, offline. I font non sono piu' fra queste — dal 5 settembre
+    // 2026 sono ospitati nel progetto e stanno sotto `/assets/`, quindi
+    // rientrano in pieno in cio' che questa lista sorveglia.
     if (origin.includes("127.0.0.1") && (pathname.startsWith("/assets/") || pathname === "/")) {
       failedLocalAssets.push(pathname);
     }
@@ -168,6 +170,24 @@ test("PWA: l'app si apre senza rete grazie al service worker", async ({ page, co
   // sarebbero gia' fallite — questa lo dice esplicitamente invece di
   // lasciarlo dedurre.
   expect(failedLocalAssets).toEqual([]);
+
+  // E i font sono usabili, non solo arrivati. La distinzione conta: finche'
+  // venivano da `fonts.googleapis.com`, offline falliva il foglio di stile
+  // e con esso spariva la regola `@font-face`, quindi il testo restava
+  // leggibile ma nel font di sistema. `document.fonts.load` forza il
+  // caricamento e `check` dice se una faccia che combacia e' disponibile
+  // davvero: senza service worker che serva il woff2, e' `false`.
+  const fontiUsabili = await page.evaluate(async () => {
+    await Promise.all([
+      document.fonts.load("700 24px Oswald"),
+      document.fonts.load("400 16px Inter"),
+    ]);
+    return {
+      oswald: document.fonts.check("700 24px Oswald"),
+      inter: document.fonts.check("400 16px Inter"),
+    };
+  });
+  expect(fontiUsabili).toEqual({ oswald: true, inter: true });
 
   // Non verifichiamo qui `OfflineIndicator`. Sotto l'emulazione di rete di
   // Playwright `navigator.onLine` resta `true`, quindi il banner non compare:

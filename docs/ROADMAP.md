@@ -77,20 +77,6 @@ passi è scritta in fondo a quella migration.
 **Perché ora**: è l'unico problema di sicurezza del progetto con un impatto
 reale. Dettagli in [`SECURITY.md`](SECURITY.md).
 
-## Priorità media
-
-### I font si perdono, offline
-
-Il service worker adesso c'è e copre documento, `/assets/` e le risorse di
-root. Restano fuori i font di Google (`fonts.gstatic.com`), che sono
-cross-origin: offline l'app si apre ma ripiega sui font di sistema.
-
-Serve: ospitare i font nel progetto invece di prenderli da un CDN. È anche una
-questione di privacy e di una richiesta di rete in meno all'avvio.
-
-**Costo**: basso. **Perché non ora**: l'app resta leggibile e usabile; è un
-degrado estetico, non funzionale.
-
 ## Priorità bassa
 
 ### Quello che resta dei componenti giganti

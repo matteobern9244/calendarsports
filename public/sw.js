@@ -16,6 +16,9 @@
  * ASSET CON HASH (/assets/*) -> cache prima.
  *   Il nome contiene l'hash del contenuto, quindi il file a quel nome non
  *   cambia mai. Una risposta in cache e' per costruzione ancora valida.
+ *   Ci rientrano anche i font, ospitati nel progetto dal 5 settembre 2026:
+ *   prima venivano da `fonts.googleapis.com`, cross-origin, e offline
+ *   l'app ripiegava sui font di sistema.
  *
  * TUTTO IL RESTO -> non lo tocchiamo.
  *   Le chiamate alle edge function Supabase non passano di qui: la cache dei
@@ -30,7 +33,7 @@
  * ---------------------------------------------------------------------------
  */
 
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const SHELL_CACHE = `calendar-events-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `calendar-events-assets-${CACHE_VERSION}`;
 const CURRENT_CACHES = [SHELL_CACHE, ASSET_CACHE];
@@ -66,15 +69,41 @@ const ROOT_ASSETS = [
 const MATCH_OPTIONS = { ignoreVary: true };
 
 /**
- * Gli asset che il documento referenzia, ricavati dal documento stesso.
+ * Gli asset con hash referenziati da un testo, ricavati dal testo stesso.
  *
  * Serve perche' i nomi contengono l'hash del contenuto e cambiano a ogni
  * build: un service worker, che e' un file statico, non puo' conoscerli.
- * Vite li scrive in `<script src>`, `<link rel="stylesheet" href>` e
- * `<link rel="modulepreload" href>`, tutti sotto `/assets/`.
+ * Nel documento Vite li scrive in `<script src>`,
+ * `<link rel="stylesheet" href>` e `<link rel="modulepreload" href>`; nel
+ * CSS compaiono dentro `url(...)`. In entrambi i casi stanno sotto
+ * `/assets/`, e la stessa espressione li trova.
  */
-function assetUrlsIn(html) {
-  return [...new Set(html.match(/\/assets\/[A-Za-z0-9._-]+/g) ?? [])];
+function assetUrlsIn(text) {
+  return [...new Set(text.match(/\/assets\/[A-Za-z0-9._-]+/g) ?? [])];
+}
+
+/**
+ * Gli asset referenziati dai fogli di stile appena messi in cache.
+ *
+ * Non e' un di piu': il documento non nomina i font, che compaiono solo
+ * dentro `url(...)` nel CSS. Fino al 5 settembre 2026 non se ne accorgeva
+ * nessuno perche' i font venivano da Google, cioe' da un'origine che questo
+ * service worker non tocca; da quando sono ospitati nel progetto, saltarli
+ * significa aprirsi offline con i font di sistema — e la richiesta fallita
+ * resta anche nel registro degli errori.
+ *
+ * Legge dalla cache invece di richiedere in rete: quei fogli di stile sono
+ * appena stati scaricati.
+ */
+async function assetUrlsInStyleSheets(cache, urls) {
+  const sheets = urls.filter((u) => u.endsWith(".css"));
+  const found = await Promise.all(
+    sheets.map(async (u) => {
+      const cached = await cache.match(u, MATCH_OPTIONS);
+      return cached ? assetUrlsIn(await cached.text()) : [];
+    }),
+  );
+  return [...new Set(found.flat())].filter((u) => !urls.includes(u));
 }
 
 self.addEventListener("install", (event) => {
@@ -100,12 +129,17 @@ self.addEventListener("install", (event) => {
         // I chunk caricati pigramente (una route mai visitata) restano fuori:
         // entrano in cache la prima volta che vengono chiesti online.
         const assetCache = await caches.open(ASSET_CACHE);
+        const precache = (url) => assetCache.add(new Request(url, { cache: "reload" }));
         const assets = [...assetUrlsIn(await response.text()), ...ROOT_ASSETS];
         // `allSettled`: un singolo asset irraggiungibile non deve far fallire
         // l'installazione dell'intero service worker.
-        await Promise.allSettled(
-          assets.map((url) => assetCache.add(new Request(url, { cache: "reload" }))),
-        );
+        await Promise.allSettled(assets.map(precache));
+
+        // Secondo giro, e solo ora: i font sono nominati dal CSS, non dal
+        // documento, quindi vanno cercati nei fogli di stile che il giro
+        // precedente ha appena messo in cache.
+        const nested = await assetUrlsInStyleSheets(assetCache, assets);
+        await Promise.allSettled(nested.map(precache));
       } catch (_) {
         // Rete assente durante l'installazione: il service worker si installa
         // lo stesso e riempira' la cache alla prima navigazione riuscita.

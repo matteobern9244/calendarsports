@@ -17,7 +17,8 @@ file divergono, vince il codice: aggiornare qui.
 │                                                               │
 │  React Query  ──▶  sportsApi  ──▶  fetch con retry 502/503/504 │
 │  countdownClock (un timer per tutta l'app)                     │
-│  service worker: solo notifiche push, nessuna cache            │
+│  service worker: notifiche push + cache offline di documento,  │
+│                  asset con hash e font ospitati               │
 └────────────────────────────┬──────────────────────────────────┘
                              │  HTTPS, anon key
 ┌────────────────────────────▼──────────────────────────────────┐
