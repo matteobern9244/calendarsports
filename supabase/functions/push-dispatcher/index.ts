@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import webpush from "https://esm.sh/web-push@3.6.7";
 import { dispatcherConfig } from "./env.ts";
 import { deliverOnce, supabaseSentLogStore } from "./dedupe.ts";
+import { hasReachedHorizon, notificationHorizonMs } from "./calendarWindow.ts";
 import {
   ROME_TIME_ZONE,
   formatRomeEventDateTime,
@@ -17,6 +18,18 @@ const { supabaseUrl, serviceRoleKey, anonKey, vapidPublicKey, vapidPrivateKey, v
   dispatcherConfig;
 
 webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+
+// La finestra entro cui un evento e' considerato dovuto. L'intervallo del job
+// cron NON puo' superarla: e' l'ampiezza dell'unico intervallo in cui un giro
+// riesce a vedere un evento, non un margine attorno all'evento. Oggi il job
+// gira ogni 5 minuti; portarlo a 10 senza allargare questa costante perderebbe
+// il 30% delle notifiche, in silenzio.
+const WINDOW_MS = 6 * 60 * 1000;
+
+// Tetto di sicurezza all'impaginazione. Non e' la condizione di uscita reale
+// — quella e' `hasReachedHorizon` — ma impedisce a una risposta malformata di
+// far girare il ciclo all'infinito.
+const MAX_CALENDAR_PAGES = 30;
 
 type EventItem = {
   id: string;
@@ -138,25 +151,45 @@ async function loadMotoGP(): Promise<EventItem[]> {
   return out;
 }
 
-async function loadJuventus(): Promise<EventItem[]> {
+/**
+ * Legge il calendario Juventus fermandosi appena supera l'orizzonte delle
+ * notifiche, invece di scaricare l'intera stagione a ogni giro.
+ *
+ * Due accorgimenti che funzionano solo insieme:
+ *
+ *   * `upcoming=1` fa scartare a monte le partite gia' giocate, cosi' la
+ *     pagina 1 comincia da adesso. Senza, l'ordinamento crescente lavora
+ *     contro di noi: a maggio ci sarebbero trenta partite passate davanti, e
+ *     l'uscita anticipata scatterebbe solo all'ultima pagina.
+ *   * l'uscita anticipata smette di chiedere pagine quando la data letta ha
+ *     superato `now + 1440 min`, che e' il preavviso piu' lungo possibile.
+ *
+ * `nowMs` viene passato dal chiamante e non riletto qui: e' l'istante *prima*
+ * delle chiamate a monte, quindi l'orizzonte e' leggermente piu' stretto del
+ * `now` con cui poi si decide chi e' dovuto. Il margine di sei minuti sommato
+ * dall'orizzonte copre quella differenza con abbondanza — il timeout del job
+ * e' di due minuti.
+ */
+async function loadJuventus(nowMs: number): Promise<EventItem[]> {
   const season = getJuventusSeason();
+  const horizonMs = notificationHorizonMs(nowMs, WINDOW_MS);
   const out: EventItem[] = [];
-  const first = await fetchFn(
-    "sports-football",
-    `action=calendar&season=${season}&page=1&pageSize=12`,
-  );
-  const items: any[] = Array.isArray(first?.items) ? [...first.items] : [];
-  const total = Number(first?.totalPages ?? 1);
-  const cap = Math.min(total, 30);
-  if (cap > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: cap - 1 }, (_, i) => i + 2).map((p) =>
-        fetchFn("sports-football", `action=calendar&season=${season}&page=${p}&pageSize=12`),
-      ),
-    );
-    for (const r of rest) {
-      if (Array.isArray(r?.items)) items.push(...r.items);
-    }
+  const query = (page: number) =>
+    `action=calendar&season=${season}&page=${page}&pageSize=12&upcoming=1`;
+
+  const first = await fetchFn("sports-football", query(1));
+  const firstItems: any[] = Array.isArray(first?.items) ? first.items : [];
+  const items: any[] = [...firstItems];
+  const totalPages = Math.min(Number(first?.totalPages ?? 1) || 1, MAX_CALENDAR_PAGES);
+
+  let page = 1;
+  let reachedHorizon = hasReachedHorizon(firstItems, horizonMs);
+  while (!reachedHorizon && page < totalPages) {
+    page++;
+    const next = await fetchFn("sports-football", query(page));
+    const nextItems: any[] = Array.isArray(next?.items) ? next.items : [];
+    items.push(...nextItems);
+    reachedHorizon = hasReachedHorizon(nextItems, horizonMs);
   }
   for (const m of items) {
     if (!m.date) continue;
@@ -193,7 +226,8 @@ Deno.serve(async (req) => {
   const sb = createClient(supabaseUrl, serviceRoleKey);
   const sentLog = supabaseSentLogStore(sb);
 
-  const [f1, motogp, juve] = await Promise.all([loadF1(), loadMotoGP(), loadJuventus()]);
+  const startedAt = Date.now();
+  const [f1, motogp, juve] = await Promise.all([loadF1(), loadMotoGP(), loadJuventus(startedAt)]);
   const events: EventItem[] = [...f1, ...motogp, ...juve].filter(
     (e) => toEventTimestampMs(e.date) !== null,
   );
@@ -208,7 +242,6 @@ Deno.serve(async (req) => {
   }
 
   const now = Date.now();
-  const WINDOW_MS = 6 * 60 * 1000;
 
   let sent = 0,
     skipped = 0,
