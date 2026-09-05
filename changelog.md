@@ -28,6 +28,14 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   apre l'elenco completo del giorno, da cui si sceglie. La vista sotto
   `md` non era interessata: lì gli eventi si vedevano già tutti.
 
+- **Il registro delle notifiche inviate smette di crescere senza fine.**
+  `push_sent_log` non aveva nessuna cancellazione in tutto il progetto:
+  una riga per ogni notifica mandata, alimentata da un job che gira ogni
+  cinque minuti, e un indice su `sent_at` che nessuno interrogava. Ora una
+  migration aggiunge un job giornaliero che cancella oltre i trenta giorni,
+  e quell'indice serve a qualcosa. La migration è scritta ma **non ancora
+  applicata**: richiede accesso al database.
+
 - **La data del ranking di Sinner seguiva il fuso di chi guardava.** La
   scheda giocatore la formattava con `new Date(iso)` e senza `timeZone`:
   dall'Italia il risultato coincideva, a ovest di Greenwich mostrava il

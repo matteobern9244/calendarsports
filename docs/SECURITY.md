@@ -27,6 +27,28 @@ esplicita sopra. Nessuna funzione `SECURITY DEFINER` esiste nel progetto.
 Tutti gli accessi passano dalle edge function che usano la service role key, e
 nessun componente del frontend chiama `supabase.from(...)` né `supabase.rpc(...)`.
 
+### Retention di `push_sent_log`
+
+`supabase/migrations/20260905184700_push_sent_log_retention.sql` aggiunge un job
+`pg_cron` giornaliero che cancella le righe più vecchie di trenta giorni, più
+una cancellazione immediata. Prima non c'era nessun `DELETE` in tutto il
+progetto: la tabella poteva solo crescere, alimentata da un job che gira ogni
+cinque minuti.
+
+La migration **non crea nessuna funzione**: il `DELETE` sta nel corpo del job.
+È voluto, ed è la ragione per cui compare qui e non solo nel changelog — la
+condizione da sorvegliare dichiarata più sotto è che `public` non acquisti
+funzioni `SECURITY DEFINER`, e il modo più semplice di rispettarla è non
+aggiungere funzioni.
+
+Trenta giorni non sono un compromesso: la finestra in cui una riga impedisce
+davvero un doppione dura **sei minuti**, quanto la finestra di invio del
+dispatcher. Oltre quella, la riga è solo la traccia di ciò che è stato mandato.
+
+> **Scritta, non applicata.** Al 5 settembre 2026 questa migration non è stata
+> eseguita né verificata: chi l'ha scritta non aveva accesso al database. Le
+> query di controllo sono in fondo al file.
+
 ### `pg_net` è raggiungibile dai ruoli client
 
 Verificato sul database reale il **31 agosto 2026**, e la diagnosi che

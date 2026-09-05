@@ -112,13 +112,6 @@ sportive, `CalendarPage` (620 → 371, con la e2e che prima non la
 visitava) e la selezione del programma di prima serata di
 `TonightTvList`, che ora è una funzione pura con i suoi test.
 
-### `push_sent_log` cresce senza limite
-
-Nessuna retention, nessun `DELETE` da nessuna parte. L'indice su `sent_at` esiste
-e non è usato da niente. Con pochi iscritti non è un problema oggi.
-
-**Costo**: basso.
-
 ## Valutate e scartate, per ora
 
 - **TypeScript 7.** Esiste ed è stabile, ma `typescript-eslint` dichiara
