@@ -1,6 +1,6 @@
 # Sicurezza
 
-Documento sintetico del modello di sicurezza di **Calendar Events v2.8.0**.
+Documento sintetico del modello di sicurezza di **Calendar Events v2.9.0**.
 
 > Le affermazioni di questo documento sono state verificate contro il codice il
 > **26 agosto 2026**, e quelle sul database contro il database di produzione il

@@ -17,7 +17,11 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
-## [Unreleased]
+## [2.9.0] — Rotazione del segreto, dispatcher più leggero, offline completo (2026-09-06)
+
+Bump applicativo `2.8.0` → `2.9.0`, esposto da `src/lib/version.ts` e
+`package.json`. Nota di rilascio:
+[`docs/releases/2.9.0-rotazione-segreto-e-dispatcher.md`](docs/releases/2.9.0-rotazione-segreto-e-dispatcher.md).
 
 ### Sicurezza
 
@@ -87,6 +91,19 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Modificato
 
+- **Il dispatcher fa la metà del lavoro per mandare le stesse notifiche.**
+  Ricaricava l'intera stagione della Juventus a ogni giro — sei chiamate a
+  monte ogni cinque minuti — per poi guardare una finestra di sei minuti:
+  1404 giri per 10 notifiche fra il 31 agosto e il 5 settembre, lo 0,7%. Ora
+  usa `upcoming=1`, che `sports-football` offriva già e nessuno usava, e
+  smette di chiedere pagine appena supera il preavviso più lungo. Le due cose
+  funzionano solo insieme: il calendario è ordinato per data crescente, quindi
+  senza il filtro l'uscita anticipata sarebbe inutile per metà stagione, con
+  trenta partite passate davanti. Da sei chiamate a monte per giro a tre.
+  Distribuito e verificato il 6 settembre 2026: `eventsConsidered` è sceso da
+  **339 a 304**, che era il valore previsto prima della misura. Per chi usa
+  l'app non cambia niente: le notifiche sono le stesse.
+
 - **Le due sezioni streaming controllano davvero quello che ricevono.** Il
   palinsesto TV e le uscite dei provider passavano da un confine che
   tipizzava senza verificare niente: un campo rinominato a monte sarebbe
@@ -121,6 +138,20 @@ il 26 e il 31 agosto 2026. Le voci qui sotto includono anche otto lavori
 chiusi durante l'audit che erano stati tolti da `docs/ROADMAP.md` senza passare
 di qui: la regola del ROADMAP dice che una voce realizzata si sposta nel
 changelog, e questo è quel passaggio.
+
+### Note operative
+
+- **Versione applicativa portata a `2.9.0`** in `src/lib/version.ts` e
+  `package.json`.
+- **I file che l'agente Lovable rigenera non rompono più il lint.**
+  `src/integrations/supabase/client.ts` e `previewAuthStorage.ts` vengono
+  riscritti a ogni intervento sul progetto, con apici singoli e senza le
+  virgole finali che Prettier pretende: la CI falliva con dieci errori di
+  formattazione. Ora sono esclusi da `.prettierignore` e dagli `ignores` di
+  `eslint.config.js`, lo stesso trattamento già riservato a
+  `src/integrations/supabase/types.ts`. Il guardrail che conta resta intatto:
+  `no-restricted-imports` vieta di **importare** il client generato, e agisce
+  sui file che importano, non su quello importato.
 
 ### Infrastruttura e qualità (lavori dell'audit non ancora raccontati)
 
