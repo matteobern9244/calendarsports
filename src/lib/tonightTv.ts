@@ -136,7 +136,7 @@ export function combineTvHighlights(results: TvQueryResult[]) {
         rows.push({
           family: fam,
           channel: ch.name,
-          channelNumber: ch.number,
+          channelNumber: ch.number ?? undefined,
           time: hhmm,
           startMs: d.getTime(),
           durationMin,
@@ -146,7 +146,7 @@ export function combineTvHighlights(results: TvQueryResult[]) {
           endMinutesFromMidnight,
           hasExplicitEnd,
           title: p.title,
-          genre: p.genre,
+          genre: p.genre ?? undefined,
         });
       }
     }

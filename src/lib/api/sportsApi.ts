@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY } from "@/lib/supabaseClient";
 import {
-  declaredOnly,
+  creditsSchema,
   edgeEnvelopeSchema,
   f1CalendarSchema,
   f1ConstructorStandingsSchema,
@@ -16,17 +16,14 @@ import {
   motogpConstructorStandingsSchema,
   motogpNextEventSchema,
   motogpStandingsSchema,
+  releaseDetailsSchema,
+  releasesItalySchema,
+  releasesSchema,
   tennisNextEventSchema,
   tennisPlayerInfoSchema,
   tennisResultsSchema,
   tennisScheduleSchema,
-} from "@/lib/api/schemas";
-import type {
-  CreditsPayload,
-  ReleaseDetailsPayload,
-  ReleasesItalyPayload,
-  ReleasesPayload,
-  TvFamilyPayload,
+  tvFamilySchema,
 } from "@/lib/api/schemas";
 
 /**
@@ -221,7 +218,7 @@ export const streamingApi = {
     callEdgeFunction(
       "streaming-tv",
       { action: "prime-time", family, ...(date ? { date } : {}) },
-      declaredOnly<TvFamilyPayload>(),
+      tvFamilySchema,
     ),
   getReleasesByProvider: (provider: StreamingProviderId, dateFrom?: string, dateTo?: string) =>
     callEdgeFunction(
@@ -232,13 +229,13 @@ export const streamingApi = {
         ...(dateFrom ? { dateFrom } : {}),
         ...(dateTo ? { dateTo } : {}),
       },
-      declaredOnly<ReleasesPayload>(),
+      releasesSchema,
     ),
   getReleaseCredits: (type: "movie" | "tv", id: number | string) =>
     callEdgeFunction(
       "streaming-releases",
       { action: "credits", type, id: String(id) },
-      declaredOnly<CreditsPayload>(),
+      creditsSchema,
     ),
   /**
    * Catalogo aggregato Italia: tutti i titoli con disponibilità in IT
@@ -264,7 +261,7 @@ export const streamingApi = {
         ...(opts.sort ? { sort: opts.sort } : {}),
         ...(opts.genreId ? { genreId: String(opts.genreId) } : {}),
       },
-      declaredOnly<ReleasesItalyPayload>(),
+      releasesItalySchema,
     ),
   /**
    * Dettaglio titolo one-shot (overview, generi, regista/creators, cast,
@@ -274,7 +271,7 @@ export const streamingApi = {
     callEdgeFunction(
       "streaming-releases",
       { action: "details", type, id: String(id) },
-      declaredOnly<ReleaseDetailsPayload>(),
+      releaseDetailsSchema,
     ),
 };
 

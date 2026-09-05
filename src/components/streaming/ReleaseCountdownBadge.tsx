@@ -5,7 +5,7 @@ import { Sparkles, Clock, CalendarClock, Check } from "lucide-react";
 import { getNowMinute, subscribeCountdown } from "@/lib/countdownClock";
 
 interface ReleaseCountdownBadgeProps {
-  releaseDate: string;
+  releaseDate: string | null | undefined;
   className?: string;
 }
 

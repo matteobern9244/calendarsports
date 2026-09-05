@@ -29,6 +29,17 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Modificato
 
+- **Le due sezioni streaming controllano davvero quello che ricevono.** Il
+  palinsesto TV e le uscite dei provider passavano da un confine che
+  tipizzava senza verificare niente: un campo rinominato a monte sarebbe
+  arrivato fino allo schermo come cella vuota, senza un errore da nessuna
+  parte. Ora hanno schemi ricavati da ciò che le edge function producono, e
+  un titolo malformato viene scartato dalla lista invece di comparire rotto
+  accanto agli altri. Le interfacce scritte a mano che li precedevano
+  erano già in ritardo sul codice su due punti: dichiaravano obbligatori
+  una ventina di campi che il dettaglio senza chiave TMDB non manda
+  affatto, e non nominavano `genreIds`, che ogni titolo porta con sé.
+
 - **Il calendario non tiene più un timer suo.** La pagina rileggeva
   `Date.now()` ogni minuto con un `setInterval` che girava anche a scheda
   nascosta, per ingrigire gli eventi conclusi. Ora legge il clock

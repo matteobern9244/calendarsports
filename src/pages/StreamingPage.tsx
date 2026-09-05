@@ -531,7 +531,7 @@ export default function StreamingPage() {
                             {item.type === "movie" ? "Film" : "Serie"}
                             {item.year ? ` · ${item.year}` : ""}
                           </Badge>
-                          {item.voteAverage !== null && item.voteAverage > 0 && (
+                          {item.voteAverage != null && item.voteAverage > 0 && (
                             <span className="font-mono">★ {item.voteAverage.toFixed(1)}</span>
                           )}
                         </div>

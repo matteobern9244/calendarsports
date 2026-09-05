@@ -79,22 +79,6 @@ reale. Dettagli in [`SECURITY.md`](SECURITY.md).
 
 ## Priorità media
 
-### Il confine streaming è dichiarato, ma non verificato
-
-Da quando `callEdgeFunction` valida i payload con gli schemi di
-[`src/lib/api/schemas.ts`](../src/lib/api/schemas.ts), le cinque azioni
-sportive controllano davvero cosa ricevono. Le cinque azioni di
-`streaming-tv` e `streaming-releases` no: passano da `declaredOnly`, che
-tipizza e basta. È lo stesso grado di garanzia di prima — nessuno — ma ora è
-scritto e si trova con un grep invece di nascondersi dentro `any`.
-
-Serve: schemi ricavati da quello che le due edge function producono davvero
-(TMDB per le uscite, palinsesti per la TV), non dalle interfacce scritte a
-mano, che potrebbero già essere in ritardo sul codice.
-
-**Costo**: medio. **Perché ora**: `StreamingPage` è la pagina più grande del
-progetto e la sola dove un campo rinominato a monte non fa rumore.
-
 ### I font si perdono, offline
 
 Il service worker adesso c'è e copre documento, `/assets/` e le risorse di

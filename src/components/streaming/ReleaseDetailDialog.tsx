@@ -76,7 +76,7 @@ export default function ReleaseDetailDialog({ item, provider, providerLabel, onC
                     {details.numberOfSeasons} stagion{details.numberOfSeasons === 1 ? "e" : "i"}
                   </Badge>
                 )}
-                {item.voteAverage !== null && item.voteAverage > 0 && (
+                {item.voteAverage != null && item.voteAverage > 0 && (
                   <Badge variant="outline" className="text-[10px] font-mono">
                     ★ {item.voteAverage.toFixed(1)}
                   </Badge>
@@ -124,13 +124,13 @@ export default function ReleaseDetailDialog({ item, provider, providerLabel, onC
                 {(details?.directors?.length ?? 0) > 0 && (
                   <p className="text-xs text-muted-foreground">
                     <span className="uppercase tracking-widest font-heading mr-1">Regia:</span>
-                    {details!.directors.join(", ")}
+                    {details?.directors?.join(", ")}
                   </p>
                 )}
                 {(details?.creators?.length ?? 0) > 0 && (
                   <p className="text-xs text-muted-foreground">
                     <span className="uppercase tracking-widest font-heading mr-1">Creatori:</span>
-                    {details!.creators.join(", ")}
+                    {details?.creators?.join(", ")}
                   </p>
                 )}
 

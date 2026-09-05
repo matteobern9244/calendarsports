@@ -23,6 +23,15 @@
  *   malformata non deve svuotare l'intero calendario. E' la difesa piu'
  *   vicina al comportamento precedente, dove un elemento rotto rendeva
  *   celle vuote senza far cadere la pagina.
+ *
+ * ## Copertura
+ *
+ * Tutti i confini hanno il loro schema. Fino a poco fa `streaming-tv` e
+ * `streaming-releases` passavano da un `declaredOnly` che tipizzava senza
+ * controllare: quel varco e' stato chiuso e la funzione rimossa, perche' un
+ * passa-tutto lasciato in giro e' l'attrezzo che il prossimo confine
+ * riprende in mano. Un confine nuovo si apre con il suo schema, ricavato da
+ * cio' che la edge function costruisce davvero.
  */
 import { z } from "zod";
 // Solo tipo: `sportsApi` importa questo modulo a runtime, quindi un import
@@ -84,16 +93,6 @@ export function tolerantArray<T>(item: z.ZodType<T>, label: string) {
     }
     return kept;
   });
-}
-
-/**
- * Forma dichiarata a mano e **non verificata** a runtime: passa tutto e si
- * limita a tipizzare. Serve solo dove un confine non ha ancora il suo schema,
- * ed e' il residuo esplicito di cio' che prima faceva `any` ovunque in modo
- * invisibile. Cercare le occorrenze di `declaredOnly` da' il debito residuo.
- */
-export function declaredOnly<T>() {
-  return z.custom<T>(() => true);
 }
 
 /** Inviluppo comune a tutte le edge function. */
@@ -470,139 +469,195 @@ export const highlightsSchema = tolerantArray(highlightItemSchema, "highlights-y
 
 // === Streaming (TMDB + palinsesti) ===
 //
-// Questi payload non hanno ancora uno schema: le forme qui sotto sono
-// dichiarate a mano e passano al confine tramite `declaredOnly`, cioe'
-// senza nessun controllo a runtime. E' lo stesso grado di garanzia di
-// prima, ma dichiarato invece che nascosto dentro `any`.
+// Questi schemi sono ricavati da cio' che `streaming-tv` e
+// `streaming-releases` costruiscono davvero, non dalle interfacce che li
+// precedevano: quelle erano scritte a mano, non verificate a runtime, e su
+// due punti erano gia' in ritardo sul codice.
+//
+// - `normalizeItem` produce anche `genreIds`, che nessuna interfaccia
+//   nominava. `looseObject` lo lascia passare invece di toglierlo.
+// - Il ramo senza chiave TMDB di `details` risponde `{ type, id,
+//   configured: false }` e basta. L'interfaccia ne dichiarava una ventina
+//   obbligatori: uno schema ricavato da lei avrebbe rifiutato una risposta
+//   legittima e rotto un caso che oggi degrada bene.
 
-export interface TvProgram {
-  start: string;
-  /**
-   * Opzionale perche' la fonte non sempre lo comunica, ed e' il codice a
-   * saperlo: `combineTvHighlights` fa `Boolean(p.end)` e in mancanza non
-   * mostra nessuna durata, invece di inventarne una. Il tipo lo dichiarava
-   * obbligatorio, cioe' prometteva al chiamante qualcosa che il payload non
-   * garantisce — ed essendo `declaredOnly`, senza validazione a runtime,
-   * nessuno lo avrebbe smentito.
-   */
-  end?: string;
-  title: string;
-  genre?: string;
-  description?: string;
-}
+/**
+ * Le famiglie e i provider sono validati a monte da `FAMILY_RE` e
+ * `PROVIDER_FILTER_RE`: un valore fuori elenco non arriva mai. Il
+ * `satisfies` lega l'elenco all'unione dichiarata in `sportsApi`, cosi'
+ * aggiungerne uno da una parte sola non compila.
+ */
+const streamingFamilySchema = z.enum([
+  "sky-sport",
+  "sky-cinema",
+  "rai",
+  "mediaset",
+  "discovery",
+] as const satisfies readonly StreamingFamilyId[]);
 
-export interface TvChannel {
-  id: string;
-  name: string;
-  logo: string | null;
-  number?: number;
-  programs: TvProgram[];
-}
+const streamingProviderSchema = z.enum([
+  "netflix",
+  "prime",
+  "disney",
+  "hbo",
+] as const satisfies readonly StreamingProviderId[]);
 
-export interface TvFamilyPayload {
-  family: StreamingFamilyId;
-  familyLabel: string;
-  date: string;
-  channels: TvChannel[];
-  programsAvailable: boolean;
-}
+/**
+ * `end` e' nullish perche' la fonte non sempre lo comunica, ed e' il codice
+ * a saperlo: `combineTvHighlights` fa `Boolean(p.end)` e in mancanza non
+ * mostra nessuna durata invece di inventarne una.
+ */
+export const tvProgramSchema = z.looseObject({
+  start: z.string(),
+  end: z.string().nullish(),
+  title: z.string(),
+  genre: z.string().nullish(),
+  description: z.string().nullish(),
+});
 
-export interface AvailableProvider {
-  id: number;
-  key: StreamingProviderId | string | null;
-  name: string;
-  logo: string | null;
-  type: "flatrate" | "free" | "ads";
-}
+/**
+ * `number` manca del tutto per i canali senza posizione LCN: la edge
+ * function scrive `number: ch.number`, e `JSON.stringify` toglie la chiave
+ * quando il valore e' `undefined`.
+ */
+export const tvChannelSchema = z.looseObject({
+  id: z.string(),
+  name: z.string(),
+  logo: z.string().nullish(),
+  number: z.number().nullish(),
+  programs: tolerantArray(tvProgramSchema, "streaming-tv:programs"),
+});
 
-export interface ReleaseItem {
-  tmdbId: number;
-  type: "movie" | "tv";
-  title: string;
-  releaseDate: string;
-  poster: string | null;
-  overview: string;
-  voteAverage: number | null;
-  deepLink: string | null;
-  /** Anno YYYY estratto dalla release date, null se mancante. */
-  year?: number | null;
-  /** Generi TMDB localizzati in italiano (label testuali). */
-  genres?: string[];
-  /** Provider IT disponibili (flatrate/free/ads), max ~5. */
-  availableProviders?: AvailableProvider[];
-  /** Link JustWatch generale del titolo (results.IT.link da TMDB). */
-  justWatchLink?: string | null;
-  /** Popolarità TMDB grezza (per ordinamento client lato vista). */
-  popularity?: number;
-}
+export const tvFamilySchema = z.looseObject({
+  family: streamingFamilySchema,
+  familyLabel: z.string(),
+  date: z.string(),
+  channels: tolerantArray(tvChannelSchema, "streaming-tv:channels"),
+  programsAvailable: z.boolean(),
+});
 
-export interface ReleasesPayload {
-  provider: StreamingProviderId;
-  providerLabel: string;
-  providerHomepage?: string;
-  date: string;
-  dateFrom: string;
-  dateTo: string;
-  effectiveFrom?: string;
-  effectiveTo?: string;
-  widenedWindow?: boolean;
-  items: ReleaseItem[];
-  configured: boolean;
-}
+/** `key` e' `TMDB_PROVIDER_ID_TO_KEY[id] ?? null`: non e' detto sia dei nostri. */
+export const availableProviderSchema = z.looseObject({
+  id: z.number(),
+  key: z.string().nullish(),
+  name: z.string(),
+  logo: z.string().nullish(),
+  type: z.enum(["flatrate", "free", "ads"]),
+});
 
-export interface ReleasesItalyPayload {
-  region: "IT";
-  dateFrom: string;
-  dateTo: string;
-  effectiveFrom?: string;
-  effectiveTo?: string;
-  widenedWindow?: boolean;
-  /** True quando la finestra date non ha prodotto risultati e il backend
-   *  ripiega sulle uscite più recenti del provider (senza vincolo data). */
-  fallbackRecent?: boolean;
-  provider: StreamingProviderId | null;
-  kind: "movie" | "tv" | "all";
-  sort: "release" | "popularity";
-  genreId: number | null;
-  items: ReleaseItem[];
-  configured: boolean;
-}
+/**
+ * Obbligatori solo i tre campi senza i quali la card non si disegna:
+ * `tmdbId` (identita' e chiave di lista), `type` e `title`. `releaseDate`
+ * no — TMDB lo omette per le serie senza data di prima messa in onda, e la
+ * UI lo tratta gia' come facoltativo.
+ */
+export const releaseItemSchema = z.looseObject({
+  tmdbId: z.number(),
+  type: z.enum(["movie", "tv"]),
+  title: z.string(),
+  releaseDate: z.string().nullish(),
+  poster: z.string().nullish(),
+  overview: z.string().nullish(),
+  voteAverage: z.number().nullish(),
+  deepLink: z.string().nullish(),
+  year: z.number().nullish(),
+  genres: z.array(z.string()).nullish(),
+  availableProviders: z.array(availableProviderSchema).nullish(),
+  justWatchLink: z.string().nullish(),
+  popularity: z.number().nullish(),
+});
 
-export interface CastMember {
-  id: number;
-  name: string;
-  character: string;
-  profile: string | null;
-}
+/**
+ * `effectiveFrom`, `effectiveTo` e `widenedWindow` esistono solo quando la
+ * finestra e' stata allargata: il ramo senza chiave TMDB non li scrive.
+ */
+export const releasesSchema = z.looseObject({
+  provider: streamingProviderSchema,
+  providerLabel: z.string(),
+  providerHomepage: z.string().nullish(),
+  date: z.string(),
+  dateFrom: z.string(),
+  dateTo: z.string(),
+  effectiveFrom: z.string().nullish(),
+  effectiveTo: z.string().nullish(),
+  widenedWindow: z.boolean().nullish(),
+  items: tolerantArray(releaseItemSchema, "streaming-releases:new-today"),
+  configured: z.boolean(),
+});
 
-export interface CreditsPayload {
-  type: "movie" | "tv";
-  id: string;
-  cast: CastMember[];
-  configured: boolean;
-}
+/**
+ * `provider` e' `null` quando il filtro vale «tutti»; `fallbackRecent` dice
+ * che la finestra date non ha prodotto niente e il backend ha ripiegato
+ * sulle uscite piu' recenti.
+ */
+export const releasesItalySchema = z.looseObject({
+  region: z.literal("IT"),
+  dateFrom: z.string(),
+  dateTo: z.string(),
+  effectiveFrom: z.string().nullish(),
+  effectiveTo: z.string().nullish(),
+  widenedWindow: z.boolean().nullish(),
+  fallbackRecent: z.boolean().nullish(),
+  provider: streamingProviderSchema.nullable(),
+  kind: z.enum(["movie", "tv", "all"]),
+  sort: z.enum(["release", "popularity"]),
+  genreId: z.number().nullable(),
+  items: tolerantArray(releaseItemSchema, "streaming-releases:new-italy"),
+  configured: z.boolean(),
+});
 
-export interface ReleaseDetailsPayload {
-  type: "movie" | "tv";
-  id: string;
-  title: string;
-  originalTitle: string | null;
-  releaseDate: string;
-  year: number | null;
-  poster: string | null;
-  backdrop: string | null;
-  overview: string;
-  voteAverage: number | null;
-  voteCount: number;
-  runtime: number | null;
-  numberOfSeasons: number | null;
-  numberOfEpisodes: number | null;
-  genres: string[];
-  directors: string[];
-  creators: string[];
-  cast: CastMember[];
-  trailerYouTubeKey: string | null;
-  availableProviders: AvailableProvider[];
-  justWatchLink: string | null;
-  configured: boolean;
-}
+export const castMemberSchema = z.looseObject({
+  id: z.number(),
+  name: z.string(),
+  character: z.string().nullish(),
+  profile: z.string().nullish(),
+});
+
+export const creditsSchema = z.looseObject({
+  type: z.enum(["movie", "tv"]),
+  id: z.string(),
+  cast: tolerantArray(castMemberSchema, "streaming-releases:credits"),
+  configured: z.boolean(),
+});
+
+/**
+ * Solo `type`, `id` e `configured` sono garantiti: senza chiave TMDB la
+ * edge function risponde quei tre campi e nient'altro. Il dialog lo sa
+ * gia' — legge ogni campo con `?.` e ripiega sull'item della lista — ma il
+ * tipo prometteva il contrario.
+ */
+export const releaseDetailsSchema = z.looseObject({
+  type: z.enum(["movie", "tv"]),
+  id: z.string(),
+  configured: z.boolean(),
+  title: z.string().nullish(),
+  originalTitle: z.string().nullish(),
+  releaseDate: z.string().nullish(),
+  year: z.number().nullish(),
+  poster: z.string().nullish(),
+  backdrop: z.string().nullish(),
+  overview: z.string().nullish(),
+  voteAverage: z.number().nullish(),
+  voteCount: z.number().nullish(),
+  runtime: z.number().nullish(),
+  numberOfSeasons: z.number().nullish(),
+  numberOfEpisodes: z.number().nullish(),
+  genres: z.array(z.string()).nullish(),
+  directors: z.array(z.string()).nullish(),
+  creators: z.array(z.string()).nullish(),
+  cast: z.array(castMemberSchema).nullish(),
+  trailerYouTubeKey: z.string().nullish(),
+  availableProviders: z.array(availableProviderSchema).nullish(),
+  justWatchLink: z.string().nullish(),
+});
+
+export type TvProgram = z.infer<typeof tvProgramSchema>;
+export type TvChannel = z.infer<typeof tvChannelSchema>;
+export type TvFamilyPayload = z.infer<typeof tvFamilySchema>;
+export type AvailableProvider = z.infer<typeof availableProviderSchema>;
+export type ReleaseItem = z.infer<typeof releaseItemSchema>;
+export type ReleasesPayload = z.infer<typeof releasesSchema>;
+export type ReleasesItalyPayload = z.infer<typeof releasesItalySchema>;
+export type CastMember = z.infer<typeof castMemberSchema>;
+export type CreditsPayload = z.infer<typeof creditsSchema>;
+export type ReleaseDetailsPayload = z.infer<typeof releaseDetailsSchema>;

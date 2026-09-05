@@ -10,6 +10,11 @@ import {
   tennisResultsSchema,
   toNumber,
   tolerantArray,
+  tvFamilySchema,
+  releasesSchema,
+  releasesItalySchema,
+  creditsSchema,
+  releaseDetailsSchema,
 } from "./schemas";
 
 const match = (id: string) => ({
@@ -159,5 +164,171 @@ describe("campi che portano il nome di un membro di Object.prototype", () => {
       '[{ "position": 1, "team": "Ducati Lenovo Team", "points": 180, "constructor": "ducati" }]',
     );
     expect(rows[0].constructor).toBe("ducati");
+  });
+});
+
+// === Confine streaming ===
+//
+// I payload qui sotto sono ricopiati da cio' che le edge function
+// costruiscono davvero — `supabase/functions/streaming-tv/index.ts:697` e i
+// quattro `payload` di `supabase/functions/streaming-releases/index.ts` — e
+// non dalle interfacce del frontend, che su due punti erano in ritardo sul
+// codice.
+
+describe("il confine di streaming-tv", () => {
+  const program = {
+    start: "2099-05-05T19:25:00",
+    end: "2099-05-05T21:15:00",
+    title: "Un film qualunque",
+    genre: "Film",
+    description: "Trama.",
+  };
+  const payload = {
+    family: "rai",
+    familyLabel: "RAI (generalisti)",
+    date: "2099-05-05",
+    channels: [{ id: "rai-1", name: "Rai 1", logo: null, number: 1, programs: [program] }],
+    programsAvailable: true,
+  };
+
+  it("accetta il palinsesto di prima serata e conserva i campi non nominati", () => {
+    const parsed = tvFamilySchema.parse({ ...payload, fonte: "staseraintv" });
+    expect(parsed.channels[0].programs[0].title).toBe("Un film qualunque");
+    expect(parsed.fonte).toBe("staseraintv");
+  });
+
+  it("accetta il canale senza numero, che `JSON.stringify` toglie dal payload", () => {
+    // La edge function scrive `number: ch.number`, e per i canali che non
+    // hanno una posizione LCN quel campo non arriva affatto.
+    const senzaNumero = {
+      ...payload,
+      channels: [{ id: "rai-3", name: "Rai 3", logo: null, programs: [] }],
+    };
+    expect(tvFamilySchema.parse(senzaNumero).channels[0].number).toBeUndefined();
+  });
+
+  it("scarta il programma malformato invece di svuotare il canale", () => {
+    // E' il livello dove lo scraping si rompe davvero: una riga HH:MM
+    // illeggibile non deve costare l'intero palinsesto del canale.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const parsed = tvFamilySchema.parse({
+      ...payload,
+      channels: [{ ...payload.channels[0], programs: [{ start: "2099-05-05T19:25:00" }, program] }],
+    });
+    expect(parsed.channels[0].programs).toHaveLength(1);
+    expect(parsed.channels[0].programs[0].title).toBe("Un film qualunque");
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it("scarta il canale malformato invece di svuotare la famiglia", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const parsed = tvFamilySchema.parse({
+      ...payload,
+      channels: [{ id: 404, name: "Rotto", logo: null, programs: [] }, payload.channels[0]],
+    });
+    expect(parsed.channels).toHaveLength(1);
+    expect(parsed.channels[0].id).toBe("rai-1");
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("il confine di streaming-releases", () => {
+  const item = {
+    tmdbId: 1234,
+    type: "movie",
+    title: "Titolo",
+    releaseDate: "2099-05-01",
+    poster: null,
+    overview: "",
+    voteAverage: 7.5,
+    deepLink: null,
+    year: 2099,
+    genreIds: [28, 12],
+    genres: ["Azione"],
+    availableProviders: [],
+    justWatchLink: null,
+    popularity: 3.2,
+  };
+
+  it("conserva `genreIds`, che l'interfaccia scritta a mano non nominava", () => {
+    // `normalizeItem` lo produce a ogni elemento: uno schema che spoglia i
+    // campi sconosciuti lo farebbe sparire in silenzio.
+    const parsed = releasesSchema.parse({
+      provider: "netflix",
+      providerLabel: "Netflix",
+      date: "2099-05-05",
+      dateFrom: "2099-05-05",
+      dateTo: "2099-05-05",
+      items: [item],
+      configured: true,
+    });
+    expect(parsed.items[0].genreIds).toEqual([28, 12]);
+  });
+
+  it("accetta la risposta senza chiave TMDB, che omette la finestra effettiva", () => {
+    // Ramo `!apiKey`: niente `effectiveFrom`, `effectiveTo`, `widenedWindow`.
+    const parsed = releasesSchema.parse({
+      provider: "prime",
+      providerLabel: "Prime Video",
+      providerHomepage: "https://www.primevideo.com",
+      date: "2099-05-05",
+      dateFrom: "2099-05-05",
+      dateTo: "2099-05-05",
+      items: [],
+      configured: false,
+    });
+    expect(parsed.configured).toBe(false);
+    expect(parsed.widenedWindow).toBeUndefined();
+  });
+
+  it("accetta il catalogo Italia degradato, con provider nullo", () => {
+    const parsed = releasesItalySchema.parse({
+      region: "IT",
+      dateFrom: "2099-04-05",
+      dateTo: "2099-07-04",
+      provider: null,
+      kind: "all",
+      sort: "release",
+      genreId: null,
+      items: [],
+      configured: false,
+    });
+    expect(parsed.provider).toBeNull();
+    expect(parsed.fallbackRecent).toBeUndefined();
+  });
+
+  it("scarta il titolo senza `title` invece di svuotare il catalogo", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const parsed = releasesItalySchema.parse({
+      region: "IT",
+      dateFrom: "2099-04-05",
+      dateTo: "2099-07-04",
+      provider: "netflix",
+      kind: "all",
+      sort: "release",
+      genreId: null,
+      items: [{ tmdbId: 7, type: "tv" }, item],
+      configured: true,
+    });
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0].tmdbId).toBe(1234);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it("accetta il cast vuoto delle due risposte degradate di `credits`", () => {
+    const parsed = creditsSchema.parse({ type: "movie", id: "1234", cast: [], configured: false });
+    expect(parsed.cast).toEqual([]);
+  });
+
+  it("accetta il dettaglio degradato `{ type, id, configured: false }`", () => {
+    // Senza chiave TMDB la edge function risponde solo questi tre campi.
+    // L'interfaccia scritta a mano ne dichiarava una ventina obbligatori:
+    // uno schema ricavato da lei rifiuterebbe una risposta legittima, e il
+    // dialog — che legge tutto con `?.` e ripiega sull'item di lista —
+    // smetterebbe di aprirsi invece di degradare.
+    const parsed = releaseDetailsSchema.parse({ type: "tv", id: "99", configured: false });
+    expect(parsed.title).toBeUndefined();
+    expect(parsed.cast).toBeUndefined();
+    expect(parsed.configured).toBe(false);
   });
 });
