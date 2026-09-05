@@ -39,6 +39,7 @@ const TARGET_DIRS = [
   "src/components/streaming",
   "src/components/highlights",
   "src/components/juventus",
+  "src/components/sinner",
 ];
 
 // Un solo file e' esente, e per una ragione che non si generalizza:

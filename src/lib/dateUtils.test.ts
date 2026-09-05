@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   formatDuration,
   formatDurationSpoken,
+  formatLongDateIT,
   toRomeDate,
   formatJuventusDateTime,
 } from "./dateUtils";
@@ -158,5 +159,21 @@ describe("formatJuventusDateTime", () => {
     const result = formatJuventusDateTime("2026-04-21T23:30:00Z");
     expect(result.date).toBe("2026-04-22".split("-").reverse().join("/"));
     expect(result.time).toBe("01:30");
+  });
+});
+
+describe("formatLongDateIT", () => {
+  it("scrive il mese per esteso, in italiano", () => {
+    expect(formatLongDateIT("2026-08-25")).toBe("25 agosto 2026");
+  });
+
+  it("legge come UTC un ISO senza offset, e lo mostra in fuso italiano", () => {
+    // Le 23:30 UTC del 25 sono le 01:30 del 26 a Roma: la data mostrata
+    // deve seguire il fuso italiano, non quello del client.
+    expect(formatLongDateIT("2026-08-25T23:30:00")).toBe("26 agosto 2026");
+  });
+
+  it("restituisce l'ingresso quando non e' una data", () => {
+    expect(formatLongDateIT("non una data")).toBe("non una data");
   });
 });

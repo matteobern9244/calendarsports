@@ -54,6 +54,29 @@ export function formatDateIT(dateStr: string): string {
 }
 
 /**
+ * Data estesa in italiano — «25 agosto 2026» — in fuso `Europe/Rome`.
+ * Il formatter sta a livello di modulo perche' costruirlo costa circa
+ * settanta volte la sua `format`, e la data di aggiornamento del ranking
+ * si formatta a ogni render della scheda giocatore.
+ */
+const LONG_DATE_IT_FMT = new Intl.DateTimeFormat("it-IT", {
+  timeZone: "Europe/Rome",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+export function formatLongDateIT(dateStr: string): string {
+  const date = toRomeDate(dateStr);
+  if (!date) return dateStr;
+  try {
+    return LONG_DATE_IT_FMT.format(date);
+  } catch {
+    return dateStr;
+  }
+}
+
+/**
  * Helper specializzato per le date Juventus: garantisce che ogni
  * stringa proveniente dal backend (Sky/Lega) sia normalizzata e
  * presentata sempre in fuso `Europe/Rome`, indipendentemente dal

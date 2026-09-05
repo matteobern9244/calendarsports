@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatLongDateIT } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 import { Ruler, Weight, Hand, MapPin, UserRound, Trophy } from "lucide-react";
 
@@ -41,20 +42,6 @@ export interface PlayerHeaderProps {
   } | null;
 }
 
-function formatRankingDate(iso?: string | null): string | null {
-  if (!iso) return null;
-  try {
-    const d = new Date(iso);
-    return new Intl.DateTimeFormat("it-IT", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }).format(d);
-  } catch {
-    return iso;
-  }
-}
-
 const SLAM_LABELS: {
   key: keyof NonNullable<PlayerHeaderProps["slamResults"]>;
   short: string;
@@ -86,7 +73,7 @@ function resultLabel(raw: string): string {
 export default function PlayerHeader(props: PlayerHeaderProps) {
   const [imgError, setImgError] = useState(false);
   const rankingLabel = props.ranking != null ? `#${props.ranking}` : "—";
-  const rankingDate = formatRankingDate(props.rankingDate);
+  const rankingDate = props.rankingDate ? formatLongDateIT(props.rankingDate) : null;
   const visibleSlams = props.slamResults
     ? SLAM_LABELS.filter(({ key }) => props.slamResults?.[key] && props.slamResults[key]?.best)
     : [];
