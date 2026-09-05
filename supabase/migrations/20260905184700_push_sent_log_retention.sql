@@ -83,6 +83,33 @@
 --    ORDER BY start_time DESC LIMIT 3;
 -- ===========================================================================
 
+-- ===========================================================================
+-- APPLICATA il 5 settembre 2026, e verificata dopo
+-- ===========================================================================
+--
+-- Stato prima:  671 righe, di cui 566 oltre i trenta giorni (l'84%), la piu'
+--               vecchia del 7 maggio 2026. 240 kB. 5 iscritti.
+-- Stato dopo:   105 righe, `da_cancellare` = 0, la piu' vecchia del 7 agosto.
+--               Le righe recenti e i 5 iscritti intatti.
+-- Job:          `push-sent-log-retention`, jobid 5, attivo, `17 3 * * *`,
+--               owner `postgres`, database `postgres`.
+--
+-- Prima di cancellare e' stata verificata l'unica cosa che poteva far danno:
+-- che nessuna riga da cancellare si riferisse a un evento ancora futuro. Gli
+-- `event_id` sono per numero di round (`f1-11-fp2`, `motogp-12-PR`): quelli
+-- cancellati erano i round F1 5-11, quelli vivi il 12 e il 13. I due soli id
+-- presenti in entrambe le finestre erano i preavvisi da un giorno di sessioni
+-- MotoGP del 7 agosto, cioe' passate.
+--
+-- NOTA sul registro delle migration. Questa e' stata applicata eseguendo l'SQL
+-- direttamente, e in `supabase_migrations.schema_migrations` non compare. Non
+-- e' una dimenticanza: il registro si ferma al 23 maggio 2026 e non contiene
+-- nemmeno le due migration del 31 agosto, che pure sono applicate. In questo
+-- progetto le migration recenti si applicano a mano. Tutte e tre sono
+-- rieseguibili, quindi riapplicarle non farebbe danno.
+--
+-- ===========================================================================
+
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN

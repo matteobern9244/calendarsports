@@ -53,8 +53,9 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   una riga per ogni notifica mandata, alimentata da un job che gira ogni
   cinque minuti, e un indice su `sent_at` che nessuno interrogava. Ora una
   migration aggiunge un job giornaliero che cancella oltre i trenta giorni,
-  e quell'indice serve a qualcosa. La migration è scritta ma **non ancora
-  applicata**: richiede accesso al database.
+  e quell'indice serve a qualcosa. **Applicata e verificata il 5 settembre
+  2026**: delle 671 righe presenti, 566 erano oltre i trenta giorni — l'84%,
+  con la più vecchia del 7 maggio.
 
 - **La data del ranking di Sinner seguiva il fuso di chi guardava.** La
   scheda giocatore la formattava con `new Date(iso)` e senza `timeZone`:

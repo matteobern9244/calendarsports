@@ -17,18 +17,6 @@ chi le aveva viste.
 
 ## Priorità alta
 
-### La retention di `push_sent_log` è scritta ma non applicata
-
-`supabase/migrations/20260905184700_push_sent_log_retention.sql` esiste dal 5
-settembre 2026 e **non è mai stata eseguita**: chi l'ha scritta non aveva
-accesso al database. Finché resta lì, la tabella continua a crescere come
-prima — il codice non è la correzione, l'applicazione lo è.
-
-Serve: applicarla e rileggere lo stato dopo. Le query di controllo sono in
-fondo al file; la seconda dice se il `DELETE` ha fatto quello che promette.
-
-**Costo**: minuti, con accesso al database. Impossibile, senza.
-
 ### La revoca di `pg_net` non è applicabile, e ora sappiamo perché
 
 Provata sul progetto reale il 31 agosto 2026: il `REVOKE` **non ha sollevato
@@ -45,32 +33,35 @@ risponde 404 e forzando lo schema PostgREST risponde «Only the following
 schemas are exposed: public, graphql_public». Lo schema `net` non ha una porta
 e `public` non contiene funzioni da cui rimbalzare.
 
-**Cosa resta da sorvegliare**, e si verifica da qui: che `public` non acquisti
-funzioni `SECURITY DEFINER`, e che gli schemi esposti restino `public` e
-`graphql_public`. Il ragionamento completo è in
+**Cosa resta da sorvegliare**: che `public` non acquisti funzioni
+`SECURITY DEFINER`, e che gli schemi esposti restino `public` e
+`graphql_public`. La prima è stata ricontrollata sul database il 5 settembre
+2026 — in `public` non c'è nessuna funzione. La seconda **non è leggibile da
+SQL** e va verificata dall'esterno, con la anon key. Il ragionamento completo è in
 `supabase/migrations/20260831193000_revoke_pg_net_from_client_roles.sql`, che è
 stata svuotata e lasciata come nota.
 
 **Costo**: richiede `supabase_admin`, che i progetti non hanno.
 
-### Il dispatcher va in timeout nove volte su dieci
+### Il dispatcher fa molto lavoro per mandare pochissimo
 
-Trovato applicando la migration del Vault e guardando `net._http_response`:
-nella finestra conservata, **65 giri su 72 finiscono in timeout** e solo 7
-leggono una risposta — 200, `{"ok":true}`. Il default di `pg_net` è 5000 ms e
-il dispatcher interroga tre sport impaginando il calendario Juventus fino a
-trenta pagine.
+Il timeout **non è più un problema, ed è misurato**. Il 31 agosto 2026, su
+`net._http_response`, 65 giri su 72 finivano in timeout. Ricontrollato il 5
+settembre dopo il passaggio a `timeout_milliseconds := 120000`: **72 giri su
+72, tutti 200, zero timeout, zero errori.** Quella metà è chiusa.
 
-È un difetto particolarmente silenzioso: `cron.job_run_details` segna
-`succeeded`, perché l'SQL è andato — è la richiesta HTTP a essere stata
-mollata. Chi guardasse solo il cron non vedrebbe niente.
+Resta la seconda, e adesso ha un numero. Fra il 31 agosto e il 5 settembre il
+dispatcher ha fatto **1404 giri e ha mandato 10 notifiche**: lo 0,7%. Ogni
+giro impagina il calendario Juventus fino a trenta pagine, quindi sono
+nell'ordine delle quarantamila sotto-richieste a `sports-football` in cinque
+giorni per dieci notifiche.
 
-Il job è stato ricreato con `timeout_milliseconds := 120000`. **Resta da
-verificare** che il dispatcher rientri in quella finestra, e da capire se
-riduca il lavoro: trenta sotto-richieste a `sports-football` a ogni giro, ogni
-cinque minuti, sono molte per una funzione che poi non manda quasi mai niente.
+Serve: ridurre il lavoro per giro. Le strade sono due e non si escludono —
+impaginare solo finché servono eventi nella finestra di preavviso invece di
+trenta pagine fisse, oppure interrogare meno spesso. La prima è dentro
+`supabase/functions/push-dispatcher/index.ts:150`.
 
-**Costo**: basso per la misura, medio per la riduzione del lavoro.
+**Costo**: medio, e richiede di poter ridistribuire la edge function.
 
 ### Rotazione del segreto del dispatcher
 

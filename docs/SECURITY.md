@@ -45,9 +45,21 @@ Trenta giorni non sono un compromesso: la finestra in cui una riga impedisce
 davvero un doppione dura **sei minuti**, quanto la finestra di invio del
 dispatcher. Oltre quella, la riga è solo la traccia di ciò che è stato mandato.
 
-> **Scritta, non applicata.** Al 5 settembre 2026 questa migration non è stata
-> eseguita né verificata: chi l'ha scritta non aveva accesso al database. Le
-> query di controllo sono in fondo al file.
+**Applicata e verificata il 5 settembre 2026.** Prima: 671 righe, di cui 566
+oltre i trenta giorni — l'84%, con la più vecchia del 7 maggio. Dopo: 105
+righe, `da_cancellare` = 0, righe recenti e cinque iscritti intatti. Il job
+`push-sent-log-retention` è attivo, gira alle 03:17 UTC come `postgres`.
+
+Prima di cancellare è stata verificata l'unica cosa che poteva far danno: che
+nessuna riga da cancellare puntasse a un evento ancora futuro. Gli `event_id`
+sono per numero di round, e i round cancellati erano già passati.
+
+> **Nota sul registro delle migration.** Questa è stata applicata eseguendo
+> l'SQL direttamente e non compare in `supabase_migrations.schema_migrations`.
+> Non è una dimenticanza: **il registro si ferma al 23 maggio 2026** e non
+> contiene nemmeno le due migration del 31 agosto, che pure sono applicate e
+> funzionanti. In questo progetto le migration recenti si applicano a mano, e
+> tutte e tre sono scritte per essere rieseguibili.
 
 ### `pg_net` è raggiungibile dai ruoli client
 
@@ -96,6 +108,14 @@ porta.
 Resta difesa in profondità mancante, non un buco aperto. Le due condizioni che
 lo terrebbero tale sono verificabili da qui e vanno tenute d'occhio: `public`
 senza funzioni, e nessuno schema esposto oltre a `public` e `graphql_public`.
+
+**Ricontrollate il 5 settembre 2026.** In `public` non c'è nessuna funzione —
+non zero `SECURITY DEFINER`, proprio zero funzioni: manca il piano d'appoggio,
+non solo il trampolino. La seconda condizione **non è leggibile da SQL**:
+l'elenco degli schemi esposti non è impostato né a livello di database né di
+ruolo, vive nella configurazione del progetto. Quella metà resta verificata
+solo per via empirica, dalla risposta di PostgREST del 31 agosto, e va
+ricontrollata dall'esterno.
 Il ragionamento completo è dentro
 `supabase/migrations/20260831193000_revoke_pg_net_from_client_roles.sql`, che
 è stata svuotata e lasciata come nota proprio perché nessuno riscriva la stessa

@@ -6,13 +6,17 @@
 > importanza, e contiene le trappole già pagate: leggerle costa cinque minuti,
 > riscoprirle è costato ore.
 >
-> **Quasi tutto ciò che si poteva fare da qui è stato fatto.** Il confine
-> streaming, i font ospitati nel progetto, il bottone «+N altri» del calendario
-> e la retention di `push_sent_log` sono chiusi e stanno nei commit su
-> `develop`, da `9b677d0` a `864f0d4`. Quello che resta ha una caratteristica
-> in comune, ed è la ragione per cui è rimasto: **richiede accesso al progetto
-> Supabase**, dashboard o database. Se non ce l'hai, il punto 5 è l'unico che
-> puoi davvero muovere, e non è codice.
+> **Il piano di audit e refactoring iniziale è chiuso, tranne un punto.** Il
+> confine streaming, i font ospitati nel progetto, il bottone «+N altri» del
+> calendario e la retention di `push_sent_log` — quest'ultima applicata e
+> verificata sul database di produzione — stanno nei commit su `develop`, da
+> `9b677d0` in poi. Il timeout del dispatcher è stato rimisurato ed è a posto,
+> la prima condizione di sorveglianza su `pg_net` è stata ricontrollata.
+>
+> **L'unica cosa aperta con un impatto reale è la rotazione di
+> `DISPATCH_SECRET`**, che richiede la dashboard Supabase e non si fa da SQL.
+> Il resto è lavoro di miglioramento con un beneficio misurabile ma nessuna
+> urgenza.
 
 ---
 
@@ -44,113 +48,102 @@ Il gate è `bun run verify` (typecheck, lint a zero warning, italiano, fuso,
 test, build), più `bun run test:e2e` per la navigazione se te l'hanno
 autorizzato.
 
-**Prima di cominciare, dichiara che accesso hai.** I punti da 1 a 4 non si
-possono né fare né verificare senza il progetto Supabase, e non c'è modo di
-scoprirlo strada facendo: `supabase` CLI, `psql`, `postgres` e `docker` non
-sono installati su questa macchina. Se non hai accesso, dillo e passa al punto
-5, invece di produrre migration che nessuno può applicare.
+**Prima di cominciare, dichiara che accesso hai.** `supabase` CLI, `psql`,
+`postgres` e `docker` **non** sono installati su questa macchina, ma il
+connettore MCP di Lovable arriva al database di produzione: workspace
+«Matteo's Lovable», progetto `1ed8a7da-a4e3-498a-8dc6-55cf77fbd1ec`
+(«Calendar Events»), che è il Supabase `jxijruuclgskxlbqittk`. Da lì si legge e
+si scrive SQL come `postgres`, con `bypassrls`.
+
+Quel connettore **non** arriva ai secret delle edge function né alla loro
+ridistribuzione: sono in dashboard. È esattamente la linea che separa il punto
+1 e la seconda metà del punto 2 da tutto il resto.
+
+**Scrivere su un database di produzione va fatto in tre tempi**: leggi lo stato
+prima, applica, rileggi lo stato dopo. Non dichiarare «applicata» senza il
+terzo.
 
 ---
 
-## 1. Applicare la migration di retention di `push_sent_log`
-
-`supabase/migrations/20260905184700_push_sent_log_retention.sql` **è scritta e
-non è mai stata eseguita.** È il lavoro più piccolo di questa lista e l'unico
-già pronto: serve solo qualcuno che possa applicarla e rileggere lo stato dopo.
-
-Cosa fa: una cancellazione immediata oltre i trenta giorni, più un job
-`pg_cron` giornaliero alle 03:17 UTC che la ripete. Non crea funzioni — il
-`DELETE` sta nel corpo del job, e il perché è al punto 4.
-
-Le query di controllo sono in fondo al file. La più importante è la seconda:
-subito dopo l'applicazione, `da_cancellare` deve essere `0`. Se non lo è, il
-`DELETE` non ha fatto quello che dice.
-
-**Costo**: minuti, se hai accesso. Impossibile, se non ce l'hai.
-
----
-
-## 2. Rotazione di `DISPATCH_SECRET` — bloccante, e non è codice
+## 1. Rotazione di `DISPATCH_SECRET` — l'unico problema vero rimasto
 
 `DISPATCH_SECRET` è scritto in chiaro nella migration
 `supabase/migrations/20260523084606_*.sql`, quindi è nella storia di Git e su
 GitHub. È l'**unica** autenticazione di `push-dispatcher`: chi legge il
-repository può far partire notifiche a tutti gli iscritti.
+repository può far partire notifiche a tutti e cinque gli iscritti.
 
 Riscrivere la storia di `main` non è praticabile con la sincronizzazione
 Lovable attiva. **È la rotazione a neutralizzare il valore esposto, non la
 cancellazione.**
 
-Il prerequisito è già applicato (`20260831193100`): il segreto è nel Vault e il
-job lo rilegge a ogni giro, quindi ruotarlo non richiede più di ricreare il
-job. La procedura in quattro passi è in fondo a quella migration:
+Il prerequisito è applicato e verificato: il segreto è nel Vault e il job lo
+rilegge a ogni giro, quindi ruotarlo non richiede di ricreare il job. La
+procedura in quattro passi è in fondo a
+`supabase/migrations/20260831193100_cron_dispatch_secret_from_vault.sql`:
 
 1. generare un valore nuovo;
-2. `vault.update_secret(...)`;
-3. incollare lo stesso valore in Project Settings → Edge Functions → Secrets e
-   ridistribuire `push-dispatcher`;
-4. verificare i tre giri successivi in `cron.job_run_details`.
+2. `vault.update_secret(...)` — **questo si può fare da SQL**;
+3. incollare lo stesso valore nel secret `DISPATCH_SECRET` del progetto
+   (Project Settings → Edge Functions → Secrets) e ridistribuire
+   `push-dispatcher` — **questo no, richiede la dashboard**;
+4. verificare i tre giri successivi in `cron.job_run_details` e, meglio, in
+   `net._http_response`.
 
-**Fra il passo 2 e il passo 3 il dispatcher risponde 401 e non parte nessuna
-notifica.** È il verso giusto in cui fallire, ma va fatto quando qualcuno sta
-guardando.
-
-Un agente può preparare i comandi, verificare l'esito, aggiornare
-`docs/SECURITY.md` e il changelog. **Non** può fare i passi in dashboard. Se
-non hai accesso, dillo e fermati qui invece di simulare progresso.
-
----
-
-## 3. Il dispatcher: verificare il timeout, poi ridurre il lavoro
-
-Misurato il 31 agosto 2026 su `net._http_response`: **65 giri su 72 finivano in
-timeout**, e `cron.job_run_details` segnava `succeeded` perché l'SQL era andato
-— era la richiesta HTTP a essere stata mollata. Il job è stato ricreato con
-`timeout_milliseconds := 120000`.
-
-Restano due cose, in quest'ordine.
-
-**Verificare** che il dispatcher rientri davvero nella finestra. Si guarda
-`net._http_response` **e** `cron.job_run_details` sullo stesso intervallo: la
-prima dice se la risposta è arrivata, il secondo dice solo se l'SQL è partito.
-
-**Ridurre il lavoro.** `supabase/functions/push-dispatcher/index.ts:150`
-impagina il calendario Juventus fino a `Math.min(total, 30)` pagine a ogni
-giro, ogni cinque minuti, per una funzione che poi non manda quasi mai niente.
-Misura prima di scegliere: senza il numero, qualunque riduzione è un'ipotesi.
-
-**Costo**: basso per la misura, medio per la riduzione. Entrambi richiedono
-accesso al database.
+**Non fare il passo 2 senza poter fare subito il 3.** Fra i due il dispatcher
+risponde 401 e non parte nessuna notifica: è il verso giusto in cui fallire,
+ma va fatto quando qualcuno sta guardando. Il connettore MCP di Lovable arriva
+al database, quindi al passo 2; il passo 3 vive fuori da SQL.
 
 ---
 
-## 4. Sorveglianza di `pg_net` — non si corregge, si guarda
+## 2. Il dispatcher fa molto lavoro per mandare pochissimo
 
-La revoca **non è applicabile** e ora si sa perché: le funzioni appartengono a
-`supabase_admin`, le migration girano come `postgres`, e in PostgreSQL un
-`REVOKE` da chi non è owner emette un warning e prosegue. La revoca corretta —
-da `PUBLIC` — fermerebbe le notifiche, perché nella stessa ACL non compare
-`postgres`, che è il ruolo del job cron.
+**La metà sul timeout è chiusa e misurata.** Il 31 agosto 2026, su
+`net._http_response`, 65 giri su 72 finivano in timeout. Ricontrollato il 5
+settembre dopo il passaggio a `timeout_milliseconds := 120000`: **72 su 72,
+tutti 200, zero timeout, zero errori.** Non riaprirla.
+
+Resta la seconda metà, e adesso ha un numero. Fra il 31 agosto e il 5
+settembre: **1404 giri, 10 notifiche mandate.** Lo 0,7%. Ogni giro impagina il
+calendario Juventus fino a `Math.min(total, 30)` pagine
+(`supabase/functions/push-dispatcher/index.ts:150`), quindi sono nell'ordine
+delle quarantamila sotto-richieste a `sports-football` in cinque giorni per
+dieci notifiche.
+
+Due strade, non alternative: impaginare solo finché servono eventi dentro la
+finestra di preavviso invece di trenta pagine fisse, oppure interrogare meno
+spesso di cinque minuti. La finestra di invio è di sei minuti e i preavvisi
+sono 15, 60 e 1440 minuti: c'è margine.
+
+**Costo**: medio, e richiede di poter ridistribuire la edge function — cosa che
+dal solo database non si fa.
+
+---
+
+## 3. Sorveglianza di `pg_net` — non si corregge, si guarda
+
+La revoca **non è applicabile** e si sa perché: le funzioni appartengono a
+`supabase_admin`, le migration girano come `postgres`, e un `REVOKE` da chi non
+è owner emette un warning e prosegue. La revoca corretta — da `PUBLIC` —
+fermerebbe le notifiche, perché nella stessa ACL non compare `postgres`.
 
 `supabase/migrations/20260831193000_revoke_pg_net_from_client_roles.sql` è
 stata svuotata e lasciata come nota. **Non riscriverla.**
 
-Restano due condizioni da ricontrollare ogni volta che si tocca il database:
+Le due condizioni da ricontrollare ogni volta che si tocca il database:
 
-- **`public` non deve acquisire funzioni `SECURITY DEFINER`.** Sarebbe il
-  trampolino che oggi manca per arrivare a `pg_net`. È anche il motivo per cui
-  la migration di retention non crea funzioni.
-- **Gli schemi esposti devono restare `public` e `graphql_public`.**
-
-La metà verificabile senza database è già stata fatta il 5 settembre 2026:
-`grep -rniE "security definer" supabase/migrations/` trova solo il commento
-esplicativo dentro la migration svuotata. Nessuna migration crea funzioni
-`SECURITY DEFINER` in `public`. **La verifica sullo stato reale del database
-resta da fare.**
+- **`public` non deve acquisire funzioni `SECURITY DEFINER`.** Ricontrollata il
+  5 settembre 2026: in `public` non c'è **nessuna funzione**. Manca il piano
+  d'appoggio, non solo il trampolino. Si verifica con una query su `pg_proc`
+  filtrata su `prosecdef`.
+- **Gli schemi esposti devono restare `public` e `graphql_public`.** Questa
+  **non è leggibile da SQL**: non è impostata né a livello di database né di
+  ruolo, vive nella configurazione del progetto. Va verificata dall'esterno con
+  la anon key, come il 31 agosto.
 
 ---
 
-## 5. `StreamingPage`, l'ultimo dei componenti giganti — e il criterio dice di fermarsi
+## 4. `StreamingPage`, l'ultimo dei componenti giganti — e il criterio dice di fermarsi
 
 588 righe, dieci stati locali, quattro tabelle di rendering. La
 serializzazione dei filtri è già fuori (`src/lib/streamingFilters.ts`, con i
@@ -179,6 +172,22 @@ serve per una ragione migliore di quella.
 - **Una migration può essere applicata e non aver fatto niente.** Un `REVOKE` da
   chi non è owner emette un warning e prosegue. È il modo peggiore in cui una
   migration sbaglia. Rileggi lo stato dopo averla applicata, sempre.
+- **Il registro delle migration si è fermato al 23 maggio 2026.**
+  `supabase_migrations.schema_migrations` contiene cinque versioni e non
+  include le migration del 31 agosto e del 5 settembre, che pure sono applicate
+  e funzionanti. In questo progetto le migration recenti si applicano a mano,
+  eseguendo l'SQL. Non dedurre da quella tabella che cosa è stato applicato:
+  **guarda lo schema**, non il registro.
+- **Gli `event_id` delle notifiche sono per numero di round**, non per data:
+  `f1-11-fp2`, `motogp-12-PR`. Si ripetono ogni stagione. Senza retention, la
+  riga del round 11 del 2026 avrebbe soppresso la notifica del round 11 del
+  2027 — un difetto latente che la retention a trenta giorni chiude di
+  rimbalzo. Se un giorno tocchi il dedup, ricordati che la chiave non è unica
+  nel tempo.
+- **`.claude/hooks/block-dangerous-bash.sh` è letterale.** Blocca un comando
+  Bash che contenga certe stringhe legate a Supabase, anche quando compaiono
+  dentro il testo di un commento che stai scrivendo. Non è un falso positivo da
+  aggirare: riformula il commento.
 - **Il tool MCP del browser può essere bloccato dal classificatore anche quando
   l'utente ti ha autorizzato.** Playwright chiamato direttamente da uno script
   funziona: importa `chromium` da `@playwright/test`, ma **il file dev'essere
