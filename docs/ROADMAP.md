@@ -119,57 +119,35 @@ sull'azione, ma l'azione resta quella sbagliata.
 Serve: aprire l'elenco del giorno, o passare alla vista agenda filtrata su
 quel giorno.
 
+Da quando la griglia è un componente a sé, un test in
+`src/components/calendar/MonthGrid.test.tsx` fissa il comportamento
+attuale — clic su «+1 altri» → si apre il quinto evento — proprio perché
+si veda se cambia senza che nessuno l'abbia deciso. Chi corregge il
+difetto deve aggiornare quel test: è il segno che la correzione è
+avvenuta, non un ostacolo.
+
 **Costo**: basso.
 
 ## Priorità bassa
 
-### Le pagine sport ripetono ancora il guscio esterno
-
-La parte interna è fatta: la terna `LoadingState` / `ErrorState` /
-`UnavailableExternalSource`, che si ripeteva dieci volte (una per scheda), vive
-ora in `src/components/common/DataSection.tsx`.
-
-Resta il contorno, ripetuto quattro volte, una per pagina:
-
-- il **guardiano offline** — lo stesso `if` che verifica «nessuna sezione ha
-  dati _e_ tutte sono in errore _e_ siamo offline» e ritorna `OfflineFallback`
-  dentro `div.container.py-8.sm:py-12`, ~12 righe per pagina;
-- l'**intestazione con le tab** — stesso contenitore, `SectionHeader` dentro un
-  `div.mb-2`, `Tabs` con `TabsList` e trigger che ripetono la stessa classe,
-  ~15 righe per pagina. `SinnerPage` usa una `TabsList` più semplice delle
-  altre tre.
-
-**Costo**: basso. **Perché non ora**: sono ~50 righe in tutto, contro le
-centinaia che valeva la terna. È pulizia, non correttezza, e il guadagno per
-riga toccata è molto più basso di quello appena incassato.
-
 ### Quello che resta dei componenti giganti
 
-`StreamingPage` è scesa da 788 a 588 righe: fuori la serializzazione dei
-filtri (`src/lib/streamingFilters.ts`, con i test dell'andata e ritorno) e i
-tre sotto-componenti che stavano in fondo al file. Restano dentro dieci stati
-locali e le tabelle di rendering.
+Resta **`StreamingPage`**, 588 righe: dieci stati locali e quattro tabelle
+di rendering. La serializzazione dei filtri è già fuori
+(`src/lib/streamingFilters.ts`, con i test dell'andata e ritorno) e la
+rete c'è — una e2e sul deep-link, che è la parte capace di rompersi in
+silenzio, perché la UI continuerebbe a funzionare ignorando l'URL.
 
-`CalendarPage` è scesa da 712 a 620: fuori `buildMonthGrid` e le date in fuso
-italiano, in `src/lib/calendarGrid.ts`, con dodici test che prima non
-esistevano.
+**Costo**: medio. **Perché non ora**: quello che resta dentro è JSX
+leggibile, e tagliarlo non farebbe guadagnare niente in verificabilità.
+È il criterio con cui è stato fatto tutto il resto di questo lavoro, e
+qui dice di fermarsi.
 
-`TonightTvList` è scesa da 808 a 661: fuori `combineTvHighlights` e i predicati
-della prima serata, in `src/lib/tonightTv.ts`, con nove test diretti che non
-passano più da `vi.mock("@tanstack/react-query")`.
-
-Resta dentro il JSX di tutte e tre: tabelle, viste mobile, paginazioni.
-Conteggi verificati il 31 agosto 2026.
-
-**Prima del taglio, la rete.** Per `StreamingPage` è servita una e2e sul
-deep-link, e non è un dettaglio di processo: la serializzazione dell'indirizzo
-è la parte che si rompe senza far rumore, perché la UI continua a funzionare
-ignorando l'URL. `TonightTvList` ha una sola e2e (il separatore fra famiglie)
-e due `vi.mock("@tanstack/react-query")` che descrivono le nostre abitudini
-invece del contratto della libreria.
-
-**Costo**: medio-alto. **Perché non ora**: va fatto per estrazioni successive,
-non in un colpo solo.
+Chiuse nel frattempo, e raccontate nei commit su `develop`:
+`JuventusPage` (712 → 248 righe), il guscio comune delle quattro pagine
+sportive, `CalendarPage` (620 → 371, con la e2e che prima non la
+visitava) e la selezione del programma di prima serata di
+`TonightTvList`, che ora è una funzione pura con i suoi test.
 
 ### `push_sent_log` cresce senza limite
 

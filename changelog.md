@@ -19,7 +19,27 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Unreleased]
 
-_(nessuna voce aperta)_
+### Corretto
+
+- **La data del ranking di Sinner seguiva il fuso di chi guardava.** La
+  scheda giocatore la formattava con `new Date(iso)` e senza `timeZone`:
+  dall'Italia il risultato coincideva, a ovest di Greenwich mostrava il
+  giorno prima. Ora passa da `formatLongDateIT`, che normalizza a UTC e
+  presenta in `Europe/Rome` come tutto il resto dell'app.
+
+### Modificato
+
+- **Il calendario non tiene più un timer suo.** La pagina rileggeva
+  `Date.now()` ogni minuto con un `setInterval` che girava anche a scheda
+  nascosta, per ingrigire gli eventi conclusi. Ora legge il clock
+  condiviso dell'app, che in background si ferma e al ritorno riparte
+  allineato.
+
+Il resto del lavoro di questo ciclo è refactoring senza effetti
+percepibili — il guscio comune delle quattro pagine sportive, le tre viste
+del calendario, la selezione del programma di prima serata — e per regola
+non prende una voce qui: per chi usa l'app non cambia niente, e l'insieme
+delle classi CSS identico prima e dopo è la prova che è davvero così.
 
 ## [2.8.0] — Audit completo: sicurezza, PWA offline, accessibilità (2026-08-31)
 
