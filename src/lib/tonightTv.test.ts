@@ -4,6 +4,7 @@ import {
   combineTvHighlights,
   overlapsPrimeWindow,
   primeWindowOverlapMinutes,
+  selectPrimeTimeHighlights,
   type TvHighlight,
   type TvQueryResult,
 } from "./tonightTv";
@@ -230,5 +231,96 @@ describe("la fascia di prima serata è 21:00–22:59", () => {
         highlight({ hourRome: 20, minuteRome: 0, endMinutesFromMidnight: 24 * 60 }),
       ),
     ).toBe(120);
+  });
+});
+
+describe("un solo programma per canale, quello che occupa davvero la serata", () => {
+  const ordine = { rai: 0, mediaset: 1, "sky-sport": 2, "sky-cinema": 3, discovery: 4 } as Record<
+    string,
+    number
+  >;
+  const scegli = (highlights: TvHighlight[], familyFilter = "all") =>
+    selectPrimeTimeHighlights(highlights, { familyFilter, familyOrder: ordine });
+
+  it("scarta chi non tocca la fascia", () => {
+    const fuori = highlight({ hourRome: 18, minuteRome: 0, endMinutesFromMidnight: 19 * 60 });
+    expect(scegli([fuori])).toEqual([]);
+  });
+
+  it("sullo stesso canale vince chi copre piu' minuti di prima serata", () => {
+    // Il TG delle 20:00 finisce alle 21:20: venti minuti di fascia. Il film
+    // ne copre novanta.
+    const tg = highlight({
+      title: "TG",
+      hourRome: 20,
+      minuteRome: 0,
+      endMinutesFromMidnight: 21 * 60 + 20,
+      durationMin: 80,
+    });
+    const film = highlight({ title: "Un film" });
+    expect(scegli([tg, film]).map((h) => h.title)).toEqual(["Un film"]);
+  });
+
+  it("a parita' di minuti in fascia preferisce chi supera i quaranta minuti", () => {
+    // Stessa finestra esatta, durate diverse: la soglia distingue il
+    // programma principale dalla promo che gli sta accanto.
+    const comune = { hourRome: 21, minuteRome: 0, endMinutesFromMidnight: 23 * 60 };
+    const promo = highlight({ ...comune, title: "Promo", durationMin: 30 });
+    const principale = highlight({ ...comune, title: "Il principale", durationMin: 120 });
+    expect(scegli([promo, principale]).map((h) => h.title)).toEqual(["Il principale"]);
+    expect(scegli([principale, promo]).map((h) => h.title)).toEqual(["Il principale"]);
+  });
+
+  it("quando nessuno dei due supera la soglia vince comunque il piu' lungo", () => {
+    const comune = { hourRome: 21, minuteRome: 0, endMinutesFromMidnight: 23 * 60 };
+    const breve = highlight({ ...comune, title: "Breve", durationMin: 20 });
+    const meno = highlight({ ...comune, title: "Meno breve", durationMin: 35 });
+    expect(scegli([breve, meno]).map((h) => h.title)).toEqual(["Meno breve"]);
+  });
+
+  it("a parita' di tutto vince chi comincia prima, cosi' l'ordine e' stabile", () => {
+    const comune = {
+      hourRome: 21,
+      minuteRome: 0,
+      endMinutesFromMidnight: 23 * 60,
+      durationMin: 120,
+    };
+    const tardi = highlight({ ...comune, title: "Dopo", startMs: 2000 });
+    const presto = highlight({ ...comune, title: "Prima", startMs: 1000 });
+    expect(scegli([tardi, presto]).map((h) => h.title)).toEqual(["Prima"]);
+    expect(scegli([presto, tardi]).map((h) => h.title)).toEqual(["Prima"]);
+  });
+
+  it("lo stesso nome di canale in due famiglie resta due voci", () => {
+    // La chiave e' famiglia + canale: due reti omonime di gruppi diversi
+    // non si scavalcano.
+    const rai = highlight({ family: "rai", channel: "Uno", title: "Su Rai" });
+    const mediaset = highlight({ family: "mediaset", channel: "Uno", title: "Su Mediaset" });
+    expect(scegli([mediaset, rai]).map((h) => h.title)).toEqual(["Su Rai", "Su Mediaset"]);
+  });
+
+  it("il filtro per famiglia toglie tutto il resto", () => {
+    const rai = highlight({ family: "rai", channel: "RAI 1" });
+    const sky = highlight({ family: "sky-sport", channel: "Sky Sport Uno" });
+    expect(scegli([rai, sky], "sky-sport").map((h) => h.channel)).toEqual(["Sky Sport Uno"]);
+  });
+
+  it("ordina per famiglia, poi per numero di canale, poi per orario", () => {
+    // Un canale senza numero va in fondo alla sua famiglia, non in testa.
+    const senzaNumero = highlight({ family: "rai", channel: "RAI Sport", title: "Senza numero" });
+    const due = highlight({ family: "rai", channel: "RAI 2", channelNumber: 2, title: "Rai Due" });
+    const uno = highlight({ family: "rai", channel: "RAI 1", channelNumber: 1, title: "Rai Uno" });
+    const sky = highlight({
+      family: "sky-sport",
+      channel: "Sky Sport Uno",
+      channelNumber: 201,
+      title: "Sky",
+    });
+    expect(scegli([sky, senzaNumero, due, uno]).map((h) => h.title)).toEqual([
+      "Rai Uno",
+      "Rai Due",
+      "Senza numero",
+      "Sky",
+    ]);
   });
 });

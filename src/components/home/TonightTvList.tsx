@@ -19,12 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import LoadingState from "@/components/common/LoadingState";
 import { STREAMING_FAMILIES } from "@/hooks/useStreamingData";
-import {
-  combineTvHighlights,
-  overlapsPrimeWindow,
-  primeWindowOverlapMinutes,
-  type TvHighlight,
-} from "@/lib/tonightTv";
+import { combineTvHighlights, selectPrimeTimeHighlights } from "@/lib/tonightTv";
 import { streamingApi, type StreamingFamilyId } from "@/lib/api/sportsApi";
 import { formatDuration, formatDurationSpoken } from "@/lib/dateUtils";
 import { inferGenre } from "@/lib/genreUtils";
@@ -100,73 +95,13 @@ function TonightTvList() {
     return m;
   }, []);
 
-  const tonightHighlights = useMemo(() => {
-    // Prima serata italiana: finestra [21:00, 23:00) Europe/Rome.
-    // Algoritmo intelligente: un programma e' rilevante se il suo
-    // intervallo [start, end) si interseca con la finestra di prima
-    // serata. Cosi' un kickoff anticipato lungo (es. Coppa Italia
-    // 20:40 -> 22:50) resta visibile perche' attraversa la fascia,
-    // mentre programmi che iniziano alle 23:00 o dopo, o che
-    // finiscono entro le 21:00, vengono esclusi.
-    //
-    // Programmi senza orario di fine reale (`hasExplicitEnd === false`)
-    // ricevono un trattamento dedicato: vengono inclusi solo quando
-    // l'inizio cade prima delle 23:00 (la fascia li potrebbe coprire),
-    // senza richiedere il check sulla fine, perche' la durata effettiva
-    // non e' nota. Vengono comunque marcati come "dati incompleti" cosi'
-    // l'UI mostra il banner con link alla Guida TV ufficiale.
-    // Soglia 40 min: con la finestra piu' larga servono criteri piu' stretti
-    // per il "vero" programma di prima serata. Calcio 100+, fiction 90+,
-    // film 100+, news show 40+. Tg regionali (~30 min) esclusi.
-    const MIN_DURATION = 40;
-
-    const pool =
-      familyFilter === "all"
-        ? allHighlights
-        : allHighlights.filter((r) => r.family === familyFilter);
-
-    // Per ogni canale: scegli il programma che massimizza l'overlap con
-    // la fascia di prima serata. Tie-break: durata totale (preferisce il
-    // "main", scartando TG/promo brevi anche a parita' di overlap),
-    // poi startMs piu' basso per stabilita'.
-    const byChannel = new Map<string, TvHighlight>();
-    for (const h of pool) {
-      if (!overlapsPrimeWindow(h)) continue;
-      const key = `${h.family}|${h.channel}`;
-      const existing = byChannel.get(key);
-      if (!existing) {
-        byChannel.set(key, h);
-        continue;
-      }
-      const hOverlap = primeWindowOverlapMinutes(h);
-      const existingOverlap = primeWindowOverlapMinutes(existing);
-      if (hOverlap !== existingOverlap) {
-        if (hOverlap > existingOverlap) byChannel.set(key, h);
-        continue;
-      }
-      // Stesso overlap: preferisci la durata maggiore (vero "main"
-      // program), con MIN_DURATION come soglia minima preferenziale.
-      const hIsMain = h.durationMin >= MIN_DURATION;
-      const existingIsMain = existing.durationMin >= MIN_DURATION;
-      if (hIsMain !== existingIsMain) {
-        if (hIsMain) byChannel.set(key, h);
-        continue;
-      }
-      if (h.durationMin !== existing.durationMin) {
-        if (h.durationMin > existing.durationMin) byChannel.set(key, h);
-        continue;
-      }
-      if (h.startMs < existing.startMs) byChannel.set(key, h);
-    }
-
-    return Array.from(byChannel.values()).sort((a, b) => {
-      const fa = familyOrder[a.family] - familyOrder[b.family];
-      if (fa !== 0) return fa;
-      const cn = (a.channelNumber ?? 9999) - (b.channelNumber ?? 9999);
-      if (cn !== 0) return cn;
-      return a.startMs - b.startMs;
-    });
-  }, [allHighlights, familyFilter, familyOrder]);
+  // La scelta del programma principale di ogni canale sta in
+  // `src/lib/tonightTv.ts`: soglia, tie-break e ordinamento hanno i loro
+  // test con dati veri, senza montare la scheda ne' fingere React Query.
+  const tonightHighlights = useMemo(
+    () => selectPrimeTimeHighlights(allHighlights, { familyFilter, familyOrder }),
+    [allHighlights, familyFilter, familyOrder],
+  );
 
   const familyLabelMap = useMemo(() => {
     const m: Record<StreamingFamilyId, string> = {} as Record<StreamingFamilyId, string>;

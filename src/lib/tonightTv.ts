@@ -180,3 +180,73 @@ export function primeWindowOverlapMinutes(h: TvHighlight): number {
   const overlapEnd = Math.min(h.endMinutesFromMidnight, PRIME_TIME_END_EXCLUSIVE_MIN);
   return Math.max(0, overlapEnd - overlapStart);
 }
+
+/**
+ * Soglia oltre la quale un programma e' il "vero" programma di prima
+ * serata: calcio 100+, fiction 90+, film 100+, news show 40+. I TG
+ * regionali, sui trenta minuti, restano sotto.
+ */
+const MIN_DURATION = 40;
+
+export interface PrimeTimeSelection {
+  /** `"all"` oppure l'id di una famiglia. */
+  familyFilter: string;
+  /** Posizione di ogni famiglia nell'ordine di presentazione. */
+  familyOrder: Record<string, number>;
+}
+
+/**
+ * Un solo programma per canale: quello che occupa davvero la prima
+ * serata. Stava in una `useMemo` dentro `TonightTvList`, cioe' dove i
+ * suoi criteri — la soglia, i tre tie-break, la chiave famiglia+canale —
+ * non erano verificabili senza montare il componente e fingere React
+ * Query.
+ *
+ * A parita' di minuti coperti l'ordine dei criteri conta: prima chi
+ * supera `MIN_DURATION`, poi la durata, poi l'inizio piu' basso, che
+ * serve solo a rendere il risultato indipendente dall'ordine in
+ * ingresso.
+ */
+export function selectPrimeTimeHighlights(
+  highlights: TvHighlight[],
+  { familyFilter, familyOrder }: PrimeTimeSelection,
+): TvHighlight[] {
+  const pool =
+    familyFilter === "all" ? highlights : highlights.filter((r) => r.family === familyFilter);
+
+  const byChannel = new Map<string, TvHighlight>();
+  for (const h of pool) {
+    if (!overlapsPrimeWindow(h)) continue;
+    const key = `${h.family}|${h.channel}`;
+    const existing = byChannel.get(key);
+    if (!existing) {
+      byChannel.set(key, h);
+      continue;
+    }
+    const hOverlap = primeWindowOverlapMinutes(h);
+    const existingOverlap = primeWindowOverlapMinutes(existing);
+    if (hOverlap !== existingOverlap) {
+      if (hOverlap > existingOverlap) byChannel.set(key, h);
+      continue;
+    }
+    const hIsMain = h.durationMin >= MIN_DURATION;
+    const existingIsMain = existing.durationMin >= MIN_DURATION;
+    if (hIsMain !== existingIsMain) {
+      if (hIsMain) byChannel.set(key, h);
+      continue;
+    }
+    if (h.durationMin !== existing.durationMin) {
+      if (h.durationMin > existing.durationMin) byChannel.set(key, h);
+      continue;
+    }
+    if (h.startMs < existing.startMs) byChannel.set(key, h);
+  }
+
+  return Array.from(byChannel.values()).sort((a, b) => {
+    const fa = familyOrder[a.family] - familyOrder[b.family];
+    if (fa !== 0) return fa;
+    const cn = (a.channelNumber ?? 9999) - (b.channelNumber ?? 9999);
+    if (cn !== 0) return cn;
+    return a.startMs - b.startMs;
+  });
+}
