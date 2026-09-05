@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   MONTH_LABELS,
-  WEEKDAY_LABELS,
   buildMonthGrid,
-  formatDayHeaderIT,
   romeDayKey,
-  romeHHMM,
   romeHHMMFromDate,
   toRomeYMD,
   ymdKey,
@@ -24,7 +21,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import AgendaView from "@/components/calendar/AgendaView";
+import MonthGrid from "@/components/calendar/MonthGrid";
+import MonthList from "@/components/calendar/MonthList";
+import { SPORT_BADGE, SPORT_DOT, SPORT_LABEL } from "@/components/calendar/sportStyles";
 import LoadingState from "@/components/common/LoadingState";
+import { useNowMinute } from "@/hooks/useNow";
 import { useSyncAll } from "@/hooks/useSyncAll";
 import {
   useCalendarEvents,
@@ -35,26 +37,6 @@ import { toRomeDate, formatDateTimeIT } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 
 // Etichette IT per settimane e mesi (no date-fns/locale per zero-dipendenze)
-const SPORT_DOT: Record<CalendarItem["sport"], string> = {
-  juventus: "bg-[hsl(var(--sport-juventus))]",
-  f1: "bg-[hsl(var(--sport-f1))]",
-  motogp: "bg-[hsl(var(--sport-motogp))]",
-};
-
-const SPORT_LABEL: Record<CalendarItem["sport"], string> = {
-  juventus: "Juventus",
-  f1: "F1",
-  motogp: "MotoGP",
-};
-
-const SPORT_BADGE: Record<CalendarItem["sport"], string> = {
-  juventus:
-    "border-[hsl(var(--sport-juventus))]/40 text-[hsl(var(--sport-juventus))] bg-[hsl(var(--sport-juventus))]/10",
-  f1: "border-[hsl(var(--sport-f1))]/40 text-[hsl(var(--sport-f1))] bg-[hsl(var(--sport-f1))]/10",
-  motogp:
-    "border-[hsl(var(--sport-motogp))]/40 text-[hsl(var(--sport-motogp))] bg-[hsl(var(--sport-motogp))]/10",
-};
-
 const SPORTS: ReadonlyArray<CalendarSport> = ["juventus", "f1", "motogp"];
 const FILTERS_KEY = "calendar.filters";
 const VIEW_KEY = "calendar.view";
@@ -106,13 +88,12 @@ export default function CalendarPage() {
   const { events, isLoading, refetchAll } = useCalendarEvents();
   const { sync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
 
-  // "Passato" = orario di inizio < ora corrente. Refresh ogni 60s per
-  // ingrigire automaticamente gli eventi appena conclusi.
-  const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  useEffect(() => {
-    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
-    return () => window.clearInterval(id);
-  }, []);
+  // "Passato" = orario di inizio < ora corrente, ricalcolato ogni minuto
+  // per ingrigire gli eventi appena conclusi. L'ora arriva dal clock
+  // condiviso dell'app invece che da un `setInterval` di pagina: quello
+  // continuava a girare anche a scheda nascosta, mentre il clock si ferma
+  // in background e riparte allineato.
+  const nowMs = useNowMinute();
   const isPast = (iso: string): boolean => {
     const d = toRomeDate(iso);
     return d ? d.getTime() < nowMs : false;
@@ -310,269 +291,39 @@ export default function CalendarPage() {
 
       {isLoading && events.length === 0 && <LoadingState message="Caricamento calendario..." />}
 
-      {/* Vista mese (>= md) */}
       {viewMode === "month" && (
-        <div className="hidden md:block rounded-xl border border-border/60 bg-card/60 backdrop-blur-xs overflow-hidden">
-          {/* Header settimana */}
-          <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30">
-            {WEEKDAY_LABELS.map((w) => (
-              <div
-                key={w}
-                className="px-2 py-2 text-[11px] font-heading uppercase tracking-widest text-muted-foreground text-center"
-              >
-                {w}
-              </div>
-            ))}
-          </div>
-          {/* Griglia */}
-          <div className="grid grid-cols-7 grid-rows-6 auto-rows-[minmax(120px,1fr)]">
-            {grid.flat().map((cell) => {
-              const key = ymdKey(cell);
-              const dayEvents = eventsByDay.get(key) ?? [];
-              const isToday = cell.y === today.y && cell.m === today.m && cell.d === today.d;
-              const inMonth = cell.m === view.m;
-              const visible = dayEvents.slice(0, 4);
-              const hidden = dayEvents.length - visible.length;
-              return (
-                <div
-                  key={key}
-                  className={cn(
-                    "min-h-[120px] border-r border-b border-border/40 p-1.5 flex flex-col gap-1",
-                    !inMonth && "bg-muted/10 text-muted-foreground/60",
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div
-                      className={cn(
-                        "inline-flex items-center justify-center text-xs font-medium",
-                        isToday
-                          ? "h-6 w-6 rounded-full bg-primary text-primary-foreground font-bold"
-                          : "px-1",
-                      )}
-                    >
-                      {cell.d}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-0.5 overflow-hidden">
-                    {visible.map((ev) => {
-                      const past = isPast(ev.date);
-                      return (
-                        <button
-                          key={ev.id}
-                          type="button"
-                          onClick={() => setSelectedEvent(ev)}
-                          // Il nome accessibile dev'essere una frase, non la
-                          // somma degli span: letti di fila davano
-                          // "21:00 F1: Imola (Gara)" senza dire che il bottone
-                          // apre qualcosa. E lo stato "concluso" era affidato
-                          // al solo `line-through`, che uno screen reader non
-                          // vede.
-                          aria-label={`${romeHHMM(ev.date)} ${SPORT_LABEL[ev.sport]}: ${ev.shortLabel} (${ev.context})${past ? ", concluso" : ""}. Apri i dettagli`}
-                          className={cn(
-                            "group flex items-start gap-1 text-left text-[11px] leading-tight px-1 py-0.5 rounded hover:bg-muted/50 transition-colors",
-                            past && "opacity-50 grayscale line-through",
-                          )}
-                          title={`${romeHHMM(ev.date)} ${ev.title}${past ? " (concluso)" : ""}`}
-                        >
-                          <span
-                            className={cn(
-                              "mt-1 h-1.5 w-1.5 rounded-full shrink-0",
-                              SPORT_DOT[ev.sport],
-                            )}
-                          />
-                          <span className="truncate">
-                            <span className="font-mono">{romeHHMM(ev.date)}</span>{" "}
-                            <span className="font-semibold uppercase tracking-wide">
-                              {SPORT_LABEL[ev.sport]}:
-                            </span>{" "}
-                            <span>{ev.shortLabel}</span>{" "}
-                            <span className="text-muted-foreground">({ev.context})</span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                    {hidden > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedEvent(dayEvents[4])}
-                        // Il testo visibile dice "+N altri" ma il bottone apre
-                        // il dettaglio del quinto evento, non una lista.
-                        // L'etichetta accessibile parte dal testo visibile
-                        // (WCAG 2.5.3) e poi dice cosa succede davvero,
-                        // invece di lasciare che sia una sorpresa.
-                        aria-label={`+${hidden} altri: apri i dettagli di ${dayEvents[4].shortLabel}`}
-                        className="text-[11px] text-muted-foreground hover:text-foreground px-1"
-                      >
-                        +{hidden} altri
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <MonthGrid
+          grid={grid}
+          view={view}
+          today={today}
+          eventsByDay={eventsByDay}
+          isPast={isPast}
+          onSelect={setSelectedEvent}
+        />
       )}
 
-      {/* Vista lista (mobile) — solo in modalità mese */}
       {viewMode === "month" && (
-        <div className="md:hidden space-y-3">
-          {grid
-            .flat()
-            .filter((c) => c.m === view.m)
-            .map((cell) => {
-              const key = ymdKey(cell);
-              const dayEvents = eventsByDay.get(key) ?? [];
-              if (dayEvents.length === 0) return null;
-              const isToday = cell.y === today.y && cell.m === today.m && cell.d === today.d;
-              return (
-                <div
-                  key={key}
-                  className="rounded-lg border border-border/50 bg-card/60 overflow-hidden"
-                >
-                  <div
-                    className={cn(
-                      "px-3 py-1.5 flex items-center justify-between text-xs font-heading uppercase tracking-widest border-b border-border/40",
-                      isToday
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted/40 text-muted-foreground",
-                    )}
-                  >
-                    <span>
-                      {cell.d} {MONTH_LABELS[cell.m - 1]}
-                    </span>
-                    <span>{dayEvents.length} eventi</span>
-                  </div>
-                  <ul className="divide-y divide-border/40">
-                    {dayEvents.map((ev) => {
-                      const past = isPast(ev.date);
-                      return (
-                        <li key={ev.id}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedEvent(ev)}
-                            aria-label={`${romeHHMM(ev.date)} ${SPORT_LABEL[ev.sport]}: ${ev.shortLabel} (${ev.context})${past ? ", concluso" : ""}. Apri i dettagli`}
-                            className={cn(
-                              "w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-muted/40",
-                              past && "opacity-50 grayscale",
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "mt-1.5 h-2 w-2 rounded-full shrink-0",
-                                SPORT_DOT[ev.sport],
-                              )}
-                            />
-                            <span className={cn("flex-1 min-w-0", past && "line-through")}>
-                              <span className="block text-sm font-semibold truncate">
-                                {ev.shortLabel}{" "}
-                                <span className="text-muted-foreground font-normal">
-                                  · {ev.context}
-                                </span>
-                              </span>
-                              <span className="block text-xs text-muted-foreground font-mono mt-0.5">
-                                {romeHHMM(ev.date)} · {SPORT_LABEL[ev.sport]}
-                              </span>
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              );
-            })}
-          {!isLoading &&
-            grid
-              .flat()
-              .filter((c) => c.m === view.m)
-              .every((c) => (eventsByDay.get(ymdKey(c)) ?? []).length === 0) && (
-              <p className="text-center text-muted-foreground py-12">
-                Nessun evento in {monthLabel}
-              </p>
-            )}
-        </div>
+        <MonthList
+          grid={grid}
+          view={view}
+          today={today}
+          eventsByDay={eventsByDay}
+          isPast={isPast}
+          onSelect={setSelectedEvent}
+          isLoading={isLoading}
+          monthLabel={monthLabel}
+        />
       )}
 
-      {/* Vista Agenda */}
       {viewMode === "agenda" && (
-        <div className="space-y-3">
-          {agendaDays.length === 0 && !isLoading && (
-            <p className="text-center text-muted-foreground py-12">Nessun evento in {monthLabel}</p>
-          )}
-          {agendaDays.map(({ ymd, key, events: dayEvents }) => {
-            const isToday = ymd.y === today.y && ymd.m === today.m && ymd.d === today.d;
-            return (
-              <section
-                key={key}
-                className="rounded-lg border border-border/50 bg-card/60 overflow-hidden"
-              >
-                <header
-                  className={cn(
-                    "sticky top-0 z-10 px-3 py-2 flex items-center justify-between text-xs font-heading uppercase tracking-widest border-b border-border/40 backdrop-blur-sm",
-                    isToday
-                      ? "bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))]"
-                      : "bg-muted/40 text-muted-foreground",
-                  )}
-                >
-                  <span>{formatDayHeaderIT(ymd)}</span>
-                  <span>
-                    {dayEvents.length} {dayEvents.length === 1 ? "evento" : "eventi"}
-                  </span>
-                </header>
-                <ul className="divide-y divide-border/40">
-                  {dayEvents.map((ev) => {
-                    const past = isPast(ev.date);
-                    return (
-                      <li key={ev.id}>
-                        <button
-                          onClick={() => setSelectedEvent(ev)}
-                          className={cn(
-                            "w-full text-left px-3 py-2.5 flex items-start gap-3 hover:bg-muted/40 transition-colors",
-                            past && "opacity-50 grayscale",
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "mt-1.5 h-2 w-2 rounded-full shrink-0",
-                              SPORT_DOT[ev.sport],
-                            )}
-                          />
-                          <span className="font-mono text-xs text-muted-foreground w-12 shrink-0 mt-0.5">
-                            {romeHHMM(ev.date)}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-[10px] font-heading uppercase tracking-widest shrink-0 mt-0.5",
-                              SPORT_BADGE[ev.sport],
-                            )}
-                          >
-                            {SPORT_LABEL[ev.sport]}
-                          </Badge>
-                          <span className={cn("flex-1 min-w-0", past && "line-through")}>
-                            <span className="block text-sm font-semibold truncate">
-                              {ev.shortLabel}
-                              <span className="text-muted-foreground font-normal">
-                                {" "}
-                                · {ev.context}
-                              </span>
-                            </span>
-                            {ev.broadcaster && (
-                              <span className="block text-xs text-muted-foreground mt-0.5">
-                                In TV: <span className="text-foreground/80">{ev.broadcaster}</span>
-                              </span>
-                            )}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            );
-          })}
-        </div>
+        <AgendaView
+          agendaDays={agendaDays}
+          today={today}
+          isPast={isPast}
+          onSelect={setSelectedEvent}
+          isLoading={isLoading}
+          monthLabel={monthLabel}
+        />
       )}
 
       {/* Dialog dettaglio evento */}

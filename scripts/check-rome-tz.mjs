@@ -37,6 +37,7 @@ const TARGET_DIRS = [
   "src/lib",
   "src/components/home",
   "src/components/streaming",
+  "src/components/calendar",
   "src/components/highlights",
   "src/components/juventus",
   "src/components/sinner",
