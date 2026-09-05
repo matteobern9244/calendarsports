@@ -9,6 +9,10 @@ bun.lock
 # Stato locale dei plugin per agenti AI: non e' codice del progetto.
 .remember
 
-# File generato dalla CLI Supabase: viene ri-sincronizzato da upstream e non
-# deve divergere per motivi di formattazione.
+# File generati e ri-sincronizzati da upstream: la CLI Supabase per `types.ts`,
+# l'agente Lovable per gli altri due, che li riscrive a ogni intervento. Non
+# devono divergere per motivi di formattazione, e formattarli a mano sarebbe
+# una toppa che si strappa al deploy successivo.
 src/integrations/supabase/types.ts
+src/integrations/supabase/client.ts
+src/integrations/supabase/previewAuthStorage.ts

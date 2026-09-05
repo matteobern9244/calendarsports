@@ -15,8 +15,14 @@ export default tseslint.config(
       // Artefatti di Playwright.
       "playwright-report",
       "test-results",
-      // Generato dalla CLI Supabase: si ri-sincronizza da upstream.
+      // Generati e ri-sincronizzati da upstream: `types.ts` dalla CLI Supabase,
+      // gli altri due dall'agente Lovable, che li riscrive a ogni intervento
+      // sul progetto. Escluderli non indebolisce niente: il guardrail che
+      // conta e' `no-restricted-imports` piu' sotto, che vieta di IMPORTARE
+      // il client generato, ed e' sui file che importano che agisce.
       "src/integrations/supabase/types.ts",
+      "src/integrations/supabase/client.ts",
+      "src/integrations/supabase/previewAuthStorage.ts",
     ],
   },
   {
