@@ -63,10 +63,22 @@ richieste a `sports-football`, più una a `sports-f1` e una a `sports-motogp`:
 notifiche.
 
 Resta sproporzionato, ma di un ordine di grandezza meno di quanto si
-raccontava. Serve: prendere solo gli eventi dentro la finestra di preavviso
-invece dell'intera stagione a ogni giro, oppure interrogare meno spesso di
-cinque minuti — la finestra di invio è di sei minuti e i preavvisi sono 15, 60
-e 1440 minuti, quindi c'è margine.
+raccontava. La strada praticabile è **prendere meno dati**: fermare
+l'impaginazione quando le partite superano `now + 1440 min + finestra`, invece
+di scorrere tutte le pagine. Il calendario è ordinato per data, quindi è una
+condizione di uscita, non un filtro.
+
+**Non «girare meno spesso», almeno non da sola.** Questa voce lo suggeriva, ed
+era sbagliato. La condizione di invio in `index.ts:221-224` prende un evento
+solo se il giro cade dentro `[t − preavviso, t − preavviso + 6 min]`: la
+finestra è larga sei minuti, quindi **l'intervallo del cron non può
+superarla**. Simulato il 5 settembre 2026 su una giornata intera, minuto per
+minuto e per tutti e tre i preavvisi: `*/5` e `*/6` non perdono niente,
+`*/10` perde il **30% delle notifiche**, in silenzio. Passare a dieci minuti
+richiede quindi di portare `WINDOW_MS` ad almeno dieci minuti nel codice, e
+ricade nello stesso blocco: ridistribuire la edge function. `*/6` funziona
+senza toccare il codice e risparmierebbe un giro su sei, ma consuma tutto il
+margine rimasto fra intervallo e finestra: non vale il rischio.
 
 **Costo**: medio, e richiede di poter ridistribuire la edge function.
 **Perché non è urgente**: nessuno se ne accorge, e da quando il timeout è a

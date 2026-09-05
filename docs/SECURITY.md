@@ -154,9 +154,17 @@ autenticazione.
 > **Il valore di quel segreto è scritto in chiaro dentro la migration
 > `supabase/migrations/20260523084606_*.sql`, che è nella storia di Git e su un
 > repository GitHub.** Chi ha accesso in lettura al repository può invocare il
-> dispatcher: inviare notifiche a tutti gli iscritti, ripetutamente, e far
-> generare a ogni invocazione una trentina di sotto-richieste verso
-> `sports-football`.
+> dispatcher: inviare notifiche a tutti gli iscritti attivi, ripetutamente, e
+> far generare a ogni invocazione sei chiamate verso le funzioni sportive.
+>
+> Due cifre di questo paragrafo erano sbagliate, e sono state **misurate il 5
+> settembre 2026**. Gli iscritti sono cinque righe ma **due abilitate**: il
+> dispatcher seleziona `enabled = true`, quindi le notifiche raggiungono due
+> browser, non cinque. E «una trentina di sotto-richieste» veniva dal tetto
+> `Math.min(total, 30)`, che è un limite e non una misura: `sports-football`
+> per la stagione 2026 risponde `total: 47`, `pageSize: 12`, `totalPages: 4`.
+> Il giro fa quindi **quattro** chiamate a `sports-football`, più una a
+> `sports-f1` e una a `sports-motogp`.
 >
 > Va considerato compromesso. Riscrivere la storia di `main` non è praticabile
 > con la sincronizzazione Lovable attiva: è la rotazione a neutralizzare il
