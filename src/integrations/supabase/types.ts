@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          favorite_team: string
+          id: string
+          show_f1: boolean
+          show_motogp: boolean
+          show_sinner: boolean
+          theme: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          favorite_team?: string
+          id: string
+          show_f1?: boolean
+          show_motogp?: boolean
+          show_sinner?: boolean
+          theme?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          favorite_team?: string
+          id?: string
+          show_f1?: boolean
+          show_motogp?: boolean
+          show_sinner?: boolean
+          theme?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       push_sent_log: {
         Row: {
           event_id: string

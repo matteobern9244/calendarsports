@@ -27,6 +27,7 @@ import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { cn } from "@/lib/utils";
 import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useUserPrefs } from "@/contexts/useUserPrefs";
 import { useNowMinute } from "@/hooks/useNow";
 
 interface UpcomingEvent {
@@ -86,6 +87,7 @@ export default function HomePage() {
   const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
 
   const now = useNowMinute();
+  const { sections } = useUserPrefs();
 
   const events = useMemo(() => {
     const upcoming: UpcomingEvent[] = [];
@@ -150,8 +152,15 @@ export default function HomePage() {
       }
     }
 
-    return upcoming.sort((a, b) => getDateTimestamp(a.rawDate) - getDateTimestamp(b.rawDate));
-  }, [f1Data, juveCalendar, sinnerNext, motogpNext, now]);
+    return upcoming
+      .filter((e) => {
+        if (e.sport === "Formula 1") return sections.f1;
+        if (e.sport === "MotoGP") return sections.motogp;
+        if (e.sport === "Tennis · Sinner") return sections.sinner;
+        return true;
+      })
+      .sort((a, b) => getDateTimestamp(a.rawDate) - getDateTimestamp(b.rawDate));
+  }, [f1Data, juveCalendar, sinnerNext, motogpNext, now, sections]);
 
   // Fallback offline: nessun dato in cache da nessuna fonte e siamo offline
   if (

@@ -1,6 +1,6 @@
 import { useRef, useState, MouseEvent as ReactMouseEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { Menu, X, Settings } from "lucide-react";
+import { Menu, X, Settings, LogIn, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
@@ -15,17 +15,31 @@ import {
 } from "./BrandIcons";
 import { SparkleLoop } from "./SparkleLoop";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
+import { useUserPrefs } from "@/contexts/useUserPrefs";
+import { useAuth } from "@/contexts/useAuth";
 
 // Header non riceve piu' props: tema e preferenze sono in /preferenze.
 
-const navItems = [
+const ALL_NAV_ITEMS = [
   { label: "HOME", shortLabel: "HOME", path: "/", Icon: HomeBrandIcon },
   { label: "CALENDARIO", shortLabel: "AGENDA", path: "/calendario", Icon: CalendarBrandIcon },
   { label: "STREAMING", shortLabel: "STREAMING", path: "/streaming", Icon: StreamingBrandIcon },
-  { label: "JANNIK SINNER", shortLabel: "SINNER", path: "/sinner", Icon: TennisBrandIcon },
+  {
+    label: "JANNIK SINNER",
+    shortLabel: "SINNER",
+    path: "/sinner",
+    Icon: TennisBrandIcon,
+    section: "sinner",
+  },
   { label: "JUVENTUS", shortLabel: "JUVE", path: "/juventus", Icon: JuveBrandIcon },
-  { label: "FORMULA 1", shortLabel: "F1", path: "/formula1", Icon: F1BrandIcon },
-  { label: "MOTOGP", shortLabel: "MOTOGP", path: "/motogp", Icon: MotoGPBrandIcon },
+  { label: "FORMULA 1", shortLabel: "F1", path: "/formula1", Icon: F1BrandIcon, section: "f1" },
+  {
+    label: "MOTOGP",
+    shortLabel: "MOTOGP",
+    path: "/motogp",
+    Icon: MotoGPBrandIcon,
+    section: "motogp",
+  },
 ] as const;
 
 interface Burst {
@@ -41,6 +55,13 @@ export default function Header() {
   const navigate = useNavigate();
   const burstSeq = useRef(0);
   const { open: prefsOpen, toggle: togglePrefs } = usePreferencesPanel();
+  const { sections } = useUserPrefs();
+  const { user } = useAuth();
+
+  // Le sezioni disattivate nel profilo spariscono dal menu.
+  const navItems = ALL_NAV_ITEMS.filter(
+    (item) => !("section" in item) || sections[item.section as keyof typeof sections],
+  );
 
   const triggerBurst = (path: string, e: ReactMouseEvent<HTMLAnchorElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -178,6 +199,15 @@ export default function Header() {
 
         {/* Theme toggle + mobile menu */}
         <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={user ? "Il mio profilo" : "Accedi"}
+            onClick={() => (user ? togglePrefs() : navigate("/accedi"))}
+            className="rounded-full border border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10 transition-colors"
+          >
+            {user ? <UserRound className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
+          </Button>
           <Button
             variant="ghost"
             size="icon"
