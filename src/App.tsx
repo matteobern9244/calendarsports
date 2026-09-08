@@ -6,6 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Layout from "@/components/layout/Layout";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import LoadingState from "@/components/common/LoadingState";
+import SectionRoute from "@/components/common/SectionRoute";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { UserPrefsProvider } from "@/contexts/UserPrefsContext";
 import Index from "./pages/Index";
 
 // La Home resta nel bundle iniziale: e' la pagina su cui si atterra, caricarla
@@ -20,6 +23,8 @@ const JuventusMatchPage = lazy(() => import("./pages/JuventusMatchPage"));
 const Formula1Page = lazy(() => import("./pages/Formula1Page"));
 const MotoGPPage = lazy(() => import("./pages/MotoGPPage"));
 const PreferencesPage = lazy(() => import("./pages/PreferencesPage"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -51,22 +56,49 @@ const App = () => (
       <TooltipProvider>
         <Sonner />
         <BrowserRouter>
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route element={<Layout />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/calendario" element={<CalendarPage />} />
-                <Route path="/streaming" element={<StreamingPage />} />
-                <Route path="/sinner" element={<SinnerPage />} />
-                <Route path="/juventus" element={<JuventusPage />} />
-                <Route path="/juventus/partite/:matchId" element={<JuventusMatchPage />} />
-                <Route path="/formula1" element={<Formula1Page />} />
-                <Route path="/motogp" element={<MotoGPPage />} />
-                <Route path="/preferenze" element={<PreferencesPage />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+          <AuthProvider>
+            <UserPrefsProvider>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  <Route element={<Layout />}>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/calendario" element={<CalendarPage />} />
+                    <Route path="/streaming" element={<StreamingPage />} />
+                    <Route
+                      path="/sinner"
+                      element={
+                        <SectionRoute section="sinner">
+                          <SinnerPage />
+                        </SectionRoute>
+                      }
+                    />
+                    <Route path="/juventus" element={<JuventusPage />} />
+                    <Route path="/juventus/partite/:matchId" element={<JuventusMatchPage />} />
+                    <Route
+                      path="/formula1"
+                      element={
+                        <SectionRoute section="f1">
+                          <Formula1Page />
+                        </SectionRoute>
+                      }
+                    />
+                    <Route
+                      path="/motogp"
+                      element={
+                        <SectionRoute section="motogp">
+                          <MotoGPPage />
+                        </SectionRoute>
+                      }
+                    />
+                    <Route path="/preferenze" element={<PreferencesPage />} />
+                    <Route path="/accedi" element={<AuthPage />} />
+                    <Route path="/reimposta-password" element={<ResetPasswordPage />} />
+                  </Route>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </UserPrefsProvider>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

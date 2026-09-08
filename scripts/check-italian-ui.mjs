@@ -76,6 +76,10 @@ const ALLOWLIST_WORDS = new Set(
     "DNS",
     "DNQ",
     "DOB",
+    // Prestiti d'uso corrente in italiano nei moduli di accesso
+    "Email",
+    "Password",
+
     // Brand / provider
     "Sky",
     "Sport",

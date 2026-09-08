@@ -35,6 +35,7 @@ import {
   type CalendarSport,
 } from "@/hooks/useCalendarEvents";
 import { toRomeDate, formatDateTimeIT } from "@/lib/dateUtils";
+import { useUserPrefs } from "@/contexts/useUserPrefs";
 import { cn } from "@/lib/utils";
 
 // Etichette IT per settimane e mesi (no date-fns/locale per zero-dipendenze)
@@ -89,6 +90,13 @@ export default function CalendarPage() {
     }
   }, [viewMode]);
 
+  const { sections } = useUserPrefs();
+  // Le sezioni disattivate nel profilo non compaiono nel calendario.
+  const visibleSports = useMemo(
+    () => SPORTS.filter((s) => s === "juventus" || sections[s]),
+    [sections],
+  );
+
   const { events, isLoading, refetchAll } = useCalendarEvents();
   const { sync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
 
@@ -103,7 +111,10 @@ export default function CalendarPage() {
     return d ? d.getTime() < nowMs : false;
   };
 
-  const filteredEvents = useMemo(() => events.filter((e) => enabled[e.sport]), [events, enabled]);
+  const filteredEvents = useMemo(
+    () => events.filter((e) => enabled[e.sport] && visibleSports.includes(e.sport)),
+    [events, enabled, visibleSports],
+  );
 
   // Indice eventi per giorno (chiave Rome YYYY-MM-DD)
   const eventsByDay = useMemo(() => {
@@ -226,7 +237,7 @@ export default function CalendarPage() {
 
       {/* Legenda */}
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        {SPORTS.map((s) => {
+        {visibleSports.map((s) => {
           const on = enabled[s];
           return (
             <button

@@ -4,6 +4,8 @@ import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { CalendarItem } from "@/hooks/useCalendarEvents";
 import CalendarPage from "./CalendarPage";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { UserPrefsProvider } from "@/contexts/UserPrefsContext";
 
 const mockUseCalendarEvents = vi.fn();
 
@@ -40,7 +42,11 @@ function renderPage() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <CalendarPage />
+        <AuthProvider>
+          <UserPrefsProvider>
+            <CalendarPage />
+          </UserPrefsProvider>
+        </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );

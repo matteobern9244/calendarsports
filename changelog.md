@@ -17,6 +17,34 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [2.10.0] — Utenti, profilo e preferenze sincronizzate (2026-09-08)
+
+Bump applicativo `2.9.0` → `2.10.0`, esposto da `src/lib/version.ts` e
+`package.json`.
+
+### Aggiunto
+
+- **Registrazione e accesso** con email e password, Google e Apple (gestiti da
+  Lovable Cloud), pagina `/accedi`, recupero password via email e pagina
+  `/reimposta-password`.
+- **Profilo utente** (tabella `profiles`, con regole di accesso limitate al solo
+  proprietario) che conserva tema dell'applicazione (predefinito: scuro),
+  squadra di calcio preferita (predefinita: Juventus) e visibilità delle sezioni
+  Jannik Sinner, Formula 1 e MotoGP (predefinite: attive).
+- **Sezioni disattivabili**: quando una sezione è spenta scompare dal menu,
+  dalla Home e dal Calendario, e il link diretto riporta alla Home.
+- Nel pannello Preferenze una nuova area **Account** con stato dell'accesso,
+  uscita, squadra preferita e interruttori delle sezioni.
+
+### Modificato
+
+- Le preferenze locali già presenti sul dispositivo vengono migrate nel profilo
+  al primo accesso; da quel momento vale quanto salvato online.
+- Chi non ha effettuato l'accesso continua a vedere l'applicazione come prima,
+  con le preferenze salvate solo sul dispositivo.
+- Allowlist di `scripts/check-italian-ui.mjs`: aggiunte «Email» e «Password»,
+  prestiti d'uso corrente in italiano nei moduli di accesso.
+
 ## [2.9.0] — Rotazione del segreto, dispatcher più leggero, offline completo (2026-09-06)
 
 Bump applicativo `2.8.0` → `2.9.0`, esposto da `src/lib/version.ts` e
