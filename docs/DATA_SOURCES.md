@@ -45,17 +45,34 @@ Azioni: `calendar`, `driver-standings`, `constructor-standings`, `last-result`,
 
 Azioni: `standings`, `calendar`, `next-match`.
 
+Parametri: `season` (quattro cifre) e `team` (slug, nome o alias di una squadra
+di Serie A). `team` assente vale `juventus`; un valore fuori dall'elenco
+risponde `400`, non un calendario vuoto. `standings` ignora `team`: la
+classifica è la stessa per tutte e venti.
+
 - **Scraping HTML**: i widget di `sport.sky.it`, da cui si estrae un JSON
   incapsulato in `<script data-props="true">`, con un fallback all'attributo
   `model=` del formato precedente.
-- **API reale**: Lega Serie A (`api-sdp.legaseriea.it`) per le emittenti. Gli id
-  di stagione sono **hardcoded** e arrivano al 2026.
+- **API reale**: Lega Serie A (`api-sdp.legaseriea.it`) per le emittenti. L'id
+  di stagione si **risolve a runtime** da `/competitions/{id}/seasons`, cercando
+  la voce il cui `seasonName` inizia con l'anno richiesto, e si memorizza per la
+  vita dell'isolate. Prima era una mappa scritta a mano, ed era sbagliata: 2026
+  e 2025 puntavano allo stesso id, quindi il calendario in corso mostrava le
+  emittenti della stagione precedente. Se la risoluzione fallisce la funzione
+  serve il calendario **senza emittenti**, non con quelle di un'altra stagione.
 - **Dataset statico**: gli id competizione. Tre principali (Serie A, Champions,
   Coppa Italia) più ventiquattro sondati in modo opportunistico, ignorando i 404.
-- **Cache**: nessuna. È l'unica funzione senza cache lato server.
+  E l'elenco delle venti squadre, in `_shared/serieATeams.ts`, copia generata di
+  `src/lib/serieATeams.ts`.
+- **Cache**: nessuna sulle partite. È l'unica funzione senza cache lato server.
 - `meta.dataSource` vale `fallback-previous-season` quando la stagione richiesta
   non è ancora pubblicata e si ripiega su quella prima. `calendar` non lo fa di
   proposito: riempirebbe il calendario con le partite dell'anno scorso.
+- `meta.team` e `meta.teamName` dichiarano quale squadra è stata servita.
+  `meta.competitionsWithoutMatches` elenca i tornei che hanno risposto ma non
+  contengono partite della squadra, e resta distinto da
+  `meta.competitionsUnavailable`, che è il torneo irraggiungibile: con venti
+  squadre «il Lecce non gioca la Champions» è la norma, non un guasto.
 
 ### `sports-motogp`
 

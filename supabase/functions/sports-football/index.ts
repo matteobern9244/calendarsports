@@ -1,5 +1,12 @@
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/security.ts";
 import { buildMatchId, romeDateKeyOf } from "./matchId.ts";
+import { matchesTeam, type SerieATeam } from "../_shared/serieATeams.ts";
+import {
+  legaMatchInvolvesTeam,
+  matchInvolvesTeam,
+  pickSeasonId,
+  resolveRequestedTeam,
+} from "./teamFilter.ts";
 
 const SKY_BASE = "https://sport.sky.it";
 const SERIE_A_COMP_ID = "21";
@@ -8,13 +15,13 @@ const COPPA_ITALIA_COMP_ID = "259";
 const LEGA_API = "https://api-sdp.legaseriea.it/v1/serie-a/football";
 
 /**
- * Competizioni interrogate per costruire il calendario Juventus.
+ * Competizioni interrogate per costruire il calendario della squadra.
  *
  * Sky non espone un widget "squadra": ogni torneo ha un id numerico e va
  * letto separatamente. Oltre ai tre tornei principali proviamo una lista di
  * id candidati (competizioni realmente pubblicate da Sky o adiacenti a
  * quelle note) per intercettare automaticamente Supercoppa Italiana,
- * Mondiale per Club, amichevoli e qualunque altro torneo in cui la Juventus
+ * Mondiale per Club, amichevoli e qualunque altro torneo in cui la squadra
  * venga inserita. Gli id non disponibili rispondono 404 e vengono ignorati.
  */
 const CORE_COMPETITION_IDS = [SERIE_A_COMP_ID, UCL_COMP_ID, COPPA_ITALIA_COMP_ID];
@@ -46,13 +53,52 @@ const EXTRA_COMPETITION_IDS = [
 ];
 const ALL_COMPETITION_IDS = [...CORE_COMPETITION_IDS, ...EXTRA_COMPETITION_IDS];
 
-const LEGA_SEASON_IDS: Record<string, string> = {
-  "2026": "serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a",
-  "2025": "serie-a::Football_Season::5f0e080fc3a44073984b75b3a8e06a8a",
-  "2024": "serie-a::Football_Season::1e32f55e98fc408a9d1fc27c0ba43243",
-  "2023": "serie-a::Football_Season::104a84bc07f641e685f70a850c6399eb",
-  "2022": "serie-a::Football_Season::65f4d59dedbb43b68197b0ff0529fa21",
+/** Id della Serie A nell'API Lega: stabile, non dipende dalla stagione. */
+const LEGA_SERIE_A_COMPETITION_ID =
+  "serie-a::Football_Competition::ec93b94f74294dc98ab5bcfd67fc0d88";
+
+const LEGA_HEADERS = {
+  accept: "text/plain; x-api-version=1.0",
+  Referer: "https://www.legaseriea.it/",
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
 };
+
+/**
+ * Gli id stagione sono immutabili: una volta risolti valgono per tutta la vita
+ * dell'isolate. Si memorizzano solo le risposte riuscite, così un guasto
+ * temporaneo della Lega non resta congelato fino al prossimo deploy.
+ */
+const seasonIdCache = new Map<string, string | null>();
+
+/**
+ * Chiede alla Lega qual e' l'id della stagione che inizia in `season`.
+ *
+ * Prima questo dato era una mappa statica scritta a mano, ed era gia'
+ * sbagliata: «2026» e «2025» puntavano allo stesso id, quindi il calendario
+ * 2026/27 mostrava i telecronisti del 2025/26. Un errore di questo tipo non
+ * si manifesta: non c'e' un 404, non c'e' uno spinner, c'e' solo un nome di
+ * emittente plausibile e vecchio di un anno.
+ */
+async function fetchSeasonId(season: string): Promise<string | null> {
+  const cached = seasonIdCache.get(season);
+  if (cached !== undefined) return cached;
+
+  try {
+    const url = `${LEGA_API}/competitions/${encodeURIComponent(LEGA_SERIE_A_COMPETITION_ID)}/seasons?locale=it-IT`;
+    const res = await fetch(url, { headers: LEGA_HEADERS });
+    if (!res.ok) {
+      console.warn(`Lega API seasons error: ${res.status}`);
+      return null;
+    }
+    const seasonId = pickSeasonId(await res.json(), season);
+    if (!seasonId) console.warn(`La Lega non espone la stagione ${season}`);
+    seasonIdCache.set(season, seasonId);
+    return seasonId;
+  } catch (e) {
+    console.error("Lega API seasons fetch error:", e);
+    return null;
+  }
+}
 
 const COMPETITION_NAMES: Record<string, string> = {
   [SERIE_A_COMP_ID]: "Serie A",
@@ -146,24 +192,18 @@ async function fetchSkyWidget(
   throw new Error(`Sky Sport error: ${lastStatus ?? 404}`);
 }
 
-async function fetchBroadcasterMap(season: string): Promise<Record<string, string>> {
-  const seasonId = LEGA_SEASON_IDS[season];
-  if (!seasonId) {
-    console.warn(`No Lega Serie A seasonId for season ${season}`);
-    return {};
-  }
+async function fetchBroadcasterMap(
+  season: string,
+  team: SerieATeam,
+): Promise<Record<string, string>> {
+  const seasonId = await fetchSeasonId(season);
+  if (!seasonId) return {};
 
   try {
     const url = `${LEGA_API}/seasons/${encodeURIComponent(seasonId)}/matches?locale=it-IT`;
     console.log("Fetching Lega Serie A broadcasters:", url);
 
-    const res = await fetch(url, {
-      headers: {
-        accept: "text/plain; x-api-version=1.0",
-        Referer: "https://www.legaseriea.it/",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-    });
+    const res = await fetch(url, { headers: LEGA_HEADERS });
 
     if (!res.ok) {
       console.warn(`Lega API error: ${res.status}`);
@@ -175,15 +215,7 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
     const map: Record<string, string> = {};
 
     for (const m of matches) {
-      const homeName = m.home?.shortName || m.home?.officialName || "";
-      const awayName = m.away?.shortName || m.away?.officialName || "";
-
-      if (
-        !homeName.toLowerCase().includes("juventus") &&
-        !awayName.toLowerCase().includes("juventus")
-      ) {
-        continue;
-      }
+      if (!legaMatchInvolvesTeam(m, team)) continue;
 
       const broadcasters = m.editorial?.broadcasters;
       if (!broadcasters) continue;
@@ -211,7 +243,7 @@ async function fetchBroadcasterMap(season: string): Promise<Record<string, strin
       }
     }
 
-    console.log(`Found broadcaster info for ${Object.keys(map).length} Juventus matches`);
+    console.log(`Found broadcaster info for ${Object.keys(map).length} ${team.name} matches`);
     return map;
   } catch (e) {
     console.error("Lega API broadcaster fetch error:", e);
@@ -243,10 +275,11 @@ function competitionNameFromMatches(rounds: any[]): string | null {
   return null;
 }
 
-function extractJuventusMatches(
+function extractTeamMatches(
   model: any,
   competitionId: string,
   broadcasterMap: Record<string, string>,
+  team: SerieATeam,
 ): any[] {
   const rounds = model.competitionMatchList || [];
   const matches: any[] = [];
@@ -259,13 +292,9 @@ function extractJuventusMatches(
     for (const matchDay of matchDayList) {
       const matchList = matchDay.matchList || [];
       for (const match of matchList) {
+        if (!matchInvolvesTeam(match, team)) continue;
         const homeName = match.home?.name || "";
         const awayName = match.away?.name || "";
-        if (
-          !homeName.toLowerCase().includes("juventus") &&
-          !awayName.toLowerCase().includes("juventus")
-        )
-          continue;
 
         const isFinished = match.status === "FullTime";
 
@@ -323,10 +352,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    // La squadra e' un parametro come la stagione. Assente significa Juventus:
+    // i chiamanti gia' in produzione non lo passano e devono continuare a
+    // vedere quello che vedevano prima.
+    const richiesta = resolveRequestedTeam(url.searchParams.get("team"));
+    if (!richiesta.ok) {
+      return new Response(JSON.stringify({ success: false, error: richiesta.error }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const team = richiesta.team;
+
     let data: any;
     let seasonUsed = season;
-    let calendarMeta: { competitionsIncluded: string[]; competitionsUnavailable: string[] } | null =
-      null;
+    let calendarMeta: {
+      competitionsIncluded: string[];
+      competitionsUnavailable: string[];
+      competitionsWithoutMatches: string[];
+    } | null = null;
 
     switch (action) {
       case "standings": {
@@ -365,14 +409,14 @@ Deno.serve(async (req) => {
       }
 
       case "calendar": {
-        // Tutte le competizioni Juventus della stagione richiesta.
+        // Tutte le competizioni della squadra nella stagione richiesta.
         // IMPORTANTE: nessun fallback alla stagione precedente, altrimenti i
         // tornei non ancora pubblicati (es. Champions a inizio stagione)
         // riempirebbero il calendario con partite dell'anno scorso.
         const competitionIds = ALL_COMPETITION_IDS;
 
         const [broadcasterMap, ...skyResponses] = await Promise.all([
-          fetchBroadcasterMap(season),
+          fetchBroadcasterMap(season, team),
           ...competitionIds.map((compId) =>
             fetchSkyWidget(
               (s) => `${SKY_BASE}/football/competition-calendar-results/${s}/${compId}/widget.html`,
@@ -388,6 +432,9 @@ Deno.serve(async (req) => {
         const allMatches: any[] = [];
         const competitionsIncluded: string[] = [];
         const competitionsUnavailable: string[] = [];
+        // Distinta da `unavailable`: il torneo esiste e risponde, e' la squadra
+        // che non ci gioca. Con venti squadre e' il caso normale, non l'errore.
+        const competitionsWithoutMatches: string[] = [];
 
         for (let i = 0; i < competitionIds.length; i++) {
           const compId = competitionIds[i];
@@ -400,10 +447,15 @@ Deno.serve(async (req) => {
           }
           const model = extractWidgetModel(skyResponse.html);
           if (!model) continue;
-          const compMatches = extractJuventusMatches(model, compId, broadcasterMap);
+          const compMatches = extractTeamMatches(model, compId, broadcasterMap, team);
           if (compMatches.length === 0) {
             if (CORE_COMPETITION_IDS.includes(compId)) {
-              competitionsUnavailable.push(COMPETITION_NAMES[compId] || compId);
+              const nome = COMPETITION_NAMES[compId] || compId;
+              competitionsWithoutMatches.push(nome);
+              // Il confronto fra nomi e' per uguaglianza esatta: se la fonte
+              // scrivesse la squadra in una forma imprevista, il torneo
+              // risponderebbe e il filtro scarterebbe tutto in silenzio.
+              console.warn(`${nome} risponde ma non contiene partite di ${team.name}`);
             }
             continue;
           }
@@ -419,7 +471,11 @@ Deno.serve(async (req) => {
           else if (id) seenIds.add(id);
         }
 
-        calendarMeta = { competitionsIncluded, competitionsUnavailable };
+        calendarMeta = {
+          competitionsIncluded,
+          competitionsUnavailable,
+          competitionsWithoutMatches,
+        };
 
         // Sort by date
         allMatches.sort((a, b) => {
@@ -481,23 +537,22 @@ Deno.serve(async (req) => {
         if (!model?.rankingLists?.[0]?.teams) {
           throw new Error("Dati non trovati");
         }
-        const juve = model.rankingLists[0].teams.find((t: any) =>
-          t.teamName?.toLowerCase().includes("juventus"),
-        );
-        data = juve
+        const riga = model.rankingLists[0].teams.find((t: any) => matchesTeam(t.teamName, team));
+        if (!riga) console.warn(`${team.name} non compare nella classifica ${season}`);
+        data = riga
           ? {
-              position: juve.position,
-              team: juve.teamName,
-              points: juve.points,
-              played: juve.games,
-              wins: juve.gamesWon,
-              draws: juve.gamesDraw,
-              losses: juve.gamesLost,
-              goalsFor: juve.goalsScored,
-              goalsAgainst: juve.goalsConceded,
-              goalDiff: juve.goalsDifference,
-              logoUrl: juve.logoUrl,
-              lastMatches: (juve.lastMatchesTrend || []).map((m: any) => ({
+              position: riga.position,
+              team: riga.teamName,
+              points: riga.points,
+              played: riga.games,
+              wins: riga.gamesWon,
+              draws: riga.gamesDraw,
+              losses: riga.gamesLost,
+              goalsFor: riga.goalsScored,
+              goalsAgainst: riga.goalsConceded,
+              goalDiff: riga.goalsDifference,
+              logoUrl: riga.logoUrl,
+              lastMatches: (riga.lastMatchesTrend || []).map((m: any) => ({
                 result: m.label,
                 home: m.home,
                 away: m.away,
@@ -526,6 +581,8 @@ Deno.serve(async (req) => {
       dataSource,
       season: /^\d{4}$/.test(season) ? parseInt(season, 10) : season,
       seasonUsed: /^\d{4}$/.test(seasonUsed) ? parseInt(seasonUsed, 10) : seasonUsed,
+      team: team.slug,
+      teamName: team.name,
       source: "Sky Sport Italia + Lega Serie A",
       ...(calendarMeta ?? {}),
     };
