@@ -47,8 +47,13 @@ vi.mock("sonner", () => ({
   },
 }));
 
+import { toast } from "sonner";
 import { useSyncAll } from "./useSyncAll";
 import { useCalendarEvents } from "./useCalendarEvents";
+import { resolveTeam } from "@/lib/serieATeams";
+
+const JUVE = resolveTeam("juventus");
+const NAPOLI = resolveTeam("napoli");
 
 const STAGIONE = getCurrentJuventusSeason();
 
@@ -73,7 +78,7 @@ function richiesteCalendario() {
 
 /** Preme «Sincronizza» per il Napoli e aspetta che abbia finito. */
 async function sincronizza({ wrapper }: Ambiente) {
-  const { result } = renderHook(() => useSyncAll("napoli"), { wrapper });
+  const { result } = renderHook(() => useSyncAll(NAPOLI), { wrapper });
   await result.current.sync();
   await waitFor(() => expect(result.current.syncing).toBe(false));
 }
@@ -82,6 +87,7 @@ describe("useSyncAll", () => {
   beforeEach(() => {
     chiamaEdge.mockReset();
     calendario.mockReset();
+    vi.mocked(toast.loading).mockClear();
     chiamaEdge.mockResolvedValue(PAGINA);
     calendario.mockResolvedValue(PAGINA);
   });
@@ -146,7 +152,7 @@ describe("useSyncAll", () => {
     await sincronizza(amb);
 
     calendario.mockClear();
-    renderHook(() => useCalendarEvents("napoli"), { wrapper: amb.wrapper });
+    renderHook(() => useCalendarEvents(NAPOLI), { wrapper: amb.wrapper });
 
     await waitFor(() =>
       expect(amb.client.getQueryData(queryKeys.f1.calendar(STAGIONE))).toBeDefined(),
@@ -163,12 +169,27 @@ describe("useSyncAll", () => {
     await sincronizza(amb);
 
     calendario.mockClear();
-    renderHook(() => useCalendarEvents("juventus"), { wrapper: amb.wrapper });
+    renderHook(() => useCalendarEvents(JUVE), { wrapper: amb.wrapper });
 
     await waitFor(() =>
       expect(calendario.mock.calls.filter(([team]) => team === "juventus").length).toBeGreaterThan(
         0,
       ),
     );
+  });
+
+  /**
+   * Anche quello che «Sincronizza» **dice** e' intestato a una squadra. I
+   * passi scorrono in un toast — «Aggiorno Juventus 2026/27...» — e restare
+   * fermi sulla Juventus mentre si aggiorna il Napoli non romperebbe niente:
+   * mostrerebbe soltanto una riga falsa a chi la legge.
+   */
+  it("i passi mostrati nominano la squadra chiesta", async () => {
+    const amb = ambiente();
+    await sincronizza(amb);
+
+    const messaggi = vi.mocked(toast.loading).mock.calls.map(([testo]) => String(testo));
+    expect(messaggi.some((m) => m.includes("Napoli"))).toBe(true);
+    expect(messaggi.filter((m) => m.includes("Juventus"))).toEqual([]);
   });
 });

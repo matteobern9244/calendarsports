@@ -16,8 +16,8 @@ import {
 import { SparkleLoop } from "./SparkleLoop";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 import { useUserPrefs } from "@/contexts/useUserPrefs";
-import { DEFAULT_TEAM } from "@/lib/serieATeams";
-import { teamPath } from "@/lib/teamRoutes";
+import { resolveTeamStrict } from "@/lib/serieATeams";
+import { teamPath, teamSlugFromPath } from "@/lib/teamRoutes";
 
 // Header non riceve piu' props: tema e preferenze sono in /preferenze.
 
@@ -32,10 +32,8 @@ const ALL_NAV_ITEMS = [
     Icon: TennisBrandIcon,
     section: "sinner",
   },
-  // La squadra e' ancora quella predefinita: la voce seguira' la preferenza
-  // quando la preferenza arrivera' fino alla navigazione. Il percorso e' pero'
-  // gia' quello nuovo, cosi' il menu non passa da un redirect a ogni clic.
-  { label: "JUVENTUS", shortLabel: "JUVE", path: teamPath(DEFAULT_TEAM), Icon: JuveBrandIcon },
+  // La voce della squadra e' l'unica che cambia da utente a utente: si
+  // aggiunge qui sotto, in `navItems`, perche' dipende da un hook.
   { label: "FORMULA 1", shortLabel: "F1", path: "/formula1", Icon: F1BrandIcon, section: "f1" },
   {
     label: "MOTOGP",
@@ -45,6 +43,14 @@ const ALL_NAV_ITEMS = [
     section: "motogp",
   },
 ] as const;
+
+interface NavItem {
+  label: string;
+  shortLabel: string;
+  path: string;
+  Icon: (typeof ALL_NAV_ITEMS)[number]["Icon"];
+  section?: string;
+}
 
 interface Burst {
   id: number;
@@ -59,12 +65,38 @@ export default function Header() {
   const navigate = useNavigate();
   const burstSeq = useRef(0);
   const { open: prefsOpen, toggle: togglePrefs } = usePreferencesPanel();
-  const { sections } = useUserPrefs();
+  const { sections, favoriteTeam } = useUserPrefs();
+
+  /**
+   * Dentro una pagina squadra comanda l'**indirizzo**, fuori la preferenza.
+   *
+   * E' la stessa regola che governa il rendering della pagina, e qui serve
+   * due volte: un menu che dicesse «Napoli» sopra la pagina del Milan — aperta
+   * magari da un link condiviso — mentirebbe su cio' che si sta guardando, e
+   * cliccandolo porterebbe via invece di ricaricare dove si e'.
+   *
+   * `resolveTeamStrict` e non `resolveTeam`: uno slug inventato e' un 404, non
+   * una squadra, e li' il menu torna a proporre la preferenza.
+   *
+   * L'indirizzo si legge dal `pathname` e non con `useParams` perche'
+   * l'intestazione sta nel `Layout`, che **avvolge** le rotte invece di
+   * starci dentro: qui i parametri della rotta non arrivano.
+   */
+  const team = resolveTeamStrict(teamSlugFromPath(location.pathname) ?? undefined) ?? favoriteTeam;
 
   // Le sezioni disattivate nel profilo spariscono dal menu.
-  const navItems = ALL_NAV_ITEMS.filter(
+  const navItems: NavItem[] = ALL_NAV_ITEMS.filter(
     (item) => !("section" in item) || sections[item.section as keyof typeof sections],
   );
+  // La voce della squadra torna dov'era: fra Sinner e Formula 1.
+  const posizioneSquadra = navItems.findIndex((item) => item.path === "/formula1");
+  const squadra: NavItem = {
+    label: team.name.toUpperCase(),
+    shortLabel: team.name.toUpperCase(),
+    path: teamPath(team),
+    Icon: JuveBrandIcon,
+  };
+  navItems.splice(posizioneSquadra === -1 ? navItems.length : posizioneSquadra, 0, squadra);
 
   const triggerBurst = (path: string, e: ReactMouseEvent<HTMLAnchorElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();

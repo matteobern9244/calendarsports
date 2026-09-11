@@ -2,7 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CalendarItem } from "@/hooks/useCalendarEvents";
 import type { RomeYMD } from "@/lib/calendarGrid";
+import { resolveTeam } from "@/lib/serieATeams";
 import DayEventsDialog from "./DayEventsDialog";
+
+const JUVE = resolveTeam("juventus");
 
 const GIORNO: RomeYMD = { y: 2099, m: 5, d: 3 };
 
@@ -35,6 +38,7 @@ function renderDialog(
       isPast={over.isPast ?? (() => false)}
       onSelect={onSelect}
       onClose={onClose}
+      team={JUVE}
     />,
   );
   return { onSelect, onClose };

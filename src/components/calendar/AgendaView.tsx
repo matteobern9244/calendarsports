@@ -1,8 +1,9 @@
 import type { CalendarItem } from "@/hooks/useCalendarEvents";
+import type { SerieATeam } from "@/lib/serieATeams";
 import { formatDayHeaderIT, romeHHMM, type RomeYMD } from "@/lib/calendarGrid";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { SPORT_BADGE, SPORT_DOT, SPORT_LABEL } from "./sportStyles";
+import { SPORT_BADGE, SPORT_DOT, sportLabel } from "./sportStyles";
 
 export interface AgendaDay {
   ymd: RomeYMD;
@@ -23,6 +24,8 @@ interface AgendaViewProps {
   isLoading: boolean;
   /** «Maggio 2099», per il messaggio di elenco vuoto. */
   monthLabel: string;
+  /** La squadra guardata: decide l'etichetta della riga di calcio. */
+  team: SerieATeam;
 }
 
 /**
@@ -36,6 +39,7 @@ export default function AgendaView({
   onSelect,
   isLoading,
   monthLabel,
+  team,
 }: AgendaViewProps) {
   return (
     <div className="space-y-3">
@@ -87,7 +91,7 @@ export default function AgendaView({
                           SPORT_BADGE[ev.sport],
                         )}
                       >
-                        {SPORT_LABEL[ev.sport]}
+                        {sportLabel(ev.sport, team)}
                       </Badge>
                       <span className={cn("flex-1 min-w-0", past && "line-through")}>
                         <span className="block text-sm font-semibold truncate">

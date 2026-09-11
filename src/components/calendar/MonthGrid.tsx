@@ -1,7 +1,8 @@
 import type { CalendarItem } from "@/hooks/useCalendarEvents";
+import type { SerieATeam } from "@/lib/serieATeams";
 import { WEEKDAY_LABELS, romeHHMM, ymdKey, type RomeYMD } from "@/lib/calendarGrid";
 import { cn } from "@/lib/utils";
-import { SPORT_DOT, SPORT_LABEL } from "./sportStyles";
+import { SPORT_DOT, sportLabel } from "./sportStyles";
 
 interface MonthGridProps {
   /** Le sei settimane del mese, giorni di bordo compresi. */
@@ -18,6 +19,8 @@ interface MonthGridProps {
   onSelect: (event: CalendarItem) => void;
   /** Chiede l'elenco completo di un giorno: e' cosa fa «+N altri». */
   onOpenDay: (day: RomeYMD) => void;
+  /** La squadra guardata: decide l'etichetta della riga di calcio. */
+  team: SerieATeam;
 }
 
 /**
@@ -33,6 +36,7 @@ export default function MonthGrid({
   isPast,
   onSelect,
   onOpenDay,
+  team,
 }: MonthGridProps) {
   return (
     <div className="hidden md:block rounded-xl border border-border/60 bg-card/60 backdrop-blur-xs overflow-hidden">
@@ -90,7 +94,7 @@ export default function MonthGrid({
                       // apre qualcosa. E lo stato "concluso" era affidato
                       // al solo `line-through`, che uno screen reader non
                       // vede.
-                      aria-label={`${romeHHMM(ev.date)} ${SPORT_LABEL[ev.sport]}: ${ev.shortLabel} (${ev.context})${past ? ", concluso" : ""}. Apri i dettagli`}
+                      aria-label={`${romeHHMM(ev.date)} ${sportLabel(ev.sport, team)}: ${ev.shortLabel} (${ev.context})${past ? ", concluso" : ""}. Apri i dettagli`}
                       className={cn(
                         "group flex items-start gap-1 text-left text-[11px] leading-tight px-1 py-0.5 rounded hover:bg-muted/50 transition-colors",
                         past && "opacity-50 grayscale line-through",
@@ -106,7 +110,7 @@ export default function MonthGrid({
                       <span className="truncate">
                         <span className="font-mono">{romeHHMM(ev.date)}</span>{" "}
                         <span className="font-semibold uppercase tracking-wide">
-                          {SPORT_LABEL[ev.sport]}:
+                          {sportLabel(ev.sport, team)}:
                         </span>{" "}
                         <span>{ev.shortLabel}</span>{" "}
                         <span className="text-muted-foreground">({ev.context})</span>

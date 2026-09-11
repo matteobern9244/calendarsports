@@ -366,3 +366,90 @@ test("preferenze: la squadra si sceglie da una tendina che non chiude il pannell
     "Napoli",
   );
 });
+
+/**
+ * La preferenza esce dal pannello e arriva dove si naviga.
+ *
+ * Fino al passo 10 la squadra scelta cambiava soltanto cio' che si vedeva
+ * digitando `/squadra/<slug>` a mano: il menu, la Home e il calendario
+ * aggregato restavano juventini. Questa e' la catena che lo chiude, ed e' una
+ * catena che solo il browser puo' percorrere per intero — tendina in un
+ * portale, `localStorage`, navigazione, tre pagine diverse.
+ */
+test("squadra: la preferenza arriva al menu e alla Home", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Preferenze" }).click();
+  const tendina = page.getByRole("combobox", { name: "Squadra di calcio preferita" });
+  await tendina.click();
+  await page.getByRole("option", { name: "Napoli", exact: true }).click();
+  // La scelta e' registrata prima di chiudere: l'Escape che arrivasse mentre
+  // la tendina si sta ancora chiudendo verrebbe consumato da lei, e il
+  // pannello — che e' modale — resterebbe aperto sopra il menu.
+  await expect(tendina).toHaveText("Napoli");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  // Il menu porta alla squadra scelta, senza passare da un redirect.
+  const voce = page.getByRole("link", { name: "NAPOLI", exact: true });
+  await expect(voce).toBeVisible();
+  await expect(voce).toHaveAttribute("href", "/squadra/napoli");
+
+  // La Home dice di chi e' la prossima partita, e da che parte gioca.
+  // Juventus-Napoli e' la prima in calendario per il Napoli: vista da Napoli
+  // e' una trasferta, e con il vecchio `includes("juventus")` sarebbe stata
+  // «vs Napoli», cioe' il Napoli dato come avversario di se stesso.
+  await expect(page.getByText("Calcio · Napoli")).toBeVisible();
+  await expect(page.getByText("@ Juventus")).toBeVisible();
+
+  // Da qui in avanti si naviga per link e non con `goto`: la preferenza vive
+  // in `localStorage`, e ogni caricamento di documento in questa suite parte
+  // da un `localStorage.clear()`.
+  await voce.click();
+  await expect(page).toHaveURL(/\/squadra\/napoli$/);
+  await expect(page.getByRole("heading", { name: "Napoli" }).first()).toBeVisible();
+});
+
+/**
+ * La stessa preferenza, vista dalle altre due pagine che la usano. Qui la
+ * squadra e' scritta sul dispositivo invece che scelta dalla tendina: e' il
+ * modo di sopravvivere ai `goto`, e descrive comunque un utente vero — chi
+ * torna sull'app il giorno dopo.
+ */
+test("squadra: la preferenza guida il calendario aggregato, l'indirizzo la scavalca", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("cse-favorite-team", "napoli");
+  });
+  await page.clock.setFixedTime(new Date("2099-05-05T10:00:00Z"));
+  await installSportsApiMocks(page);
+
+  await page.goto("/calendario");
+
+  // Napoli-Lazio esiste solo nel calendario del Napoli: la sua presenza
+  // dimostra che la pagina ha chiesto davvero l'altra squadra.
+  await expect(page.getByRole("button", { name: /Napoli: vs Lazio/ })).toBeVisible();
+  // E Juventus-Milan, che nel calendario del Napoli non c'e', non compare.
+  await expect(page.getByRole("button", { name: /vs Milan/ })).toHaveCount(0);
+
+  // L'incrocio si vede dalla parte giusta: per il Napoli e' una trasferta.
+  await expect(page.getByRole("button", { name: /Napoli: @ Juventus/ })).toBeVisible();
+
+  // Il filtro dice di chi sono quelle partite, e spegne le sue.
+  await page.getByRole("button", { name: "Napoli", exact: true }).click();
+  await expect(page.getByRole("button", { name: /Napoli: @ Juventus/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /F1: Gara \(Imola\)/ })).toBeVisible();
+
+  // Dentro una pagina squadra comanda l'indirizzo: un link condiviso sulla
+  // Juventus non deve mostrare un menu che dice «Napoli», ne' portare via da
+  // li' al primo clic.
+  await page.goto("/squadra/juventus");
+  await expect(page.getByRole("link", { name: "JUVENTUS", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "NAPOLI", exact: true })).toHaveCount(0);
+
+  // Fuori di li' il menu torna a proporre la preferenza.
+  await page.goto("/calendario");
+  await expect(page.getByRole("link", { name: "NAPOLI", exact: true })).toBeVisible();
+});

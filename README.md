@@ -138,13 +138,15 @@ L'app espone sei viste principali:
   la card chiarisce dove il titolo è già disponibile in Italia oggi.
 
 - `Jannik Sinner`: profilo sintetico, risultati e calendario tornei.
-- `Juventus`: calendario partite e classifica Serie A.
+- `Squadra di calcio`: calendario partite, classifica Serie A e dettaglio
+  delle singole partite, all'indirizzo `/squadra/<slug>`. La squadra e' quella
+  dell'indirizzo; il menu propone quella scelta nelle preferenze.
 - `Formula 1`: calendario GP, classifica piloti e costruttori.
 - `MotoGP`: calendario weekend, classifica piloti e costruttori.
-- `Calendario`: vista aggregata Juventus + F1 + MotoGP con due modalità
-  selezionabili (`Mese` stile Google Calendar e `Agenda` cronologica
-  raggruppata per giorno) e **filtri sport cliccabili** (Juventus, F1,
-  MotoGP) con stato persistito in `localStorage`. Si aggiorna in real
+- `Calendario`: vista aggregata della squadra scelta + F1 + MotoGP con due
+  modalità selezionabili (`Mese` stile Google Calendar e `Agenda` cronologica
+  raggruppata per giorno) e **filtri sport cliccabili** — il primo porta il
+  nome della squadra scelta — con stato persistito in `localStorage`. Si aggiorna in real
   time tramite il pulsante "Sincronizza" condiviso con la Home.
 
 Funzionalita' trasversali:
@@ -297,7 +299,7 @@ Rischi:
 - OpenF1 non garantisce copertura completa di tutti i piloti;
 - i fallback statici richiedono manutenzione stagionale.
 
-### Juventus
+### Calcio (squadra scelta)
 
 Fonti correnti:
 

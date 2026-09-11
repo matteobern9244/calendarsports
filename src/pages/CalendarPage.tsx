@@ -25,11 +25,10 @@ import AgendaView from "@/components/calendar/AgendaView";
 import DayEventsDialog from "@/components/calendar/DayEventsDialog";
 import MonthGrid from "@/components/calendar/MonthGrid";
 import MonthList from "@/components/calendar/MonthList";
-import { SPORT_BADGE, SPORT_DOT, SPORT_LABEL } from "@/components/calendar/sportStyles";
+import { SPORT_BADGE, SPORT_DOT, sportLabel } from "@/components/calendar/sportStyles";
 import LoadingState from "@/components/common/LoadingState";
 import { useNowMinute } from "@/hooks/useNow";
 import { useSyncAll } from "@/hooks/useSyncAll";
-import { DEFAULT_TEAM } from "@/lib/serieATeams";
 import {
   useCalendarEvents,
   type CalendarItem,
@@ -91,15 +90,21 @@ export default function CalendarPage() {
     }
   }, [viewMode]);
 
-  const { sections } = useUserPrefs();
+  // La squadra arriva dalla preferenza, non da una costante: qui non c'e' una
+  // URL che la dica, e il calendario aggregato e' proprio il posto dove le
+  // partite di una squadra sola si mescolano a F1 e MotoGP.
+  const { sections, favoriteTeam } = useUserPrefs();
   // Le sezioni disattivate nel profilo non compaiono nel calendario.
   const visibleSports = useMemo(
     () => SPORTS.filter((s) => s === "juventus" || sections[s]),
     [sections],
   );
 
-  const { events, isLoading, refetchAll } = useCalendarEvents(DEFAULT_TEAM.slug);
-  const { sync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll(DEFAULT_TEAM.slug);
+  const { events, isLoading, refetchAll } = useCalendarEvents(favoriteTeam);
+  // La stessa squadra della pagina: «Sincronizza» scrive in cache con
+  // `setQueryData`, quindi due squadre diverse qui vorrebbero dire un
+  // pulsante che gira, dice «fatto» e non cambia niente.
+  const { sync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll(favoriteTeam);
 
   // "Passato" = orario di inizio < ora corrente, ricalcolato ogni minuto
   // per ingrigire gli eventi appena conclusi. L'ora arriva dal clock
@@ -245,7 +250,11 @@ export default function CalendarPage() {
               key={s}
               type="button"
               aria-pressed={on}
-              title={on ? `Nascondi ${SPORT_LABEL[s]}` : `Mostra ${SPORT_LABEL[s]}`}
+              title={
+                on
+                  ? `Nascondi ${sportLabel(s, favoriteTeam)}`
+                  : `Mostra ${sportLabel(s, favoriteTeam)}`
+              }
               onClick={() => setEnabled((prev) => ({ ...prev, [s]: !prev[s] }))}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors",
@@ -262,7 +271,7 @@ export default function CalendarPage() {
                   !on && "opacity-40",
                 )}
               />
-              <span>{SPORT_LABEL[s]}</span>
+              <span>{sportLabel(s, favoriteTeam)}</span>
             </button>
           );
         })}
@@ -316,6 +325,7 @@ export default function CalendarPage() {
           isPast={isPast}
           onSelect={setSelectedEvent}
           onOpenDay={setOpenDay}
+          team={favoriteTeam}
         />
       )}
 
@@ -329,6 +339,7 @@ export default function CalendarPage() {
           onSelect={setSelectedEvent}
           isLoading={isLoading}
           monthLabel={monthLabel}
+          team={favoriteTeam}
         />
       )}
 
@@ -340,6 +351,7 @@ export default function CalendarPage() {
           onSelect={setSelectedEvent}
           isLoading={isLoading}
           monthLabel={monthLabel}
+          team={favoriteTeam}
         />
       )}
 
@@ -353,6 +365,7 @@ export default function CalendarPage() {
           setSelectedEvent(ev);
         }}
         onClose={() => setOpenDay(null)}
+        team={favoriteTeam}
       />
 
       {/* Dialog dettaglio evento */}
@@ -369,7 +382,7 @@ export default function CalendarPage() {
                       SPORT_BADGE[selectedEvent.sport],
                     )}
                   >
-                    {SPORT_LABEL[selectedEvent.sport]}
+                    {sportLabel(selectedEvent.sport, favoriteTeam)}
                   </Badge>
                   <span className="text-xs text-muted-foreground font-mono">
                     {formatDateTimeIT(selectedEvent.date)}
@@ -387,7 +400,7 @@ export default function CalendarPage() {
               <DialogFooter>
                 <Button asChild variant="outline" className="rounded-full">
                   <Link to={selectedEvent.href} onClick={() => setSelectedEvent(null)}>
-                    Vai a {SPORT_LABEL[selectedEvent.sport]}
+                    Vai a {sportLabel(selectedEvent.sport, favoriteTeam)}
                   </Link>
                 </Button>
               </DialogFooter>

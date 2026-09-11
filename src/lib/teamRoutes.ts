@@ -50,3 +50,24 @@ export function teamMatchPath(team: SerieATeam, matchId: string | null | undefin
 export function skyTeamPageUrl(team: SerieATeam): string {
   return `https://sport.sky.it/calcio/squadre/${team.slug}/news`;
 }
+
+/**
+ * La squadra scritta in un indirizzo, o `null` se l'indirizzo non e' quello di
+ * una pagina squadra.
+ *
+ * E' l'inverso di `teamPath`, e sta qui per quello: le due si devono il
+ * contrario l'una dell'altra, e una forma di URL cambiata in un posto solo non
+ * farebbe fallire nessun typecheck. Un test le tiene insieme su tutte e venti
+ * le squadre.
+ *
+ * Serve a chi legge l'indirizzo stando **fuori** dalle rotte, dove
+ * `useParams` non arriva: l'intestazione vive nel `Layout`, che avvolge le
+ * rotte invece di starci dentro.
+ *
+ * Restituisce il segmento com'e', senza dire se sia davvero una squadra:
+ * validarlo tocca a chi lo usa, con `resolveTeamStrict`.
+ */
+export function teamSlugFromPath(pathname: string): string | null {
+  const match = /^\/squadra\/([^/]+)/.exec(pathname);
+  return match ? match[1] : null;
+}

@@ -19,10 +19,10 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Non rilasciato]
 
-Lavoro in corso sulla squadra di calcio configurabile. **La preferenza non
-guida ancora la navigazione**: il menu, la Home e il calendario aggregato
-portano tuttora alla Juventus qualunque cosa si scelga. La pagina squadra pero'
-non e' piu' juventina: segue l'indirizzo, e ogni squadra ha il suo.
+Lavoro in corso sulla squadra di calcio configurabile. La squadra scelta ora
+**si vede davvero**: il menu, la Home e il calendario aggregato la seguono, e
+ogni squadra ha un indirizzo suo. Restano juventini gli highlights, il tema
+visivo della pagina squadra e le notifiche push, per i motivi spiegati sotto.
 
 ### Aggiunto
 
@@ -33,6 +33,13 @@ non e' piu' juventina: segue l'indirizzo, e ogni squadra ha il suo.
   Uno slug che non e' una squadra e' una pagina non trovata, non la Juventus:
   un indirizzo che annuncia una squadra e ne mostra un'altra sarebbe un dato
   falso, per di piu' condivisibile.
+- La **squadra scelta guida ora la navigazione**. La voce del menu porta il suo
+  nome e il suo indirizzo; la Home mostra la sua prossima partita, con
+  l'avversario e il campo dalla parte giusta; il calendario aggregato mostra le
+  sue partite, le intesta a lei nella legenda e nei filtri, e i suoi link
+  aprono il dettaglio restando nel suo ramo. Dentro una pagina squadra comanda
+  pero' l'**indirizzo**: un link condiviso sulla Juventus mostra la Juventus, e
+  il menu lo dice, anche a chi ha scelto un'altra squadra.
 
 ### Modificato
 
@@ -56,6 +63,8 @@ non e' piu' juventina: segue l'indirizzo, e ogni squadra ha il suo.
   lettura, quindi l'app resta corretta anche dove la migration non e' passata.
 - Tema, squadra e sezioni **cambiano subito** sullo schermo, senza aspettare la
   risposta del server.
+- «Sincronizza» aggiorna la squadra scelta e lo **dice**: i passi che scorrono
+  mentre lavora portano il suo nome, non piu' «Juventus» fisso.
 
 ### Corretto
 
@@ -65,6 +74,27 @@ non e' piu' juventina: segue l'indirizzo, e ogni squadra ha il suo.
 - Se la copia delle preferenze del dispositivo sul profilo, al primo accesso,
   non riesce, adesso viene ritentata al prossimo avvio. Prima veniva segnata
   come fatta comunque, e le preferenze del dispositivo erano perse in silenzio.
+- Nel calendario aggregato il verso della partita si deduceva cercando la
+  parola «juventus» dentro il nome della squadra di casa. Oltre a essere fermo
+  su una squadra sola, il confronto era per sottostringa: la **Juventus Next
+  Gen**, che gioca in Serie C e puo' comparire negli elenchi di coppa, veniva
+  presa per la prima squadra. Ora il confronto e' per uguaglianza esatta, come
+  ovunque nel resto dell'app.
+
+### Limiti noti
+
+- L'intestazione **trabocca oltre il bordo** fra 768 e 1023 pixel di larghezza:
+  le sette voci non ci stanno. E' un difetto che esiste da prima di questo
+  lavoro — misurato a 1029 pixel su 768 disponibili con la vecchia sigla
+  «JUVE» — e i nomi per esteso lo peggiorano di una quarantina di pixel. Va
+  affrontato sul layout dell'intestazione, non qui.
+- Gli **highlights restano juventini**: `highlights-youtube` ha tre elenchi di
+  playlist cablati, e per venti squadre servirebbero venti identificativi da
+  verificare a mano.
+- Il **tema visivo** della pagina squadra resta bianconero: oro e blu-navy sono
+  ovunque, e il Napoli si vede con la livrea juventina.
+- Le **notifiche push** continuano a riguardare la Juventus: cambiarlo richiede
+  una colonna squadra su `push_subscriptions` e una modifica al dispatcher.
 
 ## [2.10.0] — Utenti, profilo e preferenze sincronizzate (2026-09-08)
 

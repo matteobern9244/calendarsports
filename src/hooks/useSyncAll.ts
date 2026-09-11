@@ -6,6 +6,7 @@ import { STREAMING_PROVIDERS, STREAMING_FAMILIES } from "@/hooks/useStreamingDat
 import { streamingApi, callEdgeFunctionWithMeta } from "@/lib/api/sportsApi";
 import { todayRomeISO, addDaysISO } from "@/lib/dateUtils";
 import { requiresWarning } from "@/hooks/syncWarning";
+import type { SerieATeam } from "@/lib/serieATeams";
 import {
   getCurrentSinnerSeason,
   getCurrentF1Season,
@@ -41,7 +42,15 @@ type PrefetchTask = {
   staleTime: number;
 };
 
-export function useSyncAll(teamSlug: string) {
+/**
+ * La squadra arriva intera e non come slug: serve due volte, e per due cose
+ * diverse. Lo slug entra nelle chiavi e nei parametri, il nome nei passi che
+ * l'utente legge — e un'etichetta ferma sulla Juventus mentre si aggiorna il
+ * Napoli non romperebbe niente, direbbe soltanto il falso.
+ */
+export function useSyncAll(team: SerieATeam) {
+  const teamSlug = team.slug;
+  const teamName = team.name;
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [syncStep, setSyncStep] = useState<string>("");
@@ -59,6 +68,7 @@ export function useSyncAll(teamSlug: string) {
     const seasonS = getCurrentSinnerSeason();
     const seasonM = getCurrentMotoGPSeason();
     const seasonJLabel = formatJuventusSeasonLabel(seasonJ);
+    const labelCalcio = `${teamName} ${seasonJLabel}`;
 
     // Mappa: per ogni sport, qual e' la stagione corrente. Usata per
     // ripulire dalla cache le chiavi con stagione diversa.
@@ -107,7 +117,7 @@ export function useSyncAll(teamSlug: string) {
       // Juventus
       {
         sport: "juventus",
-        label: `Juventus ${seasonJLabel}`,
+        label: labelCalcio,
         queryKey: queryKeys.juventus.standings(seasonJ),
         fn: "sports-football",
         params: { action: "standings", season: String(seasonJ) },
@@ -115,7 +125,7 @@ export function useSyncAll(teamSlug: string) {
       },
       {
         sport: "juventus",
-        label: `Juventus ${seasonJLabel}`,
+        label: labelCalcio,
         queryKey: queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, false),
         fn: "sports-football",
         params: {
@@ -129,7 +139,7 @@ export function useSyncAll(teamSlug: string) {
       },
       {
         sport: "juventus",
-        label: `Juventus ${seasonJLabel}`,
+        label: labelCalcio,
         queryKey: queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, true),
         fn: "sports-football",
         params: {
@@ -144,7 +154,7 @@ export function useSyncAll(teamSlug: string) {
       },
       {
         sport: "juventus",
-        label: `Juventus ${seasonJLabel}`,
+        label: labelCalcio,
         queryKey: queryKeys.juventus.info(teamSlug, seasonJ),
         fn: "sports-football",
         params: { action: "next-match", season: String(seasonJ), team: teamSlug },
@@ -220,7 +230,7 @@ export function useSyncAll(teamSlug: string) {
 
     const sportLabel: Record<SportKey, string> = {
       f1: `F1 ${seasonF1}`,
-      juventus: `Juventus ${seasonJLabel}`,
+      juventus: labelCalcio,
       sinner: `Sinner ${seasonS}`,
       motogp: `MotoGP ${seasonM}`,
     };
@@ -303,8 +313,9 @@ export function useSyncAll(teamSlug: string) {
       setSyncProgress(70);
 
       // === Step 3: Juventus calendar — tutte le pagine ===
-      setSyncStep("Aggiornamento calendario Juventus completo...");
-      toast.loading("Aggiornamento calendario Juventus completo...", { id: toastId });
+      const passoCalendario = `Aggiornamento calendario ${teamName} completo...`;
+      setSyncStep(passoCalendario);
+      toast.loading(passoCalendario, { id: toastId });
       const firstPage = queryClient.getQueryData<{ totalPages?: number }>(
         queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, false),
       );
@@ -339,7 +350,7 @@ export function useSyncAll(teamSlug: string) {
                 upcoming.data,
               );
             } catch (err) {
-              console.warn(`Sync juventus calendar page ${p} failed:`, err);
+              console.warn(`Sync ${teamSlug} calendar page ${p} failed:`, err);
             }
           }),
         );
@@ -412,11 +423,11 @@ export function useSyncAll(teamSlug: string) {
       setSyncing(false);
       setTimeout(() => setSyncProgress(0), 600);
     }
-    // `teamSlug` fa parte delle dipendenze: senza, al cambio squadra la
+    // La squadra fa parte delle dipendenze: senza, al cambio squadra la
     // callback resterebbe quella vecchia e «Sincronizza» continuerebbe ad
     // aggiornare le cache della squadra precedente — in silenzio, perche' le
     // richieste andrebbero comunque a buon fine.
-  }, [queryClient, teamSlug]);
+  }, [queryClient, teamSlug, teamName]);
 
   return { sync, syncing, syncStep, syncProgress, lastSyncAt };
 }

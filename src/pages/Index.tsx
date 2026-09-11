@@ -22,7 +22,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
-import { DEFAULT_TEAM } from "@/lib/serieATeams";
+import { matchSide } from "@/lib/juventusMatch";
 import TonightTvList from "@/components/home/TonightTvList";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { cn } from "@/lib/utils";
@@ -48,13 +48,17 @@ const container = {
 };
 
 export default function HomePage() {
+  // La preferenza si legge prima di tutto il resto: da qui in giu' decide
+  // quale calendario si chiede, quale cache «Sincronizza» scalda, e di chi e'
+  // la prossima partita mostrata.
+  const { sections, favoriteTeam } = useUserPrefs();
   const {
     sync: handleSync,
     syncing,
     syncStep,
     syncProgress,
     lastSyncAt,
-  } = useSyncAll(DEFAULT_TEAM.slug);
+  } = useSyncAll(favoriteTeam);
   const { isOnline } = useOnlineStatus();
   const lastSyncLabel = useMemo(() => {
     if (!lastSyncAt) return null;
@@ -77,7 +81,7 @@ export default function HomePage() {
     isLoading: juveLoading,
     error: juveError,
     refetch: juveRefetch,
-  } = useJuventusCalendar(DEFAULT_TEAM.slug, getCurrentJuventusSeason());
+  } = useJuventusCalendar(favoriteTeam.slug, getCurrentJuventusSeason());
   const {
     data: sinnerNext,
     isLoading: sinnerLoading,
@@ -94,7 +98,6 @@ export default function HomePage() {
   const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
 
   const now = useNowMinute();
-  const { sections } = useUserPrefs();
 
   const events = useMemo(() => {
     const upcoming: UpcomingEvent[] = [];
@@ -121,11 +124,14 @@ export default function HomePage() {
         )
         .sort((a, b) => getDateTimestamp(a.date) - getDateTimestamp(b.date))[0];
       if (nextMatch) {
-        const isHome = nextMatch.homeTeam?.toLowerCase().includes("juventus");
-        const opponent = isHome ? nextMatch.awayTeam : nextMatch.homeTeam;
+        // Le stesse deduzioni della pagina squadra, non una seconda copia:
+        // il confronto e' per uguaglianza esatta, e il verso dipende da chi
+        // guarda. Il vecchio `includes("juventus")` sbagliava due volte —
+        // sulla squadra e sul confronto.
+        const { isHome, opponent } = matchSide(nextMatch, favoriteTeam);
         const { date: dateStr, time: timeStr } = formatJuventusDateTime(nextMatch.date);
         upcoming.push({
-          sport: "Calcio · Juventus",
+          sport: `Calcio · ${favoriteTeam.name}`,
           title: `${isHome ? "vs" : "@"} ${opponent}`,
           subtitle: `${nextMatch.competition || "Serie A"} · ${nextMatch.competition === "Serie A" ? `Giornata ${nextMatch.matchday || "—"}` : `Turno ${nextMatch.matchday || "—"}`}`,
           rawDate: nextMatch.date,
@@ -167,7 +173,7 @@ export default function HomePage() {
         return true;
       })
       .sort((a, b) => getDateTimestamp(a.rawDate) - getDateTimestamp(b.rawDate));
-  }, [f1Data, juveCalendar, sinnerNext, motogpNext, now, sections]);
+  }, [f1Data, juveCalendar, sinnerNext, motogpNext, now, sections, favoriteTeam]);
 
   // Fallback offline: nessun dato in cache da nessuna fonte e siamo offline
   if (

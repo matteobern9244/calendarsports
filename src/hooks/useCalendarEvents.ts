@@ -8,7 +8,7 @@ import {
 } from "@/lib/currentSeason";
 import { toRomeDate } from "@/lib/dateUtils";
 import { queryKeys } from "@/lib/queryKeys";
-import { DEFAULT_TEAM } from "@/lib/serieATeams";
+import { matchesTeam, type SerieATeam } from "@/lib/serieATeams";
 import { teamMatchPath } from "@/lib/teamRoutes";
 
 /**
@@ -154,8 +154,16 @@ function expandMotoGP(rounds: unknown[] | undefined): CalendarItem[] {
   return out;
 }
 
-/** Juventus calendar (Sky/Lega Serie A) -> CalendarItem[] (1 per partita). */
-function expandJuventus(items: unknown[] | undefined): CalendarItem[] {
+/**
+ * Calendario di calcio (Sky/Lega Serie A) -> CalendarItem[] (1 per partita).
+ *
+ * La squadra e' un parametro perche' la stessa partita vive in due calendari
+ * con versi opposti: uno Juventus-Napoli e' «vs Napoli» per una e «@ Juventus»
+ * per l'altra. Il confronto e' `matchesTeam`, cioe' uguaglianza esatta sul
+ * nome normalizzato: il `/juventus/i` di prima scambiava la Juventus Next Gen
+ * per la prima squadra, e nessun test se ne sarebbe accorto.
+ */
+function expandFootball(items: unknown[] | undefined, team: SerieATeam): CalendarItem[] {
   if (!Array.isArray(items)) return [];
   const out: CalendarItem[] = [];
   for (const m of items as Array<Record<string, unknown>>) {
@@ -166,7 +174,7 @@ function expandJuventus(items: unknown[] | undefined): CalendarItem[] {
     const competition = String(m.competition ?? "Serie A");
     const matchday = m.matchday;
     const id = String(m.id ?? `${home}-${away}-${date}`);
-    const isHome = /juventus/i.test(home);
+    const isHome = matchesTeam(home, team);
     const opponent = isHome ? away : home;
     const ctxNum = matchday != null ? `Giornata ${matchday}` : "";
     out.push({
@@ -176,11 +184,7 @@ function expandJuventus(items: unknown[] | undefined): CalendarItem[] {
       shortLabel: `${isHome ? "vs" : "@"} ${opponent}`,
       context: [competition, ctxNum].filter(Boolean).join(" · "),
       title: `${home} - ${away}`,
-      // La squadra qui e' ancora quella predefinita, ma la **forma**
-      // dell'indirizzo e' gia' quella nuova: un link e una rotta che si
-      // dicono cose diverse sono un link rotto, e un link rotto non fa
-      // fallire nessun typecheck.
-      href: teamMatchPath(DEFAULT_TEAM, id),
+      href: teamMatchPath(team, id),
       broadcaster: m.broadcaster ? String(m.broadcaster) : undefined,
     });
   }
@@ -193,7 +197,8 @@ function expandJuventus(items: unknown[] | undefined): CalendarItem[] {
  * automaticamente queste cache. Per Juventus carichiamo TUTTE le pagine
  * della stagione corrente (~25) in parallelo.
  */
-export function useCalendarEvents(teamSlug: string) {
+export function useCalendarEvents(team: SerieATeam) {
+  const teamSlug = team.slug;
   const seasonF1 = getCurrentF1Season();
   const seasonJ = getCurrentJuventusSeason();
   const seasonM = getCurrentMotoGPSeason();
@@ -250,7 +255,10 @@ export function useCalendarEvents(teamSlug: string) {
   // e, essendo `events` una nuova referenza, invaliderebbe a cascata anche
   // le memo di `CalendarPage` che ne dipendono. Le tre `expand*` sono
   // funzioni pure di modulo, quindi non sono dipendenze: le uniche sono i
-  // dati, che React Query mantiene referenzialmente stabili.
+  // dati, che React Query mantiene referenzialmente stabili, e la squadra.
+  // Anche quella e' stabile, ed e' il motivo per cui questo hook prende una
+  // `SerieATeam` e non uno slug: l'oggetto arriva sempre da `SERIE_A_TEAMS`,
+  // mentre chi lo ricostruisse a ogni render annullerebbe la memo in silenzio.
   const f1Data = f1.data;
   const motogpData = motogp.data;
   const juveAllData = juveAll.data;
@@ -261,14 +269,15 @@ export function useCalendarEvents(teamSlug: string) {
       [
         ...expandF1(f1Data as unknown[] | undefined),
         ...expandMotoGP(motogpData as unknown[] | undefined),
-        ...expandJuventus(
+        ...expandFootball(
           (juveAllData as unknown[] | undefined) ??
             (juveFirstData as { items?: unknown[] } | undefined)?.items,
+          team,
         ),
       ]
         .filter((e) => toRomeDate(e.date) !== null)
         .sort((a, b) => a.date.localeCompare(b.date)),
-    [f1Data, motogpData, juveAllData, juveFirstData],
+    [f1Data, motogpData, juveAllData, juveFirstData, team],
   );
 
   const { refetch: refetchF1 } = f1;

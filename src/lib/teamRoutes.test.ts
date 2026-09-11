@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { skyTeamPageUrl, teamMatchPath, teamPath } from "./teamRoutes";
-import { DEFAULT_TEAM, resolveTeam } from "./serieATeams";
+import { skyTeamPageUrl, teamMatchPath, teamPath, teamSlugFromPath } from "./teamRoutes";
+import { DEFAULT_TEAM, resolveTeam, SERIE_A_TEAMS } from "./serieATeams";
 
 describe("teamRoutes", () => {
   it("la pagina squadra e' /squadra/<slug>", () => {
@@ -63,5 +63,48 @@ describe("teamRoutes", () => {
     expect(skyTeamPageUrl(resolveTeam("inter"))).toBe(
       "https://sport.sky.it/calcio/squadre/inter/news",
     );
+  });
+});
+
+/**
+ * Il verso opposto: dall'indirizzo alla squadra. Serve a chi sta **fuori**
+ * dalle rotte e non puo' usare `useParams` — l'intestazione, che vive nel
+ * `Layout` e avvolge le rotte invece di starci dentro.
+ */
+describe("teamSlugFromPath", () => {
+  it("legge la squadra dalla pagina e dal dettaglio partita", () => {
+    expect(teamSlugFromPath("/squadra/napoli")).toBe("napoli");
+    expect(teamSlugFromPath("/squadra/napoli/partite/serie-a-2099-05-24-napoli-vs-lazio")).toBe(
+      "napoli",
+    );
+  });
+
+  it("fuori dalle pagine squadra non c'e' nessuna squadra", () => {
+    expect(teamSlugFromPath("/")).toBeNull();
+    expect(teamSlugFromPath("/calendario")).toBeNull();
+    expect(teamSlugFromPath("/squadra")).toBeNull();
+    expect(teamSlugFromPath("/squadra/")).toBeNull();
+  });
+
+  /**
+   * Il vero motivo per cui questa funzione sta accanto a `teamPath` e non
+   * dentro l'intestazione: le due si devono il contrario l'una dell'altra, e
+   * se qualcuno cambiasse la forma della URL in una sola delle due nessun
+   * typecheck se ne accorgerebbe. Qui diventa rosso.
+   */
+  it("e' l'inverso di teamPath per tutte e venti le squadre", () => {
+    for (const team of SERIE_A_TEAMS) {
+      expect(teamSlugFromPath(teamPath(team))).toBe(team.slug);
+      expect(teamSlugFromPath(teamMatchPath(team, "una-partita"))).toBe(team.slug);
+    }
+  });
+
+  /**
+   * Restituisce il segmento com'e', senza decidere se sia una squadra: chi
+   * legge un indirizzo lo valida con `resolveTeamStrict`, ed e' cosi' che
+   * `/squadra/squadra-inventata` resta un 404 invece di diventare la Juventus.
+   */
+  it("non valida: uno slug inventato torna indietro tale e quale", () => {
+    expect(teamSlugFromPath("/squadra/squadra-inventata")).toBe("squadra-inventata");
   });
 });

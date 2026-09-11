@@ -2,7 +2,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CalendarItem } from "@/hooks/useCalendarEvents";
 import { buildMonthGrid, ymdKey, type RomeYMD } from "@/lib/calendarGrid";
+import { resolveTeam } from "@/lib/serieATeams";
 import MonthGrid from "./MonthGrid";
+
+const JUVE = resolveTeam("juventus");
+const NAPOLI = resolveTeam("napoli");
 
 const GIORNO: RomeYMD = { y: 2099, m: 5, d: 3 };
 const OGGI: RomeYMD = { y: 2099, m: 5, d: 1 };
@@ -18,7 +22,11 @@ const evento = (id: string, over: Partial<CalendarItem> = {}): CalendarItem => (
   ...over,
 });
 
-function renderGrid(eventi: CalendarItem[], isPast: (iso: string) => boolean = () => false) {
+function renderGrid(
+  eventi: CalendarItem[],
+  isPast: (iso: string) => boolean = () => false,
+  team = JUVE,
+) {
   const onSelect = vi.fn();
   const onOpenDay = vi.fn();
   render(
@@ -30,6 +38,7 @@ function renderGrid(eventi: CalendarItem[], isPast: (iso: string) => boolean = (
       isPast={isPast}
       onSelect={onSelect}
       onOpenDay={onOpenDay}
+      team={team}
     />,
   );
   return { onSelect, onOpenDay };
@@ -95,5 +104,19 @@ describe("MonthGrid", () => {
     renderGrid([]);
     expect(screen.getAllByText("27")).toHaveLength(2);
     expect(screen.getAllByText("30")).toHaveLength(2);
+  });
+
+  /**
+   * L'etichetta davanti all'evento e' l'unica cosa che dice di **chi** sono
+   * quelle partite. Ferma su «Juventus» sopra il calendario del Napoli,
+   * direbbe il falso a chi legge e a chi ascolta.
+   */
+  it("l'etichetta del calcio segue la squadra guardata", () => {
+    renderGrid([evento("a", { shortLabel: "@ Juventus" })], () => false, NAPOLI);
+    expect(
+      screen.getByRole("button", {
+        name: "20:45 Napoli: @ Juventus (Serie A · Giornata 3). Apri i dettagli",
+      }),
+    ).toBeInTheDocument();
   });
 });

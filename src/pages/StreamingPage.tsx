@@ -52,7 +52,7 @@ import { cn } from "@/lib/utils";
 import { todayRomeISO, addDaysISO, formatDateIT } from "@/lib/dateUtils";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
-import { DEFAULT_TEAM } from "@/lib/serieATeams";
+import { useUserPrefs } from "@/contexts/useUserPrefs";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 // `?? []` creerebbe un array nuovo a ogni render, invalidando le `useMemo`
@@ -81,13 +81,17 @@ export default function StreamingPage() {
   const [italyProvider, setItalyProvider] = useState<StreamingProviderId | "all">(
     initial.italyProvider,
   );
+  // Qui il calcio non si vede, ma «Sincronizza» aggiorna anche il suo
+  // calendario: se scaldasse la cache di una squadra diversa da quella
+  // scelta, il pulsante direbbe «fatto» e le altre pagine non cambierebbero.
+  const { favoriteTeam } = useUserPrefs();
   const {
     sync: handleSync,
     syncing,
     syncStep,
     syncProgress,
     lastSyncAt,
-  } = useSyncAll(DEFAULT_TEAM.slug);
+  } = useSyncAll(favoriteTeam);
   const { isOnline } = useOnlineStatus();
   const lastSyncLabel = useMemo(() => {
     if (!lastSyncAt) return null;

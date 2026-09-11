@@ -20,7 +20,7 @@ script disponibili.
 | Area                 | Punti di ingresso da leggere                                                                                                                                                        |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Home                 | `src/pages/Index.tsx`, `components/home/TonightTvList.tsx`, `components/common/EventCard.tsx`, hook `use*NextEvent`                                                                 |
-| Calendario aggregato | `src/pages/CalendarPage.tsx`, `src/hooks/useCalendarEvents.ts` (espansione F1 + MotoGP + Juventus, filtri persistiti)                                                               |
+| Calendario aggregato | `src/pages/CalendarPage.tsx`, `src/hooks/useCalendarEvents.ts` (espansione F1 + MotoGP + squadra scelta, filtri persistiti), `components/calendar/sportStyles.ts`                   |
 | Squadra di calcio    | `src/pages/TeamPage.tsx`, `src/pages/TeamMatchPage.tsx`, `components/common/TeamRoute.tsx`, `src/lib/teamRoutes.ts`, `sports-football`, `useJuventusCalendar`, `useSerieAStandings` |
 | Formula 1            | `src/pages/Formula1Page.tsx`, `sports-f1`, `src/lib/f1Utils.ts`                                                                                                                     |
 | MotoGP               | `src/pages/MotoGPPage.tsx`, `sports-motogp` (Pulselive per il calendario, Sky per le classifiche)                                                                                   |
@@ -59,6 +59,12 @@ perché **non sono deducibili dal nome della pagina**.
 - **La preferenza grezza si ferma al contesto**: `favoriteTeam` di
   `useUserPrefs` è una `SerieATeam` già risolta, non una stringa. Dettagli e
   motivo in [`architecture-and-boundaries.md`](architecture-and-boundaries.md).
+- **Chi legge la preferenza e chi legge l'indirizzo**: Home, `/calendario` e
+  `/streaming` non hanno una squadra nella URL e prendono `favoriteTeam`;
+  `/squadra/:teamSlug` prende quella dell'indirizzo. `Header` fa entrambe le
+  cose, con l'indirizzo che vince quando c'è. Il guardiano sulle prime tre è
+  `src/pages/syncTeam.test.tsx`: una squadra sbagliata lì non produce nessun
+  errore, solo un «Sincronizza» che aggiorna la cache di un'altra.
 - **Identità di una partita**: `buildMatchId` in
   `supabase/functions/sports-football/index.ts` costruisce lo slug usato come
   parametro di `/squadra/:teamSlug/partite/:matchId`. Cambiarlo rompe i link

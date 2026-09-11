@@ -162,6 +162,25 @@ Il punto di vista sulla singola partita è un parametro, non la Juventus:
 La stessa Juventus-Napoli compare in due calendari, e in quello del Napoli
 l'avversario è dall'altra parte e il risultato è rovesciato.
 
+**Dove non c'è un indirizzo, comanda la preferenza.** Home, calendario
+aggregato e streaming non hanno una squadra nella URL: la leggono da
+`useUserPrefs().favoriteTeam`, che è già una `SerieATeam` risolta. Nessuna di
+loro deve tenersi una costante: un `DEFAULT_TEAM` dimenticato lì non rompe
+niente di visibile — mostra le partite giuste e aggiorna la cache di un'altra
+squadra. Il controllo eseguibile è `src/pages/syncTeam.test.tsx`, che monta le
+tre pagine e verifica quale squadra ricevono `useSyncAll` e
+`useCalendarEvents`.
+
+L'intestazione applica **entrambe** le regole, e in quest'ordine: dentro una
+pagina squadra segue l'indirizzo, fuori la preferenza. Un menu che dicesse
+«Napoli» sopra la pagina della Juventus aperta da un link condiviso mentirebbe
+su ciò che si sta guardando, e cliccandolo porterebbe via da lì. L'indirizzo si
+legge con `teamSlugFromPath` e non con `useParams`, perché `Header` vive nel
+`Layout`, che **avvolge** le rotte invece di starci dentro: i parametri della
+rotta lì non arrivano. `teamSlugFromPath` sta in `teamRoutes.ts` accanto a
+`teamPath` perché le due si devono il contrario l'una dell'altra, e un test le
+tiene insieme su tutte e venti le squadre.
+
 ### Lo stato si aggiusta durante il render, non in un effect
 
 Per azzerare la paginazione quando cambia un filtro, confronta il valore con

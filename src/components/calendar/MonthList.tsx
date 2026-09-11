@@ -1,7 +1,8 @@
 import type { CalendarItem } from "@/hooks/useCalendarEvents";
+import type { SerieATeam } from "@/lib/serieATeams";
 import { MONTH_LABELS, romeHHMM, ymdKey, type RomeYMD } from "@/lib/calendarGrid";
 import { cn } from "@/lib/utils";
-import { SPORT_DOT, SPORT_LABEL } from "./sportStyles";
+import { SPORT_DOT, sportLabel } from "./sportStyles";
 
 interface MonthListProps {
   /** Le sei settimane del mese: qui si tengono solo i giorni del mese. */
@@ -20,6 +21,8 @@ interface MonthListProps {
   isLoading: boolean;
   /** «Maggio 2099», per il messaggio di elenco vuoto. */
   monthLabel: string;
+  /** La squadra guardata: decide l'etichetta della riga di calcio. */
+  team: SerieATeam;
 }
 
 /**
@@ -35,6 +38,7 @@ export default function MonthList({
   onSelect,
   isLoading,
   monthLabel,
+  team,
 }: MonthListProps) {
   return (
     <div className="md:hidden space-y-3">
@@ -72,7 +76,7 @@ export default function MonthList({
                       <button
                         type="button"
                         onClick={() => onSelect(ev)}
-                        aria-label={`${romeHHMM(ev.date)} ${SPORT_LABEL[ev.sport]}: ${ev.shortLabel} (${ev.context})${past ? ", concluso" : ""}. Apri i dettagli`}
+                        aria-label={`${romeHHMM(ev.date)} ${sportLabel(ev.sport, team)}: ${ev.shortLabel} (${ev.context})${past ? ", concluso" : ""}. Apri i dettagli`}
                         className={cn(
                           "w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-muted/40",
                           past && "opacity-50 grayscale",
@@ -92,7 +96,7 @@ export default function MonthList({
                             </span>
                           </span>
                           <span className="block text-xs text-muted-foreground font-mono mt-0.5">
-                            {romeHHMM(ev.date)} · {SPORT_LABEL[ev.sport]}
+                            {romeHHMM(ev.date)} · {sportLabel(ev.sport, team)}
                           </span>
                         </span>
                       </button>
