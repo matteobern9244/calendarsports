@@ -118,6 +118,15 @@ il rollback della cache sta nella richiesta che ha toccato quei campi. Il tema
 e' l'eccezione, e non per dimenticanza: l'effect che riallinea `useTheme` al
 profilo lo riporta indietro da solo.
 
+E dal lato dello schermo la tendina e' **pilotata**, non inizializzata:
+`TeamSelect` riceve `value`, mai `defaultValue`. La preferenza cambia anche da
+fuori — il profilo che arriva dal server al primo accesso, un salvataggio
+rifiutato che viene annullato — e un controllo non pilotato continuerebbe a
+mostrare la squadra vecchia senza che niente lo segnali. Il controllo
+eseguibile e' `src/components/preferences/TeamSelect.test.tsx`: e' l'unica
+verifica che uccide quella mutazione, perche' la e2e non ha modo di far
+cambiare la preferenza da fuori senza una sessione.
+
 ### Lo stato si aggiusta durante il render, non in un effect
 
 Per azzerare la paginazione quando cambia un filtro, confronta il valore con

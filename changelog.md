@@ -27,8 +27,10 @@ la preferenza viene conservata e come si comporta quando si salva.
 ### Modificato
 
 - La **squadra preferita si sceglie da un elenco** delle venti squadre di Serie
-  A invece di scriverla a mano. La casella di testo libero accettava qualunque
-  cosa, e quella cosa finiva nel profilo.
+  A, in ordine alfabetico, invece di scriverla a mano. La casella di testo
+  libero accettava qualunque cosa, e quella cosa finiva nel profilo. L'elenco
+  e' la tendina usata nel resto dell'app, non quella del sistema operativo, e
+  si apre dentro il pannello delle preferenze senza chiuderlo.
 - La preferenza si conserva ora come **identificatore** (`juventus`) e non come
   nome (`Juventus`): e' la forma che serve alle URL, alle chiavi di cache e al
   parametro delle edge function. Migration correttiva
