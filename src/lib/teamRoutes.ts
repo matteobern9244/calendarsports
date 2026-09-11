@@ -71,3 +71,30 @@ export function teamSlugFromPath(pathname: string): string | null {
   const match = /^\/squadra\/([^/]+)/.exec(pathname);
   return match ? match[1] : null;
 }
+
+/** Il riferimento con cui Sky identifica un atleta: entrambi i pezzi servono. */
+export interface SkyPlayerRef {
+  slug: string;
+  id: string;
+}
+
+/**
+ * Ricava slug e id dalla URL della scheda atleta pubblicata nella rosa.
+ *
+ * Sono **due** valori e servono tutti e due, verificato dal vivo l'11 settembre
+ * 2026: `/calcio/atleti/{id}` risponde `404`, e cosi' `/calcio/atleti/x/{id}`
+ * con lo slug sbagliato. Non esiste un indirizzo canonico che rediriga.
+ *
+ * Torna `null` — e non un oggetto a meta' — quando la URL non ha quella forma:
+ * un giocatore senza scheda su Sky esiste, e la sua riga semplicemente non si
+ * apre. Meglio una riga che non si apre di una richiesta che va a sbattere.
+ *
+ * La forma accettata e' stretta di proposito: questi due valori finiscono in
+ * una URL a monte dentro la edge function, che li rivalida con lo stesso
+ * criterio. Qui il controllo evita un viaggio inutile, li' e' la difesa vera.
+ */
+export function skyPlayerRef(profileUrl: string | null | undefined): SkyPlayerRef | null {
+  if (!profileUrl) return null;
+  const match = profileUrl.match(/\/calcio\/atleti\/([a-z0-9-]{1,80})\/(\d{1,12})(?:[/?#]|$)/);
+  return match ? { slug: match[1], id: match[2] } : null;
+}

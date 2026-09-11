@@ -43,7 +43,7 @@ Azioni: `calendar`, `driver-standings`, `constructor-standings`, `last-result`,
 
 ### `sports-football`
 
-Azioni: `standings`, `calendar`, `next-match`.
+Azioni: `standings`, `calendar`, `next-match`, `team-squad`, `lineups`, `player-stats`.
 
 Parametri: `season` (quattro cifre) e `team` (slug, nome o alias di una squadra
 di Serie A). `team` assente vale `juventus`; un valore fuori dall'elenco
@@ -108,6 +108,35 @@ classifica è la stessa per tutte e venti.
   Sono **previsioni editoriali**, non formazioni ufficiali, e la fonte non
   pubblica quando le ha aggiornate: l'interfaccia lo dichiara e non inventa un
   «ultimo aggiornamento».
+- **JSON incorporato (`player-stats`)**: la scheda atleta di Sky,
+  `sport.sky.it/calcio/atleti/{slug}/{id}`. Come le probabili, **non è
+  scraping**: la pagina porta un `<script type="application/json">` con
+  `statisticsMap`, un blocco per **stagione e competizione**
+  (`seasonAndCompId: "2026#21"`, nello **stesso spazio di id** usato per le
+  competizioni: 21 è la Serie A, 5 la Champions).
+  **Servono tutti e due i pezzi dell'indirizzo**: verificato l'11 settembre
+  2026, `/calcio/atleti/{id}` risponde `404` e così `/calcio/atleti/x/{id}` con
+  lo slug sbagliato. Non esiste un indirizzo canonico che rediriga. Entrambi
+  arrivano dal `profileUrl` della rosa e vengono rivalidati con regex strette
+  prima di finire nell'URL a monte.
+  **La forma cambia con il ruolo**: un portiere ha `SavesMade`, `Cleansheets`,
+  `GoalsConceded`, `PenaltiesSaved` e **non ha** `Starts`, `Goals` né
+  `Assists`. Il payload è quindi un dizionario di quello che c'è, non un
+  oggetto a campi fissi: riempire di zeri i campi mancanti darebbe numeri falsi
+  con l'aria di dati veri.
+  **Costa una pagina da ~460 KB per giocatore**, di cui il JSON utile occupa 3.
+  Un indirizzo più leggero è stato cercato e non esiste: per questo la UI le
+  chiede **solo per il giocatore che qualcuno apre**, e non per tutta la rosa.
+  Il filtro sulla stagione richiesta è obbligatorio e non cosmetico: la stessa
+  scheda porta anche stagioni vecchie — gli Europei 2024, per esempio — e
+  mostrarle sotto il titolo di quella in corso sarebbe un dato vecchio
+  presentato come attuale.
+- **Nessuna fonte per le statistiche di squadra.** La scheda «Statistiche»
+  della pagina squadra non interroga niente: posizione, punti, medie,
+  andamento, forma e ripartizione casa/trasferta sono **derivati** da
+  `standings` e `calendar` nel frontend, in `src/lib/teamStats.ts`. È il motivo
+  per cui non compaiono in questo catalogo con una voce propria: non c'è un
+  «da dove vengono» diverso da quello delle due azioni qui sopra.
 - **Cache**: nessuna sulle partite. È l'unica funzione senza cache lato server.
 - `meta.dataSource` vale **`unavailable`** quando `team-squad` torna con zero
   giocatori, o quando `lineups` non trova nessuno dei due lati — fuori dalle
@@ -205,13 +234,68 @@ funzioni di questo stesso progetto).
 Questi valori sono corretti oggi e non lo saranno per sempre. Nessuno li
 sorveglia automaticamente.
 
-| Dove                                  | Cosa                                               |
-| ------------------------------------- | -------------------------------------------------- |
-| `sports-tennis`                       | elenco curato dei tornei 2026, gate sull'anno 2026 |
-| `sports-football` → `LEGA_SEASON_IDS` | id stagione fino al 2026                           |
-| `sports-motogp`                       | numeri, nazionalità e foto della griglia 2026      |
-| `sports-f1` → `F1_DRIVER_PHOTOS`      | percorsi CDN che citano `2025`                     |
-| `streaming-tv`                        | slug dei canali, verificati a mano                 |
+| Dove                             | Cosa                                               |
+| -------------------------------- | -------------------------------------------------- |
+| `sports-tennis`                  | elenco curato dei tornei 2026, gate sull'anno 2026 |
+| `sports-motogp`                  | numeri, nazionalità e foto della griglia 2026      |
+| `sports-f1` → `F1_DRIVER_PHOTOS` | percorsi CDN che citano `2025`                     |
+| `streaming-tv`                   | slug dei canali, verificati a mano                 |
+
+## Fonti valutate e scartate
+
+Stanno qui perché la domanda «e le statistiche dei giocatori?» tornerà, e la
+risposta è già stata cercata: senza questa sezione la si ricerca da capo.
+
+### API-Football (`v3.football.api-sports.io`) — **scartata: costa, e non serve**
+
+Era la fonte prevista dal piano per le statistiche del **singolo giocatore**.
+Interrogata con una chiave vera l'**11 settembre 2026** su
+`/leagues?id=135&season=2026`:
+
+```json
+{
+  "errors": { "plan": "Free plans do not have access to this season, try from 2022 to 2024." },
+  "results": 0
+}
+```
+
+Il piano gratuito si ferma alla stagione **2024**. Non è un problema di
+configurazione: il dato della stagione in corso costa.
+
+**Poi si è cercato meglio, ed è finita diversamente.** Le stesse statistiche —
+presenze, minuti, gol, assist, tiri, passaggi chiave, recuperi, falli,
+cartellini, e per i portieri parate, clean sheet e rigori parati — sono
+pubblicate dalla **scheda atleta di Sky**, che l'app raggiungeva già: il parser
+della rosa ne estraeva il link da prima. Gratis, per la stagione in corso, e
+senza una fonte nuova da presidiare. Vedi `player-stats` sopra.
+
+API-Football resta scartata, ma per una ragione diversa da quella iniziale:
+**non serve più**. Se un giorno servisse per un dato che Sky non pubblica — per
+esempio gli expected goals — la decisione tornerebbe a essere di prodotto
+(pagare o no), non tecnica.
+
+**La scorciatoia che non è stata presa**: servire le stagioni che il piano
+gratuito copre. Sarebbero numeri veri del 2024 mostrati sotto il titolo del 2026.
+
+**Alternativa esclusa**: l'API della Lega Serie A, già in uso per emittenti e
+stadi, risponde `404` a `players`, `statistics`, `lineups`,
+`matches/{id}/statistics` e `teams/{id}/squad`. Ha squadre, classifica e
+partite, e nient'altro.
+
+### Transfermarkt — **scartata: termini di servizio**
+
+Valutata per i valori di mercato. Risponde `200` con HTML completo da un IP
+domestico, e questo **non** basta: l'IP di una edge function Supabase è un IP
+datacenter, cioè la categoria che questi siti bloccano per primi, e i termini
+di servizio vietano lo scraping comunque.
+
+Decisione del proprietario del progetto, l'11 settembre 2026: **non si fa**.
+Non è un rinvio tecnico in attesa di uno sblocco.
+
+### football-data.org — **scartata: add-on a pagamento**
+
+La Serie A è nel piano gratuito, ma rose, formazioni e statistiche giocatore
+stanno dietro un add-on a pagamento.
 
 ## Riferimenti
 

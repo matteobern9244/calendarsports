@@ -1,7 +1,11 @@
-import { useMemo } from "react";
+import { useId, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import type { SerieATeam } from "@/lib/serieATeams";
 import type { SquadPlayer, SquadRow, TeamSquad } from "@/lib/api/schemas";
 import { toNumber } from "@/lib/api/schemas";
+import { skyPlayerRef } from "@/lib/teamRoutes";
+import { cn } from "@/lib/utils";
+import PlayerStatsPanel from "./PlayerStatsPanel";
 
 /**
  * La rosa: reparti, allenatore e stadio.
@@ -20,6 +24,7 @@ import { toNumber } from "@/lib/api/schemas";
 interface SquadSectionProps {
   team: SerieATeam;
   squad: TeamSquad;
+  season: number;
 }
 
 /** I reparti nell'ordine della fonte, che e' gia' ordine di campo. */
@@ -42,24 +47,31 @@ function Misura({ valore, unita }: { valore: number | null; unita: string }) {
   );
 }
 
-function Riga({ persona }: { persona: SquadRow }) {
+/**
+ * Una riga della rosa, che si apre sulle statistiche di quel giocatore.
+ *
+ * **Si apre solo se c'e' una scheda atleta da cui prenderle.** L'allenatore non
+ * ne ha una — il suo nome sta in uno `<span>` proprio per questo — e la sua
+ * riga resta testo: una riga che si apre sul nulla prometterebbe qualcosa.
+ *
+ * Quando la riga e' apribile il nome **non e' piu' un link**: un link dentro un
+ * bottone non e' HTML valido, e il rimando a Sky si sposta dentro il pannello,
+ * dove `DataSection` lo offre gia' negli stati di errore e di vuoto.
+ *
+ * Il pannello viene montato solo da aperta, ed e' quello che tiene in piedi il
+ * conto delle richieste: una per giocatore aperto, nessuna per gli altri
+ * ventiquattro.
+ */
+function Riga({ persona, season }: { persona: SquadRow; season: number }) {
+  const [aperta, setAperta] = useState(false);
+  const idPannello = useId();
+  const riferimento = skyPlayerRef(persona.profileUrl);
+
   const numero = toNumber(persona.shirtNumber);
   const eta = toNumber(persona.ageYears);
-  const nome = persona.profileUrl ? (
-    <a
-      href={persona.profileUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="hover:text-primary transition-colors"
-    >
-      {persona.name}
-    </a>
-  ) : (
-    persona.name
-  );
 
-  return (
-    <li className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0">
+  const contenuto = (
+    <>
       <span className="w-7 shrink-0 text-right font-heading text-sm text-muted-foreground tabular-nums">
         {numero ?? "—"}
       </span>
@@ -72,17 +84,64 @@ function Riga({ persona }: { persona: SquadRow }) {
           className="h-3.5 w-5 shrink-0 rounded-[2px] object-cover"
         />
       )}
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{nome}</span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+        {riferimento || !persona.profileUrl ? (
+          persona.name
+        ) : (
+          <a
+            href={persona.profileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors"
+          >
+            {persona.name}
+          </a>
+        )}
+      </span>
       <span className="shrink-0 text-xs text-muted-foreground flex gap-2.5">
         {eta !== null && <span className="tabular-nums">{eta} anni</span>}
         <Misura valore={toNumber(persona.heightCm)} unita="m" />
         <Misura valore={toNumber(persona.weightKg)} unita="kg" />
       </span>
+    </>
+  );
+
+  if (!riferimento) {
+    return (
+      <li className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0">
+        {contenuto}
+      </li>
+    );
+  }
+
+  return (
+    <li className="border-b border-border/40 last:border-0">
+      <button
+        type="button"
+        onClick={() => setAperta((v) => !v)}
+        aria-expanded={aperta}
+        aria-controls={idPannello}
+        className="flex w-full items-center gap-3 rounded-md py-2 text-left transition-colors hover:bg-muted/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--team-accent))]"
+      >
+        {contenuto}
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+            aperta && "rotate-180",
+          )}
+          aria-hidden="true"
+        />
+      </button>
+      {aperta && (
+        <div id={idPannello}>
+          <PlayerStatsPanel riferimento={riferimento} nome={persona.name} season={season} />
+        </div>
+      )}
     </li>
   );
 }
 
-export default function SquadSection({ team, squad }: SquadSectionProps) {
+export default function SquadSection({ team, squad, season }: SquadSectionProps) {
   const reparti = useMemo(() => byRole(squad.players), [squad.players]);
   const capienza = toNumber(squad.stadium?.capacity);
   const anno = toNumber(squad.stadium?.yearOfConstruction);
@@ -117,7 +176,7 @@ export default function SquadSection({ team, squad }: SquadSectionProps) {
             Allenatore
           </h3>
           <ul>
-            <Riga persona={squad.manager} />
+            <Riga persona={squad.manager} season={season} />
           </ul>
         </section>
       )}
@@ -129,7 +188,7 @@ export default function SquadSection({ team, squad }: SquadSectionProps) {
           </h3>
           <ul>
             {players.map((p) => (
-              <Riga key={p.playerId ?? `${p.role}-${p.name}`} persona={p} />
+              <Riga key={p.playerId ?? `${p.role}-${p.name}`} persona={p} season={season} />
             ))}
           </ul>
         </section>
@@ -137,7 +196,8 @@ export default function SquadSection({ team, squad }: SquadSectionProps) {
 
       <p className="text-[11px] text-muted-foreground">
         Rosa e allenatore da Sky Sport; stadio dalla Lega Serie A. L'età è quella pubblicata dalla
-        fonte, che non espone la data di nascita.
+        fonte, che non espone la data di nascita. Tocca un giocatore per le sue statistiche di
+        stagione.
       </p>
       <span className="sr-only">Rosa del {team.name}</span>
     </div>

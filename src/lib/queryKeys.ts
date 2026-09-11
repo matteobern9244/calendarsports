@@ -83,6 +83,13 @@ export const queryKeys = {
     squad: (team: string, season: number) => ["football", "squad", team, season] as const,
     /** Le probabili della prossima partita della squadra. */
     lineups: (team: string, season: number) => ["football", "lineups", team, season] as const,
+    /**
+     * Le statistiche di un giocatore. La chiave e' il **giocatore**, non la
+     * squadra: la stessa scheda resta valida se quel giocatore viene ceduto, e
+     * due squadre non condividono mai un giocatore nella stessa stagione.
+     */
+    playerStats: (playerSlug: string, playerId: string, season: number) =>
+      ["football", "player-stats", playerSlug, playerId, season] as const,
   },
   sinner: {
     info: () => ["sinner", "info"] as const,

@@ -57,6 +57,18 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   prendono da soli il colore della squadra, che dalla 3.0.0 e' una variabile
   CSS ereditata: a una libreria andrebbe passato come proprieta' JavaScript.
 - Anche le statistiche si scaricano solo all'apertura della scheda.
+- **Nella scheda Rosa ogni giocatore si apre sulle sue statistiche di
+  stagione**: presenze, minuti, gol, assist, tiri, passaggi chiave, palloni
+  recuperati e persi, falli, ammonizioni ed espulsioni — e per i portieri
+  parate, porte inviolate, gol subiti e rigori parati. Con le percentuali di
+  passaggi, tiri e duelli riusciti, che restano coppie «riusciti su totale» e
+  non diventano un totale solo.
+- **Le voci mostrate dipendono dal ruolo, perché dipendono dal ruolo nella
+  fonte.** Un portiere non ha «da titolare» né «assist»: quei campi non
+  esistono per lui, e la scheda li omette invece di mostrarli a zero.
+- Le statistiche di un giocatore si scaricano **solo quando si apre la sua
+  riga**, una alla volta: la scheda da cui vengono pesa 460 kilobyte, e una
+  rosa intera ne costerebbe undici megabyte a ogni apertura.
 
 ### Corretto
 
@@ -102,10 +114,14 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   pallino c'e' sempre l'etichetta, che per il calcio e' il nome della squadra:
   a distinguere e' il testo, non il solo colore — che e' anche la regola giusta
   per chi i colori non li distingue.
-- **Non ci sono statistiche per singolo giocatore** — minuti, gol, assist,
-  cartellini. Richiedono API-Football, e nessuna delle fonti gia' in uso le
-  espone: l'API della Lega Serie A risponde `404` a `players` e `statistics`.
-  La scheda lo dichiara invece di riempire il vuoto.
+- Le statistiche del giocatore sono **di stagione, non per partita**, e solo
+  per le competizioni in cui ha giocato quest'anno: la fonte pubblica anche le
+  stagioni passate, ma mostrarle sotto il titolo di questa sarebbe un dato
+  vecchio dato per attuale.
+- Una voce che la fonte aggiungesse — gli expected goals, per dire — **non
+  comparirebbe** finché non le si dà un nome italiano in
+  `playerStatsLabels.ts`. È il prezzo per non mettere parole inglesi in
+  un'interfaccia italiana.
 - **Si mostra l'eta', non la data di nascita**: la fonte pubblica «29 anni» e
   nient'altro. Ricavare una data all'indietro darebbe un giorno preciso e
   falso.

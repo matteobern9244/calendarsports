@@ -10,6 +10,7 @@ type EndpointName =
   | "sports-football:standings"
   | "sports-football:team-squad"
   | "sports-football:lineups"
+  | "sports-football:player-stats"
   | "sports-tennis:player-info"
   | "sports-tennis:results"
   | "sports-tennis:schedule"
@@ -97,6 +98,23 @@ const payloads: Record<EndpointName, unknown> = {
     time: "13:00:00Z",
   },
   "sports-football:calendar": FOOTBALL_CALENDAR,
+  // Le statistiche del giocatore. Il mock **non** e' a campi fissi, come non
+  // lo e' la fonte: il portiere della fixture ha `SavesMade` e non ha `Goals`,
+  // che e' la differenza che l'interfaccia deve saper reggere.
+  "sports-football:player-stats": {
+    playerId: "184254",
+    playerSlug: "guglielmo-vicario",
+    competitions: [
+      {
+        seasonYear: "2026",
+        season: "2026/2027",
+        competitionId: "21",
+        competition: "Serie A",
+        stats: { GamesPlayed: 3, TimePlayed: 270, SavesMade: 11, Cleansheets: 1, GoalsConceded: 5 },
+        charts: [{ id: "TotalPasses", success: 64, failure: 27 }],
+      },
+    ],
+  },
   "sports-football:standings": FOOTBALL_STANDINGS,
   // La rosa dipende dalla squadra come il calendario: il nome del giocatore e
   // l'allenatore la nominano, cosi' una e2e che apra la scheda Rosa del

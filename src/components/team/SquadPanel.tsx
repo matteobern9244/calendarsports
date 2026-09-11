@@ -41,7 +41,7 @@ export default function SquadPanel({ team, season, source }: SquadPanelProps) {
       emptyDescription="La rosa di questa squadra non è disponibile dalla nostra fonte in questo momento. Apri la pagina ufficiale Sky Sport qui sotto per consultare l'elenco completo dei giocatori, con ruolo, numero di maglia e dati anagrafici."
       emptyCtaHint="Tocca qui per la rosa completa"
     >
-      {data && <SquadSection team={team} squad={data} />}
+      {data && <SquadSection team={team} squad={data} season={season} />}
     </DataSection>
   );
 }

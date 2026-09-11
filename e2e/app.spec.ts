@@ -762,3 +762,56 @@ test("calendario: il colore del calcio segue la squadra, dialoghi compresi", asy
   ).toBe(true);
   expect(dentro.accento, "il colore della squadra non raggiunge il portale").toBe("205 95% 42%");
 });
+
+test("squadra: la rosa si apre sulle statistiche del giocatore, una richiesta per volta", async ({
+  page,
+}) => {
+  await installSportsApiMocks(page);
+
+  const richieste: string[] = [];
+  page.on("request", (r) => {
+    if (r.url().includes("action=player-stats")) richieste.push(r.url());
+  });
+
+  await page.goto("/squadra/juventus");
+  await page.getByRole("tab", { name: "Rosa" }).click();
+  await expect(page.getByText("Portiere Juve")).toBeVisible();
+
+  // Il conto e' il punto di tutto il disegno: la scheda atleta di Sky pesa
+  // 460 KB, e una rosa da venticinque righe che le chiedesse tutte costerebbe
+  // undici megabyte a ogni apertura.
+  expect(
+    richieste,
+    "la rosa ha chiesto statistiche senza che nessuno aprisse una riga",
+  ).toHaveLength(0);
+
+  const portiere = page.getByRole("button", { name: /Portiere Juve/ });
+  await expect(portiere).toHaveAttribute("aria-expanded", "false");
+  await portiere.click();
+  await expect(portiere).toHaveAttribute("aria-expanded", "true");
+
+  // Le voci del portiere, che un giocatore di movimento non ha.
+  await expect(page.getByText("Parate")).toBeVisible();
+  await expect(page.getByText("Porte inviolate")).toBeVisible();
+  await expect(page.getByText("Presenze")).toBeVisible();
+  // E quelle che il portiere non ha: se comparissero, sarebbero zeri inventati.
+  await expect(page.getByText("Da titolare")).toHaveCount(0);
+  await expect(page.getByText("Assist")).toHaveCount(0);
+  // Le coppie restano coppie: «64 riusciti su 91», non un totale solo.
+  await expect(page.getByText(/64/).first()).toBeVisible();
+  await expect(page.getByText(/riusciti su 91/)).toBeVisible();
+
+  expect(richieste, "la riga aperta doveva chiedere le sue statistiche").toHaveLength(1);
+  expect(richieste[0]).toContain("playerSlug=portiere-juve");
+
+  // Chi non ha una scheda atleta non ha una riga apribile, e non finge di
+  // averne una.
+  await expect(page.getByRole("button", { name: /Difensore Juve/ })).toHaveCount(0);
+  await expect(page.getByText("Difensore Juve")).toBeVisible();
+
+  // Richiuderla non ne chiede altre.
+  await portiere.click();
+  await expect(portiere).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByText("Parate")).toHaveCount(0);
+  expect(richieste).toHaveLength(1);
+});

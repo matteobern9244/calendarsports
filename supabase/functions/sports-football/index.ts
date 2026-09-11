@@ -2,6 +2,11 @@ import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/
 import { buildMatchId, romeDateKeyOf } from "./matchId.ts";
 import { parseSquad, type Squad } from "./teamSquad.ts";
 import { parseLineups, type Lineups } from "./lineups.ts";
+import {
+  parsePlayerStats,
+  statsPerStagione,
+  type StatistichePerCompetizione,
+} from "./playerStats.ts";
 import { matchesTeam, type SerieATeam } from "../_shared/serieATeams.ts";
 import {
   legaMatchInvolvesTeam,
@@ -127,6 +132,43 @@ async function fetchSquad(team: SerieATeam): Promise<Squad> {
   } catch (e) {
     console.error(`Errore nel recupero della rosa di ${team.slug}:`, e);
     return { players: [], manager: null };
+  }
+}
+
+/**
+ * Le statistiche di un giocatore, dalla sua scheda atleta su Sky.
+ *
+ * **Servono tutti e due i pezzi dell'indirizzo.** Verificato dal vivo l'11
+ * settembre 2026: `/calcio/atleti/{id}` risponde `404`, e cosi'
+ * `/calcio/atleti/x/{id}` con lo slug sbagliato. Non c'e' un indirizzo
+ * canonico che rediriga, quindi entrambi i valori vengono dalla scheda rosa e
+ * devono arrivare qui interi.
+ *
+ * Entrambi finiscono dentro una URL a monte, quindi passano prima dalla
+ * validazione stretta di `resolveRequestedPlayer`: e' la regola del progetto
+ * per ogni parametro interpolato, anche quando l'origine e' nostra.
+ *
+ * Una pagina che non risponde non e' un errore da propagare: e' un giocatore
+ * di cui oggi non abbiamo le statistiche. Chi chiama lo dichiara.
+ */
+async function fetchPlayerStats(
+  slug: string,
+  id: string,
+  season: string,
+): Promise<StatistichePerCompetizione[]> {
+  const url = `${SKY_BASE}/calcio/atleti/${encodeURIComponent(slug)}/${encodeURIComponent(id)}`;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+    });
+    if (!res.ok) {
+      console.warn(`Scheda atleta non disponibile (${slug}/${id}): ${res.status}`);
+      return [];
+    }
+    return statsPerStagione(parsePlayerStats(await res.text()), season);
+  } catch (e) {
+    console.error(`Errore nel recupero delle statistiche di ${slug}/${id}:`, e);
+    return [];
   }
 }
 
@@ -686,6 +728,28 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "player-stats": {
+        // I due pezzi dell'indirizzo, validati **prima** di finire in una URL
+        // a monte. Vengono dalla nostra scheda rosa, non da chi naviga: la
+        // validazione e' difesa in profondita', non diffidenza verso l'utente.
+        const slug = url.searchParams.get("playerSlug") ?? "";
+        const id = url.searchParams.get("playerId") ?? "";
+        if (!/^[a-z0-9-]{1,80}$/.test(slug) || !/^\d{1,12}$/.test(id)) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Parametri giocatore non validi" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        const competizioni = await fetchPlayerStats(slug, id, season);
+        data = { playerId: id, playerSlug: slug, competitions: competizioni };
+        // Zero competizioni vuol dire che per questa stagione la fonte non
+        // pubblica niente per lui — un giocatore appena arrivato, o una scheda
+        // che ha cambiato forma. In nessuno dei due casi la pagina deve
+        // mostrare una tabella di zeri.
+        if (competizioni.length === 0) dataSourceDegradato = "unavailable";
+        break;
+      }
+
       case "lineups": {
         const formazioni = await fetchLineups(team);
         data = formazioni;
@@ -699,7 +763,8 @@ Deno.serve(async (req) => {
       default:
         return new Response(
           JSON.stringify({
-            error: "Azione non valida. Usa: standings, calendar, next-match, team-squad, lineups",
+            error:
+              "Azione non valida. Usa: standings, calendar, next-match, team-squad, lineups, player-stats",
           }),
           {
             status: 400,

@@ -14,6 +14,7 @@ import {
   footballInfoSchema,
   teamSquadSchema,
   lineupsSchema,
+  playerStatsSchema,
   motogpCalendarSchema,
   motogpConstructorStandingsSchema,
   motogpNextEventSchema,
@@ -205,6 +206,23 @@ export const footballApi = {
       "sports-football",
       { action: "lineups", season: String(season), team },
       lineupsSchema,
+    ),
+  /**
+   * Le statistiche di un singolo giocatore.
+   *
+   * Una richiesta **per giocatore**, e non e' un dettaglio: la scheda atleta di
+   * Sky pesa circa 460 KB, e il JSON utile ne occupa 3. Non esiste un
+   * indirizzo piu' leggero — cercato l'11 settembre 2026 e non trovato — ed e'
+   * il motivo per cui queste statistiche si chiedono solo quando qualcuno apre
+   * un giocatore, invece di comparire in una tabella di tutta la rosa: venti
+   * righe sarebbero venti richieste e nove megabyte verso una fonte che non ci
+   * deve niente.
+   */
+  getPlayerStats: (playerSlug: string, playerId: string, season: number) =>
+    callEdgeFunction(
+      "sports-football",
+      { action: "player-stats", season: String(season), playerSlug, playerId },
+      playerStatsSchema,
     ),
   getTeamInfo: (team: string, season: number) =>
     callEdgeFunction(

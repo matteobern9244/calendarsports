@@ -124,6 +124,28 @@ export function useLineups(teamSlug: string, season: number) {
   });
 }
 
+/**
+ * Le statistiche di un giocatore, **solo quando qualcuno le chiede**.
+ *
+ * `enabled` non e' una comodita': ogni chiamata costa a Sky una pagina da 460
+ * KB, e la scheda rosa ne mostra venticinque per volta. La query parte quando
+ * la riga viene aperta, e da li' in poi resta in cache un'ora — una
+ * statistica di stagione cambia una volta a settimana, non ogni minuto.
+ */
+export function usePlayerStats(
+  playerSlug: string,
+  playerId: string,
+  season: number,
+  enabled: boolean,
+) {
+  return useQuery({
+    enabled,
+    queryKey: queryKeys.football.playerStats(playerSlug, playerId, season),
+    queryFn: () => footballApi.getPlayerStats(playerSlug, playerId, season),
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
 // === Tennis/Sinner Hooks ===
 export function useSinnerInfo() {
   return useQuery({

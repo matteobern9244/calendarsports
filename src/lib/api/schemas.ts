@@ -353,6 +353,33 @@ export type LineupPlayer = z.infer<typeof lineupPlayerSchema>;
 export type LineupSide = NonNullable<z.infer<typeof lineupSideSchema>>;
 export type Lineups = z.infer<typeof lineupsSchema>;
 
+/**
+ * Le statistiche di un giocatore in una competizione.
+ *
+ * `stats` e' un **dizionario aperto**, non un oggetto a campi fissi, e non e'
+ * pigrizia: la forma cambia con il ruolo. Un portiere ha `SavesMade` e
+ * `Cleansheets` e **non ha** `Starts` ne' `Goals`; un attaccante il contrario.
+ * Un tipo a campi fissi costringerebbe a inventare uno zero per i campi che
+ * quel ruolo non ha, e uno zero si legge come un dato.
+ */
+const competitionStatsSchema = z.looseObject({
+  seasonYear: z.string(),
+  season: z.string(),
+  competitionId: z.string(),
+  competition: z.string(),
+  stats: z.record(z.string(), z.number()),
+  charts: z.array(z.looseObject({ id: z.string(), success: z.number(), failure: z.number() })),
+});
+
+export const playerStatsSchema = z.looseObject({
+  playerId: z.string(),
+  playerSlug: z.string(),
+  competitions: tolerantArray(competitionStatsSchema, "sports-football:player-stats"),
+});
+
+export type PlayerStats = z.infer<typeof playerStatsSchema>;
+export type CompetitionStats = z.infer<typeof competitionStatsSchema>;
+
 export type FootballMatch = z.infer<typeof footballMatchSchema>;
 export type FootballStandingRow = z.infer<typeof footballStandingRowSchema>;
 export type FootballInfo = z.infer<typeof footballInfoSchema>;

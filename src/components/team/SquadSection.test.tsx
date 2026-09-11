@@ -52,7 +52,7 @@ const rosa = (over: Partial<TeamSquad> = {}): TeamSquad => ({
 });
 
 const renderRosa = (squad: TeamSquad = rosa()) =>
-  render(<SquadSection team={JUVE} squad={squad} />);
+  render(<SquadSection team={JUVE} squad={squad} season={2026} />);
 
 describe("SquadSection", () => {
   it("raggruppa per reparto e conta i giocatori", () => {
@@ -94,24 +94,50 @@ describe("SquadSection", () => {
     expect(screen.getByText(/45\.666 posti/)).toBeInTheDocument();
 
     const senza = rosa({ stadium: { ...rosa().stadium!, capacity: null } });
-    const { container } = render(<SquadSection team={JUVE} squad={senza} />);
+    const { container } = render(<SquadSection team={JUVE} squad={senza} season={2026} />);
     expect(within(container).queryByText(/posti/)).toBeNull();
     expect(within(container).getByText("Allianz Stadium")).toBeInTheDocument();
   });
 
   it("senza stadio la rosa si vede lo stesso", () => {
     // Le due fonti sono indipendenti: se cade la Lega, Sky deve bastare.
-    const { container } = render(<SquadSection team={JUVE} squad={rosa({ stadium: null })} />);
+    const { container } = render(
+      <SquadSection team={JUVE} squad={rosa({ stadium: null })} season={2026} />,
+    );
     expect(within(container).queryByText("Stadio")).toBeNull();
     expect(within(container).getByText("Vicario G.")).toBeInTheDocument();
   });
 
-  it("chi ha una scheda atleta e' un link, chi non ce l'ha e' testo", () => {
+  /**
+   * Era «chi ha una scheda atleta e' un link». Da quando la riga si apre sulle
+   * statistiche, il nome non e' piu' un link — un link dentro un bottone non e'
+   * HTML valido — e il rimando a Sky vive nel pannello. L'invariante che quel
+   * test proteggeva pero' resta, ed e' questa: **chi ha una scheda e'
+   * raggiungibile, chi non ce l'ha non finge di averla.**
+   *
+   * Il click non si prova qui: aprire monta `PlayerStatsPanel`, che apre una
+   * query, e questo file non ha un `QueryClientProvider` — la copertura vera e'
+   * la e2e «la rosa si apre sulle statistiche del giocatore».
+   */
+  it("chi ha una scheda atleta ha una riga che si apre, chi non ce l'ha resta testo", () => {
     renderRosa();
-    expect(screen.getByRole("link", { name: "Vicario G." })).toHaveAttribute(
-      "href",
-      "https://sport.sky.it/calcio/atleti/guglielmo-vicario/184254",
-    );
+
+    const vicario = screen.getByRole("button", { name: /Vicario G\./ });
+    expect(vicario).toHaveAttribute("aria-expanded", "false");
+
+    // Kelly non ha `profileUrl`: niente bottone, e nemmeno un link che
+    // prometta una scheda che non esiste.
+    expect(screen.queryByRole("button", { name: /Kelly L\./ })).toBeNull();
     expect(screen.queryByRole("link", { name: "Kelly L." })).toBeNull();
+    expect(screen.getByText("Kelly L.")).toBeInTheDocument();
+  });
+
+  /**
+   * L'allenatore non ha una scheda atleta — il suo nome sta in uno `<span>`
+   * proprio per questo — e la sua riga non deve invitare ad aprirla.
+   */
+  it("l'allenatore non ha una riga apribile", () => {
+    renderRosa();
+    expect(screen.queryByRole("button", { name: /Spalletti L\./ })).toBeNull();
   });
 });

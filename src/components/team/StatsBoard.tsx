@@ -37,9 +37,18 @@ import { cn } from "@/lib/utils";
  *
  * ## Cosa non c'e'
  *
- * Le statistiche **per giocatore** — minuti, gol, assist, cartellini — che
- * richiedono API-Football. Non ci sono e non sono finte: quando ci saranno
- * arriveranno da una fonte dichiarata, con la sua sezione.
+ * Le statistiche **per giocatore** — minuti, gol, assist, cartellini.
+ *
+ * La domanda e' stata chiusa con una misura, non con una stima: interrogata
+ * con una chiave vera l'11 settembre 2026, API-Football risponde
+ * `Free plans do not have access to this season, try from 2022 to 2024`, e
+ * l'API della Lega Serie A — l'unica alternativa gia' in uso — risponde `404`
+ * a `players` e `statistics`. Il dato non e' raggiungibile senza pagare.
+ *
+ * Percio' qui non c'e', ed e' scritto in pagina **con la sua ragione**. La
+ * scorciatoia da non prendere e' servire le stagioni che il piano gratuito
+ * copre: sarebbero numeri veri del 2024 sotto il titolo del 2026, cioe' un
+ * dato vecchio presentato come attuale — la cosa che `AGENTS.md` vieta.
  */
 interface StatsBoardProps {
   team: SerieATeam;
@@ -228,7 +237,13 @@ export default function StatsBoard({ team, standings, matches }: StatsBoardProps
 
       <p className="text-[11px] text-muted-foreground">
         Totali dalla classifica di Sky Sport; andamento, casa e trasferta ricalcolati sui risultati
-        del calendario. Le statistiche per singolo giocatore non sono ancora disponibili.
+        del calendario di questa stagione.
+      </p>
+      <p className="text-[11px] text-muted-foreground">
+        Le statistiche per singolo giocatore — minuti, gol, assist, cartellini — non ci sono.
+        L&apos;unica fonte che le espone, API-Football, nel piano gratuito copre solo le stagioni
+        dal 2022 al 2024, e mostrare qui i numeri di due stagioni fa significherebbe dare per
+        attuale un dato che non lo è.
       </p>
       <span className="sr-only">Statistiche di campionato del {team.name}</span>
     </div>
