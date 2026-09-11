@@ -1,6 +1,6 @@
 # Fonti dati
 
-Catalogo delle fonti di **Calendar Events v3.1.0**, funzione per funzione e
+Catalogo delle fonti di **Calendar Events v3.1.1**, funzione per funzione e
 azione per azione.
 
 Fonte di verità per questo documento: `supabase/functions/*/index.ts`. Quando il
@@ -43,7 +43,8 @@ Azioni: `calendar`, `driver-standings`, `constructor-standings`, `last-result`,
 
 ### `sports-football`
 
-Azioni: `standings`, `calendar`, `next-match`, `team-squad`, `lineups`, `player-stats`.
+Azioni: `standings`, `calendar`, `next-match`, `team-squad`, `lineups`,
+`player-stats`, `match-detail`.
 
 Parametri: `season` (quattro cifre) e `team` (slug, nome o alias di una squadra
 di Serie A). `team` assente vale `juventus`; un valore fuori dall'elenco
@@ -131,6 +132,30 @@ classifica è la stessa per tutte e venti.
   scheda porta anche stagioni vecchie — gli Europei 2024, per esempio — e
   mostrarle sotto il titolo di quella in corso sarebbe un dato vecchio
   presentato come attuale.
+- **Widget partita (`match-detail`)**: `lmp-hero` e `lmp-lineup` a
+  `sport.sky.it/football/{widget}/{matchId}/widget.html` — lo **stesso schema
+  di indirizzo** dei widget classifica e calendario, con l'id della partita al
+  posto della stagione, e lo stesso `<script type="application/json">`.
+  `lmp-hero` dà punteggio, stato, stadio e i marcatori **con il nome**;
+  `lmp-lineup` gli undici veri, il modulo, la panchina, l'allenatore,
+  l'arbitro, e gol, cartellini e sostituzioni **con gli id** dei giocatori.
+  Il `matchId` non va cercato: il widget del calendario lo pubblica già come
+  `id` di ogni partita, e `calendar` lo porta avanti come `skyMatchId`.
+  **Prima del fischio d'inizio `lmp-lineup` risponde `PreMatch` con zero
+  giocatori**: non è un guasto, la formazione ufficiale non esiste ancora, e si
+  ripiega sul widget `lmp-predicted-lineup-details`, che per lato ha la stessa
+  forma della pagina probabili per squadra. La risposta lo dichiara con
+  `predicted: true`.
+  **Trappola verificata**: prima della partita `lmp-hero` pubblica `goal: 0`
+  per entrambe. Quello zero non è un risultato ma la sua assenza, e la fonte
+  non ha un campo per distinguerli: lo distingue `status`. Letto come punteggio
+  scriveva «Risultato finale 0-0» su una partita mai giocata.
+  La **cronologia non esiste nella fonte**: si costruisce fondendo i tre
+  elenchi per lato e risolvendo gli id sugli undici e sulla panchina. Un id che
+  non si risolve produce una riga in meno, mai un numero al posto di un nome.
+  Verificato dal vivo su dodici partite il 12 settembre 2026: otto giocate
+  (punteggio, moduli, undici, 13-19 eventi, arbitro) e quattro da giocare
+  (probabili, nessun punteggio).
 - **Nessuna fonte per le statistiche di squadra.** La scheda «Statistiche»
   della pagina squadra non interroga niente: posizione, punti, medie,
   andamento, forma e ripartizione casa/trasferta sono **derivati** da

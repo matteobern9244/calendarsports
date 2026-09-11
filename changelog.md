@@ -17,6 +17,57 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [3.1.1] — Il dettaglio partita smette di rimandare altrove (2026-09-12)
+
+Bump applicativo `3.1.0` → `3.1.1`. Nota di rilascio in
+[`docs/releases/3.1.1-dettaglio-partita.md`](docs/releases/3.1.1-dettaglio-partita.md).
+
+**Tocca `supabase/functions/sports-football`**: distribuita a parte e
+verificata dalla produzione, non solo pubblicata.
+
+### Aggiunto
+
+- **Le quattro schede del dettaglio partita mostrano i dati dentro l'app.**
+  Formazione, Modulo, Risultato e Cronologia erano quattro riquadri «apri la
+  pagina ufficiale su Sky Sport». Ora ci sono gli undici veri con numero e
+  foto, la panchina, gli allenatori, i due moduli affiancati, il punteggio con
+  i marcatori e il minuto, l'arbitro, e la cronologia di gol, cartellini e
+  sostituzioni in ordine di minuto.
+- **Prima del fischio d'inizio si vedono le probabili, e la scheda lo dice.**
+  La formazione ufficiale non esiste ancora: presentarla come tale sarebbe una
+  previsione spacciata per un fatto, smentibile un'ora dopo.
+- Il calendario porta ora anche l'**identificativo Sky** della partita
+  (`skyMatchId`), accanto al nostro. Il nostro resta quello degli indirizzi
+  condivisibili; quello serve a chiedere i widget del dettaglio, e viaggia da
+  lì perché il widget del calendario lo pubblica già: senza, leggerlo sarebbe
+  costato una pagina da 250 kilobyte.
+- Il dettaglio si scarica **solo all'apertura di una scheda**, e una volta
+  sola per tutte e quattro: la chiave di cache è la stessa.
+
+### Corretto
+
+- **Niente più «Risultato finale 0-0» su una partita mai giocata.** Prima del
+  fischio d'inizio la fonte pubblica `goal: 0` per entrambe le squadre, e
+  quello zero non è un risultato: è l'assenza di un risultato. La fonte non ha
+  un campo per distinguerli — lo distingue lo stato della partita.
+- Due test di navigazione **instabili**, e nessuno dei due era rumore. Uno
+  aspettava che la tendina delle preferenze mostrasse la squadra scelta
+  **dopo** la scelta, ma da quando scegliere chiude il pannello quella tendina
+  non esiste più: passava per corsa vinta. L'altro misurava il carattere con
+  `evaluate`, che non ha i tentativi automatici di `expect`, e sotto carico
+  arrivava prima del render.
+
+### Limiti noti
+
+- La cronologia sono **i fatti della partita**, non la diretta testuale: gol,
+  cartellini e sostituzioni, non il racconto azione per azione.
+- Un tipo di evento che la fonte aggiungesse — un rigore sbagliato, un gol
+  annullato — arriverebbe nel dato e non verrebbe disegnato, finché non gli si
+  dà un nome italiano. Lo schema però non lo scarta: non fa cadere la
+  cronologia.
+- Una partita senza identificativo della fonte non ha dettaglio, e la scheda lo
+  dichiara invece di restare in caricamento.
+
 ## [3.1.0] — Statistiche, e un menu che sta nella riga (2026-09-12)
 
 Bump applicativo `3.0.0` → `3.1.0`, esposto da `src/lib/version.ts` e

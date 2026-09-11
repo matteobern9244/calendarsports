@@ -114,6 +114,7 @@ prefetch scritto con una chiave sbagliata viene semplicemente buttato.
 | `useTeamSquad(team,season)`                                  | `["football","squad",team,season]`                                           | `team-squad`                             |
 | `useLineups(team,season)`                                    | `["football","lineups",team,season]`                                         | `lineups`                                |
 | `usePlayerStats(slug,id,season,enabled)`                     | `["football","player-stats",slug,id,season]`                                 | `player-stats`                           |
+| `useMatchDetail(skyMatchId)`                                 | `["football","match-detail",skyMatchId]`                                     | `match-detail`                           |
 | `useSinnerInfo()`                                            | `["sinner","info"]`                                                          | `sports-tennis?action=player-info`       |
 | `useSinnerNextEvent()`                                       | `["sinner","next-event"]`                                                    | `next-event`                             |
 | `useSinnerSchedule(season)`                                  | `["sinner","schedule",season]`                                               | `schedule`                               |
