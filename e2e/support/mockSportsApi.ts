@@ -1,4 +1,5 @@
 import type { Page, Route } from "@playwright/test";
+import { FOOTBALL_CALENDAR, FOOTBALL_STANDINGS, calendarForTeam } from "./footballFixtures";
 
 type EndpointName =
   | "sports-f1:calendar"
@@ -93,76 +94,8 @@ const payloads: Record<EndpointName, unknown> = {
     date: "2099-05-18",
     time: "13:00:00Z",
   },
-  "sports-football:calendar": [
-    {
-      // Stesso formato prodotto da `buildMatchId` nell'edge function:
-      // competizione-dataRoma-casa-vs-trasferta.
-      id: "serie-a-2099-04-26-juventus-vs-milan",
-      matchday: 34,
-      homeTeam: "Juventus",
-      awayTeam: "Milan",
-      homeLogo: null,
-      awayLogo: null,
-      homeScore: null,
-      awayScore: null,
-      date: "2099-04-26T18:45:00Z",
-      status: "Scheduled",
-      competition: "Serie A",
-      link: null,
-      broadcaster: "DAZN | Sky Sport",
-    },
-    {
-      id: "champions-league-2099-05-03-inter-vs-juventus",
-      matchday: 35,
-      homeTeam: "Inter",
-      awayTeam: "Juventus",
-      homeLogo: null,
-      awayLogo: null,
-      homeScore: null,
-      awayScore: null,
-      date: "2099-05-03T18:45:00Z",
-      status: "Scheduled",
-      competition: "Champions League",
-      link: null,
-      broadcaster: null,
-    },
-  ],
-  "sports-football:standings": [
-    {
-      position: 1,
-      team: "Juventus",
-      teamUrl: "/juventus",
-      logoUrl: null,
-      played: 33,
-      wins: 22,
-      draws: 7,
-      losses: 4,
-      goalsFor: 61,
-      goalsAgainst: 28,
-      goalDiff: 33,
-      points: 73,
-      trend: [],
-      qualification: "UCL",
-      lastMatches: [],
-    },
-    {
-      position: 2,
-      team: "Milan",
-      teamUrl: "/milan",
-      logoUrl: null,
-      played: 33,
-      wins: 21,
-      draws: 6,
-      losses: 6,
-      goalsFor: 58,
-      goalsAgainst: 30,
-      goalDiff: 28,
-      points: 69,
-      trend: [],
-      qualification: "UCL",
-      lastMatches: [],
-    },
-  ],
+  "sports-football:calendar": FOOTBALL_CALENDAR,
+  "sports-football:standings": FOOTBALL_STANDINGS,
   "sports-tennis:player-info": {
     name: "Jannik Sinner",
     ranking: 2,
@@ -402,6 +335,24 @@ export async function installSportsApiMocks(page: Page, options: MockOptions = {
 
     if (options.fail?.[endpoint]) {
       await fulfillJson(route, 200, { success: false, error: `Mock failure for ${endpoint}` });
+      return;
+    }
+
+    // Il calendario calcio e' l'unico endpoint che dipende dalla squadra. Il
+    // mock la valida e filtra come la funzione vera: se si limitasse a
+    // restituire sempre la stessa fixture, le e2e sul cambio squadra
+    // resterebbero verdi anche con il filtro rotto in produzione.
+    if (endpoint === "sports-football:calendar") {
+      const esito = calendarForTeam(url.searchParams.get("team"));
+      if (!esito.ok) {
+        await fulfillJson(route, esito.status, { success: false, error: esito.error });
+        return;
+      }
+      await fulfillJson(route, 200, {
+        success: true,
+        data: paginate(endpoint, esito.matches, url),
+        meta: { team: esito.team },
+      });
       return;
     }
 
