@@ -89,7 +89,7 @@ function surnameList(raw: unknown): string[] {
     .filter((s) => s !== "");
 }
 
-function toPlayer(raw: any): LineupPlayer {
+export function toPlayer(raw: any): LineupPlayer {
   return {
     name: String(raw?.fullName ?? raw?.surname ?? "").trim(),
     surname: str(raw?.surname),
@@ -108,7 +108,7 @@ function toPlayer(raw: any): LineupPlayer {
  * tornano: un campo disegnato con le linee sbagliate sarebbe una formazione
  * diversa da quella che la fonte ha pubblicato.
  */
-function toLines(players: LineupPlayer[], formation: string | null): LineupPlayer[][] {
+export function toLines(players: LineupPlayer[], formation: string | null): LineupPlayer[][] {
   if (!formation || !/^\d{2,5}$/.test(formation) || players.length !== 11) return [];
   const sizes = [...formation].map(Number);
   if (sizes.some((n) => n <= 0) || sizes.reduce((a, b) => a + b, 0) + 1 !== 11) return [];
@@ -122,7 +122,15 @@ function toLines(players: LineupPlayer[], formation: string | null): LineupPlaye
   return lines;
 }
 
-function toSide(raw: any): LineupSide | null {
+/**
+ * Un lato, nella forma delle **probabili**.
+ *
+ * Esportata perche' la usa anche `matchDetail.ts`: il widget
+ * `lmp-predicted-lineup-details` di una singola partita pubblica per lato la
+ * stessa identica struttura di questa pagina. Riscriverla la' avrebbe creato
+ * due letture dello stesso formato, libere di divergere.
+ */
+export function toSide(raw: any): LineupSide | null {
   const teamName = str(raw?.name);
   if (!teamName) return null;
 

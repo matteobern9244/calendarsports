@@ -146,6 +146,26 @@ export function usePlayerStats(
   });
 }
 
+/**
+ * Il dettaglio di una partita.
+ *
+ * `staleTime` breve: durante i novanta minuti il risultato e la cronologia
+ * cambiano, e questa e' l'unica schermata dell'app che guarda una partita
+ * mentre si gioca.
+ *
+ * `enabled` perche' una partita puo' non avere l'id di Sky — una fonte che
+ * smette di pubblicarlo, o una partita arrivata da un torneo minore — e in
+ * quel caso non c'e' niente da chiedere.
+ */
+export function useMatchDetail(skyMatchId: string | null | undefined) {
+  return useQuery({
+    enabled: Boolean(skyMatchId),
+    queryKey: queryKeys.football.matchDetail(skyMatchId ?? ""),
+    queryFn: () => footballApi.getMatchDetail(skyMatchId!),
+    staleTime: 60 * 1000,
+  });
+}
+
 // === Tennis/Sinner Hooks ===
 export function useSinnerInfo() {
   return useQuery({

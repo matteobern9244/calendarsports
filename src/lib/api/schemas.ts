@@ -186,6 +186,17 @@ export type F1LastResult = z.infer<typeof f1LastResultSchema>;
  */
 export const footballMatchSchema = z.looseObject({
   id: z.string(),
+  /**
+   * L'id con cui **Sky** identifica la partita, accanto al nostro.
+   *
+   * Il nostro (`id`) e' costruito da noi, stabile e leggibile, ed e' quello
+   * degli indirizzi condivisibili. Questo e' la chiave con cui si chiedono i
+   * widget del dettaglio, e viaggia con il calendario perche' il widget del
+   * calendario ce l'ha gia': senza, leggerlo costerebbe una pagina da 250 KB.
+   * `nullish` perche' una fonte che smettesse di pubblicarlo non deve far
+   * sparire la partita, solo il suo dettaglio.
+   */
+  skyMatchId: z.string().nullish(),
   matchday: scrapedNumber.nullish(),
   homeTeam: z.string(),
   awayTeam: z.string(),
@@ -379,6 +390,40 @@ export const playerStatsSchema = z.looseObject({
 
 export type PlayerStats = z.infer<typeof playerStatsSchema>;
 export type CompetitionStats = z.infer<typeof competitionStatsSchema>;
+
+/**
+ * Un fatto della partita: gol, cartellino o sostituzione.
+ *
+ * `type` **non e'** un `z.enum`: la fonte pubblica i cartellini come `YELLOW` e
+ * `RED`, ma un tipo nuovo — un rigore sbagliato, un gol annullato — deve poter
+ * arrivare e al massimo non essere disegnato, non far scartare tutta la
+ * cronologia.
+ */
+const matchEventSchema = z.looseObject({
+  minute: z.number(),
+  type: z.string(),
+  side: z.string(),
+  player: z.string(),
+  playerOut: z.string().nullish(),
+});
+
+export const matchDetailSchema = z.looseObject({
+  status: z.string().nullish(),
+  date: z.string().nullish(),
+  venue: z.string().nullish(),
+  competition: z.string().nullish(),
+  round: z.string().nullish(),
+  referee: z.string().nullish(),
+  score: z.looseObject({ home: z.number(), away: z.number() }).nullable(),
+  /** Vero quando la formazione e' una **probabile**, non quella ufficiale. */
+  predicted: z.boolean(),
+  home: lineupSideSchema,
+  away: lineupSideSchema,
+  events: tolerantArray(matchEventSchema, "sports-football:match-detail.events"),
+});
+
+export type MatchDetail = z.infer<typeof matchDetailSchema>;
+export type MatchEvent = z.infer<typeof matchEventSchema>;
 
 export type FootballMatch = z.infer<typeof footballMatchSchema>;
 export type FootballStandingRow = z.infer<typeof footballStandingRowSchema>;

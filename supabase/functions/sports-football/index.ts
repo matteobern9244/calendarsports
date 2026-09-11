@@ -2,6 +2,7 @@ import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/
 import { buildMatchId, romeDateKeyOf } from "./matchId.ts";
 import { parseSquad, type Squad } from "./teamSquad.ts";
 import { parseLineups, type Lineups } from "./lineups.ts";
+import { buildMatchDetail, parseHero, parseOfficialLineup } from "./matchDetail.ts";
 import {
   parsePlayerStats,
   statsPerStagione,
@@ -132,6 +133,31 @@ async function fetchSquad(team: SerieATeam): Promise<Squad> {
   } catch (e) {
     console.error(`Errore nel recupero della rosa di ${team.slug}:`, e);
     return { players: [], manager: null };
+  }
+}
+
+/**
+ * Un widget partita di Sky. Stesso schema di indirizzo dei widget classifica e
+ * calendario, con l'id della partita al posto della stagione.
+ *
+ * Un widget che non risponde non e' un errore da propagare: e' un pezzo di
+ * dettaglio che oggi non c'e'. `buildMatchDetail` regge l'assenza di ognuno dei
+ * tre, e chi chiama dichiara il degrado.
+ */
+async function fetchMatchWidget(widget: string, matchId: string): Promise<string | null> {
+  const url = `${SKY_BASE}/football/${widget}/${encodeURIComponent(matchId)}/widget.html`;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+    });
+    if (!res.ok) {
+      console.warn(`Widget ${widget} non disponibile per ${matchId}: ${res.status}`);
+      return null;
+    }
+    return await res.text();
+  } catch (e) {
+    console.error(`Errore nel recupero del widget ${widget} per ${matchId}:`, e);
+    return null;
   }
 }
 
@@ -461,6 +487,12 @@ function extractTeamMatches(
 
         matches.push({
           id: buildMatchId(match, competitionName),
+          // L'id **di Sky**, accanto al nostro. Il nostro identifica la partita
+          // in modo stabile e leggibile e non cambia; questo e' la chiave con
+          // cui si chiedono i widget del dettaglio. Viaggia da qui perche' il
+          // widget del calendario ce l'ha gia': senza, per leggere un numero
+          // servirebbe scaricare la pagina della partita, 250 KB.
+          skyMatchId: typeof match.id === "string" ? match.id : null,
           matchday: roundNum,
           homeTeam: homeName,
           awayTeam: awayName,
@@ -728,6 +760,41 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "match-detail": {
+        // L'id arriva dal nostro stesso calendario (`skyMatchId`), non da chi
+        // naviga. Si valida lo stesso: la regola vale per ogni parametro che
+        // finisce in una URL a monte.
+        const matchId = url.searchParams.get("matchId") ?? "";
+        if (!/^\d{1,12}$/.test(matchId)) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Parametro matchId non valido" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+
+        // I tre widget in parallelo: non dipendono l'uno dall'altro, e le
+        // probabili servono solo se la formazione ufficiale non c'e' ancora —
+        // ma scoprirlo dopo costerebbe un secondo giro di rete.
+        const [heroHtml, lineupHtml, predictedHtml] = await Promise.all([
+          fetchMatchWidget("lmp-hero", matchId),
+          fetchMatchWidget("lmp-lineup", matchId),
+          fetchMatchWidget("lmp-predicted-lineup-details", matchId),
+        ]);
+
+        data = buildMatchDetail({
+          hero: heroHtml ? parseHero(heroHtml) : null,
+          official: lineupHtml ? parseOfficialLineup(lineupHtml) : null,
+          predictedHtml,
+        });
+
+        // Nessuna formazione e nessun risultato vuol dire che dei tre widget
+        // non e' arrivato niente di utile. Puo' succedere per una partita
+        // molto lontana, e non e' un guasto: ma la pagina non deve mostrare
+        // schede vuote come se fossero la verita' sulla partita.
+        if (!data.home && !data.away && data.score === null) dataSourceDegradato = "unavailable";
+        break;
+      }
+
       case "player-stats": {
         // I due pezzi dell'indirizzo, validati **prima** di finire in una URL
         // a monte. Vengono dalla nostra scheda rosa, non da chi naviga: la
@@ -764,7 +831,7 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({
             error:
-              "Azione non valida. Usa: standings, calendar, next-match, team-squad, lineups, player-stats",
+              "Azione non valida. Usa: standings, calendar, next-match, team-squad, lineups, player-stats, match-detail",
           }),
           {
             status: 400,

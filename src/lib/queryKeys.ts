@@ -90,6 +90,12 @@ export const queryKeys = {
      */
     playerStats: (playerSlug: string, playerId: string, season: number) =>
       ["football", "player-stats", playerSlug, playerId, season] as const,
+    /**
+     * Il dettaglio di una partita. Niente stagione nella chiave: l'id di Sky
+     * la identifica gia' da solo, e aggiungerla creerebbe due voci per la
+     * stessa partita a cavallo di un rollover.
+     */
+    matchDetail: (skyMatchId: string) => ["football", "match-detail", skyMatchId] as const,
   },
   sinner: {
     info: () => ["sinner", "info"] as const,

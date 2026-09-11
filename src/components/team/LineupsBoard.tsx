@@ -75,7 +75,15 @@ function ElencoCognomi({ titolo, nomi }: { titolo: string; nomi: string[] }) {
   );
 }
 
-function Lato({ side, casa }: { side: LineupSide; casa: boolean }) {
+/**
+ * Un lato: modulo, campo, panchina, allenatore.
+ *
+ * Esportato perche' lo riusa anche la scheda «Formazione» del dettaglio
+ * partita, dove il dato ha la stessa forma — ufficiale invece che probabile,
+ * ma `LineupSide` e' lo stesso tipo. Due rendering separati dello stesso dato
+ * sarebbero liberi di divergere, e diverge sempre quello che nessuno guarda.
+ */
+export function Lato({ side, casa }: { side: LineupSide; casa: boolean }) {
   return (
     <section className="rounded-lg border border-border/60 bg-card/60 p-4 space-y-3">
       <header className="flex items-center gap-2">

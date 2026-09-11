@@ -18,6 +18,8 @@ import { DEFAULT_TEAM, matchesTeam, resolveTeamStrict } from "../../src/lib/seri
 
 export interface MockMatch {
   id: string;
+  /** L'id con cui Sky identifica la partita: la chiave del dettaglio. */
+  skyMatchId: string | null;
   matchday: number;
   homeTeam: string;
   awayTeam: string;
@@ -43,6 +45,7 @@ export interface MockMatch {
 export const FOOTBALL_CALENDAR: MockMatch[] = [
   {
     id: "serie-a-2099-04-26-juventus-vs-milan",
+    skyMatchId: "900001",
     matchday: 34,
     homeTeam: "Juventus",
     awayTeam: "Milan",
@@ -58,6 +61,7 @@ export const FOOTBALL_CALENDAR: MockMatch[] = [
   },
   {
     id: "champions-league-2099-05-03-inter-vs-juventus",
+    skyMatchId: null,
     matchday: 35,
     homeTeam: "Inter",
     awayTeam: "Juventus",
@@ -74,6 +78,7 @@ export const FOOTBALL_CALENDAR: MockMatch[] = [
   {
     // L'incrocio: compare sia per la Juventus sia per il Napoli.
     id: "serie-a-2099-05-17-juventus-vs-napoli",
+    skyMatchId: "900003",
     matchday: 36,
     homeTeam: "Juventus",
     awayTeam: "Napoli",
@@ -91,6 +96,7 @@ export const FOOTBALL_CALENDAR: MockMatch[] = [
     // Solo Napoli: senza questa, i due calendari sarebbero uno sottoinsieme
     // dell'altro e il test non distinguerebbe un filtro da un troncamento.
     id: "serie-a-2099-05-24-napoli-vs-lazio",
+    skyMatchId: "900004",
     matchday: 37,
     homeTeam: "Napoli",
     awayTeam: "Lazio",

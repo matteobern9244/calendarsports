@@ -10,14 +10,13 @@ import SectionHeader from "@/components/common/SectionHeader";
 import EventCountdown from "@/components/common/EventCountdown";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
-import EmptyState from "@/components/common/EmptyState";
 import TeamLogo from "@/components/common/TeamLogo";
-import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
+import MatchDetailSection from "@/components/team/MatchDetailSection";
 import { useFootballCalendar } from "@/hooks/useSportsData";
 import { type SerieATeam } from "@/lib/serieATeams";
 import { getCurrentFootballSeason } from "@/lib/currentSeason";
 import { matchesOf, type FootballCalendar, type FootballMatch } from "@/lib/api/schemas";
-import { matchResult, matchSide } from "@/lib/teamMatch";
+import { matchSide } from "@/lib/teamMatch";
 import { formatFootballDateTime } from "@/lib/dateUtils";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { skyTeamPageUrl, teamPath } from "@/lib/teamRoutes";
@@ -154,7 +153,6 @@ function MatchDetail({
   // per di piu' con `includes("juventus")`, che in Coppa Italia avrebbe preso
   // la Juve Stabia per la Juventus.
   const { isHome } = matchSide(match, team);
-  const risultato = matchResult(match, team);
   const { date: dateStr, time: timeStr, full: fullStr } = formatFootballDateTime(match.date);
   const compColor = COMPETITION_COLORS[match.competition] || "";
 
@@ -325,85 +323,19 @@ function MatchDetail({
         </TabsContent>
 
         <TabsContent value="formazione">
-          <UnavailableExternalSource
-            title="Formazioni ufficiali"
-            description="Le formazioni titolari e i convocati vengono comunicati dai club poco prima del fischio d'inizio. Apri la pagina ufficiale Sky Sport qui sotto per consultare gli undici in campo, la panchina e gli indisponibili in tempo reale."
-            externalLink={match.link}
-            externalLabel="Vedi formazioni su Sky Sport"
-            ctaHint="Tocca qui per scoprire chi scende in campo"
-          />
+          <MatchDetailSection team={team} match={match} scheda="formazione" onRetry={onRetry} />
         </TabsContent>
 
         <TabsContent value="modulo">
-          <UnavailableExternalSource
-            title="Modulo e disposizione tattica"
-            description="Lo schieramento tattico delle due squadre viene aggiornato in tempo reale durante la partita. Apri la pagina ufficiale Sky Sport qui sotto per vedere il modulo scelto dagli allenatori e i movimenti dei giocatori sul campo."
-            externalLink={match.link}
-            externalLabel="Vedi modulo su Sky Sport"
-            ctaHint="Tocca qui per analizzare la tattica"
-          />
+          <MatchDetailSection team={team} match={match} scheda="modulo" onRetry={onRetry} />
         </TabsContent>
 
         <TabsContent value="risultato">
-          {isFinished ? (
-            <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-              <div className="flex flex-col items-center gap-4">
-                <span className="text-xs font-heading uppercase tracking-wider text-muted-foreground">
-                  Risultato finale
-                </span>
-                <div className="flex items-baseline gap-3 font-heading font-bold tabular-nums">
-                  <span className="text-5xl sm:text-7xl">{match.homeScore}</span>
-                  <span className="text-2xl text-muted-foreground">–</span>
-                  <span className="text-5xl sm:text-7xl">{match.awayScore}</span>
-                </div>
-                {risultato && (
-                  <span
-                    className={cn(
-                      "text-sm font-heading font-bold uppercase tracking-widest",
-                      risultato === "V" && "text-green-500",
-                      risultato === "S" && "text-red-500",
-                      risultato === "P" && "text-yellow-500",
-                    )}
-                  >
-                    {risultato === "V" && `Vittoria ${team.name}`}
-                    {risultato === "S" && `Sconfitta ${team.name}`}
-                    {risultato === "P" && "Pareggio"}
-                  </span>
-                )}
-                <p className="text-xs text-muted-foreground text-center max-w-md">
-                  Marcatori non disponibili dalla fonte attuale.
-                  {match.link ? " Apri su Sky Sport per il dettaglio della partita." : ""}
-                </p>
-                {match.link && (
-                  <Button asChild variant="outline" size="sm">
-                    <a href={match.link} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Vedi marcatori su Sky Sport
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <EmptyState message="Risultato non ancora disponibile: la partita non è stata giocata." />
-              {match.date && (
-                <div className="flex justify-center">
-                  <EventCountdown startDate={match.date} onRetry={onRetry} />
-                </div>
-              )}
-            </div>
-          )}
+          <MatchDetailSection team={team} match={match} scheda="risultato" onRetry={onRetry} />
         </TabsContent>
 
         <TabsContent value="cronologia">
-          <UnavailableExternalSource
-            title="Cronaca minuto per minuto"
-            description="Gol, ammonizioni, espulsioni e sostituzioni vengono raccontati in tempo reale nella diretta testuale. Apri la pagina ufficiale Sky Sport qui sotto per seguire la cronaca completa dell'incontro, azione per azione."
-            externalLink={match.link}
-            externalLabel="Segui la cronaca su Sky Sport"
-            ctaHint="Tocca qui per la diretta testuale"
-          />
+          <MatchDetailSection team={team} match={match} scheda="cronologia" onRetry={onRetry} />
         </TabsContent>
       </Tabs>
     </div>

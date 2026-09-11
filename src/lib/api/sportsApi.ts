@@ -15,6 +15,7 @@ import {
   teamSquadSchema,
   lineupsSchema,
   playerStatsSchema,
+  matchDetailSchema,
   motogpCalendarSchema,
   motogpConstructorStandingsSchema,
   motogpNextEventSchema,
@@ -206,6 +207,18 @@ export const footballApi = {
       "sports-football",
       { action: "lineups", season: String(season), team },
       lineupsSchema,
+    ),
+  /**
+   * Il dettaglio di una partita: risultato, formazioni, modulo, cronologia.
+   *
+   * Prende l'id **di Sky**, non il nostro: e' la chiave dei widget, e arriva
+   * dal calendario come `skyMatchId`.
+   */
+  getMatchDetail: (skyMatchId: string) =>
+    callEdgeFunction(
+      "sports-football",
+      { action: "match-detail", matchId: skyMatchId },
+      matchDetailSchema,
     ),
   /**
    * Le statistiche di un singolo giocatore.

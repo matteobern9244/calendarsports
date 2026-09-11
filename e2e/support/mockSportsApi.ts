@@ -11,6 +11,7 @@ type EndpointName =
   | "sports-football:team-squad"
   | "sports-football:lineups"
   | "sports-football:player-stats"
+  | "sports-football:match-detail"
   | "sports-tennis:player-info"
   | "sports-tennis:results"
   | "sports-tennis:schedule"
@@ -98,6 +99,72 @@ const payloads: Record<EndpointName, unknown> = {
     time: "13:00:00Z",
   },
   "sports-football:calendar": FOOTBALL_CALENDAR,
+  // Il dettaglio di una partita giocata: formazioni ufficiali, non probabili,
+  // e una cronologia con i tre tipi di fatto che l'interfaccia deve saper
+  // distinguere.
+  "sports-football:match-detail": {
+    status: "FullTime",
+    date: "2099-05-17T18:45:00.000Z",
+    venue: "Allianz Stadium",
+    competition: "Serie A",
+    round: "36",
+    referee: "Arbitro M.",
+    score: { home: 2, away: 1 },
+    predicted: false,
+    home: {
+      teamSlug: null,
+      teamName: "Juventus",
+      formation: "433",
+      logoUrl: null,
+      startingLineup: [
+        {
+          name: "PortiereCasa",
+          surname: "PortiereCasa",
+          shirtNumber: 1,
+          role: "Goalkeeper",
+          playerId: "p1",
+          photoUrl: null,
+          profileUrl: null,
+        },
+      ],
+      lines: [],
+      substitutes: ["PanchinaCasa"],
+      unavailables: [],
+      disqualifieds: [],
+      doubtful: [],
+      manager: "AllenatoreCasa",
+    },
+    away: {
+      teamSlug: null,
+      teamName: "Napoli",
+      formation: "352",
+      logoUrl: null,
+      startingLineup: [
+        {
+          name: "PortiereOspite",
+          surname: "PortiereOspite",
+          shirtNumber: 1,
+          role: "Goalkeeper",
+          playerId: "p2",
+          photoUrl: null,
+          profileUrl: null,
+        },
+      ],
+      lines: [],
+      substitutes: ["PanchinaOspite"],
+      unavailables: [],
+      disqualifieds: [],
+      doubtful: [],
+      manager: "AllenatoreOspite",
+    },
+    events: [
+      { minute: 12, type: "GOAL", side: "home", player: "MarcatoreCasa" },
+      { minute: 40, type: "YELLOW", side: "away", player: "AmmonitoOspite" },
+      { minute: 61, type: "SUB", side: "home", player: "EntraCasa", playerOut: "EsceCasa" },
+      { minute: 77, type: "GOAL", side: "away", player: "MarcatoreOspite" },
+      { minute: 88, type: "GOAL", side: "home", player: "MarcatoreCasa" },
+    ],
+  },
   // Le statistiche del giocatore. Il mock **non** e' a campi fissi, come non
   // lo e' la fonte: il portiere della fixture ha `SavesMade` e non ha `Goals`,
   // che e' la differenza che l'interfaccia deve saper reggere.

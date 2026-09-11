@@ -403,12 +403,15 @@ test("squadra: la preferenza arriva al menu e alla Home", async ({ page }) => {
   const tendina = page.getByRole("combobox", { name: "Squadra di calcio preferita" });
   await tendina.click();
   await page.getByRole("option", { name: "Napoli", exact: true }).click();
-  // La scelta e' registrata prima di chiudere: l'Escape che arrivasse mentre
-  // la tendina si sta ancora chiudendo verrebbe consumato da lei, e il
-  // pannello — che e' modale — resterebbe aperto sopra il menu.
-  await expect(tendina).toHaveText("Napoli");
-  await page.keyboard.press("Escape");
+
+  // **Scegliere chiude il pannello**, e da li' in poi la tendina non esiste
+  // piu'. Questo test aspettava invece che mostrasse «Napoli», ed era una
+  // corsa: vinta quasi sempre, persa quando la chiusura arrivava prima
+  // dell'asserzione. Il fatto da verificare e' la chiusura, non un'etichetta
+  // che sta sparendo — e niente `Escape`, che senza pannello finirebbe alla
+  // pagina sotto.
   await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(tendina).toHaveCount(0);
 
   // Il menu porta alla squadra scelta, senza passare da un redirect.
   const voce = page.getByRole("link", { name: "NAPOLI", exact: true });
@@ -564,18 +567,19 @@ test("squadra: la livrea segue la squadra, il carattere resta juventino", async 
   // La verifica che conta davvero: il carattere **calcolato** cambia solo
   // dentro la sezione squadra. In jsdom questo non si potrebbe misurare —
   // non risolve le variabili CSS — ed e' il motivo per cui sta qui.
-  const fontNapoli = await napoli
-    .locator("h1, h2, h3")
-    .first()
-    .evaluate((el) => getComputedStyle(el).fontFamily);
+  //
+  // Il titolo va **atteso** prima di misurarlo: `evaluate` non ha i tentativi
+  // automatici di `expect`, e sotto carico arrivava prima che React rendesse
+  // qualcosa. Il test falliva a intermittenza per una corsa, non per il font.
+  const titoloNapoli = napoli.locator("h1, h2, h3").first();
+  await expect(titoloNapoli).toBeVisible();
+  const fontNapoli = await titoloNapoli.evaluate((el) => getComputedStyle(el).fontFamily);
   expect(fontNapoli).toContain("Inter");
 
   await page.goto("/squadra/juventus");
-  const fontJuve = await page
-    .locator(".team-theme")
-    .locator("h1, h2, h3")
-    .first()
-    .evaluate((el) => getComputedStyle(el).fontFamily);
+  const titoloJuve = page.locator(".team-theme").locator("h1, h2, h3").first();
+  await expect(titoloJuve).toBeVisible();
+  const fontJuve = await titoloJuve.evaluate((el) => getComputedStyle(el).fontFamily);
   expect(fontJuve).toContain("Oswald");
 });
 
@@ -814,4 +818,69 @@ test("squadra: la rosa si apre sulle statistiche del giocatore, una richiesta pe
   await expect(portiere).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByText("Parate")).toHaveCount(0);
   expect(richieste).toHaveLength(1);
+});
+
+test("dettaglio partita: le quattro schede mostrano i dati dentro l'app", async ({ page }) => {
+  await installSportsApiMocks(page);
+
+  const richieste: string[] = [];
+  page.on("request", (r) => {
+    if (r.url().includes("action=match-detail")) richieste.push(r.url());
+  });
+
+  await page.goto("/squadra/juventus/partite/serie-a-2099-05-17-juventus-vs-napoli");
+  await expect(page.getByRole("heading", { name: /Juventus – Napoli/ })).toBeVisible();
+
+  // «Anteprima» e' la scheda predefinita e non ha bisogno del dettaglio: i tre
+  // widget insieme pesano un centinaio di kilobyte.
+  expect(
+    richieste,
+    "il dettaglio si e' scaricato senza che nessuno aprisse una scheda",
+  ).toHaveLength(0);
+
+  // --- Formazione: gli undici, la panchina, l'allenatore. Dentro l'app.
+  await page.getByRole("tab", { name: "Formazione" }).click();
+  await expect(page.getByText("PortiereCasa")).toBeVisible();
+  await expect(page.getByText("AllenatoreOspite")).toBeVisible();
+  // E nessun rimando che sostituisca il dato: il link a Sky resta un'uscita,
+  // non il contenuto della scheda.
+  await expect(page.getByText("Vedi formazioni su Sky Sport")).toHaveCount(0);
+
+  // --- Modulo
+  await page.getByRole("tab", { name: "Modulo" }).click();
+  await expect(page.getByText("4-3-3")).toBeVisible();
+  await expect(page.getByText("3-5-2")).toBeVisible();
+  await expect(page.getByText("Vedi modulo su Sky Sport")).toHaveCount(0);
+
+  // --- Risultato: punteggio, marcatori con il minuto, arbitro, esito.
+  await page.getByRole("tab", { name: "Risultato" }).click();
+  await expect(page.getByText("Risultato finale")).toBeVisible();
+  await expect(page.getByText("MarcatoreOspite")).toBeVisible();
+  await expect(page.getByText(/Arbitro M\./)).toBeVisible();
+  await expect(page.getByText("Vittoria Juventus")).toBeVisible();
+
+  // --- Cronologia: i tre tipi di fatto, in ordine di minuto.
+  await page.getByRole("tab", { name: "Cronologia eventi" }).click();
+  await expect(page.getByText("Ammonizione")).toBeVisible();
+  await expect(page.getByText(/esce EsceCasa/)).toBeVisible();
+  const minuti = await page.locator("li", { hasText: /^\d+'/ }).allInnerTexts();
+  const numeri = minuti.map((t) => Number(/(\d+)'/.exec(t)?.[1] ?? 0)).filter((n) => n > 0);
+  expect(numeri, "la cronologia non e' ordinata per minuto").toEqual(
+    [...numeri].sort((a, b) => a - b),
+  );
+
+  // Quattro schede aperte, **una sola** richiesta: la chiave di cache e' la
+  // stessa, e React Query deduplica per chiave e non per componente.
+  expect(richieste, "ogni scheda si e' scaricata il dettaglio per conto suo").toHaveLength(1);
+});
+
+test("dettaglio partita: senza id della fonte lo dice, invece di caricare all'infinito", async ({
+  page,
+}) => {
+  await installSportsApiMocks(page);
+  // La seconda partita della fixture non ha `skyMatchId`, come una partita che
+  // la fonte pubblica senza identificativo.
+  await page.goto("/squadra/juventus/partite/champions-league-2099-05-03-inter-vs-juventus");
+  await page.getByRole("tab", { name: "Formazione" }).click();
+  await expect(page.getByText(/non pubblica un identificativo/)).toBeVisible();
 });
