@@ -17,6 +17,15 @@ import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { useCountdownMode } from "@/hooks/useCountdownMode";
 import { usePushNotifications, type LeadTime } from "@/hooks/usePushNotifications";
+import { SERIE_A_TEAMS } from "@/lib/serieATeams";
+
+/**
+ * Le squadre in ordine alfabetico italiano, non di classifica: la classifica
+ * cambia ogni domenica e sposterebbe le voci sotto il dito di chi sta
+ * scegliendo.
+ */
+const COLLATORE = new Intl.Collator("it");
+const SQUADRE_IN_ORDINE = [...SERIE_A_TEAMS].sort((a, b) => COLLATORE.compare(a.name, b.name));
 
 export default function PreferencesPanel() {
   const { open, setOpen } = usePreferencesPanel();
@@ -281,12 +290,18 @@ export default function PreferencesPanel() {
                 <p className="text-sm font-heading uppercase tracking-wider text-foreground">
                   Squadra di calcio preferita
                 </p>
-                <input
+                <select
                   aria-label="Squadra di calcio preferita"
-                  value={favoriteTeam}
+                  value={favoriteTeam.slug}
                   onChange={(e) => setFavoriteTeam(e.target.value)}
                   className="w-full rounded-md border border-border/60 bg-background/60 px-3 py-2 text-sm outline-none focus:border-[hsl(var(--gold))]/60"
-                />
+                >
+                  {SQUADRE_IN_ORDINE.map((team) => (
+                    <option key={team.slug} value={team.slug}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-3">

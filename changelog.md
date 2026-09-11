@@ -17,6 +17,36 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [Non rilasciato]
+
+Lavoro in corso sulla squadra di calcio configurabile. **Nessuna pagina legge
+ancora la preferenza**: il calendario, la Home e la pagina squadra mostrano
+tuttora la Juventus qualunque cosa si scelga. Quello che cambia adesso e' dove
+la preferenza viene conservata e come si comporta quando si salva.
+
+### Modificato
+
+- La **squadra preferita si sceglie da un elenco** delle venti squadre di Serie
+  A invece di scriverla a mano. La casella di testo libero accettava qualunque
+  cosa, e quella cosa finiva nel profilo.
+- La preferenza si conserva ora come **identificatore** (`juventus`) e non come
+  nome (`Juventus`): e' la forma che serve alle URL, alle chiavi di cache e al
+  parametro delle edge function. Migration correttiva
+  `20260911223000_favorite_team_slug.sql`, gia' applicata sul database del
+  progetto Lovable; i valori scritti prima vengono comunque riconosciuti in
+  lettura, quindi l'app resta corretta anche dove la migration non e' passata.
+- Tema, squadra e sezioni **cambiano subito** sullo schermo, senza aspettare la
+  risposta del server.
+
+### Corretto
+
+- Un salvataggio rifiutato dal server non lascia piu' in giro la scelta
+  rifiutata: prima il profilo tornava indietro ma la copia sul dispositivo no,
+  e quella scelta ricompariva alla prima uscita dall'account.
+- Se la copia delle preferenze del dispositivo sul profilo, al primo accesso,
+  non riesce, adesso viene ritentata al prossimo avvio. Prima veniva segnata
+  come fatta comunque, e le preferenze del dispositivo erano perse in silenzio.
+
 ## [2.10.0] — Utenti, profilo e preferenze sincronizzate (2026-09-08)
 
 Bump applicativo `2.9.0` → `2.10.0`, esposto da `src/lib/version.ts` e

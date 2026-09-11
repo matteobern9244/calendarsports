@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useAuth } from "@/contexts/useAuth";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
 import { useTheme } from "@/hooks/useTheme";
+import { resolveTeam } from "@/lib/serieATeams";
 import {
   DEFAULT_SECTIONS,
-  DEFAULT_TEAM,
   SECTIONS_STORAGE_KEY,
   TEAM_STORAGE_KEY,
   UserPrefsContext,
@@ -21,6 +21,14 @@ const MIGRATION_KEY_PREFIX = "cse-profile-migrated:";
 function writeLocal(key: string, value: string) {
   try {
     window.localStorage.setItem(key, value);
+  } catch {
+    /* localStorage puo' non essere disponibile */
+  }
+}
+
+function removeLocal(key: string) {
+  try {
+    window.localStorage.removeItem(key);
   } catch {
     /* localStorage puo' non essere disponibile */
   }
@@ -57,13 +65,25 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
     migratedFor.current = user.id;
     if (done) return;
     writeLocal(key, "1");
-    updateProfile.mutate({
-      theme,
-      favorite_team: localTeam,
-      show_sinner: localSections.sinner,
-      show_f1: localSections.f1,
-      show_motogp: localSections.motogp,
-    });
+    updateProfile.mutate(
+      {
+        theme,
+        favorite_team: localTeam,
+        show_sinner: localSections.sinner,
+        show_f1: localSections.f1,
+        show_motogp: localSections.motogp,
+      },
+      {
+        // Il segno si scrive prima di sapere com'e' andata, perche' serve a
+        // non far ripartire la migrazione a ogni render. Se pero' il
+        // salvataggio fallisce e il segno resta, le preferenze del dispositivo
+        // non arriveranno mai sul profilo e nessuno se ne accorgera'.
+        // `migratedFor` resta invece segnato: il nuovo tentativo e' al
+        // prossimo avvio, non subito, cosi' un errore che si ripete non
+        // diventa una raffica di richieste.
+        onError: () => removeLocal(key),
+      },
+    );
   }, [user, profile, theme, localTeam, localSections, updateProfile]);
 
   // Dopo la migrazione (o ai successivi accessi) vale il profilo.
@@ -85,8 +105,40 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
     return localSections;
   }, [profile, localSections]);
 
-  const favoriteTeam = profile?.favorite_team ?? localTeam ?? DEFAULT_TEAM;
+  /**
+   * La preferenza grezza si ferma qui: da questa riga in poi esiste solo una
+   * squadra dell'elenco. `resolveTeam` e' totale, quindi un valore legacy —
+   * un nome digitato nella vecchia casella di testo, o una stringa vuota — non
+   * ha bisogno che la migration del database sia gia' passata.
+   *
+   * Non serve memoizzare: `resolveTeam` restituisce sempre uno degli oggetti
+   * di `SERIE_A_TEAMS`, quindi a parita' di preferenza l'identita' e' la
+   * stessa e il `useMemo` del contesto non si invalida.
+   */
+  const favoriteTeam = resolveTeam(profile?.favorite_team ?? localTeam);
 
+  /**
+   * Scrive lo specchio locale della squadra. Serve anche a chi ha effettuato
+   * l'accesso: e' il valore che resta dopo l'uscita, ed e' quello che la
+   * migrazione copia sul profilo al primo accesso da un altro dispositivo.
+   */
+  const ricordaSquadra = useCallback((slug: string) => {
+    setLocalTeam(slug);
+    writeLocal(TEAM_STORAGE_KEY, slug);
+  }, []);
+
+  const ricordaSezioni = useCallback((value: Sections) => {
+    setLocalSections(value);
+    writeLocal(SECTIONS_STORAGE_KEY, JSON.stringify(value));
+  }, []);
+
+  /**
+   * Il tema e' l'unica delle tre preferenze che non ha bisogno di un
+   * ripristino esplicito dello specchio locale: l'effect «vale il profilo»
+   * riallinea `useTheme` a ogni cambio del profilo, quindi quando la mutation
+   * fallisce e la cache torna indietro, il tema — e con lui `cse-theme` in
+   * `localStorage` — la segue da solo.
+   */
   const setTheme = useCallback(
     (value: ThemeValue) => {
       setThemeLocal(value);
@@ -97,12 +149,19 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
 
   const setFavoriteTeam = useCallback(
     (value: string) => {
-      const next = value.trim() || DEFAULT_TEAM;
-      setLocalTeam(next);
-      writeLocal(TEAM_STORAGE_KEY, next);
-      if (user) updateProfile.mutate({ favorite_team: next });
+      const team = resolveTeam(value);
+      const precedente = localTeam;
+      ricordaSquadra(team.slug);
+      if (!user) return;
+      // Senza questo ripristino il profilo torna indietro (`useUpdateProfile`)
+      // ma il dispositivo no: la squadra che il server ha rifiutato resta li',
+      // invisibile finche' vince il profilo e in pagina alla prima uscita.
+      updateProfile.mutate(
+        { favorite_team: team.slug },
+        { onError: () => ricordaSquadra(precedente) },
+      );
     },
-    [user, updateProfile],
+    [user, updateProfile, localTeam, ricordaSquadra],
   );
 
   const setSection = useCallback(
@@ -111,17 +170,19 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
         ? { sinner: profile.show_sinner, f1: profile.show_f1, motogp: profile.show_motogp }
         : localSections;
       const next: Sections = { ...DEFAULT_SECTIONS, ...base, [key]: value };
-      setLocalSections(next);
-      writeLocal(SECTIONS_STORAGE_KEY, JSON.stringify(next));
-      if (user) {
-        updateProfile.mutate({
+      const precedente = localSections;
+      ricordaSezioni(next);
+      if (!user) return;
+      updateProfile.mutate(
+        {
           show_sinner: next.sinner,
           show_f1: next.f1,
           show_motogp: next.motogp,
-        });
-      }
+        },
+        { onError: () => ricordaSezioni(precedente) },
+      );
     },
-    [profile, localSections, user, updateProfile],
+    [profile, localSections, user, updateProfile, ricordaSezioni],
   );
 
   const value = useMemo<UserPrefsValue>(

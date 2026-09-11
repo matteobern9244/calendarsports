@@ -94,6 +94,30 @@ un'altra porta.
 I controlli eseguibili sono in `src/hooks/useProfile.test.tsx` e `src/contexts/UserPrefsContext.test.tsx`, non questa
 sintesi.
 
+### La preferenza grezza si ferma al contesto
+
+`favoriteTeam` non e' una stringa: e' una `SerieATeam`, risolta una volta sola
+in `UserPrefsContext` con `resolveTeam`, che e' totale. La preferenza e' nata
+come casella di testo libero, quindi in `profiles.favorite_team` e in
+`localStorage` puo' esserci un nome, un alias, uno spazio o niente — e nessuno
+di quei valori deve arrivare a una chiave di cache, a un parametro di edge
+function o a una URL. Il tipo e' li' apposta: chi ha bisogno dello slug deve
+scrivere `.slug`, e non puo' prenderlo per sbaglio da una stringa non
+validata.
+
+Vale anche in uscita. `loadLocalTeam` risolve **prima** di restituire, perche'
+quel valore non serve solo a mostrare qualcosa: al primo accesso la migrazione
+lo copia sul profilo, e un nome digitato anni fa finirebbe cosi' dentro la
+colonna da cui lo si sta togliendo.
+
+E lo specchio locale si disfa insieme al profilo. Squadra e sezioni scrivono
+`localStorage` in anticipo come la cache, quindi un salvataggio rifiutato va
+annullato in tutti e due i posti: il ripristino sta nel gestore che ha scritto
+lo specchio (`onError` della singola `mutate`), per la stessa ragione per cui
+il rollback della cache sta nella richiesta che ha toccato quei campi. Il tema
+e' l'eccezione, e non per dimenticanza: l'effect che riallinea `useTheme` al
+profilo lo riporta indietro da solo.
+
 ### Lo stato si aggiusta durante il render, non in un effect
 
 Per azzerare la paginazione quando cambia un filtro, confronta il valore con
