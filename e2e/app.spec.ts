@@ -316,7 +316,7 @@ test("calendario: la vista mese e la vista agenda mostrano gli eventi delle tre 
   await expect(page.getByRole("button", { name: /F1: Gara \(Monaco\)/ })).toHaveCount(0);
 });
 
-test("preferenze: la squadra si sceglie da una tendina che non chiude il pannello", async ({
+test("preferenze: la tendina si apre e si chiude senza travolgere il pannello", async ({
   page,
 }) => {
   await installSportsApiMocks(page);
@@ -341,14 +341,20 @@ test("preferenze: la squadra si sceglie da una tendina che non chiude il pannell
   await expect(voci.first()).toHaveText("Atalanta");
   await expect(voci.last()).toHaveText("Venezia");
 
-  await page.getByRole("option", { name: "Napoli", exact: true }).click();
-
   // La ragione per cui questo test vive in Playwright e non in jsdom: il
-  // contenuto della tendina e' in un portale fuori dallo Sheet, e la sua
-  // chiusura non deve arrivare al dialog sotto. Se ci arrivasse, il pannello
-  // sparirebbe subito dopo la scelta.
+  // contenuto della tendina sta in un portale **fuori** dallo Sheet, e la sua
+  // chiusura non deve arrivare al dialog sotto. Chiudere la tendina senza
+  // scegliere niente lascia il pannello dov'e': l'utente stava guardando, non
+  // ha deciso.
+  await page.keyboard.press("Escape");
+  await expect(voci).toHaveCount(0);
   await expect(pannello).toBeVisible();
-  await expect(tendina).toHaveText("Napoli");
+  await expect(tendina).toHaveText("Juventus");
+
+  // Scegliere invece e' un atto concluso: si salva e il pannello si chiude.
+  await tendina.click();
+  await page.getByRole("option", { name: "Napoli", exact: true }).click();
+  await expect(pannello).toBeHidden();
 
   // Sul dispositivo finisce lo **slug**, non il nome: e' il valore che la
   // migrazione copia nel profilo al primo accesso.
@@ -356,9 +362,7 @@ test("preferenze: la squadra si sceglie da una tendina che non chiude il pannell
     .poll(() => page.evaluate(() => window.localStorage.getItem("cse-favorite-team")))
     .toBe("napoli");
 
-  // E la scelta sopravvive alla chiusura del pannello e a un cambio pagina.
-  await page.keyboard.press("Escape");
-  await expect(pannello).toBeHidden();
+  // E la scelta sopravvive a un cambio pagina.
   await page.getByRole("link", { name: "FORMULA 1" }).click();
   await expect(page).toHaveURL(/\/formula1$/);
   await page.getByRole("button", { name: "Preferenze" }).click();
@@ -558,4 +562,41 @@ test("squadra: la livrea segue la squadra, il carattere resta juventino", async 
     .first()
     .evaluate((el) => getComputedStyle(el).fontFamily);
   expect(fontJuve).toContain("Oswald");
+});
+
+test("preferenze: la scelta chiude il pannello e si vede subito, senza ricaricare", async ({
+  page,
+}) => {
+  await installSportsApiMocks(page);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Preferenze" }).click();
+  const pannello = page.getByRole("dialog");
+  await page.getByRole("combobox", { name: "Squadra di calcio preferita" }).click();
+  await page.getByRole("option", { name: "Napoli", exact: true }).click();
+
+  // 1. Il pannello si chiude da solo: la scelta e' fatta, non c'e' altro da
+  //    fare li' dentro.
+  await expect(pannello).toBeHidden();
+
+  // 2. Senza ricaricare niente, il menu e la Home sono gia' del Napoli.
+  await expect(page.getByRole("link", { name: "NAPOLI", exact: true })).toBeVisible();
+  await expect(page.getByText(/Calcio · Napoli/)).toBeVisible();
+});
+
+test("preferenze: scegliere da dentro una pagina squadra porta sulla squadra scelta", async ({
+  page,
+}) => {
+  await installSportsApiMocks(page);
+  await page.goto("/squadra/juventus");
+
+  await page.getByRole("button", { name: "Preferenze" }).click();
+  await page.getByRole("combobox", { name: "Squadra di calcio preferita" }).click();
+  await page.getByRole("option", { name: "Napoli", exact: true }).click();
+
+  // Qui la preferenza da sola non basta e non deve bastare: dentro una pagina
+  // squadra comanda l'indirizzo, quindi restare fermi vorrebbe dire scegliere
+  // il Napoli e continuare a vedere la Juventus. L'indirizzo segue la scelta.
+  await expect(page).toHaveURL(/\/squadra\/napoli$/);
+  await expect(page.getByRole("heading", { name: "Napoli", exact: true })).toBeVisible();
 });

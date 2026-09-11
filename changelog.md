@@ -42,6 +42,20 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   squadra i titoli usano il font del testo. Fuori dalla sezione squadra — Home,
   calendario, streaming, preferenze — non cambia niente.
 
+### Corretto
+
+- **Scegliere la squadra si vede subito.** Il pannello delle preferenze restava
+  aperto dopo la scelta, e finche' resta aperto il resto dell'applicazione e'
+  inerte: sembrava che non fosse successo niente, e che servisse ricaricare.
+  Ora la scelta chiude il pannello.
+- **Scegliere una squadra da dentro la pagina di un'altra porta sulla squadra
+  scelta.** Prima non succedeva niente di visibile: dentro una pagina squadra
+  comanda l'indirizzo — ed e' giusto, altrimenti un link condiviso non
+  significherebbe piu' niente — ma restare fermi voleva dire scegliere il
+  Napoli e continuare a guardare la Juventus. Adesso e' l'indirizzo a seguire
+  la scelta. Dal dettaglio di una partita si torna alla pagina della squadra:
+  quella partita era dell'altra, e per la nuova non esiste.
+
 ### Limiti noti
 
 - **Si mostra l'eta', non la data di nascita**: la fonte pubblica «29 anni» e

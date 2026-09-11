@@ -13,10 +13,12 @@ import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserPrefs } from "@/contexts/useUserPrefs";
 import { useAuth } from "@/contexts/useAuth";
-import { Link } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { useCountdownMode } from "@/hooks/useCountdownMode";
 import TeamSelect from "@/components/preferences/TeamSelect";
+import { resolveTeam } from "@/lib/serieATeams";
+import { teamPath, teamSlugFromPath } from "@/lib/teamRoutes";
 import { usePushNotifications, type LeadTime } from "@/hooks/usePushNotifications";
 
 export default function PreferencesPanel() {
@@ -26,6 +28,36 @@ export default function PreferencesPanel() {
   const { user, signOut } = useAuth();
   const { mode: countdownMode, setMode: setCountdownMode } = useCountdownMode();
   const push = usePushNotifications();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  /**
+   * Scegliere una squadra e' un atto concluso: si salva, e il pannello si
+   * chiude.
+   *
+   * Prima restava aperto, e finche' resta aperto il resto dell'applicazione e'
+   * `aria-hidden` — Radix lo fa per tenere il fuoco dentro il pannello. Chi
+   * sceglieva non vedeva cambiare niente e concludeva che servisse ricaricare.
+   *
+   * **E dentro una pagina squadra la preferenza da sola non basta**, ed e'
+   * giusto che non basti: li' comanda l'indirizzo, altrimenti un link
+   * condiviso non significherebbe niente. Restare fermi vorrebbe pero' dire
+   * scegliere il Napoli e continuare a guardare la Juventus. Allora e'
+   * l'indirizzo a seguire la scelta.
+   *
+   * La navigazione sta **qui, nel gestore**, e non in un effect: un effect
+   * girerebbe anche al montaggio, e riscriverebbe l'indirizzo di un link
+   * appena aperto da qualcun altro.
+   *
+   * Dal dettaglio di una partita si torna alla pagina della squadra e non alla
+   * partita corrispondente: quella partita e' della Juventus, e per il Napoli
+   * non esiste.
+   */
+  const scegliSquadra = (slug: string) => {
+    setFavoriteTeam(slug);
+    setOpen(false);
+    if (teamSlugFromPath(location.pathname)) navigate(teamPath(resolveTeam(slug)));
+  };
 
   const LEAD_OPTIONS: Array<{ value: LeadTime; label: string }> = [
     { value: 15, label: "15 minuti prima" },
@@ -282,7 +314,7 @@ export default function PreferencesPanel() {
                 <p className="text-sm font-heading uppercase tracking-wider text-foreground">
                   Squadra di calcio preferita
                 </p>
-                <TeamSelect value={favoriteTeam} onChange={setFavoriteTeam} />
+                <TeamSelect value={favoriteTeam} onChange={scegliSquadra} />
               </div>
 
               <div className="space-y-3">
