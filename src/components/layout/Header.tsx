@@ -146,7 +146,7 @@ export default function Header() {
         <LayoutGroup id="desktop-nav">
           <nav
             className={cn(
-              "hidden md:flex items-center gap-0.5 rounded-full px-1.5 py-1.5",
+              "hidden menu:flex items-center gap-0.5 rounded-full px-1.5 py-1.5",
               "border border-[hsl(var(--gold))]/25 bg-card/60 backdrop-blur-md",
               "shadow-[0_4px_18px_-10px_hsl(var(--gold)/0.45),0_1px_0_hsl(var(--gold-light)/0.15)_inset]",
             )}
@@ -162,7 +162,7 @@ export default function Header() {
                   onClick={handleDesktopClick(item.path)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group relative inline-flex items-center gap-1.5 px-3 lg:px-4 py-2 rounded-full overflow-hidden",
+                    "group relative inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 lg:px-4 py-2 rounded-full overflow-hidden",
                     "text-[15px] lg:text-base font-heading font-semibold tracking-[0.12em] uppercase",
                     "transition-colors duration-200",
                     active
@@ -224,8 +224,9 @@ export default function Header() {
                       <SparkleLoop count={4} intervalMs={4500} radius={16} size={4} glow />
                     )}
                   </motion.span>
-                  <span className="relative z-10 hidden lg:inline">{item.label}</span>
-                  <span className="relative z-10 lg:hidden">{item.shortLabel}</span>
+                  {/* `menulungo` e' 1400px, misurato: vedi `@theme` in index.css. */}
+                  <span className="relative z-10 hidden menulungo:inline">{item.label}</span>
+                  <span className="relative z-10 menulungo:hidden">{item.shortLabel}</span>
                 </Link>
               );
             })}
@@ -254,7 +255,7 @@ export default function Header() {
             variant="ghost"
             size="icon"
             aria-label={mobileOpen ? "Chiudi menu" : "Apri menu"}
-            className="md:hidden rounded-full border border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10 transition-colors"
+            className="menu:hidden rounded-full border border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10 transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -270,7 +271,7 @@ export default function Header() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="md:hidden overflow-hidden border-t border-border/50 bg-card/95 backdrop-blur-xl"
+            className="menu:hidden overflow-hidden border-t border-border/50 bg-card/95 backdrop-blur-xl"
           >
             <div className="container py-4 flex flex-col gap-2">
               {navItems.map((item, idx) => {

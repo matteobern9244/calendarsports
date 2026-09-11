@@ -21,6 +21,27 @@
   --font-heading: Oswald, sans-serif;
   --font-body: Inter, sans-serif;
 
+  /* ---------------------------------------------------------------------
+   * Le due soglie della barra di navigazione, misurate e non scelte.
+   *
+   * Il `container` si ferma a 1400px. Dentro, la riga dell'intestazione deve
+   * contenere logo (226), barra, bottone (40) e due spazi da 16:
+   *
+   *   - con le **etichette corte** (HOME, AGENDA, SINNER, F1) la barra chiede
+   *     1134px in tutto, quindi sotto i ~1220 non ci sta — con margine per «Fiorentina», il nome piu' lungo dell'elenco: li' si passa al menu
+   *     a tendina. Prima si passava a 768, e fra 768 e 1023 la riga sbordava
+   *     di 140px — era il difetto gia' dichiarato nel changelog;
+   *   - con le **etichette lunghe** (CALENDARIO, JANNIK SINNER, FORMULA 1) ne
+   *     chiede 1306, quindi servono ~1400. Prima si accendevano a 1024, e non
+   *     entrando andavano a capo dentro la pastiglia: «FORMULA» sopra e «1»
+   *     sotto, con tutta la riga sfasata.
+   *
+   * Se cambia il logo, la spaziatura delle voci o il numero di sezioni, questi
+   * due numeri vanno rimisurati, non aggiustati a occhio.
+   * ------------------------------------------------------------------- */
+  --breakpoint-menu: 1220px;
+  --breakpoint-menulungo: 1400px;
+
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));

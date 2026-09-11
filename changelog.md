@@ -60,6 +60,13 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Corretto
 
+- **L'intestazione non sborda piu', e nessuna etichetta va a capo.** «JANNIK
+  SINNER» e «FORMULA 1» si spezzavano dentro la pastiglia — «FORMULA» sopra e
+  «1» sotto — sfasando tutta la riga. Le due soglie ora sono **misurate**: il
+  `container` si ferma a 1400 pixel, la barra con le etichette corte ne chiede
+  1134 e con quelle lunghe 1306, quindi il menu a tendina resta fino a 1220 e i
+  nomi per esteso compaiono da 1400. Chiude il limite dichiarato nella 3.0.0,
+  dove fra 768 e 1023 pixel la riga traboccava di 140 pixel.
 - **La pagina squadra non scarica piu' una stagione intera per buttarla via.**
   La query della «prossima partita» diceva «non mi serve» passando `undefined`
   come numero di pagina, e `undefined` non spegne una query: la trasforma nella

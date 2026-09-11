@@ -1,5 +1,20 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { installSportsApiMocks } from "./support/mockSportsApi";
+
+/**
+ * Una voce della barra di navigazione, comunque sia scritta a questa larghezza.
+ *
+ * L'etichetta cambia con il viewport — sotto i 1400px la barra usa la forma
+ * corta, «F1» invece di «FORMULA 1» — e il **nome accessibile la segue**, come
+ * deve: il criterio WCAG «Label in Name» chiede che il nome contenga il testo
+ * visibile, quindi un `aria-label` sempre lungo, comodo per questi test,
+ * sarebbe un difetto per chi naviga a voce e dice «clicca F1».
+ *
+ * Il viewport predefinito di Playwright e' 1280: le forme corte sono la norma
+ * qui dentro, non l'eccezione.
+ */
+const voceMenu = (page: Page, ...forme: string[]) =>
+  page.getByRole("link", { name: new RegExp(`^(${forme.join("|")})$`) });
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -19,14 +34,14 @@ test("loads home and navigates across all main sections with mocked sports data"
   await expect(page.getByText("Internazionali d'Italia")).toBeVisible();
   await expect(page.getByText("GP di Francia")).toBeVisible();
 
-  await page.getByRole("link", { name: "JANNIK SINNER" }).click();
+  await voceMenu(page, "JANNIK SINNER", "SINNER").click();
   await expect(page).toHaveURL(/\/sinner$/);
   await expect(page.getByRole("heading", { level: 1, name: "Jannik Sinner" })).toBeVisible();
   await expect(page.getByText("Miami Open")).toBeVisible();
   await page.getByRole("tab", { name: "Tornei" }).click();
   await expect(page.getByText("Internazionali d'Italia")).toBeVisible();
 
-  await page.getByRole("link", { name: "JUVENTUS" }).click();
+  await voceMenu(page, "JUVENTUS").click();
   await expect(page).toHaveURL(/\/squadra\/juventus$/);
   await expect(page.getByRole("heading", { name: "Juventus" })).toBeVisible();
   await expect(page.getByText("vs Milan").first()).toBeVisible();
@@ -36,7 +51,7 @@ test("loads home and navigates across all main sections with mocked sports data"
   await page.getByRole("tab", { name: "Classifica" }).click();
   await expect(page.getByRole("cell", { name: "Juventus" })).toBeVisible();
 
-  await page.getByRole("link", { name: "FORMULA 1" }).click();
+  await voceMenu(page, "FORMULA 1", "F1").click();
   await expect(page).toHaveURL(/\/formula1$/);
   await expect(page.getByRole("heading", { name: "Formula 1" })).toBeVisible();
   await expect(page.getByText("Gran Premio di Imola")).toBeVisible();
@@ -45,7 +60,7 @@ test("loads home and navigates across all main sections with mocked sports data"
   await page.getByRole("tab", { name: "Costruttori" }).click();
   await expect(page.getByRole("cell", { name: "McLaren" })).toBeVisible();
 
-  await page.getByRole("link", { name: "MOTOGP" }).click();
+  await voceMenu(page, "MOTOGP").click();
   await expect(page).toHaveURL(/\/motogp$/);
   await expect(page.getByRole("heading", { name: "MotoGP" })).toBeVisible();
   await expect(page.getByText("GP di Francia")).toBeVisible();
@@ -210,7 +225,7 @@ test("PWA: l'app si apre senza rete grazie al service worker", async ({ page, co
 
   // L'app shell c'e': la navigazione principale e' renderizzata, quindi il
   // documento e i suoi asset sono usciti dalla cache e React ha montato.
-  await expect(page.getByRole("link", { name: "JUVENTUS" })).toBeVisible();
+  await expect(voceMenu(page, "JUVENTUS")).toBeVisible();
 
   // E non e' solo il guscio: le sezioni della home sono montate, cioe' i
   // chunk JavaScript sono arrivati davvero.
@@ -363,7 +378,7 @@ test("preferenze: la tendina si apre e si chiude senza travolgere il pannello", 
     .toBe("napoli");
 
   // E la scelta sopravvive a un cambio pagina.
-  await page.getByRole("link", { name: "FORMULA 1" }).click();
+  await voceMenu(page, "FORMULA 1", "F1").click();
   await expect(page).toHaveURL(/\/formula1$/);
   await page.getByRole("button", { name: "Preferenze" }).click();
   await expect(page.getByRole("combobox", { name: "Squadra di calcio preferita" })).toHaveText(
@@ -649,4 +664,40 @@ test("squadra: le statistiche sono quelle della squadra dell'indirizzo", async (
   await expect(page.getByText("67", { exact: true })).toBeVisible();
   await expect(page.getByText("+24", { exact: true })).toBeVisible();
   await expect(page.getByText("73", { exact: true })).toHaveCount(0);
+});
+
+test("intestazione: nessuna etichetta va a capo e la riga non sborda mai", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await page.goto("/");
+
+  // Le larghezze che contano: il telefono, il tablet, le due soglie misurate
+  // (`--breakpoint-menu` a 1220 e `--breakpoint-menulungo` a 1400) e i due
+  // lati di ciascuna. Prima di questa correzione a 1024 la riga sbordava di
+  // 140px, e le etichette lunghe andavano a capo dentro la pastiglia:
+  // «FORMULA» sopra e «1» sotto.
+  for (const larghezza of [390, 768, 1024, 1219, 1230, 1399, 1400, 1512]) {
+    await page.setViewportSize({ width: larghezza, height: 900 });
+
+    const misura = await page.evaluate(() => {
+      const doc = document.documentElement;
+      const barra = document.querySelector("header nav");
+      const visibile = !!barra && barra.getBoundingClientRect().width > 0;
+      const voci = visibile ? [...barra.querySelectorAll("a")] : [];
+      return {
+        sbordo: doc.scrollWidth - doc.clientWidth,
+        altezzaMassima: voci.length
+          ? Math.max(...voci.map((a) => a.getBoundingClientRect().height))
+          : 0,
+      };
+    });
+
+    expect(misura.sbordo, `la pagina scorre in orizzontale a ${larghezza}px`).toBeLessThanOrEqual(
+      0,
+    );
+    // Una voce su una riga sola sta in 40px: oltre i 48 e' andata a capo.
+    expect(
+      misura.altezzaMassima,
+      `un'etichetta della barra e' andata a capo a ${larghezza}px`,
+    ).toBeLessThan(48);
+  }
 });
