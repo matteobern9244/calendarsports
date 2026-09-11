@@ -3,7 +3,7 @@
  *
  * Fino a sette pagine si elencano tutte. Oltre, restano la prima, l'ultima e
  * le vicine della corrente, e le lacune diventano un'ellissi. Viveva dentro
- * `JuventusPage.tsx` senza test: e' aritmetica che sbaglia di uno ai bordi
+ * `TeamPage.tsx` senza test: e' aritmetica che sbaglia di uno ai bordi
  * senza far rumore, perche' la barra mostra comunque *qualcosa*.
  */
 export type PageListItem = number | "ellipsis";

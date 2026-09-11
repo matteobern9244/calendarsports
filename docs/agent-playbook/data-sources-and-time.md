@@ -59,7 +59,7 @@ JavaScript da solo fa il contrario: la interpreta come ora locale del client.
 La conversione sta in `toRomeDate` (`src/lib/dateUtils.ts`) e vale per **due**
 famiglie di operazioni, non una:
 
-- **formattare**: `formatDateIT`, `formatTimeIT`, `formatJuventusDateTime`,
+- **formattare**: `formatDateIT`, `formatTimeIT`, `formatFootballDateTime`,
   `formatDateTimeIT`, tutte con `timeZone: "Europe/Rome"` esplicito;
 - **confrontare e ordinare**: `getDateTimestamp`, e chiunque debba dire quale
   evento viene prima o quanto manca.
@@ -72,14 +72,14 @@ accanto parlavano di due istanti diversi, a due ore di distanza in estate.
 l'argomento è un timestamp numerico, e quindi non c'è nessun fuso da sbagliare,
 serve un `// @tz-ignore` sulla riga precedente con la ragione scritta accanto.
 
-Il controllo eseguibile è `bun run check:tz-juventus`
+Il controllo eseguibile è `bun run check:tz-football`
 ([`scripts/check-rome-tz.mjs`](../../scripts/check-rome-tz.mjs)).
 
 ### Le stagioni si calcolano, non si scrivono
 
 `src/lib/currentSeason.ts` è l'unica fonte: F1, MotoGP e Sinner seguono l'anno
-solare, la Juventus cambia stagione a luglio
-(`getCurrentJuventusSeason`). L'argomento `now` di quelle funzioni esiste solo
+solare, il calcio cambia stagione a luglio
+(`getCurrentFootballSeason`). L'argomento `now` di quelle funzioni esiste solo
 per i test. Non introdurre costanti d'anno nelle pagine: il primo gennaio
 qualcuno se ne accorgerà.
 
@@ -101,7 +101,7 @@ allowlist va motivato nel changelog dello stesso cambiamento.
 ## Verifiche
 
 ```bash
-bun run check:tz-juventus   # fuso nei formati e nei confronti
+bun run check:tz-football   # fuso nei formati e nei confronti
 bun run check:italian       # nessun testo inglese nella UI
 bun run test                # include timezoneConsistency e currentSeason
 ```

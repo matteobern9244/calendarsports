@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import type { FootballMatch } from "@/lib/api/schemas";
-import type { PaginatedCalendar } from "@/lib/juventusCalendar";
+import type { PaginatedCalendar } from "@/lib/teamCalendar";
 import CalendarList from "./CalendarList";
 import { resolveTeam, type SerieATeam } from "@/lib/serieATeams";
 

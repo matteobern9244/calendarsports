@@ -4,7 +4,7 @@ import {
   formatDateIT,
   formatTimeIT,
   formatDateTimeIT,
-  formatJuventusDateTime,
+  formatFootballDateTime,
   getEventStatus,
   getDateTimestamp,
   prioritizeNextUpcoming,
@@ -32,12 +32,12 @@ describe("Coerenza timezone Europe/Rome tra gli helper", () => {
     expect(toRomeDate(withOffset)?.toISOString()).toBe("2026-04-21T19:45:00.000Z");
   });
 
-  it("formatDateIT, formatTimeIT, formatDateTimeIT, formatJuventusDateTime concordano in estate (CEST, UTC+2)", () => {
+  it("formatDateIT, formatTimeIT, formatDateTimeIT, formatFootballDateTime concordano in estate (CEST, UTC+2)", () => {
     expect(formatDateIT(naive)).toBe("21/04/2026");
     // 19:45 UTC -> 21:45 Europe/Rome (DST attivo)
     expect(formatTimeIT("19:45:00", "2026-04-21")).toBe("21:45");
     expect(formatDateTimeIT(naive)).toBe("21/04/2026 21:45");
-    expect(formatJuventusDateTime(naive)).toEqual({
+    expect(formatFootballDateTime(naive)).toEqual({
       date: "21/04/2026",
       time: "21:45",
       full: "21/04/2026 21:45",
@@ -50,18 +50,18 @@ describe("Coerenza timezone Europe/Rome tra gli helper", () => {
     // 19:45 UTC -> 20:45 Europe/Rome (no DST)
     expect(formatTimeIT("19:45:00", "2026-01-15")).toBe("20:45");
     expect(formatDateTimeIT(winter)).toBe("15/01/2026 20:45");
-    expect(formatJuventusDateTime(winter).time).toBe("20:45");
+    expect(formatFootballDateTime(winter).time).toBe("20:45");
   });
 
   it("naive e Z producono lo stesso output formattato", () => {
     expect(formatDateTimeIT(naive)).toBe(formatDateTimeIT(withZ));
-    expect(formatJuventusDateTime(naive)).toEqual(formatJuventusDateTime(withZ));
+    expect(formatFootballDateTime(naive)).toEqual(formatFootballDateTime(withZ));
   });
 
   it("edge case mezzanotte UTC -> giorno successivo a Roma", () => {
     // 23:30 UTC del 21 aprile = 01:30 del 22 aprile a Roma (CEST)
     const lateUtc = "2026-04-21T23:30:00Z";
-    expect(formatJuventusDateTime(lateUtc)).toEqual({
+    expect(formatFootballDateTime(lateUtc)).toEqual({
       date: "22/04/2026",
       time: "01:30",
       full: "22/04/2026 01:30",
@@ -90,7 +90,7 @@ describe("Coerenza timezone Europe/Rome tra gli helper", () => {
   it("input invalidi: stringa vuota / null -> output difensivo", () => {
     expect(toRomeDate("")).toBeNull();
     expect(toRomeDate(null)).toBeNull();
-    expect(formatJuventusDateTime("")).toEqual({ date: "—", time: "", full: "—" });
+    expect(formatFootballDateTime("")).toEqual({ date: "—", time: "", full: "—" });
     expect(formatTimeIT("")).toBe("");
     expect(formatTimeIT(null)).toBe("");
   });

@@ -8,6 +8,7 @@ import {
   ymdKey,
   type RomeYMD,
 } from "@/lib/calendarGrid";
+import { FILTERS_KEY, loadFilters } from "@/lib/calendarFilters";
 import { Link } from "react-router";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,24 +40,10 @@ import { useUserPrefs } from "@/contexts/useUserPrefs";
 import { cn } from "@/lib/utils";
 
 // Etichette IT per settimane e mesi (no date-fns/locale per zero-dipendenze)
-const SPORTS: ReadonlyArray<CalendarSport> = ["juventus", "f1", "motogp"];
-const FILTERS_KEY = "calendar.filters";
+const SPORTS: ReadonlyArray<CalendarSport> = ["football", "f1", "motogp"];
 const VIEW_KEY = "calendar.view";
 
 type ViewMode = "month" | "agenda";
-
-function loadFilters(): Record<CalendarSport, boolean> {
-  const def = { juventus: true, f1: true, motogp: true };
-  if (typeof window === "undefined") return def;
-  try {
-    const raw = window.localStorage.getItem(FILTERS_KEY);
-    if (!raw) return def;
-    const parsed = JSON.parse(raw) as Partial<Record<CalendarSport, boolean>>;
-    return { ...def, ...parsed };
-  } catch {
-    return def;
-  }
-}
 
 function loadView(): ViewMode {
   if (typeof window === "undefined") return "month";
@@ -96,7 +83,7 @@ export default function CalendarPage() {
   const { sections, favoriteTeam } = useUserPrefs();
   // Le sezioni disattivate nel profilo non compaiono nel calendario.
   const visibleSports = useMemo(
-    () => SPORTS.filter((s) => s === "juventus" || sections[s]),
+    () => SPORTS.filter((s) => s === "football" || sections[s]),
     [sections],
   );
 
@@ -277,7 +264,7 @@ export default function CalendarPage() {
         })}
         <button
           type="button"
-          onClick={() => setEnabled({ juventus: true, f1: true, motogp: true })}
+          onClick={() => setEnabled({ football: true, f1: true, motogp: true })}
           className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 font-heading uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-[hsl(var(--gold))]/40 transition-colors"
           title="Mostra tutti gli sport"
         >

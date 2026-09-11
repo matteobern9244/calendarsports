@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { queryKeys } from "@/lib/queryKeys";
-import { getCurrentJuventusSeason } from "@/lib/currentSeason";
+import { getCurrentFootballSeason } from "@/lib/currentSeason";
 
 /**
  * «Sincronizza» non chiama gli hook: chiama le edge function e scrive il
@@ -55,7 +55,7 @@ import { resolveTeam } from "@/lib/serieATeams";
 const JUVE = resolveTeam("juventus");
 const NAPOLI = resolveTeam("napoli");
 
-const STAGIONE = getCurrentJuventusSeason();
+const STAGIONE = getCurrentFootballSeason();
 
 type Ambiente = ReturnType<typeof ambiente>;
 
@@ -96,13 +96,13 @@ describe("useSyncAll", () => {
     const amb = ambiente();
     await sincronizza(amb);
 
-    // La stessa chiave che `useJuventusCalendar(team, season, 1, 12, false)`
+    // La stessa chiave che `useFootballCalendar(team, season, 1, 12, false)`
     // andra' a leggere: se qui cambiasse l'ordine degli elementi, la
     // sincronizzazione riempirebbe una voce che nessuno apre.
     expect(
-      amb.client.getQueryData(queryKeys.juventus.calendar("napoli", STAGIONE, 1, 12, false)),
+      amb.client.getQueryData(queryKeys.football.calendar("napoli", STAGIONE, 1, 12, false)),
     ).toEqual(PAGINA);
-    expect(amb.client.getQueryData(queryKeys.juventus.info("napoli", STAGIONE))).toBeDefined();
+    expect(amb.client.getQueryData(queryKeys.football.info("napoli", STAGIONE))).toBeDefined();
   });
 
   it("la richiesta porta la stessa squadra della chiave", async () => {
@@ -124,7 +124,7 @@ describe("useSyncAll", () => {
     await sincronizza(amb);
 
     expect(
-      amb.client.getQueryData(queryKeys.juventus.calendar("juventus", STAGIONE, 1, 12, false)),
+      amb.client.getQueryData(queryKeys.football.calendar("juventus", STAGIONE, 1, 12, false)),
       "la Juventus non e' stata chiesta",
     ).toBeUndefined();
   });
@@ -136,7 +136,7 @@ describe("useSyncAll", () => {
     const amb = ambiente();
     await sincronizza(amb);
 
-    expect(amb.client.getQueryData(queryKeys.juventus.standings(STAGIONE))).toBeDefined();
+    expect(amb.client.getQueryData(queryKeys.football.standings(STAGIONE))).toBeDefined();
     const classifica = chiamaEdge.mock.calls.find(
       ([fn, params]) => fn === "sports-football" && params.action === "standings",
     );

@@ -3,7 +3,7 @@ import { buildPageList } from "./pageList";
 
 /**
  * Aritmetica della paginazione con gli ellissi. Viveva dentro
- * `JuventusPage.tsx` senza un test: e' la classica funzione che sbaglia di
+ * `TeamPage.tsx` senza un test: e' la classica funzione che sbaglia di
  * uno ai bordi (pagina 1, ultima pagina, sette pagine esatte, otto) senza che
  * nessuno se ne accorga, perche' la UI mostra comunque *qualcosa*.
  *

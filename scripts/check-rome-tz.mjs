@@ -39,7 +39,7 @@ const TARGET_DIRS = [
   "src/components/streaming",
   "src/components/calendar",
   "src/components/highlights",
-  "src/components/juventus",
+  "src/components/team",
   "src/components/sinner",
 ];
 
@@ -135,7 +135,7 @@ async function main() {
     if (violations.length === 0) continue;
     hasErrors = true;
     const rel = path.relative(ROOT, file);
-    console.error(`\n[check:tz-juventus] ${rel}`);
+    console.error(`\n[check:tz-football] ${rel}`);
     for (const v of violations) {
       const hint =
         v.kind === "newDate"
@@ -146,16 +146,16 @@ async function main() {
   }
   if (hasErrors) {
     console.error(
-      "\nUsa formatJuventusDateTime / toRomeDate da @/lib/dateUtils per garantire fuso Europe/Rome.",
+      "\nUsa formatFootballDateTime / toRomeDate da @/lib/dateUtils per garantire fuso Europe/Rome.",
     );
     process.exit(1);
   }
   console.log(
-    "[check:tz-juventus] OK — nessuna formattazione senza fuso e nessun confronto su new Date(stringa).",
+    "[check:tz-football] OK — nessuna formattazione senza fuso e nessun confronto su new Date(stringa).",
   );
 }
 
 main().catch((err) => {
-  console.error("[check:tz-juventus] errore inatteso:", err);
+  console.error("[check:tz-football] errore inatteso:", err);
   process.exit(2);
 });

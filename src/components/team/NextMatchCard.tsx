@@ -6,8 +6,8 @@ import EventCountdown from "@/components/common/EventCountdown";
 import TeamLogo from "@/components/common/TeamLogo";
 import type { FootballMatch } from "@/lib/api/schemas";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
-import { formatJuventusDateTime } from "@/lib/dateUtils";
-import { matchSide } from "@/lib/juventusMatch";
+import { formatFootballDateTime } from "@/lib/dateUtils";
+import { matchSide } from "@/lib/teamMatch";
 import type { SerieATeam } from "@/lib/serieATeams";
 import { teamMatchPath } from "@/lib/teamRoutes";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ interface NextMatchCardProps {
 /** La card «Prossima Partita» in testa alla pagina squadra. */
 export default function NextMatchCard({ team, match, onRetry }: NextMatchCardProps) {
   const { isHome, opponent, opponentLogo } = matchSide(match, team);
-  const { date: dateStr, time: timeStr } = formatJuventusDateTime(match.date);
+  const { date: dateStr, time: timeStr } = formatFootballDateTime(match.date);
   const compColor = COMPETITION_COLORS[match.competition] || "";
   return (
     <motion.div

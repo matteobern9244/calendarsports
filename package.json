@@ -21,10 +21,10 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "check:italian": "node scripts/check-italian-ui.mjs",
-    "check:tz-juventus": "node scripts/check-rome-tz.mjs",
+    "check:tz-football": "node scripts/check-rome-tz.mjs",
     "sync:teams": "node scripts/sync-serie-a-teams.mjs",
     "prepare": "husky",
-    "verify": "bun run typecheck && bun run lint && bun run check:italian && bun run check:tz-juventus && bun run test && bun run build"
+    "verify": "bun run typecheck && bun run lint && bun run check:italian && bun run check:tz-football && bun run test && bun run build"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

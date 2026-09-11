@@ -108,9 +108,9 @@ prefetch scritto con una chiave sbagliata viene semplicemente buttato.
 | `useF1DriverStandings(season)`                               | `["f1","driver-standings",season]`                                           | `driver-standings`                       |
 | `useF1ConstructorStandings(season)`                          | `["f1","constructor-standings",season]`                                      | `constructor-standings`                  |
 | `useF1NextRace()`                                            | `["f1","next-race"]`                                                         | `next-race`                              |
-| `useSerieAStandings(season)`                                 | `["juventus","standings",season]`                                            | `sports-football?action=standings`       |
-| `useJuventusCalendar(team,season,page?,pageSize?,upcoming?)` | `["juventus","calendar",team,season,upcomingOnly,page??null,pageSize??null]` | `calendar`                               |
-| `useJuventusInfo(team,season)`                               | `["juventus","info",team,season]`                                            | `info`                                   |
+| `useSerieAStandings(season)`                                 | `["football","standings",season]`                                            | `sports-football?action=standings`       |
+| `useFootballCalendar(team,season,page?,pageSize?,upcoming?)` | `["football","calendar",team,season,upcomingOnly,page??null,pageSize??null]` | `calendar`                               |
+| `useFootballInfo(team,season)`                               | `["football","info",team,season]`                                            | `info`                                   |
 | `useSinnerInfo()`                                            | `["sinner","info"]`                                                          | `sports-tennis?action=player-info`       |
 | `useSinnerNextEvent()`                                       | `["sinner","next-event"]`                                                    | `next-event`                             |
 | `useSinnerSchedule(season)`                                  | `["sinner","schedule",season]`                                               | `schedule`                               |
@@ -125,7 +125,7 @@ prefetch scritto con una chiave sbagliata viene semplicemente buttato.
 | `useReleaseDetails(type,id)`                                 | `["streaming-release-details",type,id]`                                      | `details`                                |
 | `useProfile()`                                               | `["profile",userId]`                                                         | **nessuna**: `supabase.from("profiles")` |
 
-`useJuventusCalendar` chiamata **senza** `page` e `pageSize` restituisce l'intera
+`useFootballCalendar` chiamata **senza** `page` e `pageSize` restituisce l'intera
 stagione: è la forma che usano la Home e il dettaglio partita, e condividono la
 stessa voce di cache.
 
@@ -143,9 +143,9 @@ Tre cose di quelle chiavi non sono cosmetiche:
   e venti: metterla nella chiave moltiplicherebbe le stesse righe per venti e
   farebbe ricominciare da un caricamento a ogni cambio squadra.
 
-Il namespace si chiama ancora `juventus` di proposito: è un pezzo di chiave di
-cache, e rinominarlo invalida tutto ciò che è in memoria. La rinomina in
-`football` è un commit a sé.
+Il namespace si chiama `football`. Si chiamava `juventus` finché l'app aveva
+una squadra sola; rinominarlo ha azzerato la cache **in memoria** e nient'altro,
+perché non c'è `persistQueryClient` e su disco non ne esiste copia.
 
 `useProfile` è l'unico hook che **non** passa da una edge function: legge e
 scrive `profiles` direttamente, con la sessione dell'utente, e le sue mutation

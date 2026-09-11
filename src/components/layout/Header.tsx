@@ -8,7 +8,7 @@ import {
   HomeBrandIcon,
   StreamingBrandIcon,
   TennisBrandIcon,
-  JuveBrandIcon,
+  FootballBrandIcon,
   F1BrandIcon,
   MotoGPBrandIcon,
   CalendarBrandIcon,
@@ -94,7 +94,7 @@ export default function Header() {
     label: team.name.toUpperCase(),
     shortLabel: team.name.toUpperCase(),
     path: teamPath(team),
-    Icon: JuveBrandIcon,
+    Icon: FootballBrandIcon,
   };
   navItems.splice(posizioneSquadra === -1 ? navItems.length : posizioneSquadra, 0, squadra);
 

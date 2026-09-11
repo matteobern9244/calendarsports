@@ -16,5 +16,5 @@ sia quando confronti. `new Date(stringa)` legge l'orario come ora locale e sfasa
 il conto alla rovescia rispetto a quello che l'utente vede scritto accanto. La
 UI e' in italiano, tranne `STREAMING` e `CALENDAR EVENTS`.
 
-I controlli eseguibili sono `bun run check:tz-juventus` e
+I controlli eseguibili sono `bun run check:tz-football` e
 `bun run check:italian`, non questa sintesi.

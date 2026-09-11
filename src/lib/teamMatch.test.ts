@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FootballMatch } from "@/lib/api/schemas";
-import { formatGoalDiff, matchResult, matchSide } from "./juventusMatch";
+import { formatGoalDiff, matchResult, matchSide } from "./teamMatch";
 import { resolveTeam } from "@/lib/serieATeams";
 
 /**

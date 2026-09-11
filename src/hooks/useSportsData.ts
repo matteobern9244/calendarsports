@@ -43,16 +43,16 @@ export function useF1NextRace() {
   });
 }
 
-// === Football/Juventus Hooks (Sky Sport) ===
+// === Football Hooks (Sky Sport) ===
 export function useSerieAStandings(season: number) {
   return useQuery({
-    queryKey: queryKeys.juventus.standings(season),
+    queryKey: queryKeys.football.standings(season),
     queryFn: () => footballApi.getStandings(season),
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useJuventusCalendar(
+export function useFootballCalendar(
   teamSlug: string,
   season: number,
   page?: number,
@@ -60,21 +60,21 @@ export function useJuventusCalendar(
   upcomingOnly = false,
 ) {
   return useQuery({
-    queryKey: queryKeys.juventus.calendar(teamSlug, season, page, pageSize, upcomingOnly),
+    queryKey: queryKeys.football.calendar(teamSlug, season, page, pageSize, upcomingOnly),
     queryFn: () => footballApi.getCalendar(teamSlug, season, page, pageSize, upcomingOnly),
     staleTime: 5 * 60 * 1000,
     // Niente flash di skeleton al click su Successiva, ma il placeholder si
     // ferma al confine della lista: cambiare squadra, stagione o filtro
     // mostra il caricamento, non le partite di prima.
     placeholderData: keepPreviousPageOf(
-      queryKeys.juventus.calendarList(teamSlug, season, upcomingOnly),
+      queryKeys.football.calendarList(teamSlug, season, upcomingOnly),
     ),
   });
 }
 
-export function useJuventusInfo(teamSlug: string, season: number) {
+export function useFootballInfo(teamSlug: string, season: number) {
   return useQuery({
-    queryKey: queryKeys.juventus.info(teamSlug, season),
+    queryKey: queryKeys.football.info(teamSlug, season),
     queryFn: () => footballApi.getTeamInfo(teamSlug, season),
     staleTime: 60 * 1000,
   });

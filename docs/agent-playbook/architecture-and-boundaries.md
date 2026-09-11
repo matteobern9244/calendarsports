@@ -158,7 +158,7 @@ una trappola da cui non si esce. Lo verifica `e2e/app.spec.ts`, perché la
 cronologia del browser non esiste in jsdom.
 
 Il punto di vista sulla singola partita è un parametro, non la Juventus:
-`matchSide` e `matchResult` in `src/lib/juventusMatch.ts` prendono la squadra.
+`matchSide` e `matchResult` in `src/lib/teamMatch.ts` prendono la squadra.
 La stessa Juventus-Napoli compare in due calendari, e in quello del Napoli
 l'avversario è dall'altra parte e il risultato è rovesciato.
 

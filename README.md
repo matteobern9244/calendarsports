@@ -2,7 +2,8 @@
 
 Applicazione web di eventi sportivi e streaming multi-sezione per
 consultare eventi imminenti, calendari e classifiche di Jannik Sinner,
-Juventus, Formula 1 e MotoGP, oltre a palinsesti TV serali e nuove uscite
+della tua squadra di Serie A, della Formula 1 e della MotoGP, oltre a
+palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
 Versione repository corrente: `2.3.6` (consolidamento Streaming →

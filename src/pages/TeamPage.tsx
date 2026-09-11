@@ -5,22 +5,39 @@ import LandingSpinner from "@/components/common/LandingSpinner";
 import OfflinePageFallback from "@/components/common/OfflinePageFallback";
 import SportTabs from "@/components/common/SportTabs";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
-import CalendarList from "@/components/juventus/CalendarList";
-import NextMatchCard from "@/components/juventus/NextMatchCard";
-import StandingsTable from "@/components/juventus/StandingsTable";
+import CalendarList from "@/components/team/CalendarList";
+import NextMatchCard from "@/components/team/NextMatchCard";
+import StandingsTable from "@/components/team/StandingsTable";
 import { TabsContent } from "@/components/ui/tabs";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
+import { useSerieAStandings, useFootballCalendar } from "@/hooks/useSportsData";
 import { type SerieATeam } from "@/lib/serieATeams";
 import { paginatedCalendarOf } from "@/lib/api/schemas";
 import { footballApi } from "@/lib/api/sportsApi";
-import { getCurrentJuventusSeason } from "@/lib/currentSeason";
-import { pageOfIndex, pickNextMatch } from "@/lib/juventusCalendar";
+import { getCurrentFootballSeason } from "@/lib/currentSeason";
+import { pageOfIndex, pickNextMatch } from "@/lib/teamCalendar";
 import { allSectionsUnavailable } from "@/lib/offlineSections";
 import { queryKeys } from "@/lib/queryKeys";
 import { skyTeamPageUrl } from "@/lib/teamRoutes";
 
 const PAGE_SIZE = 12;
+
+/**
+ * La preferenza «Prossime / Tutte», ricordata sul dispositivo.
+ *
+ * **Il nome resta juventino di proposito**, unico superstite fra tutti quelli
+ * rinominati in questo lavoro. Non e' una svista: e' scritto nel
+ * `localStorage` di chi usa gia' l'app, e una chiave nuova non troverebbe
+ * niente. Chi aveva scelto «Tutte» se la vedrebbe tornare su «Prossime» senza
+ * capire perche'.
+ *
+ * A differenza della voce del calcio nei filtri del calendario aggregato
+ * — dove la chiave scritta su disco era un valore di `CalendarSport`, e
+ * rinominare il tipo l'ha rinominata per forza — qui nessun tipo la lega a
+ * niente: e' una stringa in due righe. Rinominarla costerebbe una migrazione
+ * per cambiare un nome che nessun utente vede mai.
+ */
+const FILTER_STORAGE_KEY = "juventus-calendar-filter";
 
 const TABS = [
   { value: "calendario", label: "Calendario" },
@@ -50,7 +67,7 @@ export default function TeamPage({ team }: TeamPageProps) {
     href: skyTeamPageUrl(team),
     label: `Vedi ${team.name} su Sky Sport`,
   };
-  const season = getCurrentJuventusSeason();
+  const season = getCurrentFootballSeason();
   const queryClient = useQueryClient();
   const {
     data: standings,
@@ -64,14 +81,14 @@ export default function TeamPage({ team }: TeamPageProps) {
   // in corso; "Tutte" mostra anche i risultati. Preferenza persistita.
   const [upcomingOnly, setUpcomingOnly] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
-    return window.localStorage.getItem("juventus-calendar-filter") !== "all";
+    return window.localStorage.getItem(FILTER_STORAGE_KEY) !== "all";
   });
   const {
     data: calendarData,
     isLoading: calLoading,
     error: calError,
     refetch: calRefetch,
-  } = useJuventusCalendar(team.slug, season, page, PAGE_SIZE, upcomingOnly);
+  } = useFootballCalendar(team.slug, season, page, PAGE_SIZE, upcomingOnly);
   const { isOnline } = useOnlineStatus();
 
   const calendar = paginatedCalendarOf(calendarData);
@@ -80,7 +97,7 @@ export default function TeamPage({ team }: TeamPageProps) {
   // card anche quando chi guarda si e' spostato su un'altra pagina.
   const nextMatchPage = calendar ? pageOfIndex(calendar.nextUpcomingIndex, PAGE_SIZE) : null;
   const nextOnCurrentPage = calendar && nextMatchPage !== null && nextMatchPage === calendar.page;
-  const { data: nextMatchData, isLoading: nextMatchLoading } = useJuventusCalendar(
+  const { data: nextMatchData, isLoading: nextMatchLoading } = useFootballCalendar(
     team.slug,
     season,
     nextOnCurrentPage || nextMatchPage === null ? undefined : nextMatchPage,
@@ -119,7 +136,7 @@ export default function TeamPage({ team }: TeamPageProps) {
     if (totalPages > 0 && currentPage + 1 <= totalPages) {
       const next = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: queryKeys.juventus.calendar(team.slug, season, next, PAGE_SIZE, upcomingOnly),
+        queryKey: queryKeys.football.calendar(team.slug, season, next, PAGE_SIZE, upcomingOnly),
         queryFn: () => footballApi.getCalendar(team.slug, season, next, PAGE_SIZE, upcomingOnly),
         staleTime: 5 * 60 * 1000,
       });
@@ -135,7 +152,7 @@ export default function TeamPage({ team }: TeamPageProps) {
       (totalPages === 0 || nextMatchPage <= totalPages)
     ) {
       queryClient.prefetchQuery({
-        queryKey: queryKeys.juventus.calendar(
+        queryKey: queryKeys.football.calendar(
           team.slug,
           season,
           nextMatchPage,
@@ -154,7 +171,7 @@ export default function TeamPage({ team }: TeamPageProps) {
     setUserInteracted(false);
     setPage(1);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem("juventus-calendar-filter", onlyUpcoming ? "upcoming" : "all");
+      window.localStorage.setItem(FILTER_STORAGE_KEY, onlyUpcoming ? "upcoming" : "all");
     }
   };
 

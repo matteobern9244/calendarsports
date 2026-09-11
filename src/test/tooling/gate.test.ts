@@ -24,7 +24,7 @@ const ANELLI: Array<{ script: string; perche: string }> = [
   { script: "lint", perche: "include Prettier e i divieti di import" },
   { script: "check:italian", perche: "la UI e' in italiano per scelta di prodotto" },
   {
-    script: "check:tz-juventus",
+    script: "check:tz-football",
     perche: "i confronti fra date sono la classe di bug piu' costosa",
   },
   { script: "test", perche: "unit test dell'app e delle edge function" },

@@ -44,7 +44,7 @@ const motogpFixture: MotoGPEvent[] = [
 const juventusFixture: FootballCalendar = {
   items: [
     {
-      id: "juve-inter",
+      id: "football-inter",
       homeTeam: "Juventus",
       awayTeam: "Inter",
       competition: "Serie A",
@@ -76,7 +76,7 @@ const incrocio: FootballCalendar = {
 
 /** Solo le voci di calcio: F1 e MotoGP non dipendono dalla squadra. */
 function calcio(events: CalendarItem[]): CalendarItem[] {
-  return events.filter((e) => e.sport === "juventus");
+  return events.filter((e) => e.sport === "football");
 }
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -104,7 +104,7 @@ describe("useCalendarEvents", () => {
     expect([...dates].sort()).toEqual(dates);
     expect(result.current.events.map((e) => e.sport)).toContain("f1");
     expect(result.current.events.map((e) => e.sport)).toContain("motogp");
-    expect(result.current.events.map((e) => e.sport)).toContain("juventus");
+    expect(result.current.events.map((e) => e.sport)).toContain("football");
   });
 
   /**

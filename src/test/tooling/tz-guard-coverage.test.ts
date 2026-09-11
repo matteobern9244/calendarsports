@@ -71,7 +71,7 @@ describe("Copertura del guardiano sul fuso", () => {
 
   it("ogni cartella di componenti che manipola date e' fra quelle sorvegliate", () => {
     // Le cartelle si aggiungono a mano a TARGET_DIRS, e una cartella nuova
-    // nasce scoperta: `src/components/juventus` e' nata cosi' durante il
+    // nasce scoperta: `src/components/team` e' nata cosi' durante il
     // refactoring, e `src/components/sinner` era scoperta da mesi con un
     // `new Date(stringa)` dentro.
     const sorvegliate = cartelleSorvegliate();

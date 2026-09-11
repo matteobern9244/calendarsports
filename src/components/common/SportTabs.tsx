@@ -38,7 +38,7 @@ const DEFAULT_LIST_CLASS = "mb-6 bg-muted flex-wrap h-auto gap-1 p-1";
 /**
  * Il guscio delle pagine sportive: contenitore, intestazione e schede.
  * Era ripetuto in `Formula1Page`, `MotoGPPage`, `SinnerPage` e
- * `JuventusPage`, con differenze reali fra le quattro copie — le schede,
+ * `TeamPage`, con differenze reali fra le quattro copie — le schede,
  * e in un caso le classi della lista. Qui restano differenze dichiarate,
  * non ripetizioni.
  */

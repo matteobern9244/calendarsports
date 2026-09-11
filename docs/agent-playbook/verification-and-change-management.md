@@ -59,7 +59,7 @@ comportamento non raggiunge, o raggiungerebbe troppo tardi.
 
 | Guardiano                                                 | Vieta                                                                                                                                                         |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/check-rome-tz.mjs` (`bun run check:tz-juventus`) | `toLocale*String` senza `timeZone: "Europe/Rome"`, e `new Date(stringa)` per confrontare eventi: legge l'ISO come ora locale e sfasa il conto alla rovescia   |
+| `scripts/check-rome-tz.mjs` (`bun run check:tz-football`) | `toLocale*String` senza `timeZone: "Europe/Rome"`, e `new Date(stringa)` per confrontare eventi: legge l'ISO come ora locale e sfasa il conto alla rovescia   |
 | `scripts/check-italian-ui.mjs` (`bun run check:italian`)  | testo inglese in contenuti, `aria-label`, `placeholder`, toast e titoli. Non è un parser AST: copre il caso comune, non tutti                                 |
 | `no-restricted-imports` in `eslint.config.js`             | l'import di `@/integrations/supabase/client`: senza env var iniettate produce richieste che rispondono HTML 200 e lasciano React Query in caricamento eterno  |
 | `react-hooks/set-state-in-effect`                         | il `setState` sincrono dentro un effect: gira anche al mount, e così azzerava la pagina arrivata da `?page=`                                                  |

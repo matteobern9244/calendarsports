@@ -4,23 +4,23 @@ import { join, relative, resolve } from "node:path";
 import { isPageOf, keepPreviousPageOf } from "./queryPlaceholder";
 import { queryKeys } from "./queryKeys";
 
-const juveProssime = queryKeys.juventus.calendarList("juventus", 2026, true);
+const juveProssime = queryKeys.football.calendarList("juventus", 2026, true);
 
 describe("isPageOf", () => {
   it("riconosce una pagina della stessa lista", () => {
-    expect(isPageOf(juveProssime, queryKeys.juventus.calendar("juventus", 2026, 2, 12, true))).toBe(
+    expect(isPageOf(juveProssime, queryKeys.football.calendar("juventus", 2026, 2, 12, true))).toBe(
       true,
     );
   });
 
   it("non riconosce la stessa pagina di un'altra squadra", () => {
-    expect(isPageOf(juveProssime, queryKeys.juventus.calendar("napoli", 2026, 2, 12, true))).toBe(
+    expect(isPageOf(juveProssime, queryKeys.football.calendar("napoli", 2026, 2, 12, true))).toBe(
       false,
     );
   });
 
   it("non riconosce la stessa pagina di un'altra stagione", () => {
-    expect(isPageOf(juveProssime, queryKeys.juventus.calendar("juventus", 2025, 2, 12, true))).toBe(
+    expect(isPageOf(juveProssime, queryKeys.football.calendar("juventus", 2025, 2, 12, true))).toBe(
       false,
     );
   });
@@ -28,7 +28,7 @@ describe("isPageOf", () => {
   it("non riconosce la stessa pagina dell'altro filtro", () => {
     // «Prossime» e «Tutte» sono due liste, non due viste della stessa.
     expect(
-      isPageOf(juveProssime, queryKeys.juventus.calendar("juventus", 2026, 2, 12, false)),
+      isPageOf(juveProssime, queryKeys.football.calendar("juventus", 2026, 2, 12, false)),
     ).toBe(false);
   });
 
@@ -39,7 +39,7 @@ describe("isPageOf", () => {
   });
 
   it("non riconosce il calendario aggregato", () => {
-    expect(isPageOf(juveProssime, queryKeys.juventus.calendarAll("juventus", 2026, 3))).toBe(false);
+    expect(isPageOf(juveProssime, queryKeys.football.calendarAll("juventus", 2026, 3))).toBe(false);
   });
 
   it("la chiave di una pagina contiene davvero la lista in testa", () => {
@@ -47,7 +47,7 @@ describe("isPageOf", () => {
     // `calendarList`, il confronto qui sopra diventerebbe sempre falso e il
     // placeholder non tornerebbe mai — la paginazione tornerebbe a
     // sfarfallare senza che niente fallisca.
-    const pagina = queryKeys.juventus.calendar("juventus", 2026, 2, 12, true);
+    const pagina = queryKeys.football.calendar("juventus", 2026, 2, 12, true);
     expect(pagina.slice(0, juveProssime.length)).toEqual([...juveProssime]);
   });
 });
@@ -57,13 +57,13 @@ describe("keepPreviousPageOf", () => {
 
   it("restituisce i dati precedenti dentro la lista", () => {
     expect(
-      tieni("pagina 1", { queryKey: queryKeys.juventus.calendar("juventus", 2026, 1, 12, true) }),
+      tieni("pagina 1", { queryKey: queryKeys.football.calendar("juventus", 2026, 1, 12, true) }),
     ).toBe("pagina 1");
   });
 
   it("restituisce undefined fuori dalla lista", () => {
     expect(
-      tieni("pagina 1", { queryKey: queryKeys.juventus.calendar("napoli", 2026, 1, 12, true) }),
+      tieni("pagina 1", { queryKey: queryKeys.football.calendar("napoli", 2026, 1, 12, true) }),
     ).toBeUndefined();
   });
 

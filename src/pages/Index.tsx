@@ -6,23 +6,23 @@ import LoadingState from "@/components/common/LoadingState";
 import { motion } from "framer-motion";
 import {
   useF1NextRace,
-  useJuventusCalendar,
+  useFootballCalendar,
   useSinnerNextEvent,
   useMotoGPNextEvent,
 } from "@/hooks/useSportsData";
-import { getCurrentJuventusSeason } from "@/lib/currentSeason";
+import { getCurrentFootballSeason } from "@/lib/currentSeason";
 import type { FootballMatch } from "@/lib/api/schemas";
 import {
   formatDateIT,
   formatTimeIT,
-  formatJuventusDateTime,
+  formatFootballDateTime,
   getDateTimestamp,
 } from "@/lib/dateUtils";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
-import { matchSide } from "@/lib/juventusMatch";
+import { matchSide } from "@/lib/teamMatch";
 import TonightTvList from "@/components/home/TonightTvList";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { cn } from "@/lib/utils";
@@ -77,11 +77,11 @@ export default function HomePage() {
     refetch: f1Refetch,
   } = useF1NextRace();
   const {
-    data: juveCalendar,
-    isLoading: juveLoading,
-    error: juveError,
-    refetch: juveRefetch,
-  } = useJuventusCalendar(favoriteTeam.slug, getCurrentJuventusSeason());
+    data: footballCalendar,
+    isLoading: footballLoading,
+    error: footballError,
+    refetch: footballRefetch,
+  } = useFootballCalendar(favoriteTeam.slug, getCurrentFootballSeason());
   const {
     data: sinnerNext,
     isLoading: sinnerLoading,
@@ -95,7 +95,7 @@ export default function HomePage() {
     refetch: motogpRefetch,
   } = useMotoGPNextEvent();
 
-  const isLoading = f1Loading || juveLoading || sinnerLoading || motogpLoading;
+  const isLoading = f1Loading || footballLoading || sinnerLoading || motogpLoading;
 
   const now = useNowMinute();
 
@@ -113,11 +113,11 @@ export default function HomePage() {
       });
     }
 
-    if (juveCalendar && Array.isArray(juveCalendar)) {
+    if (footballCalendar && Array.isArray(footballCalendar)) {
       // Il predicato non filtra soltanto: restringe il tipo, cosi' `date`
       // resta una stringa fino in fondo invece di tornare opzionale un
       // rigo piu' sotto.
-      const nextMatch = juveCalendar
+      const nextMatch = footballCalendar
         .filter(
           (m): m is FootballMatch & { date: string } =>
             m.status !== "FullTime" && typeof m.date === "string" && getDateTimestamp(m.date) > now,
@@ -129,7 +129,7 @@ export default function HomePage() {
         // guarda. Il vecchio `includes("juventus")` sbagliava due volte —
         // sulla squadra e sul confronto.
         const { isHome, opponent } = matchSide(nextMatch, favoriteTeam);
-        const { date: dateStr, time: timeStr } = formatJuventusDateTime(nextMatch.date);
+        const { date: dateStr, time: timeStr } = formatFootballDateTime(nextMatch.date);
         upcoming.push({
           sport: `Calcio · ${favoriteTeam.name}`,
           title: `${isHome ? "vs" : "@"} ${opponent}`,
@@ -173,15 +173,15 @@ export default function HomePage() {
         return true;
       })
       .sort((a, b) => getDateTimestamp(a.rawDate) - getDateTimestamp(b.rawDate));
-  }, [f1Data, juveCalendar, sinnerNext, motogpNext, now, sections, favoriteTeam]);
+  }, [f1Data, footballCalendar, sinnerNext, motogpNext, now, sections, favoriteTeam]);
 
   // Fallback offline: nessun dato in cache da nessuna fonte e siamo offline
   if (
     !isOnline &&
     f1Error &&
     !f1Data &&
-    juveError &&
-    !juveCalendar &&
+    footballError &&
+    !footballCalendar &&
     sinnerError &&
     !sinnerNext &&
     motogpError &&
@@ -192,7 +192,7 @@ export default function HomePage() {
         <OfflineFallback
           onRetry={() => {
             f1Refetch();
-            juveRefetch();
+            footballRefetch();
             sinnerRefetch();
             motogpRefetch();
           }}
@@ -277,7 +277,7 @@ export default function HomePage() {
               highlight={idx === 0}
               onRetry={() => {
                 f1Refetch();
-                juveRefetch();
+                footballRefetch();
                 sinnerRefetch();
                 motogpRefetch();
               }}

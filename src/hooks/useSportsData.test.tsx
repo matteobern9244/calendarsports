@@ -13,7 +13,7 @@ vi.mock("@/lib/api/sportsApi", () => ({
 }));
 
 import { footballApi } from "@/lib/api/sportsApi";
-import { useJuventusCalendar } from "./useSportsData";
+import { useFootballCalendar } from "./useSportsData";
 
 function calendario(casa: string, pagina = 1): FootballCalendar {
   return {
@@ -66,7 +66,7 @@ function rispostaSospesa() {
   return (c: FootballCalendar) => sblocca(c);
 }
 
-describe("useJuventusCalendar", () => {
+describe("useFootballCalendar", () => {
   beforeEach(() => {
     vi.mocked(footballApi.getCalendar).mockReset();
   });
@@ -76,7 +76,7 @@ describe("useJuventusCalendar", () => {
     // ne' spinner, produce le partite della squadra precedente sotto il nome
     // di quella nuova.
     vi.mocked(footballApi.getCalendar).mockResolvedValue(calendario("Juventus"));
-    const { result, rerender } = renderHook(({ team }) => useJuventusCalendar(team, 2026, 1, 12), {
+    const { result, rerender } = renderHook(({ team }) => useFootballCalendar(team, 2026, 1, 12), {
       wrapper: creaWrapper(),
       initialProps: { team: "juventus" },
     });
@@ -102,7 +102,7 @@ describe("useJuventusCalendar", () => {
     // rompendo la paginazione senza che niente lo dica.
     vi.mocked(footballApi.getCalendar).mockResolvedValue(calendario("Juventus", 1));
     const { result, rerender } = renderHook(
-      ({ page }) => useJuventusCalendar("juventus", 2026, page, 12),
+      ({ page }) => useFootballCalendar("juventus", 2026, page, 12),
       { wrapper: creaWrapper(), initialProps: { page: 1 } },
     );
 
@@ -124,7 +124,7 @@ describe("useJuventusCalendar", () => {
     // l'intestazione delle prossime.
     vi.mocked(footballApi.getCalendar).mockResolvedValue(calendario("Juventus"));
     const { result, rerender } = renderHook(
-      ({ upcoming }) => useJuventusCalendar("juventus", 2026, 1, 12, upcoming),
+      ({ upcoming }) => useFootballCalendar("juventus", 2026, 1, 12, upcoming),
       { wrapper: creaWrapper(), initialProps: { upcoming: true } },
     );
 

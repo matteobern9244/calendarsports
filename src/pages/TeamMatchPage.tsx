@@ -13,12 +13,12 @@ import ErrorState from "@/components/common/ErrorState";
 import EmptyState from "@/components/common/EmptyState";
 import TeamLogo from "@/components/common/TeamLogo";
 import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
-import { useJuventusCalendar } from "@/hooks/useSportsData";
+import { useFootballCalendar } from "@/hooks/useSportsData";
 import { type SerieATeam } from "@/lib/serieATeams";
-import { getCurrentJuventusSeason } from "@/lib/currentSeason";
+import { getCurrentFootballSeason } from "@/lib/currentSeason";
 import { matchesOf, type FootballCalendar, type FootballMatch } from "@/lib/api/schemas";
-import { matchResult, matchSide } from "@/lib/juventusMatch";
-import { formatJuventusDateTime } from "@/lib/dateUtils";
+import { matchResult, matchSide } from "@/lib/teamMatch";
+import { formatFootballDateTime } from "@/lib/dateUtils";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { skyTeamPageUrl, teamPath } from "@/lib/teamRoutes";
 
@@ -65,7 +65,7 @@ export default function TeamMatchPage({ team }: TeamMatchPageProps) {
       return matchId;
     }
   }, [matchId]);
-  const season = getCurrentJuventusSeason();
+  const season = getCurrentFootballSeason();
 
   // Senza parametri di pagina l'edge function restituisce il calendario
   // completo della stagione: una manciata di decine di partite. Cercare la
@@ -73,7 +73,7 @@ export default function TeamMatchPage({ team }: TeamMatchPageProps) {
   // alla volta costava fino a `totalPages` round-trip in sequenza, ognuno in
   // attesa del precedente. E' anche la stessa chiave di cache che usa la Home,
   // quindi arrivando da li' il dato e' gia' pronto.
-  const calendarQuery = useJuventusCalendar(team.slug, season);
+  const calendarQuery = useFootballCalendar(team.slug, season);
 
   const foundMatch = useMemo(
     () => findMatch(calendarQuery.data, decodedMatchId),
@@ -149,13 +149,13 @@ function MatchDetail({
   onRetry: () => void;
 }) {
   const isFinished = match.status === "FullTime";
-  // Casa/trasferta e risultato arrivano da `juventusMatch`, non da un confronto
+  // Casa/trasferta e risultato arrivano da `teamMatch`, non da un confronto
   // scritto qui: erano una seconda implementazione delle stesse due deduzioni,
   // per di piu' con `includes("juventus")`, che in Coppa Italia avrebbe preso
   // la Juve Stabia per la Juventus.
   const { isHome } = matchSide(match, team);
   const risultato = matchResult(match, team);
-  const { date: dateStr, time: timeStr, full: fullStr } = formatJuventusDateTime(match.date);
+  const { date: dateStr, time: timeStr, full: fullStr } = formatFootballDateTime(match.date);
   const compColor = COMPETITION_COLORS[match.competition] || "";
 
   const broadcasters: string[] = match.broadcaster

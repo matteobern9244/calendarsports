@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { f1Api, footballApi, motogpApi } from "@/lib/api/sportsApi";
 import {
   getCurrentF1Season,
-  getCurrentJuventusSeason,
+  getCurrentFootballSeason,
   getCurrentMotoGPSeason,
 } from "@/lib/currentSeason";
 import { toRomeDate } from "@/lib/dateUtils";
@@ -17,7 +17,7 @@ import { teamMatchPath } from "@/lib/teamRoutes";
  * (non un weekend intero). Le date sono ISO normalizzate "naive=UTC"
  * via `toRomeDate`, l'orario in UI viene formattato in `Europe/Rome`.
  */
-export type CalendarSport = "juventus" | "f1" | "motogp";
+export type CalendarSport = "football" | "f1" | "motogp";
 
 export interface CalendarItem {
   id: string;
@@ -32,7 +32,7 @@ export interface CalendarItem {
   title: string;
   /** Path di destinazione al click (pagina sport). */
   href: string;
-  /** Optional: broadcaster (Juventus). */
+  /** Optional: broadcaster (calcio). */
   broadcaster?: string;
 }
 
@@ -178,8 +178,8 @@ function expandFootball(items: unknown[] | undefined, team: SerieATeam): Calenda
     const opponent = isHome ? away : home;
     const ctxNum = matchday != null ? `Giornata ${matchday}` : "";
     out.push({
-      id: `juve-${id}`,
-      sport: "juventus",
+      id: `football-`,
+      sport: "football",
       date,
       shortLabel: `${isHome ? "vs" : "@"} ${opponent}`,
       context: [competition, ctxNum].filter(Boolean).join(" · "),
@@ -194,13 +194,13 @@ function expandFootball(items: unknown[] | undefined, team: SerieATeam): Calenda
 /**
  * Hook unico per la pagina /calendario. Usa le stesse query keys delle
  * pagine sport: ogni "Sincronizza" globale (`useSyncAll`) aggiorna
- * automaticamente queste cache. Per Juventus carichiamo TUTTE le pagine
+ * automaticamente queste cache. Per il calcio carichiamo TUTTE le pagine
  * della stagione corrente (~25) in parallelo.
  */
 export function useCalendarEvents(team: SerieATeam) {
   const teamSlug = team.slug;
   const seasonF1 = getCurrentF1Season();
-  const seasonJ = getCurrentJuventusSeason();
+  const seasonJ = getCurrentFootballSeason();
   const seasonM = getCurrentMotoGPSeason();
 
   const f1 = useQuery({
@@ -216,21 +216,21 @@ export function useCalendarEvents(team: SerieATeam) {
   });
 
   // Calcio: pagina 1 per scoprire totalPages; poi tutte le pagine
-  const juveFirst = useQuery({
-    queryKey: queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, false),
+  const footballFirst = useQuery({
+    queryKey: queryKeys.football.calendar(teamSlug, seasonJ, 1, 12, false),
     queryFn: () => footballApi.getCalendar(teamSlug, seasonJ, 1, 12),
     staleTime: 5 * 60 * 1000,
   });
 
-  const totalPages = (juveFirst.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
+  const totalPages = (footballFirst.data as { totalPages?: number } | undefined)?.totalPages ?? 1;
   const cap = Math.min(totalPages, 30);
 
-  const juveAll = useQuery({
-    queryKey: queryKeys.juventus.calendarAll(teamSlug, seasonJ, cap),
-    enabled: !!juveFirst.data,
+  const footballAll = useQuery({
+    queryKey: queryKeys.football.calendarAll(teamSlug, seasonJ, cap),
+    enabled: !!footballFirst.data,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const first = juveFirst.data as { items?: unknown[] } | undefined;
+      const first = footballFirst.data as { items?: unknown[] } | undefined;
       const items: unknown[] = Array.isArray(first?.items) ? [...first.items] : [];
       if (cap > 1) {
         const rest = await Promise.allSettled(
@@ -261,8 +261,8 @@ export function useCalendarEvents(team: SerieATeam) {
   // mentre chi lo ricostruisse a ogni render annullerebbe la memo in silenzio.
   const f1Data = f1.data;
   const motogpData = motogp.data;
-  const juveAllData = juveAll.data;
-  const juveFirstData = juveFirst.data;
+  const footballAllData = footballAll.data;
+  const footballFirstData = footballFirst.data;
 
   const events: CalendarItem[] = useMemo(
     () =>
@@ -270,32 +270,32 @@ export function useCalendarEvents(team: SerieATeam) {
         ...expandF1(f1Data as unknown[] | undefined),
         ...expandMotoGP(motogpData as unknown[] | undefined),
         ...expandFootball(
-          (juveAllData as unknown[] | undefined) ??
-            (juveFirstData as { items?: unknown[] } | undefined)?.items,
+          (footballAllData as unknown[] | undefined) ??
+            (footballFirstData as { items?: unknown[] } | undefined)?.items,
           team,
         ),
       ]
         .filter((e) => toRomeDate(e.date) !== null)
         .sort((a, b) => a.date.localeCompare(b.date)),
-    [f1Data, motogpData, juveAllData, juveFirstData, team],
+    [f1Data, motogpData, footballAllData, footballFirstData, team],
   );
 
   const { refetch: refetchF1 } = f1;
   const { refetch: refetchMotogp } = motogp;
-  const { refetch: refetchJuveFirst } = juveFirst;
-  const { refetch: refetchJuveAll } = juveAll;
+  const { refetch: refetchFootballFirst } = footballFirst;
+  const { refetch: refetchFootballAll } = footballAll;
 
   const refetchAll = useCallback(() => {
     refetchF1();
     refetchMotogp();
-    refetchJuveFirst();
-    refetchJuveAll();
-  }, [refetchF1, refetchMotogp, refetchJuveFirst, refetchJuveAll]);
+    refetchFootballFirst();
+    refetchFootballAll();
+  }, [refetchF1, refetchMotogp, refetchFootballFirst, refetchFootballAll]);
 
   return {
     events,
-    isLoading: f1.isLoading || motogp.isLoading || juveFirst.isLoading || juveAll.isLoading,
-    isError: !!(f1.error && motogp.error && juveFirst.error),
+    isLoading: f1.isLoading || motogp.isLoading || footballFirst.isLoading || footballAll.isLoading,
+    isError: !!(f1.error && motogp.error && footballFirst.error),
     refetchAll,
   };
 }

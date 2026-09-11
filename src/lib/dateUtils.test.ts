@@ -4,7 +4,7 @@ import {
   formatDurationSpoken,
   formatLongDateIT,
   toRomeDate,
-  formatJuventusDateTime,
+  formatFootballDateTime,
 } from "./dateUtils";
 
 describe("formatDuration", () => {
@@ -135,28 +135,28 @@ describe("toRomeDate", () => {
   });
 });
 
-describe("formatJuventusDateTime", () => {
+describe("formatFootballDateTime", () => {
   it("formatta in ora Roma (estate, UTC+2)", () => {
-    const result = formatJuventusDateTime("2026-04-21T19:45:00Z");
+    const result = formatFootballDateTime("2026-04-21T19:45:00Z");
     expect(result).toEqual({ date: "21/04/2026", time: "21:45", full: "21/04/2026 21:45" });
   });
   it("formatta in ora Roma (inverno, UTC+1)", () => {
-    const result = formatJuventusDateTime("2026-01-15T19:45:00Z");
+    const result = formatFootballDateTime("2026-01-15T19:45:00Z");
     expect(result.time).toBe("20:45");
     expect(result.date).toBe("15/01/2026");
   });
   it("naive senza offset = stesso risultato della Z", () => {
-    const naive = formatJuventusDateTime("2026-04-21T19:45:00");
-    const z = formatJuventusDateTime("2026-04-21T19:45:00Z");
+    const naive = formatFootballDateTime("2026-04-21T19:45:00");
+    const z = formatFootballDateTime("2026-04-21T19:45:00Z");
     expect(naive).toEqual(z);
   });
   it("ritorna placeholder per input nullo", () => {
-    expect(formatJuventusDateTime(null)).toEqual({ date: "—", time: "", full: "—" });
-    expect(formatJuventusDateTime(undefined)).toEqual({ date: "—", time: "", full: "—" });
-    expect(formatJuventusDateTime("")).toEqual({ date: "—", time: "", full: "—" });
+    expect(formatFootballDateTime(null)).toEqual({ date: "—", time: "", full: "—" });
+    expect(formatFootballDateTime(undefined)).toEqual({ date: "—", time: "", full: "—" });
+    expect(formatFootballDateTime("")).toEqual({ date: "—", time: "", full: "—" });
   });
   it("gestisce edge case mezzanotte UTC -> giorno dopo a Roma", () => {
-    const result = formatJuventusDateTime("2026-04-21T23:30:00Z");
+    const result = formatFootballDateTime("2026-04-21T23:30:00Z");
     expect(result.date).toBe("2026-04-22".split("-").reverse().join("/"));
     expect(result.time).toBe("01:30");
   });

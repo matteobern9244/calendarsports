@@ -10,7 +10,7 @@
       "Bash(bunx prettier:*)",
       "Bash(bun run format)",
       "Bash(bun run check:italian)",
-      "Bash(bun run check:tz-juventus)",
+      "Bash(bun run check:tz-football)",
       "Bash(bunx tsc --noEmit:*)",
       "Bash(bunx vitest run:*)",
       "Bash(bun audit)",

@@ -13,7 +13,7 @@ const OGGI: RomeYMD = { y: 2099, m: 5, d: 1 };
 
 const evento = (id: string, over: Partial<CalendarItem> = {}): CalendarItem => ({
   id,
-  sport: "juventus",
+  sport: "football",
   date: "2099-05-03T18:45:00",
   shortLabel: "vs Milan",
   context: "Serie A · Giornata 3",

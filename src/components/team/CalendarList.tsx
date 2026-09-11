@@ -13,9 +13,9 @@ import {
 import EventCountdown from "@/components/common/EventCountdown";
 import TeamLogo from "@/components/common/TeamLogo";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
-import { formatJuventusDateTime } from "@/lib/dateUtils";
-import { highlightIndexOnPage, pageRange, type PaginatedCalendar } from "@/lib/juventusCalendar";
-import { matchResult, matchSide } from "@/lib/juventusMatch";
+import { formatFootballDateTime } from "@/lib/dateUtils";
+import { highlightIndexOnPage, pageRange, type PaginatedCalendar } from "@/lib/teamCalendar";
+import { matchResult, matchSide } from "@/lib/teamMatch";
 import type { SerieATeam } from "@/lib/serieATeams";
 import { teamMatchPath } from "@/lib/teamRoutes";
 import { buildPageList } from "@/lib/pageList";
@@ -90,7 +90,7 @@ export default function CalendarList({
           const result = matchResult(m, team);
           const resultColor =
             result === "V" ? "text-green-500" : result === "S" ? "text-red-500" : "text-yellow-500";
-          const { date: dateStr, time: timeStr } = formatJuventusDateTime(m.date);
+          const { date: dateStr, time: timeStr } = formatFootballDateTime(m.date);
           const isNext = i === highlightIndex;
           const compColor = COMPETITION_COLORS[m.competition] || "";
 

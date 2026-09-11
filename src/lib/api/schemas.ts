@@ -224,7 +224,7 @@ export const footballStandingRowSchema = z.looseObject({
   lastMatches: z.array(footballLastMatchSchema).nullish(),
 });
 
-export const juventusInfoSchema = z
+export const footballInfoSchema = z
   .looseObject({
     position: scrapedNumber.nullish(),
     team: z.string(),
@@ -242,7 +242,7 @@ export const juventusInfoSchema = z
   .nullable();
 
 /**
- * Il calendario Juventus ha due forme, e il frontend le incontra entrambe:
+ * Il calendario di una squadra ha due forme, e il frontend le incontra entrambe:
  * array nudo senza `page`/`pageSize`, inviluppo piatto con la paginazione
  * altrimenti. I contatori dell'inviluppo li calcola la nostra edge function,
  * quindi li' i numeri sono numeri davvero.
@@ -261,7 +261,7 @@ export const footballCalendarSchema = z.union([
 
 export type FootballMatch = z.infer<typeof footballMatchSchema>;
 export type FootballStandingRow = z.infer<typeof footballStandingRowSchema>;
-export type JuventusInfo = z.infer<typeof juventusInfoSchema>;
+export type FootballInfo = z.infer<typeof footballInfoSchema>;
 export type FootballCalendar = z.infer<typeof footballCalendarSchema>;
 
 /**
@@ -350,7 +350,7 @@ export const tennisMatchSchema = z.looseObject({
 
 /**
  * `results` impagina con un inviluppo annidato, diverso da quello piatto del
- * calendario Juventus. La forma ad array resta accettata: e' quella che
+ * calendario di una squadra. La forma ad array resta accettata: e' quella che
  * restituisce la stagione senza dati e quella che puo' arrivare da una cache
  * scritta prima dell'introduzione della paginazione.
  */

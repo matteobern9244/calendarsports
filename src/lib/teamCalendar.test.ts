@@ -6,7 +6,7 @@ import {
   pageRange,
   pickNextMatch,
   type PaginatedCalendar,
-} from "./juventusCalendar";
+} from "./teamCalendar";
 
 /**
  * Il calendario Juventus arriva impaginato dal server, e la «prossima

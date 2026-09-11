@@ -85,7 +85,7 @@ export const TennisBrandIcon = (props: IconProps) => (
 );
 
 /** Juventus — scudo con stelle */
-export const JuveBrandIcon = (props: IconProps) => (
+export const FootballBrandIcon = (props: IconProps) => (
   <svg
     viewBox="0 0 24 24"
     fill="none"

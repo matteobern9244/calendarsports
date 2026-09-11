@@ -11,7 +11,7 @@ import type { HighlightSport, StreamingFamilyId, StreamingProviderId } from "@/l
  * `queryKeys` dentro il proprio inizializzatore renderebbe il tipo `any`.
  */
 const calendarList = (team: string, season: number, upcomingOnly = false) =>
-  ["juventus", "calendar", team, season, upcomingOnly] as const;
+  ["football", "calendar", team, season, upcomingOnly] as const;
 
 /** Stesso ruolo per i risultati di Sinner: la lista e' la stagione. */
 const resultsList = (season: number) => ["sinner", "results", season] as const;
@@ -38,21 +38,22 @@ export const queryKeys = {
     nextRace: () => ["f1", "next-race"] as const,
   },
   /**
-   * Il namespace si chiama ancora `juventus` di proposito: e' un pezzo di
-   * chiave di cache, e cambiarlo invalida tutto quello che e' in memoria.
-   * La rinomina in `football` e' un commit a se', senza altro dentro.
+   * Il namespace si chiamava `juventus` quando l'app aveva una squadra sola.
+   * Rinominarlo azzera la cache, ma solo quella **in memoria**: non c'e'
+   * `persistQueryClient`, quindi non esiste una copia su disco da invalidare
+   * e al primo caricamento dopo il rilascio la cache sarebbe vuota comunque.
    *
    * `team` e' il **primo** argomento e non e' opzionale: una chiamata che lo
    * dimenticasse non condividerebbe la cache fra squadre in silenzio, non
    * compilerebbe.
    */
-  juventus: {
+  football: {
     /**
      * La classifica non prende la squadra: il payload e' identico per tutte e
      * venti. Metterla nella chiave moltiplicherebbe per venti le stesse righe
      * e farebbe ricominciare da un caricamento a ogni cambio squadra.
      */
-    standings: (season: number) => ["juventus", "standings", season] as const,
+    standings: (season: number) => ["football", "standings", season] as const,
     calendarList,
     /**
      * `page` e `pageSize` fanno parte della chiave anche quando sono assenti:
@@ -70,8 +71,8 @@ export const queryKeys = {
     ) => [...calendarList(team, season, upcomingOnly), page ?? null, pageSize ?? null] as const,
     /** Il calendario ricomposto da tutte le pagine, per la vista aggregata. */
     calendarAll: (team: string, season: number, cap: number) =>
-      ["juventus", "calendar-all", team, season, cap] as const,
-    info: (team: string, season: number) => ["juventus", "info", team, season] as const,
+      ["football", "calendar-all", team, season, cap] as const,
+    info: (team: string, season: number) => ["football", "info", team, season] as const,
   },
   sinner: {
     info: () => ["sinner", "info"] as const,

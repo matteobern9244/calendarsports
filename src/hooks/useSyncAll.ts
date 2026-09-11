@@ -11,8 +11,8 @@ import {
   getCurrentSinnerSeason,
   getCurrentF1Season,
   getCurrentMotoGPSeason,
-  getCurrentJuventusSeason,
-  formatJuventusSeasonLabel,
+  getCurrentFootballSeason,
+  formatFootballSeasonLabel,
 } from "@/lib/currentSeason";
 
 /**
@@ -64,10 +64,10 @@ export function useSyncAll(team: SerieATeam) {
 
     // Stagioni correnti calcolate al volo
     const seasonF1 = getCurrentF1Season();
-    const seasonJ = getCurrentJuventusSeason();
+    const seasonJ = getCurrentFootballSeason();
     const seasonS = getCurrentSinnerSeason();
     const seasonM = getCurrentMotoGPSeason();
-    const seasonJLabel = formatJuventusSeasonLabel(seasonJ);
+    const seasonJLabel = formatFootballSeasonLabel(seasonJ);
     const labelCalcio = `${teamName} ${seasonJLabel}`;
 
     // Mappa: per ogni sport, qual e' la stagione corrente. Usata per
@@ -118,7 +118,7 @@ export function useSyncAll(team: SerieATeam) {
       {
         sport: "juventus",
         label: labelCalcio,
-        queryKey: queryKeys.juventus.standings(seasonJ),
+        queryKey: queryKeys.football.standings(seasonJ),
         fn: "sports-football",
         params: { action: "standings", season: String(seasonJ) },
         staleTime: 5 * 60 * 1000,
@@ -126,7 +126,7 @@ export function useSyncAll(team: SerieATeam) {
       {
         sport: "juventus",
         label: labelCalcio,
-        queryKey: queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, false),
+        queryKey: queryKeys.football.calendar(teamSlug, seasonJ, 1, 12, false),
         fn: "sports-football",
         params: {
           action: "calendar",
@@ -140,7 +140,7 @@ export function useSyncAll(team: SerieATeam) {
       {
         sport: "juventus",
         label: labelCalcio,
-        queryKey: queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, true),
+        queryKey: queryKeys.football.calendar(teamSlug, seasonJ, 1, 12, true),
         fn: "sports-football",
         params: {
           action: "calendar",
@@ -155,7 +155,7 @@ export function useSyncAll(team: SerieATeam) {
       {
         sport: "juventus",
         label: labelCalcio,
-        queryKey: queryKeys.juventus.info(teamSlug, seasonJ),
+        queryKey: queryKeys.football.info(teamSlug, seasonJ),
         fn: "sports-football",
         params: { action: "next-match", season: String(seasonJ), team: teamSlug },
         staleTime: 60 * 1000,
@@ -317,7 +317,7 @@ export function useSyncAll(team: SerieATeam) {
       setSyncStep(passoCalendario);
       toast.loading(passoCalendario, { id: toastId });
       const firstPage = queryClient.getQueryData<{ totalPages?: number }>(
-        queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, false),
+        queryKeys.football.calendar(teamSlug, seasonJ, 1, 12, false),
       );
       const totalPages = Math.min(10, firstPage?.totalPages ?? 1);
       if (totalPages > 1) {
@@ -342,11 +342,11 @@ export function useSyncAll(team: SerieATeam) {
                 }),
               ]);
               queryClient.setQueryData(
-                queryKeys.juventus.calendar(teamSlug, seasonJ, p, 12, false),
+                queryKeys.football.calendar(teamSlug, seasonJ, p, 12, false),
                 all.data,
               );
               queryClient.setQueryData(
-                queryKeys.juventus.calendar(teamSlug, seasonJ, p, 12, true),
+                queryKeys.football.calendar(teamSlug, seasonJ, p, 12, true),
                 upcoming.data,
               );
             } catch (err) {

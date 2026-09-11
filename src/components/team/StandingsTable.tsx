@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import TeamLogo from "@/components/common/TeamLogo";
 import type { FootballStandingRow } from "@/lib/api/schemas";
-import { formatGoalDiff } from "@/lib/juventusMatch";
+import { formatGoalDiff } from "@/lib/teamMatch";
 import { matchesTeam, type SerieATeam } from "@/lib/serieATeams";
 import { cn } from "@/lib/utils";
 

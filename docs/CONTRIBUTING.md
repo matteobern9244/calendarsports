@@ -15,7 +15,7 @@ bun run test:e2e:headed     # end-to-end con browser visibile
 bun run typecheck           # tsc -b, strict
 bun run lint                # eslint, zero avvisi ammessi
 bun run check:italian       # nessun testo inglese nella UI
-bun run check:tz-juventus   # fuso Europe/Rome nei formati e nei confronti
+bun run check:tz-football   # fuso Europe/Rome nei formati e nei confronti
 bun run build               # build di produzione
 ```
 
@@ -61,7 +61,7 @@ niente.
 1. Il client Supabase si importa **solo** da `@/lib/supabaseClient`. Lo impone
    `no-restricted-imports` in `eslint.config.js`.
 2. Date e orari passano dagli helper di `dateUtils`, mai da `new Date(stringa)`
-   diretto. Lo impone `bun run check:tz-juventus`.
+   diretto. Lo impone `bun run check:tz-football`.
 3. I testi della UI sono in italiano. Lo impone `bun run check:italian`.
 4. Il retry HTTP sta in un livello solo, dentro `sportsApi.ts`.
 5. Lo stato non si azzera in un `useEffect`: si confronta col render precedente.

@@ -65,6 +65,17 @@ visivo della pagina squadra e le notifiche push, per i motivi spiegati sotto.
   risposta del server.
 - «Sincronizza» aggiorna la squadra scelta e lo **dice**: i passi che scorrono
   mentre lavora portano il suo nome, non piu' «Juventus» fisso.
+- **Rinomine interne**: il nome «Juventus» sparisce dai pezzi di codice che
+  ormai valgono per tutte e venti le squadre — il modulo delle partite, la
+  cartella dei componenti, le chiavi di cache, gli hook del calendario, la voce
+  «calcio» dei filtri. Sullo schermo non cambia niente. Una sola di queste
+  rinomine poteva pero' togliere qualcosa a chi usa gia' l'app: nei filtri del
+  calendario aggregato la voce del calcio si chiamava `juventus` anche nella
+  memoria del dispositivo, e chi l'aveva **spenta** se la sarebbe ritrovata
+  accesa. Il nome vecchio viene quindi ancora letto, una volta sola. La
+  preferenza «Prossime/Tutte» della pagina squadra conserva invece il nome
+  vecchio: li' rinominare sarebbe costato la stessa perdita senza dare niente
+  in cambio.
 
 ### Corretto
 

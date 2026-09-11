@@ -9,7 +9,7 @@ const NAPOLI = resolveTeam("napoli");
 
 const evento = (id: string, over: Partial<CalendarItem> = {}): CalendarItem => ({
   id,
-  sport: "juventus",
+  sport: "football",
   date: "2099-05-03T18:45:00",
   shortLabel: "vs Milan",
   context: "Serie A · Giornata 3",

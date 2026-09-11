@@ -77,13 +77,13 @@ export function formatLongDateIT(dateStr: string): string {
 }
 
 /**
- * Helper specializzato per le date Juventus: garantisce che ogni
+ * Helper specializzato per le date del calcio: garantisce che ogni
  * stringa proveniente dal backend (Sky/Lega) sia normalizzata e
  * presentata sempre in fuso `Europe/Rome`, indipendentemente dal
  * fuso del client. Centralizza la formattazione per evitare drift
  * (vedi `scripts/check-rome-tz.mjs`).
  */
-export function formatJuventusDateTime(input: string | Date | null | undefined): {
+export function formatFootballDateTime(input: string | Date | null | undefined): {
   date: string;
   time: string;
   full: string;
@@ -192,7 +192,7 @@ export function formatTimeIT(timeStr?: string | null, dateStr?: string | null): 
 export function formatDateTimeIT(dateStr: string): string {
   // Usa `toRomeDate` per garantire che le stringhe ISO senza offset
   // (`naive`) vengano trattate come UTC e poi formattate sempre in
-  // fuso `Europe/Rome`. Coerente con `formatJuventusDateTime` e
+  // fuso `Europe/Rome`. Coerente con `formatFootballDateTime` e
   // `formatTimeIT`.
   const date = toRomeDate(dateStr);
   if (!date) return dateStr;

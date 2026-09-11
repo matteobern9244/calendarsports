@@ -11,7 +11,7 @@ import {
   footballCalendarSchema,
   footballStandingsSchema,
   highlightsSchema,
-  juventusInfoSchema,
+  footballInfoSchema,
   motogpCalendarSchema,
   motogpConstructorStandingsSchema,
   motogpNextEventSchema,
@@ -191,7 +191,7 @@ export const footballApi = {
     callEdgeFunction(
       "sports-football",
       { action: "next-match", season: String(season), team },
-      juventusInfoSchema,
+      footballInfoSchema,
     ),
 };
 
