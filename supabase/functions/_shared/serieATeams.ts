@@ -1,4 +1,14 @@
 /**
+ * NON MODIFICARE QUESTO FILE A MANO.
+ *
+ * È una copia generata di `src/lib/serieATeams.ts`: qualunque modifica scritta qui
+ * viene sovrascritta, e nel frattempo l'app e le edge function offrirebbero
+ * due elenchi di squadre diversi.
+ *
+ * Modifica la sorgente, poi rigenera con `bun run sync:teams`.
+ */
+
+/**
  * Le venti squadre di Serie A, con lo slug che le identifica in tutta l'app.
  *
  * **Questo e' un dataset statico e invecchia**: a ogni promozione e
