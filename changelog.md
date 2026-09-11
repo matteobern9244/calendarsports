@@ -17,13 +17,19 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
-## [3.1.1] — Il dettaglio partita smette di rimandare altrove (2026-09-12)
+## [3.2.0] — Il dettaglio partita smette di rimandare altrove (2026-09-12)
 
-Bump applicativo `3.1.0` → `3.1.1`. Nota di rilascio in
-[`docs/releases/3.1.1-dettaglio-partita.md`](docs/releases/3.1.1-dettaglio-partita.md).
+Bump applicativo `3.1.0` → `3.2.0`. Nota di rilascio in
+[`docs/releases/3.2.0-dettaglio-partita.md`](docs/releases/3.2.0-dettaglio-partita.md).
 
-**Tocca `supabase/functions/sports-football`**: distribuita a parte e
-verificata dalla produzione, non solo pubblicata.
+**Minore e non correttiva**: quattro schede che non mostravano niente
+cominciano a mostrare qualcosa, e quella è una funzione nuova. Il difetto dello
+0-0 corretto per strada è un dettaglio di questo lavoro, non il suo motivo.
+
+**Tocca `supabase/functions/sports-football`**: l'azione `match-detail` è
+nuova e il calendario porta un campo in più, quindi la funzione **va
+distribuita a parte** — pubblicare il frontend non basta. L'esito della
+distribuzione e delle verifiche in produzione è nella nota di rilascio.
 
 ### Aggiunto
 
