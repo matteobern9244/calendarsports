@@ -92,6 +92,33 @@ Ogni versione porta:
    Changelog;
 2. una nota in `docs/releases/<versione>.md`, scritta a mano.
 
+### Una versione che tocca `supabase/functions/` va distribuita a parte
+
+**Pubblicare il frontend da Lovable non distribuisce le edge function.** Il
+Publish → Update aggiorna quello che gira nel browser; le funzioni restano alla
+versione distribuita l'ultima volta, e il frontend nuovo finisce a parlare con
+la funzione vecchia. Non c'è nessun errore: c'è un parametro ignorato, o
+un'azione che risponde «non valida».
+
+È già successo due volte, alla 2.9.0 e alla 3.0.0, e la seconda perché la nota
+di rilascio della prima non era stata riletta.
+
+Perciò, quando il diff di una versione contiene `supabase/functions/`:
+
+1. si allinea `main` e si pubblica il frontend;
+2. **si distribuiscono le funzioni cambiate**, con la CLI Supabase o chiedendo
+   all'agente Lovable un deploy **senza modificare nessun file** — l'agente,
+   lasciato libero, rigenera `src/integrations/supabase/client.ts` e
+   `src/lib/previewAuthStorage.ts` e fa fallire la CI;
+3. **si verifica dalla produzione con una chiamata propria.** Che il deploy
+   dichiari di essere riuscito non è una verifica: la verifica è la risposta
+   della funzione.
+4. **si controlla che il repository sia intatto** (`git fetch` e confronto con
+   il commit atteso), perché il passo 2 gira su `main`.
+
+Il passo 3 va scritto nella nota di rilascio con il suo esito, non con la sua
+intenzione.
+
 Le note di rilascio non si generano dai commit: lo storico Git di questo
 repository è pieno di messaggi automatici di Lovable intitolati "Changes", e
 generare da lì produrrebbe un racconto che non aiuta nessuno.

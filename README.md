@@ -6,11 +6,12 @@ della tua squadra di Serie A, della Formula 1 e della MotoGP, oltre a
 palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `3.0.0` (la squadra di calcio si sceglie fra le
-venti di Serie A, sopra il rilascio `2.10.0` che ha portato utenti, profilo e
-preferenze sincronizzate). Il footer dell'app mostra la versione leggendola da
-`src/lib/version.ts` nel formato `Calendar Events · v3.0.0` (con `v`
-minuscola).
+Versione repository corrente: `3.1.0` (statistiche di squadra e di giocatore,
+livrea della squadra anche nel calendario aggregato, e un'intestazione che
+smette di sbordare; sopra il rilascio `3.0.0`, che ha reso la squadra di calcio
+una scelta fra le venti di Serie A). Il footer dell'app mostra la versione
+leggendola da `src/lib/version.ts` nel formato `Calendar Events · v3.1.0` (con
+`v` minuscola).
 
 Questa riga è sorvegliata da `src/test/tooling/version.test.ts`: era rimasta
 ferma alla `2.3.6` per sei rilasci senza che niente se ne accorgesse.

@@ -1,6 +1,6 @@
 # Fonti dati
 
-Catalogo delle fonti di **Calendar Events v2.10.0**, funzione per funzione e
+Catalogo delle fonti di **Calendar Events v3.1.0**, funzione per funzione e
 azione per azione.
 
 Fonte di verità per questo documento: `supabase/functions/*/index.ts`. Quando il

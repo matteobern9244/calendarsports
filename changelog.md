@@ -17,7 +17,14 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
-## [Non rilasciato]
+## [3.1.0] — Statistiche, e un menu che sta nella riga (2026-09-12)
+
+Bump applicativo `3.0.0` → `3.1.0`, esposto da `src/lib/version.ts` e
+`package.json`. Nota di rilascio in
+[`docs/releases/3.1.0-statistiche-e-identita.md`](docs/releases/3.1.0-statistiche-e-identita.md).
+
+**Questa versione tocca `supabase/functions/sports-football`**: è stata
+distribuita a parte e verificata dalla produzione, non solo pubblicata.
 
 ### Aggiunto
 
