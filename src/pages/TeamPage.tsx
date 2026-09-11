@@ -7,6 +7,7 @@ import SportTabs from "@/components/common/SportTabs";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
 import CalendarList from "@/components/team/CalendarList";
 import SquadPanel from "@/components/team/SquadPanel";
+import StatsPanel from "@/components/team/StatsPanel";
 import LineupsPanel from "@/components/team/LineupsPanel";
 import NextMatchCard from "@/components/team/NextMatchCard";
 import StandingsTable from "@/components/team/StandingsTable";
@@ -44,6 +45,7 @@ const FILTER_STORAGE_KEY = "juventus-calendar-filter";
 const TABS_COMUNI = [
   { value: "calendario", label: "Calendario" },
   { value: "classifica", label: "Classifica" },
+  { value: "statistiche", label: "Statistiche" },
   { value: "rosa", label: "Rosa" },
   { value: "formazioni", label: "Formazioni" },
 ] as const;
@@ -129,12 +131,20 @@ export default function TeamPage({ team }: TeamPageProps) {
   // card anche quando chi guarda si e' spostato su un'altra pagina.
   const nextMatchPage = calendar ? pageOfIndex(calendar.nextUpcomingIndex, PAGE_SIZE) : null;
   const nextOnCurrentPage = calendar && nextMatchPage !== null && nextMatchPage === calendar.page;
+  // Serve un'altra pagina solo quando la prossima partita non e' in quella
+  // che si sta guardando. Prima questa condizione viaggiava come `undefined`
+  // al posto del numero di pagina, che non spegne la query: la trasforma
+  // nella stagione intera, scaricata e poi scartata da `paginatedCalendarOf`
+  // perche' l'array piatto non e' un inviluppo paginato. Una richiesta pesante
+  // a ogni visita, senza nessun sintomo visibile.
+  const serveAltraPagina = !nextOnCurrentPage && nextMatchPage !== null;
   const { data: nextMatchData, isLoading: nextMatchLoading } = useFootballCalendar(
     team.slug,
     season,
-    nextOnCurrentPage || nextMatchPage === null ? undefined : nextMatchPage,
-    nextOnCurrentPage || nextMatchPage === null ? undefined : PAGE_SIZE,
+    nextMatchPage ?? undefined,
+    PAGE_SIZE,
     upcomingOnly,
+    serveAltraPagina,
   );
   const nextMatch = pickNextMatch({
     calendar,
@@ -308,6 +318,10 @@ export default function TeamPage({ team }: TeamPageProps) {
             />
           )}
         </DataSection>
+      </TabsContent>
+
+      <TabsContent value="statistiche">
+        <StatsPanel team={team} season={season} source={STANDINGS_SOURCE} />
       </TabsContent>
 
       <TabsContent value="rosa">

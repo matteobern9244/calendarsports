@@ -15,6 +15,7 @@ dist-ssr
 playwright-report
 test-results
 .playwright-cli/
+.playwright-mcp/
 *.local
 # `.env` e' tracciato di proposito: serve a Lovable per il build e contiene
 # solo valori pubblici (URL del progetto Supabase e anon key, gia' presenti

@@ -600,3 +600,53 @@ test("preferenze: scegliere da dentro una pagina squadra porta sulla squadra sce
   await expect(page).toHaveURL(/\/squadra\/napoli$/);
   await expect(page.getByRole("heading", { name: "Napoli", exact: true })).toBeVisible();
 });
+
+test("squadra: le statistiche sono quelle della squadra dell'indirizzo", async ({ page }) => {
+  await installSportsApiMocks(page);
+
+  // Una richiesta di calendario **senza `page`** e' la stagione intera: la
+  // edge function restituisce l'array piatto invece di una pagina da dodici.
+  //
+  // Il conto sta qui e non dentro la sola scheda perche' sorveglia due cose
+  // insieme. La prima e' che `StatsPanel` non scarichi niente finche' nessuno
+  // apre la scheda. La seconda e' che **la pagina squadra non ne faccia una
+  // per conto suo**: la query della «prossima partita» passava `undefined`
+  // come numero di pagina per dire «non mi serve», e `undefined` non disabilita
+  // una query — la trasforma nella stagione intera, scaricata e buttata via a
+  // ogni visita.
+  const stagioneIntera: string[] = [];
+  page.on("request", (r) => {
+    const url = new URL(r.url());
+    if (url.searchParams.get("action") === "calendar" && !url.searchParams.has("page")) {
+      stagioneIntera.push(r.url());
+    }
+  });
+
+  await page.goto("/squadra/juventus");
+  await expect(page.getByRole("tab", { name: "Statistiche" })).toBeVisible();
+  expect(
+    stagioneIntera,
+    "la stagione intera si e' scaricata senza che nessuno aprisse la scheda",
+  ).toHaveLength(0);
+
+  await page.getByRole("tab", { name: "Statistiche" }).click();
+
+  // I totali sono quelli della classifica, non una somma nostra: la Juventus
+  // e' prima con 73 punti e +33 di differenza reti.
+  await expect(page.getByText("1º")).toBeVisible();
+  await expect(page.getByText("73", { exact: true })).toBeVisible();
+  await expect(page.getByText("+33", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Media del campionato/).first()).toBeVisible();
+  expect(stagioneIntera.length, "la scheda aperta deve aver chiesto la stagione").toBeGreaterThan(
+    0,
+  );
+
+  // Stessa scheda, altra squadra: se i numeri non cambiassero la sezione
+  // starebbe mostrando la Juventus sotto il titolo del Napoli.
+  await page.goto("/squadra/napoli");
+  await page.getByRole("tab", { name: "Statistiche" }).click();
+  await expect(page.getByText("3º")).toBeVisible();
+  await expect(page.getByText("67", { exact: true })).toBeVisible();
+  await expect(page.getByText("+24", { exact: true })).toBeVisible();
+  await expect(page.getByText("73", { exact: true })).toHaveCount(0);
+});

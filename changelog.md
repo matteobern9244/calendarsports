@@ -42,8 +42,30 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   squadra i titoli usano il font del testo. Fuori dalla sezione squadra — Home,
   calendario, streaming, preferenze — non cambia niente.
 
+- La pagina di una squadra ha una scheda **Statistiche**: posizione, punti,
+  differenza reti e percentuale di vittorie, il rendimento come barra unica,
+  l'andamento dei punti partita dopo partita, il confronto con la **media del
+  campionato** e la divisione fra casa e trasferta.
+- Le statistiche **non aggiungono nessuna fonte**: si ricavano dalla classifica
+  di Serie A e dal calendario della squadra, che l'app gia' scarica. I totali
+  restano quelli della classifica; andamento e casa/trasferta si ricalcolano
+  sui singoli risultati, contando **solo la Serie A** — coppe e Champions si
+  giocano, ma non danno punti in campionato.
+- I grafici sono disegnati in SVG e CSS, **senza aggiungere una libreria**.
+  `AGENTS.md` chiede di non farlo quando lo stack basta, e per una barra
+  impilata, tre barre di confronto e una spezzata basta. In cambio i grafici
+  prendono da soli il colore della squadra, che dalla 3.0.0 e' una variabile
+  CSS ereditata: a una libreria andrebbe passato come proprieta' JavaScript.
+- Anche le statistiche si scaricano solo all'apertura della scheda.
+
 ### Corretto
 
+- **La pagina squadra non scarica piu' una stagione intera per buttarla via.**
+  La query della «prossima partita» diceva «non mi serve» passando `undefined`
+  come numero di pagina, e `undefined` non spegne una query: la trasforma nella
+  richiesta piu' pesante possibile, l'intero calendario senza impaginazione.
+  Succedeva a ogni visita, senza nessun sintomo visibile. Ora la query si
+  disabilita davvero.
 - **Scegliere la squadra si vede subito.** Il pannello delle preferenze restava
   aperto dopo la scelta, e finche' resta aperto il resto dell'applicazione e'
   inerte: sembrava che non fosse successo niente, e che servisse ricaricare.
@@ -58,6 +80,10 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Limiti noti
 
+- **Non ci sono statistiche per singolo giocatore** — minuti, gol, assist,
+  cartellini. Richiedono API-Football, e nessuna delle fonti gia' in uso le
+  espone: l'API della Lega Serie A risponde `404` a `players` e `statistics`.
+  La scheda lo dichiara invece di riempire il vuoto.
 - **Si mostra l'eta', non la data di nascita**: la fonte pubblica «29 anni» e
   nient'altro. Ricavare una data all'indietro darebbe un giorno preciso e
   falso.

@@ -52,14 +52,27 @@ export function useSerieAStandings(season: number) {
   });
 }
 
+/**
+ * Il calendario della squadra.
+ *
+ * **`page` e `pageSize` assenti non vogliono dire «meno dati»: vogliono dire
+ * tutti.** Senza, la edge function restituisce l'array piatto dell'intera
+ * stagione invece di una pagina da dodici. E' il modo in cui la scheda
+ * statistiche e il dettaglio partita chiedono la stagione, ed e' anche il
+ * motivo per cui esiste `enabled`: chi voleva spegnere la query passando
+ * `undefined` al posto del numero di pagina non la spegneva, la trasformava
+ * nella richiesta piu' pesante che questa funzione sappia fare.
+ */
 export function useFootballCalendar(
   teamSlug: string,
   season: number,
   page?: number,
   pageSize?: number,
   upcomingOnly = false,
+  enabled = true,
 ) {
   return useQuery({
+    enabled,
     queryKey: queryKeys.football.calendar(teamSlug, season, page, pageSize, upcomingOnly),
     queryFn: () => footballApi.getCalendar(teamSlug, season, page, pageSize, upcomingOnly),
     staleTime: 5 * 60 * 1000,
