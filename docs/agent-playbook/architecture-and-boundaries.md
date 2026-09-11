@@ -111,6 +111,27 @@ non se ne accorgeva.
 `streaming-tv` e `streaming-releases` **non** restituiscono `meta`: per loro la
 distinzione live/degradato non è disponibile lato client.
 
+### Le edge function passano dal typecheck, ma con un progetto loro
+
+`tsconfig.app.json` include soltanto `src`. Per questo le edge function hanno il
+proprio progetto, [`tsconfig.edge.json`](../../tsconfig.edge.json), referenziato
+da `tsconfig.json` e quindi incluso in `tsc -b`. Prima non c'erano: 27 file di
+produzione il cui unico controllo era ESLint, che i tipi non li vede.
+
+Girano su Deno, che qui non esiste. Le sue API sono dichiarate a mano in
+[`types/edge.d.ts`](../../types/edge.d.ts), **solo quelle usate e con la firma
+vera**: un `declare const Deno: any` farebbe passare il typecheck senza
+controllare niente, il che è peggio di non averlo perché somiglia a copertura.
+Il file vive fuori da `supabase/functions/` perché quella cartella è
+esattamente ciò che Supabase impacchetta al deploy.
+
+Stesso discorso per i test end-to-end, che hanno
+[`tsconfig.e2e.json`](../../tsconfig.e2e.json): una suite che non compila non
+fallisce nel gate, fallisce quando qualcuno la lancia.
+
+Che nessun file TypeScript resti fuori da tutti i progetti lo verifica
+`src/test/tooling/typecheckCoverage.test.ts`, dentro `bun run test`.
+
 ## Verifiche
 
 ```bash

@@ -1,0 +1,32 @@
+{
+  /*
+   * Le edge function. `tsconfig.app.json` include solo `src`, quindi questi 27
+   * file di produzione non passavano da nessun typecheck: l'unico controllo
+   * era ESLint, che i tipi non li vede.
+   *
+   * Gira su Deno, e le sue API sono dichiarate a mano in `types/edge.d.ts`.
+   */
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "types": [],
+    "paths": {
+      /* L'URL esm.sh e' lo stesso pacchetto che sta in node_modules: si usano
+         i suoi tipi veri invece di descriverlo a mano. */
+      "https://esm.sh/@supabase/supabase-js@2": [
+        "./node_modules/@supabase/supabase-js/dist/index.d.mts"
+      ]
+    }
+  },
+  "include": ["supabase/functions", "types/edge.d.ts"]
+}

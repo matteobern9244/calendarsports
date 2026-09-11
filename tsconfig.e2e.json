@@ -1,0 +1,26 @@
+{
+  /*
+   * I test end-to-end e la loro configurazione. Stavano fuori da `tsc -b`, e
+   * una suite e2e che non compila non fallisce nel gate: fallisce quando
+   * qualcuno la lancia, che e' molto piu' tardi.
+   */
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["e2e", "playwright.config.ts"]
+}
