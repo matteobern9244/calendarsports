@@ -27,9 +27,10 @@ cominciano a mostrare qualcosa, e quella è una funzione nuova. Il difetto dello
 0-0 corretto per strada è un dettaglio di questo lavoro, non il suo motivo.
 
 **Tocca `supabase/functions/sports-football`**: l'azione `match-detail` è
-nuova e il calendario porta un campo in più, quindi la funzione **va
-distribuita a parte** — pubblicare il frontend non basta. L'esito della
-distribuzione e delle verifiche in produzione è nella nota di rilascio.
+nuova e il calendario porta un campo in più, quindi la funzione
+**è stata distribuita a parte** — pubblicare il frontend non basta — e
+verificata dalla produzione. L'esito, chiamata per chiamata e scheda per
+scheda, è nella nota di rilascio.
 
 ### Aggiunto
 
