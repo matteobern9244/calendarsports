@@ -1,6 +1,6 @@
 # Architettura
 
-Documento sintetico dell'architettura di **Calendar Events v2.7.0**.
+Documento sintetico dell'architettura di **Calendar Events v2.10.0**.
 
 Fonte di verità per questo documento: `src/App.tsx`, `src/hooks/`,
 `src/lib/api/sportsApi.ts` e `supabase/migrations/*`. Quando il codice e questo
@@ -16,6 +16,7 @@ file divergono, vince il codice: aggiornare qui.
 │    Toaster · Sonner · BrowserRouter › Routes › Layout          │
 │                                                               │
 │  React Query  ──▶  sportsApi  ──▶  fetch con retry 502/503/504 │
+│  React Query  ──▶  supabase.from("profiles")  (solo preferenze) │
 │  countdownClock (un timer per tutta l'app)                     │
 │  service worker: notifiche push + cache offline di documento,  │
 │                  asset con hash e font ospitati               │
@@ -27,20 +28,28 @@ file divergono, vince il codice: aggiornare qui.
 │  streaming-tv · streaming-releases · highlights-youtube        │
 │  push-subscribe · push-vapid-key · push-dispatcher             │
 │  _shared/security.ts: CORS + rate limit                        │
+│  _shared/serieATeams.ts: le venti squadre, copia di src/lib/    │
 └──────┬─────────────────────────────────────┬──────────────────┘
        │                                      │
 ┌──────▼──────────────────┐        ┌──────────▼─────────────────┐
 │ Postgres                │        │ Terze parti                │
 │ push_subscriptions      │        │ Jolpica · OpenF1 · Sky     │
 │ push_sent_log           │        │ Lega Serie A · Pulselive   │
-│ pg_cron ogni 5 min      │        │ Wikipedia · TMDB · YouTube │
+│ profiles  (RLS: la tua) │        │ Wikipedia · TMDB · YouTube │
+│ Supabase Auth           │        │ Google · Apple (accesso)   │
+│ pg_cron ogni 5 min      │        │                            │
 └─────────────────────────┘        └────────────────────────────┘
 ```
 
 Il punto da tenere a mente: **il database non contiene eventi sportivi**. Ospita
-solo le iscrizioni alle notifiche push e il registro degli invii. Tutto il resto
-è effimero, recuperato a ogni richiesta e tenuto in cache per pochi minuti nella
-memoria dell'isolate che serve la funzione.
+le iscrizioni alle notifiche push, il registro degli invii e — dalla 2.10.0 — le
+preferenze degli utenti registrati. Tutto il resto è effimero, recuperato a ogni
+richiesta e tenuto in cache per pochi minuti nella memoria dell'isolate che
+serve la funzione.
+
+Una sola tabella si raggiunge dal browser: `profiles`, protetta da RLS sulla
+riga di chi è collegato. Alle altre due arrivano soltanto le edge function con
+la service role key.
 
 ## Organizzazione di `src/`
 
@@ -56,8 +65,11 @@ src/
 │   └── ui/         generati dalla CLI shadcn — non editare
 ├── hooks/          useSportsData, useStreamingData, useSyncAll, useNow, ...
 ├── lib/            logica pura: dateUtils, currentSeason, countdownClock,
-│                   api/sportsApi, supabaseClient, pushClient
-├── contexts/       pannello preferenze
+│                   serieATeams (le venti squadre), queryKeys,
+│                   queryPlaceholder, api/sportsApi, supabaseClient,
+│                   pushClient
+├── contexts/       sessione (AuthContext), preferenze utente
+│                   (UserPrefsContext), pannello preferenze
 └── integrations/   types.ts generato da Supabase
 ```
 
@@ -76,6 +88,8 @@ Tutte figlie di `Layout`, tranne il catch-all.
 | `/formula1`                  | `Formula1Page`      |
 | `/motogp`                    | `MotoGPPage`        |
 | `/preferenze`                | `PreferencesPage`   |
+| `/accedi`                    | `AuthPage`          |
+| `/reimposta-password`        | `ResetPasswordPage` |
 | `*`                          | `NotFound`          |
 
 Routing dichiarativo con react-router 8: nessun data router, nessun loader.
@@ -86,36 +100,67 @@ Ogni hook è un involucro sottile su React Query. La chiave è la sua identità:
 punti che leggono la stessa cosa con chiavi diverse non condividono niente, e un
 prefetch scritto con una chiave sbagliata viene semplicemente buttato.
 
-| Hook                                                    | Chiave                                                                  | Azione                                |
-| ------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------- |
-| `useF1Calendar(season)`                                 | `["f1","calendar",season]`                                              | `sports-f1?action=calendar`           |
-| `useF1DriverStandings(season)`                          | `["f1","driver-standings",season]`                                      | `driver-standings`                    |
-| `useF1ConstructorStandings(season)`                     | `["f1","constructor-standings",season]`                                 | `constructor-standings`               |
-| `useF1NextRace()`                                       | `["f1","next-race"]`                                                    | `next-race`                           |
-| `useSerieAStandings(season)`                            | `["juventus","standings",season]`                                       | `sports-football?action=standings`    |
-| `useJuventusCalendar(season,page?,pageSize?,upcoming?)` | `["juventus","calendar",season,page??null,pageSize??null,upcomingOnly]` | `calendar`                            |
-| `useSinnerInfo()`                                       | `["sinner","info"]`                                                     | `sports-tennis?action=player-info`    |
-| `useSinnerNextEvent()`                                  | `["sinner","next-event"]`                                               | `next-event`                          |
-| `useSinnerSchedule(season)`                             | `["sinner","schedule",season]`                                          | `schedule`                            |
-| `useSinnerResults(season,page?,pageSize?)`              | `["sinner","results",season,page??null,pageSize??null]`                 | `results`                             |
-| `useMotoGPCalendar(season)`                             | `["motogp","calendar",season]`                                          | `sports-motogp?action=calendar`       |
-| `useMotoGPNextEvent()`                                  | `["motogp","next-event"]`                                               | `next-event`                          |
-| `useMotoGPStandings(season)`                            | `["motogp","standings",season]`                                         | `standings`                           |
-| `useMotoGPConstructorStandings(season)`                 | `["motogp","constructor-standings",season]`                             | `constructor-standings`               |
-| `useHighlights(sport,limit)`                            | `["highlights",sport,limit]`                                            | `highlights-youtube`                  |
-| `useTvByFamily(family)`                                 | `["streaming-tv",family]`                                               | `streaming-tv?action=prime-time`      |
-| `useReleasesItaly(opts)`                                | `["streaming-releases-italy",provider,kind,from,to,sort,genreId]`       | `streaming-releases?action=new-italy` |
-| `useReleaseDetails(type,id)`                            | `["streaming-release-details",type,id]`                                 | `details`                             |
+| Hook                                                         | Chiave                                                                       | Azione                                   |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------- | ---------------------------------------- |
+| `useF1Calendar(season)`                                      | `["f1","calendar",season]`                                                   | `sports-f1?action=calendar`              |
+| `useF1DriverStandings(season)`                               | `["f1","driver-standings",season]`                                           | `driver-standings`                       |
+| `useF1ConstructorStandings(season)`                          | `["f1","constructor-standings",season]`                                      | `constructor-standings`                  |
+| `useF1NextRace()`                                            | `["f1","next-race"]`                                                         | `next-race`                              |
+| `useSerieAStandings(season)`                                 | `["juventus","standings",season]`                                            | `sports-football?action=standings`       |
+| `useJuventusCalendar(team,season,page?,pageSize?,upcoming?)` | `["juventus","calendar",team,season,upcomingOnly,page??null,pageSize??null]` | `calendar`                               |
+| `useJuventusInfo(team,season)`                               | `["juventus","info",team,season]`                                            | `info`                                   |
+| `useSinnerInfo()`                                            | `["sinner","info"]`                                                          | `sports-tennis?action=player-info`       |
+| `useSinnerNextEvent()`                                       | `["sinner","next-event"]`                                                    | `next-event`                             |
+| `useSinnerSchedule(season)`                                  | `["sinner","schedule",season]`                                               | `schedule`                               |
+| `useSinnerResults(season,page?,pageSize?)`                   | `["sinner","results",season,page??null,pageSize??null]`                      | `results`                                |
+| `useMotoGPCalendar(season)`                                  | `["motogp","calendar",season]`                                               | `sports-motogp?action=calendar`          |
+| `useMotoGPNextEvent()`                                       | `["motogp","next-event"]`                                                    | `next-event`                             |
+| `useMotoGPStandings(season)`                                 | `["motogp","standings",season]`                                              | `standings`                              |
+| `useMotoGPConstructorStandings(season)`                      | `["motogp","constructor-standings",season]`                                  | `constructor-standings`                  |
+| `useHighlights(sport,limit)`                                 | `["highlights",sport,limit]`                                                 | `highlights-youtube`                     |
+| `useTvByFamily(family)`                                      | `["streaming-tv",family]`                                                    | `streaming-tv?action=prime-time`         |
+| `useReleasesItaly(opts)`                                     | `["streaming-releases-italy",provider,kind,from,to,sort,genreId]`            | `streaming-releases?action=new-italy`    |
+| `useReleaseDetails(type,id)`                                 | `["streaming-release-details",type,id]`                                      | `details`                                |
+| `useProfile()`                                               | `["profile",userId]`                                                         | **nessuna**: `supabase.from("profiles")` |
 
 `useJuventusCalendar` chiamata **senza** `page` e `pageSize` restituisce l'intera
 stagione: è la forma che usano la Home e il dettaglio partita, e condividono la
 stessa voce di cache.
 
+Tre cose di quelle chiavi non sono cosmetiche:
+
+- **`team` viene prima di `season` e non è opzionale.** Una chiamata che lo
+  dimenticasse non condividerebbe la cache fra squadre in silenzio: non
+  compilerebbe.
+- **`page` e `pageSize` stanno in coda.** Tutto ciò che identifica la _lista_
+  viene prima, così una pagina si riconosce dal prefisso: è come
+  `keepPreviousPageOf` (`src/lib/queryPlaceholder.ts`) distingue «un'altra
+  pagina» da «un'altra squadra». `placeholderData: (prev) => prev` è vietato
+  proprio perché quella distinzione non la sa fare.
+- **`standings` non prende la squadra**, perché il payload è identico per tutte
+  e venti: metterla nella chiave moltiplicherebbe le stesse righe per venti e
+  farebbe ricominciare da un caricamento a ogni cambio squadra.
+
+Il namespace si chiama ancora `juventus` di proposito: è un pezzo di chiave di
+cache, e rinominarlo invalida tutto ciò che è in memoria. La rinomina in
+`football` è un commit a sé.
+
+`useProfile` è l'unico hook che **non** passa da una edge function: legge e
+scrive `profiles` direttamente, con la sessione dell'utente, e le sue mutation
+aggiornano la cache **in anticipo sul server** (`onMutate`), perché
+`UserPrefsContext` legge il profilo prima del valore locale.
+
 ## Schema database
 
-Due tabelle, entrambe con RLS attiva e **nessuna policy permissiva**: i ruoli
-`anon` e `authenticated` non le vedono affatto. Ci arrivano solo le edge function
-con la service role key.
+Tre tabelle, con **due regimi diversi**.
+
+`push_subscriptions` e `push_sent_log` hanno RLS attiva e nessuna policy
+permissiva: i ruoli `anon` e `authenticated` non le vedono affatto, ci arrivano
+solo le edge function con la service role key.
+
+`profiles` invece è fatta per essere letta e scritta dal browser, ma **solo la
+propria riga**: quattro policy, una per operazione, tutte per il solo ruolo
+`authenticated` e tutte con il predicato `auth.uid() = id`.
 
 ```text
 push_subscriptions
@@ -134,10 +179,29 @@ push_sent_log
 ├─ lead_time        integer
 └─ sent_at          timestamptz
    UNIQUE (subscription_id, event_id, lead_time)
+
+profiles
+├─ id                     uuid PK → auth.users.id ON DELETE CASCADE
+├─ display_name           text            ← nullable, l'unico campo scritto a mano
+├─ theme                  text  DEFAULT 'dark'
+├─ favorite_team          text  DEFAULT 'juventus'  ← slug, non nome
+├─ show_sinner            boolean DEFAULT true
+├─ show_f1, show_motogp   boolean DEFAULT true
+└─ created_at, updated_at timestamptz
+   trigger handle_new_user: crea la riga alla registrazione
 ```
 
-L'app **non ha autenticazione**: una subscription è identificata solo dal suo
-endpoint push.
+`favorite_team` conserva lo **slug** della squadra (`juventus`, non `Juventus`):
+è la forma che entra nelle chiavi di cache, nel parametro `team` delle edge
+function e nelle URL. Non c'è un vincolo `CHECK` sull'elenco delle squadre, e
+non è una dimenticanza: congelerebbe nel database una lista che cambia a ogni
+promozione, rendendo non aggiornabile la preferenza di chi tifa una squadra
+retrocessa. La validazione vive in `src/lib/serieATeams.ts`, e in lettura passa
+da `resolveTeam`, che è totale — qualunque valore inatteso ricade sul default.
+
+Le notifiche push **non** conoscono l'utente: una subscription è identificata
+solo dal suo endpoint push, e `push_subscriptions` non ha una colonna utente.
+Chi cambia squadra continua quindi a ricevere le notifiche della Juventus.
 
 `push_sent_log.event_id` è costruito dal dispatcher (`f1-{round}-{sessione}`,
 `motogp-{round}-{tipo}`, `juve-{matchId}`) e non ha integrità referenziale verso

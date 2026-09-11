@@ -105,6 +105,54 @@ minuti richiede di portare `WINDOW_MS` ad almeno dieci minuti nel codice.
 `*/6` funzionerebbe senza toccare niente e risparmierebbe un giro su sei, ma
 consuma tutto il margine fra intervallo e finestra: scartato.
 
+### Le notifiche push restano della Juventus
+
+La squadra di calcio sta diventando una preferenza dell'utente, ma
+`push_subscriptions` **non ha una colonna utente né una colonna squadra**: una
+iscrizione è identificata solo dal suo endpoint push, e `push-dispatcher`
+interroga il calendario con la squadra predefinita. Chi sceglie il Napoli
+continuerà quindi a ricevere le notifiche della Juventus, senza che niente glielo
+dica.
+
+**Costo**: medio, e non è codice di frontend. Serve una migration che aggiunga la
+squadra all'iscrizione, un modo per collegarla alla preferenza del profilo
+quando l'utente è collegato (e per lasciarla scegliere quando non lo è), e una
+modifica a `push-dispatcher`, che gira con la service role key ed è fra i file
+delicati. Cambia anche il tag di dedup: oggi è `juve-{matchId}`.
+
+**Perché non ora**: il dispatcher non si tocca finché la propagazione della
+squadra nell'app non è finita e stabile. Un difetto qui non si vede in pagina, si
+vede come notifica mancata o sbagliata a casa di qualcuno.
+
+### Gli highlights hanno tre playlist cablate
+
+`highlights-youtube` conosce tre id di playlist fissi (Juventus, F1, MotoGP).
+Venti squadre vorrebbero venti id, e nessuno può verificarli senza controllarli a
+mano uno per uno.
+
+**Costo**: basso per il meccanismo, alto per il dato. Il meccanismo è un
+parametro `team` e una mappa nel dataset delle squadre; quando la voce manca, la
+risposta deve essere `data: []` con `dataSource` non-live e un link di ricerca
+YouTube in pagina — **mai** un video preso da un'altra squadra e presentato come
+suo.
+
+**Perché non ora**: il popolamento della mappa è raccolta manuale, e va fatta
+tutta insieme o non serve.
+
+### Il tema visivo è bianconero
+
+Oro e blu-navy sono nel tema di tutta l'app, non solo della pagina squadra.
+Quando la squadra sarà scelta dall'utente, il Napoli si vedrà con la livrea
+juventina.
+
+**Costo**: medio. I colori sono token CSS in `src/index.css`, quindi la strada
+tecnica è chiara (una palette per squadra nel dataset); il lavoro vero è
+decidere quanto del tema debba seguire la squadra senza rendere illeggibile
+qualcosa in una delle due modalità.
+
+**Perché non ora**: è una scelta di prodotto, non un difetto, e non blocca
+niente.
+
 ## Priorità bassa
 
 ### Quello che resta dei componenti giganti

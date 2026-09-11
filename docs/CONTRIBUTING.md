@@ -68,6 +68,20 @@ niente.
    Lo impone `react-hooks/set-state-in-effect`.
 6. Niente `Math.random()` o `Date.now()` durante il render. Lo impone
    `react-hooks/purity`.
+7. Le chiavi di cache si scrivono **solo** in `src/lib/queryKeys.ts`, anche
+   quelle di un `prefetchQuery` dentro una pagina. Lo impone il guardiano in
+   `src/lib/queryKeys.test.ts`, che sorveglia un elenco di file: chi ne aggiunge
+   uno che scrive chiavi a mano lo aggiunge anche lì.
+8. `placeholderData: (prev) => prev` è **vietato**: React Query passa i dati
+   dell'ultima query osservata dallo stesso hook, qualunque fosse la sua chiave,
+   quindi al cambio squadra mostrerebbe le partite di quella precedente sotto
+   l'intestazione di quella nuova. Si usa `keepPreviousPageOf` da
+   `src/lib/queryPlaceholder.ts`. Lo impone `src/lib/queryPlaceholder.test.ts`.
+9. L'elenco delle squadre in `src/lib/serieATeams.ts` e la sua copia in
+   `supabase/functions/_shared/serieATeams.ts` non possono divergere, e i nomi
+   si confrontano per **uguaglianza esatta**, mai per sottostringa (in Coppa
+   Italia gioca la Juve Stabia). Lo impongono
+   `src/test/tooling/serieATeamsMirror.test.ts` e `src/lib/serieATeams.test.ts`.
 
 Ogni esenzione (`eslint-disable-next-line`, `// @tz-ignore`, `// @lingua-ignore`)
 va scritta con la motivazione accanto.

@@ -1,31 +1,67 @@
 # Sicurezza
 
-Documento sintetico del modello di sicurezza di **Calendar Events v2.9.0**.
+Documento sintetico del modello di sicurezza di **Calendar Events v2.10.0**.
 
 > Le affermazioni di questo documento sono state verificate contro il codice il
 > **26 agosto 2026**, e quelle sul database contro il database di produzione il
 > **31 agosto 2026**. Dove il codice smentiva un'aspettativa, il documento lo
 > dice invece di tacerlo: le sezioni «Punti aperti» esistono per questo.
+>
+> **Rivisto l'11 settembre 2026** per il rilascio 2.10.0, che ha introdotto
+> autenticazione e profili: le sezioni sul modello di accesso e sul database
+> descrivevano un'app senza utenti e sono state riscritte. I dati sulle policy
+> e sulle colonne vengono da `pg_policies` e da `information_schema` letti quel
+> giorno sul database di produzione, non dalle migration.
 
-Il modello è insolito e conviene dirlo subito: **l'app non ha autenticazione,
-non ha utenti e non conserva dati personali oltre alle iscrizioni alle notifiche
-push**. Non c'è una sessione da rubare né un profilo da violare. Le superfici che
-restano sono tre: l'accesso al database, l'esposizione delle edge function e i
-segreti.
+Conviene dirlo subito, perché divide il progetto in due metà con regole
+diverse: **i dati sportivi non hanno utenti, le preferenze sì**.
+
+Tutto ciò che l'app mostra — calendari, classifiche, risultati, streaming — è
+pubblico, effimero e non è mai stato legato a una persona. Dal rilascio 2.10.0
+esiste però un accesso con email e password (o Google, o Apple), gestito da
+Supabase Auth, e una tabella `profiles` che conserva **le preferenze
+dell'utente**: tema, squadra di calcio, sezioni visibili, e il nome mostrato se
+lo si scrive. Non ci sono altri dati personali: nessun pagamento, nessuna
+cronologia, nessuna posizione.
+
+Le superfici da difendere sono quindi quattro: l'accesso al database, la
+sessione dell'utente, l'esposizione delle edge function e i segreti.
 
 ## Accesso al database
 
-Le due tabelle hanno RLS attiva e **nessuna policy permissiva**. La prima
-migration ne aveva create due (`Anyone can insert subscription`,
-`Anyone can update by endpoint`, entrambe con `WITH CHECK (true)`) e la migration
-subito successiva le ha rimosse. Una terza aggiunge una policy **restrittiva**
-`USING (false)` per `anon` e `authenticated` su entrambe le tabelle.
+Le tabelle sono tre, e **non hanno tutte lo stesso regime**.
 
-Il risultato è un diniego totale per i ruoli client, con una seconda difesa
-esplicita sopra. Nessuna funzione `SECURITY DEFINER` esiste nel progetto.
+`push_subscriptions` e `push_sent_log` hanno RLS attiva e **nessuna policy
+permissiva**. La prima migration ne aveva create due
+(`Anyone can insert subscription`, `Anyone can update by endpoint`, entrambe con
+`WITH CHECK (true)`) e la migration subito successiva le ha rimosse. Una terza
+aggiunge una policy **restrittiva** `USING (false)` per `anon` e
+`authenticated` su entrambe. Il risultato è un diniego totale per i ruoli
+client, con una seconda difesa esplicita sopra: a quelle due tabelle si arriva
+solo dalle edge function con la service role key.
 
-Tutti gli accessi passano dalle edge function che usano la service role key, e
-nessun componente del frontend chiama `supabase.from(...)` né `supabase.rpc(...)`.
+`profiles` è l'eccezione, ed è deliberata. Ha quattro policy, tutte per il solo
+ruolo `authenticated` e tutte con lo stesso predicato `auth.uid() = id`, una per
+`SELECT`, `INSERT`, `UPDATE` e `DELETE`. Il ruolo `anon` non compare in nessuna:
+senza sessione la tabella non esiste. Un utente collegato vede e cambia
+**soltanto la propria riga**, e la chiave primaria è `auth.users.id`, quindi non
+c'è modo di scriverne un'altra: `auth.uid()` viene dal JWT firmato da Supabase,
+non da un parametro della richiesta.
+
+Di conseguenza **il frontend parla direttamente con il database**, per questa
+tabella e solo per questa: `src/hooks/useProfile.ts` chiama
+`supabase.from("profiles")` con la anon key e la sessione dell'utente. Tutto il
+resto passa ancora dalle edge function, e nessun componente chiama
+`supabase.rpc(...)`. Nessuna funzione `SECURITY DEFINER` scritta a mano esiste
+nel progetto, a parte `handle_new_user`, il trigger che crea la riga del profilo
+alla registrazione con `SET search_path = public`.
+
+La colonna `favorite_team` è `TEXT` **senza vincolo `CHECK`**, di proposito: un
+elenco di squadre congelato nel database renderebbe non aggiornabile la
+preferenza di chi tifa una squadra retrocessa. La validazione vive nel codice
+(`src/lib/serieATeams.ts`), e la lettura passa da `resolveTeam`, che è totale.
+Un valore inatteso in quella colonna non è quindi un modo per far sbagliare
+l'app: è una preferenza che ricade sul default.
 
 ### Retention di `push_sent_log`
 
@@ -121,6 +157,25 @@ Il ragionamento completo è dentro
 è stata svuotata e lasciata come nota proprio perché nessuno riscriva la stessa
 migration fra sei mesi.
 
+## La sessione dell'utente
+
+L'autenticazione è interamente di Supabase Auth: email e password, Google e
+Apple. Il progetto non scrive codice di verifica delle credenziali, non conserva
+password e non emette token per conto proprio; `src/contexts/AuthContext.tsx` si
+limita ad ascoltare `onAuthStateChange`.
+
+La sessione è **persistita in `localStorage`** con rinnovo automatico del token
+(`src/lib/supabaseClient.ts`). È la scelta consueta per una PWA — sopravvive
+alla chiusura della scheda, che è ciò che rende utile un'app installata — e ha
+il costo consueto: un JWT in `localStorage` è leggibile da qualunque script in
+esecuzione sulla pagina, quindi una XSS diventa un furto di sessione. Quel che
+si può rubare resta però limitato a ciò che `profiles` contiene: tema, squadra,
+sezioni visibili.
+
+La anon key nel bundle **non è un segreto** e non è una credenziale d'accesso:
+identifica il progetto, e da sola non apre nessuna delle tre tabelle. Chi non è
+collegato non supera le policy.
+
 ## Esposizione delle edge function
 
 `supabase/functions/_shared/security.ts` fornisce CORS e rate limit a ogni
@@ -142,8 +197,11 @@ niente di importante deve dipenderne.
 | `push-subscribe` non verifica il possesso dell'endpoint                                               | chi conosce l'endpoint push di un altro browser può disattivargli le notifiche o cambiargli gli anticipi |
 | `verify_jwt` non è dichiarato in `supabase/config.toml`                                               | la configurazione reale vive nella dashboard: la posture non è riproducibile dal repository              |
 
-Nessuno di questi espone dati personali, perché non ce ne sono. Il danno
-possibile è spam di notifiche e consumo di quota.
+Nessuno di questi tocca i profili: riguardano tutti le notifiche push e il
+CORS, cioè la metà dell'app che non ha utenti. Il danno possibile resta spam di
+notifiche e consumo di quota. Le preferenze sono protette da RLS sul database,
+non dalla configurazione delle funzioni, e nessuna di queste incoerenze le
+raggiunge.
 
 ## Il segreto del dispatcher
 
@@ -259,6 +317,15 @@ i provider.
 
 `push-subscribe` limita la lunghezza dell'endpoint a 2000 caratteri, tronca lo
 user agent a 500 e accetta come anticipo solo i tre valori previsti.
+
+`sports-football` accetta anche `team`, confrontato con l'elenco chiuso di
+`_shared/serieATeams.ts`: fuori elenco risponde `400`, non un calendario vuoto.
+Vale la pena essere precisi sul perché, perché non è lo stesso motivo di
+`season`: **`team` non finisce mai in una URL a monte** — i widget Sky sono per
+competizione, non per squadra, e il filtro si applica alle partite già
+scaricate. Quella whitelist non difende quindi da una path injection: difende il
+contratto, e impedisce che una squadra inesistente diventi un calendario vuoto
+indistinguibile da una giornata senza partite.
 
 Nessuna funzione lascia trapelare il dettaglio delle eccezioni: il ramo di
 cattura finale risponde sempre con un generico «Errore interno del server», e
