@@ -34,6 +34,13 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   squadre. Sono previsioni di Sky Sport e la pagina lo dice: possono cambiare
   fino al fischio d'inizio.
 - Anche le formazioni si scaricano solo all'apertura della scheda.
+- **Ogni squadra ha la sua livrea.** Bordi, gradienti, anelli e testi
+  evidenziati della sezione squadra seguono il colore sociale: il Napoli e'
+  azzurro, il Sassuolo verde, il Venezia arancione. La Juventus tiene l'oro di
+  sempre.
+- Il **carattere condensato resta juventino**: dentro la pagina di un'altra
+  squadra i titoli usano il font del testo. Fuori dalla sezione squadra — Home,
+  calendario, streaming, preferenze — non cambia niente.
 
 ### Limiti noti
 
@@ -51,6 +58,20 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   dettaglio che non esiste.
 - Fuori dalle finestre di campionato le probabili formazioni **non esistono**, e
   la scheda lo dice con parole sue invece di sembrare un errore.
+- La scheda **Highlights e' sparita per le diciannove squadre** che non sono la
+  Juventus, invece di mostrare loro video juventini. Gli identificativi delle
+  playlist sono tre e uno solo e' di calcio: per venti squadre servirebbero
+  venti valori che nessuno puo' verificare senza controllarli a mano. Non e' un
+  limite superato, e' un limite dichiarato: quando ci saranno gli elenchi, la
+  scheda tornera'.
+- I **colori delle squadre sono scritti a mano** dalle divise, non presi da una
+  fonte: nessuna di quelle che l'app interroga li pubblica. Juventus e Udinese
+  giocano in bianconero, che non e' un accento utilizzabile: la prima tiene
+  l'oro storico dell'app, la seconda un grigio-blu che e' un ripiego, non la sua
+  identita'.
+- Il **pallino del calcio nel calendario aggregato resta bianconero**: li' il
+  calcio sta accanto a F1 e MotoGP, e tre colori scelti per distinguersi fra
+  loro reggono meglio di tre colori scelti altrove.
 
 ## [3.0.0] — La squadra di calcio si sceglie (2026-09-11)
 

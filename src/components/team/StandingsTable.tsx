@@ -57,14 +57,13 @@ export default function StandingsTable({ team, standings }: StandingsTableProps)
                 key={s.position}
                 className={cn(
                   evidenziata &&
-                    "relative bg-linear-to-r from-[hsl(var(--gold))]/20 via-[hsl(var(--gold))]/8 to-transparent border-l-4 border-[hsl(var(--gold))] hover:bg-linear-to-r hover:from-[hsl(var(--gold))]/25 hover:via-[hsl(var(--gold))]/10 hover:to-transparent",
+                    "relative bg-linear-to-r from-[hsl(var(--team-accent))]/20 via-[hsl(var(--team-accent))]/8 to-transparent border-l-4 border-[hsl(var(--team-accent))] hover:bg-linear-to-r hover:from-[hsl(var(--team-accent))]/25 hover:via-[hsl(var(--team-accent))]/10 hover:to-transparent",
                 )}
               >
                 <TableCell
                   className={cn(
                     "font-heading font-bold",
-                    evidenziata &&
-                      "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] text-base",
+                    evidenziata && "text-[hsl(var(--team-accent-text))] text-base",
                   )}
                 >
                   {s.position}
@@ -72,7 +71,7 @@ export default function StandingsTable({ team, standings }: StandingsTableProps)
                 <TableCell
                   className={cn(
                     evidenziata
-                      ? "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-heading font-bold text-base"
+                      ? "text-[hsl(var(--team-accent-text))] font-heading font-bold text-base"
                       : "font-semibold",
                   )}
                 >
@@ -84,7 +83,7 @@ export default function StandingsTable({ team, standings }: StandingsTableProps)
                       shape="circle"
                       className={
                         evidenziata
-                          ? "ring-2 ring-[hsl(var(--gold))]/60 ring-offset-1 ring-offset-background"
+                          ? "ring-2 ring-[hsl(var(--team-accent))]/60 ring-offset-1 ring-offset-background"
                           : undefined
                       }
                     />
@@ -101,8 +100,7 @@ export default function StandingsTable({ team, standings }: StandingsTableProps)
                 <TableCell
                   className={cn(
                     "text-center font-bold",
-                    evidenziata &&
-                      "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-heading text-base",
+                    evidenziata && "text-[hsl(var(--team-accent-text))] font-heading text-base",
                   )}
                 >
                   {s.points}

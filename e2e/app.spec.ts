@@ -515,3 +515,47 @@ test("squadra: le probabili formazioni si dichiarano tali e distinguono i dati",
   await expect(page.getByText(/Squalificati/)).toHaveCount(0);
   await expect(page.getByText(/IndisponibileUno/).first()).toBeVisible();
 });
+
+test("squadra: gli highlights esistono solo per la Juventus", async ({ page }) => {
+  await installSportsApiMocks(page);
+
+  await page.goto("/squadra/juventus");
+  await expect(page.getByRole("tab", { name: "Highlights" })).toBeVisible();
+
+  await page.goto("/squadra/napoli");
+  await expect(page.getByRole("tab", { name: "Calendario" })).toBeVisible();
+  // Sparisce la scheda, non il suo contenuto: una linguetta che si apre sul
+  // vuoto prometterebbe dei video che per le altre diciannove non esistono.
+  await expect(page.getByRole("tab", { name: "Highlights" })).toHaveCount(0);
+});
+
+test("squadra: la livrea segue la squadra, il carattere resta juventino", async ({ page }) => {
+  await installSportsApiMocks(page);
+
+  await page.goto("/squadra/juventus");
+  const juve = page.locator(".team-theme");
+  await expect(juve).toHaveAttribute("style", /--team-accent:\s*43 96% 56%/);
+  await expect(juve).not.toHaveClass(/team-neutral/);
+
+  await page.goto("/squadra/napoli");
+  const napoli = page.locator(".team-theme");
+  await expect(napoli).toHaveAttribute("style", /--team-accent:\s*205 95% 42%/);
+  await expect(napoli).toHaveClass(/team-neutral/);
+
+  // La verifica che conta davvero: il carattere **calcolato** cambia solo
+  // dentro la sezione squadra. In jsdom questo non si potrebbe misurare —
+  // non risolve le variabili CSS — ed e' il motivo per cui sta qui.
+  const fontNapoli = await napoli
+    .locator("h1, h2, h3")
+    .first()
+    .evaluate((el) => getComputedStyle(el).fontFamily);
+  expect(fontNapoli).toContain("Inter");
+
+  await page.goto("/squadra/juventus");
+  const fontJuve = await page
+    .locator(".team-theme")
+    .locator("h1, h2, h3")
+    .first()
+    .evaluate((el) => getComputedStyle(el).fontFamily);
+  expect(fontJuve).toContain("Oswald");
+});

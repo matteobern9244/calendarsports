@@ -32,23 +32,23 @@ export default function NextMatchCard({ team, match, onRetry }: NextMatchCardPro
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
       className={cn(
-        "relative mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--gold))]/40",
-        "bg-linear-to-br from-[hsl(var(--gold))]/15 via-card to-[hsl(var(--navy))]/20",
-        "shadow-[0_18px_44px_-22px_hsl(var(--gold)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]",
+        "relative mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--team-accent))]/40",
+        "bg-linear-to-br from-[hsl(var(--team-accent))]/15 via-card to-[hsl(var(--team-accent-dark))]/20",
+        "shadow-[0_18px_44px_-22px_hsl(var(--team-accent)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]",
       )}
     >
       <Link
         to={teamMatchPath(team, match.id)}
         aria-label={`Apri dettaglio ${isHome ? `${team.name} vs ${opponent}` : `${opponent} vs ${team.name}`}`}
-        className="block px-5 py-5 sm:px-6 sm:py-6 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
+        className="block px-5 py-5 sm:px-6 sm:py-6 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--team-accent))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
       >
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--gold))] to-transparent opacity-80"
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--team-accent))] to-transparent opacity-80"
         />
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="h-4 w-4 text-[hsl(var(--gold))]" aria-hidden="true" />
-          <span className="font-heading text-[10px] tracking-[0.2em] uppercase text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-bold">
+          <Sparkles className="h-4 w-4 text-[hsl(var(--team-accent))]" aria-hidden="true" />
+          <span className="font-heading text-[10px] tracking-[0.2em] uppercase text-[hsl(var(--team-accent-text))] font-bold">
             Prossima Partita
           </span>
           <Badge

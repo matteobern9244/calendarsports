@@ -13,7 +13,7 @@ import StandingsTable from "@/components/team/StandingsTable";
 import { TabsContent } from "@/components/ui/tabs";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSerieAStandings, useFootballCalendar } from "@/hooks/useSportsData";
-import { type SerieATeam } from "@/lib/serieATeams";
+import { DEFAULT_TEAM, type SerieATeam } from "@/lib/serieATeams";
 import { paginatedCalendarOf } from "@/lib/api/schemas";
 import { footballApi } from "@/lib/api/sportsApi";
 import { getCurrentFootballSeason } from "@/lib/currentSeason";
@@ -41,13 +41,35 @@ const PAGE_SIZE = 12;
  */
 const FILTER_STORAGE_KEY = "juventus-calendar-filter";
 
-const TABS = [
+const TABS_COMUNI = [
   { value: "calendario", label: "Calendario" },
   { value: "classifica", label: "Classifica" },
   { value: "rosa", label: "Rosa" },
   { value: "formazioni", label: "Formazioni" },
-  { value: "highlights", label: "Highlights" },
 ] as const;
+
+/**
+ * Gli highlights esistono **solo per la Juventus**, e per le altre diciannove
+ * la scheda non c'e' affatto.
+ *
+ * `highlights-youtube` conosce tre playlist cablate, una sola delle quali e'
+ * di calcio. Per venti squadre servirebbero venti identificativi che nessuno
+ * puo' verificare senza controllarli a mano, e nel frattempo chi sceglie il
+ * Napoli vedrebbe video juventini sotto il titolo del Napoli: un dato di
+ * un'altra squadra presentato come suo.
+ *
+ * Sparisce la **scheda**, non il suo contenuto. Lasciare la linguetta con
+ * dentro un vuoto sarebbe peggio dell'assenza, perche' prometterebbe qualcosa:
+ * chi la tocca si aspetta dei video e trova una spiegazione.
+ *
+ * La edge function non si tocca: la sua mappa a tre voci resta corretta, e il
+ * filtro e' una scelta di prodotto, non un limite dei dati.
+ */
+function tabsPerSquadra(team: SerieATeam) {
+  return team.slug === DEFAULT_TEAM.slug
+    ? [...TABS_COMUNI, { value: "highlights", label: "Highlights" } as const]
+    : TABS_COMUNI;
+}
 
 // Le due sezioni della pagina squadra non offrono il link a Sky Sport durante
 // il caricamento (nessun `loadingLabel`): lo propongono solo quando c'e'
@@ -76,6 +98,7 @@ export default function TeamPage({ team }: TeamPageProps) {
     href: skyTeamPageUrl(team),
     label: `Vedi ${team.name} su Sky Sport`,
   };
+  const tabs = tabsPerSquadra(team);
   const season = getCurrentFootballSeason();
   const queryClient = useQueryClient();
   const {
@@ -230,7 +253,7 @@ export default function TeamPage({ team }: TeamPageProps) {
     <SportTabs
       title={team.name}
       defaultValue="calendario"
-      tabs={TABS}
+      tabs={tabs}
       beforeTabs={
         nextMatch && <NextMatchCard team={team} match={nextMatch} onRetry={() => calRefetch()} />
       }
@@ -295,9 +318,11 @@ export default function TeamPage({ team }: TeamPageProps) {
         <LineupsPanel team={team} season={season} source={LINEUPS_SOURCE} />
       </TabsContent>
 
-      <TabsContent value="highlights">
-        <HighlightsSection sport="juventus" accentVar="gold" />
-      </TabsContent>
+      {team.slug === DEFAULT_TEAM.slug && (
+        <TabsContent value="highlights">
+          <HighlightsSection sport="juventus" accentVar="gold" />
+        </TabsContent>
+      )}
     </SportTabs>
   );
 }

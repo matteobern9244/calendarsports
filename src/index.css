@@ -365,6 +365,54 @@
     @apply font-heading;
   }
 
+  /* ---------------------------------------------------------------------
+   * Il tema della sezione squadra.
+   *
+   * `teamThemeStyle` in `src/lib/teamTheme.ts` mette `--team-accent` e le sue
+   * varianti su `TeamRoute`, che avvolge pagina squadra e dettaglio partita.
+   * Qui si stabilisce solo quale delle due varianti di testo vale nel tema
+   * corrente: uno stile inline non puo' saperlo, perche' viene scritto una
+   * volta sola e letto in entrambi.
+   *
+   * Fuori dalla sezione squadra `--team-accent` non e' definita, quindi il
+   * valore di ripiego su `:root` tiene in vita qualunque componente venga
+   * riusato altrove.
+   * ------------------------------------------------------------------- */
+  :root {
+    --team-accent: var(--gold);
+    --team-accent-light: var(--gold-light);
+    --team-accent-dark: var(--gold-dark);
+    --team-accent-on-light: var(--gold-dark);
+    --team-accent-on-dark: var(--gold);
+  }
+
+  .team-theme {
+    --team-accent-text: var(--team-accent-on-light);
+  }
+  html.dark .team-theme {
+    --team-accent-text: var(--team-accent-on-dark);
+  }
+
+  /* ---------------------------------------------------------------------
+   * Il carattere condensato resta alla Juventus.
+   *
+   * Un interruttore solo, sulla radice della sezione squadra, invece di una
+   * modifica in ognuno dei `font-heading` sparsi nei componenti: `font-heading`
+   * in Tailwind 4 non e' un valore ma un riferimento a questa variabile, quindi
+   * ridefinirla qui cambia il significato di **ogni** discendente, compresi
+   * quelli che verranno scritti domani.
+   *
+   * Il prezzo e' che la regola non si vede dai componenti: chi legge
+   * `font-heading` in `NextMatchCard` non ha modo di sapere che a volte e'
+   * Inter. Per questo sta scritta qui, e non solo in `teamTheme.ts`.
+   *
+   * Fuori dalla sezione squadra non cambia niente: Home, calendario, streaming
+   * e preferenze restano con Oswald.
+   * ------------------------------------------------------------------- */
+  .team-neutral {
+    --font-heading: var(--font-body);
+  }
+
   html {
     color-scheme: light dark;
   }

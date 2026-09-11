@@ -60,6 +60,14 @@ classifica è la stessa per tutte e venti.
   e 2025 puntavano allo stesso id, quindi il calendario in corso mostrava le
   emittenti della stagione precedente. Se la risoluzione fallisce la funzione
   serve il calendario **senza emittenti**, non con quelle di un'altra stagione.
+- **Dataset statico**: i **colori sociali** delle venti squadre, in
+  `src/lib/teamColors.ts`. Scritti a mano dalle divise, **non ufficiali**:
+  nessuna fonte interrogata dall'app li pubblica. Uno solo per squadra — le
+  varianti chiara, scura e leggibile si calcolano — e un guardiano verifica che
+  le chiavi siano esattamente i venti slug del dataset. Juventus e Udinese
+  giocano in bianconero, che non è un accento: la prima tiene l'oro storico
+  dell'app, la seconda un grigio-blu che è un ripiego dichiarato, non la sua
+  identità.
 - **Dataset statico**: gli id competizione. Tre principali (Serie A, Champions,
   Coppa Italia) più ventiquattro sondati in modo opportunistico, ignorando i 404.
   E l'elenco delle venti squadre, in `_shared/serieATeams.ts`, copia generata di

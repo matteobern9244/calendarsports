@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useParams } from "react-router";
 import NotFound from "@/pages/NotFound";
 import { resolveTeamStrict, type SerieATeam } from "@/lib/serieATeams";
+import { teamThemeClass, teamThemeStyle } from "@/lib/teamTheme";
 
 /**
  * Il guardiano delle rotte `/squadra/:teamSlug`.
@@ -24,5 +25,12 @@ export default function TeamRoute({ children }: { children: (team: SerieATeam) =
   const { teamSlug } = useParams<{ teamSlug: string }>();
   const team = resolveTeamStrict(teamSlug);
   if (!team) return <NotFound />;
-  return <>{children(team)}</>;
+  // L'unico punto in cui la sezione squadra prende la sua identita' visiva:
+  // colore e carattere scendono da qui a tutto quello che sta sotto, pagina
+  // squadra e dettaglio partita compresi.
+  return (
+    <div className={teamThemeClass(team)} style={teamThemeStyle(team)}>
+      {children(team)}
+    </div>
+  );
 }

@@ -24,11 +24,11 @@ import { skyTeamPageUrl, teamPath } from "@/lib/teamRoutes";
 
 const COMPETITION_COLORS: Record<string, string> = {
   "Serie A":
-    "bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] border-[hsl(var(--gold))]/40",
+    "bg-[hsl(var(--team-accent))]/15 text-[hsl(var(--team-accent-text))] border-[hsl(var(--team-accent))]/40",
   "Champions League":
     "bg-[hsl(var(--accent))]/20 text-[hsl(var(--accent))] dark:text-[hsl(var(--accent-foreground))] border-[hsl(var(--accent))]/40",
   "Coppa Italia":
-    "bg-[hsl(var(--secondary))]/15 text-[hsl(var(--secondary))] dark:text-[hsl(var(--gold))] border-[hsl(var(--secondary))]/40",
+    "bg-[hsl(var(--secondary))]/15 text-[hsl(var(--secondary))] dark:text-[hsl(var(--team-accent))] border-[hsl(var(--secondary))]/40",
 };
 
 /**
@@ -183,17 +183,17 @@ function MatchDetail({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className={cn(
-          "relative mt-6 mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--gold))]/40 px-5 py-5 sm:px-6 sm:py-6",
-          "bg-linear-to-br from-[hsl(var(--gold))]/15 via-card to-[hsl(var(--navy))]/20",
-          "shadow-[0_18px_44px_-22px_hsl(var(--gold)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]",
+          "relative mt-6 mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--team-accent))]/40 px-5 py-5 sm:px-6 sm:py-6",
+          "bg-linear-to-br from-[hsl(var(--team-accent))]/15 via-card to-[hsl(var(--team-accent-dark))]/20",
+          "shadow-[0_18px_44px_-22px_hsl(var(--team-accent)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]",
         )}
       >
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--gold))] to-transparent opacity-80"
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--team-accent))] to-transparent opacity-80"
         />
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <Sparkles className="h-4 w-4 text-[hsl(var(--gold))]" aria-hidden="true" />
+          <Sparkles className="h-4 w-4 text-[hsl(var(--team-accent))]" aria-hidden="true" />
           <Badge
             variant="outline"
             className={cn(
@@ -423,7 +423,7 @@ function InfoRow({
     <div
       className={cn(
         "rounded-xl border border-border bg-card px-4 py-3",
-        highlighted && "border-[hsl(var(--gold))]/50 bg-[hsl(var(--gold))]/5",
+        highlighted && "border-[hsl(var(--team-accent))]/50 bg-[hsl(var(--team-accent))]/5",
       )}
     >
       <p className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground">
@@ -432,7 +432,7 @@ function InfoRow({
       <p
         className={cn(
           "mt-1 text-sm font-semibold text-foreground",
-          highlighted && "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))]",
+          highlighted && "text-[hsl(var(--team-accent-text))]",
         )}
       >
         {value}

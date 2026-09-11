@@ -103,27 +103,27 @@ export default function CalendarList({
                 "group relative rounded-2xl border bg-card",
                 "transition-[box-shadow,border-color,transform] duration-300 ease-out",
                 "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
-                "hover:shadow-[0_16px_36px_-18px_hsl(var(--gold)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
+                "hover:shadow-[0_16px_36px_-18px_hsl(var(--team-accent)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",
                 isNext
-                  ? "border-[hsl(var(--gold))]/60 ring-1 ring-[hsl(var(--gold))]/25 hover:border-[hsl(var(--gold))]/80"
-                  : "border-[hsl(var(--gold))]/20 hover:border-[hsl(var(--gold))]/55",
+                  ? "border-[hsl(var(--team-accent))]/60 ring-1 ring-[hsl(var(--team-accent))]/25 hover:border-[hsl(var(--team-accent))]/80"
+                  : "border-[hsl(var(--team-accent))]/20 hover:border-[hsl(var(--team-accent))]/55",
               )}
             >
               <Link
                 to={teamMatchPath(team, m.id)}
                 aria-label={`Apri dettaglio ${m.homeTeam} vs ${m.awayTeam}`}
-                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--team-accent))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--gold))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--team-accent))]/70 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300"
                 />
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_top,hsl(var(--gold)/0.10),transparent_60%)]"
+                  className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_top,hsl(var(--team-accent)/0.10),transparent_60%)]"
                 />
                 {isNext && (
-                  <span className="absolute -top-2.5 left-4 z-10 rounded-full bg-linear-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--gold)/0.6)]">
+                  <span className="absolute -top-2.5 left-4 z-10 rounded-full bg-linear-to-r from-[hsl(var(--team-accent-dark))] via-[hsl(var(--team-accent))] to-[hsl(var(--team-accent-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--team-accent)/0.6)]">
                     Prossima
                   </span>
                 )}
