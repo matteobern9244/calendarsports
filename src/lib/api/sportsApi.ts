@@ -168,17 +168,29 @@ export const footballApi = {
       { action: "standings", season: String(season) },
       footballStandingsSchema,
     ),
-  getCalendar: (season: number, page?: number, pageSize?: number, upcomingOnly?: boolean) => {
-    const params: Record<string, string> = { action: "calendar", season: String(season) };
+  /**
+   * `team` viaggia insieme alla chiave di cache, non dopo: una chiave che
+   * porta la squadra mentre la richiesta non la porta crea una voce intestata
+   * al Napoli e la riempie con le partite della Juventus. Nessun errore,
+   * nessun caricamento sospeso, solo il calendario sbagliato.
+   */
+  getCalendar: (
+    team: string,
+    season: number,
+    page?: number,
+    pageSize?: number,
+    upcomingOnly?: boolean,
+  ) => {
+    const params: Record<string, string> = { action: "calendar", season: String(season), team };
     if (page !== undefined) params.page = String(page);
     if (pageSize !== undefined) params.pageSize = String(pageSize);
     if (upcomingOnly) params.upcoming = "1";
     return callEdgeFunction("sports-football", params, footballCalendarSchema);
   },
-  getJuventusInfo: (season: number) =>
+  getTeamInfo: (team: string, season: number) =>
     callEdgeFunction(
       "sports-football",
-      { action: "next-match", season: String(season) },
+      { action: "next-match", season: String(season), team },
       juventusInfoSchema,
     ),
 };

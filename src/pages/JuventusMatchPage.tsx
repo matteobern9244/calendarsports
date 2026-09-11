@@ -14,6 +14,7 @@ import EmptyState from "@/components/common/EmptyState";
 import TeamLogo from "@/components/common/TeamLogo";
 import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import { useJuventusCalendar } from "@/hooks/useSportsData";
+import { DEFAULT_TEAM } from "@/lib/serieATeams";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
 import { matchesOf, toNumber, type FootballCalendar, type FootballMatch } from "@/lib/api/schemas";
 import { formatJuventusDateTime } from "@/lib/dateUtils";
@@ -61,7 +62,7 @@ export default function JuventusMatchPage() {
   // alla volta costava fino a `totalPages` round-trip in sequenza, ognuno in
   // attesa del precedente. E' anche la stessa chiave di cache che usa la Home,
   // quindi arrivando da li' il dato e' gia' pronto.
-  const calendarQuery = useJuventusCalendar(season);
+  const calendarQuery = useJuventusCalendar(DEFAULT_TEAM.slug, season);
 
   const foundMatch = useMemo(
     () => findMatch(calendarQuery.data, decodedMatchId),

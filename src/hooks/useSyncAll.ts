@@ -41,7 +41,7 @@ type PrefetchTask = {
   staleTime: number;
 };
 
-export function useSyncAll() {
+export function useSyncAll(teamSlug: string) {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [syncStep, setSyncStep] = useState<string>("");
@@ -116,19 +116,26 @@ export function useSyncAll() {
       {
         sport: "juventus",
         label: `Juventus ${seasonJLabel}`,
-        queryKey: queryKeys.juventus.calendar(seasonJ, 1, 12, false),
+        queryKey: queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, false),
         fn: "sports-football",
-        params: { action: "calendar", season: String(seasonJ), page: "1", pageSize: "12" },
+        params: {
+          action: "calendar",
+          season: String(seasonJ),
+          team: teamSlug,
+          page: "1",
+          pageSize: "12",
+        },
         staleTime: 5 * 60 * 1000,
       },
       {
         sport: "juventus",
         label: `Juventus ${seasonJLabel}`,
-        queryKey: queryKeys.juventus.calendar(seasonJ, 1, 12, true),
+        queryKey: queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, true),
         fn: "sports-football",
         params: {
           action: "calendar",
           season: String(seasonJ),
+          team: teamSlug,
           page: "1",
           pageSize: "12",
           upcoming: "1",
@@ -138,9 +145,9 @@ export function useSyncAll() {
       {
         sport: "juventus",
         label: `Juventus ${seasonJLabel}`,
-        queryKey: queryKeys.juventus.info(seasonJ),
+        queryKey: queryKeys.juventus.info(teamSlug, seasonJ),
         fn: "sports-football",
-        params: { action: "next-match", season: String(seasonJ) },
+        params: { action: "next-match", season: String(seasonJ), team: teamSlug },
         staleTime: 60 * 1000,
       },
       // Sinner
@@ -299,7 +306,7 @@ export function useSyncAll() {
       setSyncStep("Aggiornamento calendario Juventus completo...");
       toast.loading("Aggiornamento calendario Juventus completo...", { id: toastId });
       const firstPage = queryClient.getQueryData<{ totalPages?: number }>(
-        queryKeys.juventus.calendar(seasonJ, 1, 12, false),
+        queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, false),
       );
       const totalPages = Math.min(10, firstPage?.totalPages ?? 1);
       if (totalPages > 1) {
@@ -310,23 +317,25 @@ export function useSyncAll() {
                 callEdgeFunctionWithMeta("sports-football", {
                   action: "calendar",
                   season: String(seasonJ),
+                  team: teamSlug,
                   page: String(p),
                   pageSize: "12",
                 }),
                 callEdgeFunctionWithMeta("sports-football", {
                   action: "calendar",
                   season: String(seasonJ),
+                  team: teamSlug,
                   page: String(p),
                   pageSize: "12",
                   upcoming: "1",
                 }),
               ]);
               queryClient.setQueryData(
-                queryKeys.juventus.calendar(seasonJ, p, 12, false),
+                queryKeys.juventus.calendar(teamSlug, seasonJ, p, 12, false),
                 all.data,
               );
               queryClient.setQueryData(
-                queryKeys.juventus.calendar(seasonJ, p, 12, true),
+                queryKeys.juventus.calendar(teamSlug, seasonJ, p, 12, true),
                 upcoming.data,
               );
             } catch (err) {
@@ -403,7 +412,11 @@ export function useSyncAll() {
       setSyncing(false);
       setTimeout(() => setSyncProgress(0), 600);
     }
-  }, [queryClient]);
+    // `teamSlug` fa parte delle dipendenze: senza, al cambio squadra la
+    // callback resterebbe quella vecchia e «Sincronizza» continuerebbe ad
+    // aggiornare le cache della squadra precedente — in silenzio, perche' le
+    // richieste andrebbero comunque a buon fine.
+  }, [queryClient, teamSlug]);
 
   return { sync, syncing, syncStep, syncProgress, lastSyncAt };
 }

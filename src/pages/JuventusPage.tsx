@@ -11,6 +11,7 @@ import StandingsTable from "@/components/juventus/StandingsTable";
 import { TabsContent } from "@/components/ui/tabs";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
+import { DEFAULT_TEAM } from "@/lib/serieATeams";
 import { paginatedCalendarOf } from "@/lib/api/schemas";
 import { footballApi } from "@/lib/api/sportsApi";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
@@ -61,7 +62,7 @@ export default function JuventusPage() {
     isLoading: calLoading,
     error: calError,
     refetch: calRefetch,
-  } = useJuventusCalendar(season, page, PAGE_SIZE, upcomingOnly);
+  } = useJuventusCalendar(DEFAULT_TEAM.slug, season, page, PAGE_SIZE, upcomingOnly);
   const { isOnline } = useOnlineStatus();
 
   const calendar = paginatedCalendarOf(calendarData);
@@ -71,6 +72,7 @@ export default function JuventusPage() {
   const nextMatchPage = calendar ? pageOfIndex(calendar.nextUpcomingIndex, PAGE_SIZE) : null;
   const nextOnCurrentPage = calendar && nextMatchPage !== null && nextMatchPage === calendar.page;
   const { data: nextMatchData, isLoading: nextMatchLoading } = useJuventusCalendar(
+    DEFAULT_TEAM.slug,
     season,
     nextOnCurrentPage || nextMatchPage === null ? undefined : nextMatchPage,
     nextOnCurrentPage || nextMatchPage === null ? undefined : PAGE_SIZE,
@@ -108,8 +110,15 @@ export default function JuventusPage() {
     if (totalPages > 0 && currentPage + 1 <= totalPages) {
       const next = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: queryKeys.juventus.calendar(season, next, PAGE_SIZE, upcomingOnly),
-        queryFn: () => footballApi.getCalendar(season, next, PAGE_SIZE, upcomingOnly),
+        queryKey: queryKeys.juventus.calendar(
+          DEFAULT_TEAM.slug,
+          season,
+          next,
+          PAGE_SIZE,
+          upcomingOnly,
+        ),
+        queryFn: () =>
+          footballApi.getCalendar(DEFAULT_TEAM.slug, season, next, PAGE_SIZE, upcomingOnly),
         staleTime: 5 * 60 * 1000,
       });
     }
@@ -124,8 +133,21 @@ export default function JuventusPage() {
       (totalPages === 0 || nextMatchPage <= totalPages)
     ) {
       queryClient.prefetchQuery({
-        queryKey: queryKeys.juventus.calendar(season, nextMatchPage, PAGE_SIZE, upcomingOnly),
-        queryFn: () => footballApi.getCalendar(season, nextMatchPage, PAGE_SIZE, upcomingOnly),
+        queryKey: queryKeys.juventus.calendar(
+          DEFAULT_TEAM.slug,
+          season,
+          nextMatchPage,
+          PAGE_SIZE,
+          upcomingOnly,
+        ),
+        queryFn: () =>
+          footballApi.getCalendar(
+            DEFAULT_TEAM.slug,
+            season,
+            nextMatchPage,
+            PAGE_SIZE,
+            upcomingOnly,
+          ),
         staleTime: 5 * 60 * 1000,
       });
     }

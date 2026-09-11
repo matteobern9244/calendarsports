@@ -53,3 +53,36 @@ describe("callEdgeFunction", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("footballApi: la squadra viaggia con la richiesta", () => {
+  /**
+   * Mettere la squadra nella chiave di cache senza metterla nella richiesta
+   * sarebbe peggio che non farlo: si creerebbe una voce di cache intestata al
+   * Napoli e la si riempirebbe con le partite della Juventus. Nessun errore,
+   * nessun caricamento sospeso, solo il calendario sbagliato.
+   */
+  function urlChiamato(fetchMock: ReturnType<typeof respondWith>): string {
+    return String(fetchMock.mock.calls[0][0]);
+  }
+
+  it("il calendario chiede la squadra richiesta", async () => {
+    const fetchMock = respondWith({ success: true, data: [] });
+    vi.stubGlobal("fetch", fetchMock);
+    await footballApi.getCalendar("napoli", 2026, 1, 12);
+    expect(urlChiamato(fetchMock)).toContain("team=napoli");
+  });
+
+  it("la scheda squadra chiede la squadra richiesta", async () => {
+    const fetchMock = respondWith({ success: true, data: null });
+    vi.stubGlobal("fetch", fetchMock);
+    await footballApi.getTeamInfo("lecce", 2026);
+    expect(urlChiamato(fetchMock)).toContain("team=lecce");
+  });
+
+  it("la classifica non manda la squadra, perché non le serve", async () => {
+    const fetchMock = respondWith({ success: true, data: [] });
+    vi.stubGlobal("fetch", fetchMock);
+    await footballApi.getStandings(2026);
+    expect(urlChiamato(fetchMock)).not.toContain("team=");
+  });
+});

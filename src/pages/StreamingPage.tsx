@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils";
 import { todayRomeISO, addDaysISO, formatDateIT } from "@/lib/dateUtils";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
+import { DEFAULT_TEAM } from "@/lib/serieATeams";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 // `?? []` creerebbe un array nuovo a ogni render, invalidando le `useMemo`
@@ -80,7 +81,13 @@ export default function StreamingPage() {
   const [italyProvider, setItalyProvider] = useState<StreamingProviderId | "all">(
     initial.italyProvider,
   );
-  const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
+  const {
+    sync: handleSync,
+    syncing,
+    syncStep,
+    syncProgress,
+    lastSyncAt,
+  } = useSyncAll(DEFAULT_TEAM.slug);
   const { isOnline } = useOnlineStatus();
   const lastSyncLabel = useMemo(() => {
     if (!lastSyncAt) return null;

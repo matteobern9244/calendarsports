@@ -18,15 +18,40 @@ describe("queryKeys", () => {
   });
 
   it("il calendario Juventus senza paginazione e' una voce di cache distinta", () => {
-    expect(queryKeys.juventus.calendar(2026)).toEqual([
+    expect(queryKeys.juventus.calendar("juventus", 2026)).toEqual([
       "juventus",
       "calendar",
+      "juventus",
       2026,
       null,
       null,
       false,
     ]);
-    expect(queryKeys.juventus.calendar(2026, 1, 12)).not.toEqual(queryKeys.juventus.calendar(2026));
+    expect(queryKeys.juventus.calendar("juventus", 2026, 1, 12)).not.toEqual(
+      queryKeys.juventus.calendar("juventus", 2026),
+    );
+  });
+
+  it("il calendario di due squadre sono due voci di cache diverse", () => {
+    // È la trappola numero uno di tutto questo lavoro: una cache condivisa
+    // fra squadre non produce né errore né spinner, produce le partite della
+    // squadra precedente sotto il nome di quella nuova.
+    expect(queryKeys.juventus.calendar("napoli", 2026, 1, 12)).not.toEqual(
+      queryKeys.juventus.calendar("juventus", 2026, 1, 12),
+    );
+    expect(queryKeys.juventus.info("napoli", 2026)).not.toEqual(
+      queryKeys.juventus.info("juventus", 2026),
+    );
+    expect(queryKeys.juventus.calendarAll("napoli", 2026, 3)).not.toEqual(
+      queryKeys.juventus.calendarAll("juventus", 2026, 3),
+    );
+  });
+
+  it("la classifica NON porta la squadra", () => {
+    // Il payload di `standings` è identico per tutte e venti: metterla nella
+    // chiave moltiplicherebbe per venti le stesse identiche righe, e ogni
+    // cambio squadra ricomincerebbe da un caricamento inutile.
+    expect(queryKeys.juventus.standings(2026)).toEqual(["juventus", "standings", 2026]);
   });
 
   it("nessuno riscrive le chiavi a mano fuori dalla fabbrica", () => {
@@ -42,6 +67,9 @@ describe("queryKeys", () => {
       "src/hooks/useSportsData.ts",
       "src/hooks/useStreamingData.ts",
       "src/hooks/useSyncAll.ts",
+      // Mancava, e infatti dentro c'erano quattro chiavi scritte a mano —
+      // fra cui una, `calendar-all`, che non aveva nemmeno una fabbrica.
+      "src/hooks/useCalendarEvents.ts",
     ]) {
       read(file)
         .split("\n")

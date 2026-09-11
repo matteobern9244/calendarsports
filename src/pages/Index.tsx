@@ -22,6 +22,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useSyncAll } from "@/hooks/useSyncAll";
+import { DEFAULT_TEAM } from "@/lib/serieATeams";
 import TonightTvList from "@/components/home/TonightTvList";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,13 @@ const container = {
 };
 
 export default function HomePage() {
-  const { sync: handleSync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
+  const {
+    sync: handleSync,
+    syncing,
+    syncStep,
+    syncProgress,
+    lastSyncAt,
+  } = useSyncAll(DEFAULT_TEAM.slug);
   const { isOnline } = useOnlineStatus();
   const lastSyncLabel = useMemo(() => {
     if (!lastSyncAt) return null;
@@ -70,7 +77,7 @@ export default function HomePage() {
     isLoading: juveLoading,
     error: juveError,
     refetch: juveRefetch,
-  } = useJuventusCalendar(getCurrentJuventusSeason());
+  } = useJuventusCalendar(DEFAULT_TEAM.slug, getCurrentJuventusSeason());
   const {
     data: sinnerNext,
     isLoading: sinnerLoading,

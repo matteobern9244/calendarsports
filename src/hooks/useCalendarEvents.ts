@@ -7,6 +7,7 @@ import {
   getCurrentMotoGPSeason,
 } from "@/lib/currentSeason";
 import { toRomeDate } from "@/lib/dateUtils";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Tipo unificato che alimenta la vista mese del calendario
@@ -186,27 +187,27 @@ function expandJuventus(items: unknown[] | undefined): CalendarItem[] {
  * automaticamente queste cache. Per Juventus carichiamo TUTTE le pagine
  * della stagione corrente (~25) in parallelo.
  */
-export function useCalendarEvents() {
+export function useCalendarEvents(teamSlug: string) {
   const seasonF1 = getCurrentF1Season();
   const seasonJ = getCurrentJuventusSeason();
   const seasonM = getCurrentMotoGPSeason();
 
   const f1 = useQuery({
-    queryKey: ["f1", "calendar", seasonF1],
+    queryKey: queryKeys.f1.calendar(seasonF1),
     queryFn: () => f1Api.getCalendar(seasonF1),
     staleTime: 5 * 60 * 1000,
   });
 
   const motogp = useQuery({
-    queryKey: ["motogp", "calendar", seasonM],
+    queryKey: queryKeys.motogp.calendar(seasonM),
     queryFn: () => motogpApi.getCalendar(seasonM),
     staleTime: 5 * 60 * 1000,
   });
 
-  // Juventus: pagina 1 per scoprire totalPages; poi tutte le pagine
+  // Calcio: pagina 1 per scoprire totalPages; poi tutte le pagine
   const juveFirst = useQuery({
-    queryKey: ["juventus", "calendar", seasonJ, 1, 12, false],
-    queryFn: () => footballApi.getCalendar(seasonJ, 1, 12),
+    queryKey: queryKeys.juventus.calendar(teamSlug, seasonJ, 1, 12, false),
+    queryFn: () => footballApi.getCalendar(teamSlug, seasonJ, 1, 12),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -214,7 +215,7 @@ export function useCalendarEvents() {
   const cap = Math.min(totalPages, 30);
 
   const juveAll = useQuery({
-    queryKey: ["juventus", "calendar-all", seasonJ, cap],
+    queryKey: queryKeys.juventus.calendarAll(teamSlug, seasonJ, cap),
     enabled: !!juveFirst.data,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
@@ -223,7 +224,8 @@ export function useCalendarEvents() {
       if (cap > 1) {
         const rest = await Promise.allSettled(
           Array.from({ length: cap - 1 }, (_, i) => i + 2).map(
-            (p) => footballApi.getCalendar(seasonJ, p, 12) as Promise<{ items?: unknown[] }>,
+            (p) =>
+              footballApi.getCalendar(teamSlug, seasonJ, p, 12) as Promise<{ items?: unknown[] }>,
           ),
         );
         for (const r of rest) {

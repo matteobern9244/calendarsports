@@ -71,7 +71,7 @@ describe("useCalendarEvents", () => {
   });
 
   it("espande le tre fonti in un unico elenco ordinato per data", async () => {
-    const { result } = renderHook(() => useCalendarEvents(), { wrapper });
+    const { result } = renderHook(() => useCalendarEvents("juventus"), { wrapper });
 
     await waitFor(() => expect(result.current.events.length).toBeGreaterThan(0));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -93,7 +93,7 @@ describe("useCalendarEvents", () => {
    * assumendo questa stabilita': senza, non memoizzano niente.
    */
   it("restituisce lo stesso array fra due render se i dati non sono cambiati", async () => {
-    const { result, rerender } = renderHook(() => useCalendarEvents(), { wrapper });
+    const { result, rerender } = renderHook(() => useCalendarEvents("juventus"), { wrapper });
 
     await waitFor(() => expect(result.current.events.length).toBeGreaterThan(0));
     await waitFor(() => expect(result.current.isLoading).toBe(false));

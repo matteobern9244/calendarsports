@@ -21,16 +21,39 @@ export const queryKeys = {
     constructorStandings: (season: number) => ["f1", "constructor-standings", season] as const,
     nextRace: () => ["f1", "next-race"] as const,
   },
+  /**
+   * Il namespace si chiama ancora `juventus` di proposito: e' un pezzo di
+   * chiave di cache, e cambiarlo invalida tutto quello che e' in memoria.
+   * La rinomina in `football` e' un commit a se', senza altro dentro.
+   *
+   * `team` e' il **primo** argomento e non e' opzionale: una chiamata che lo
+   * dimenticasse non condividerebbe la cache fra squadre in silenzio, non
+   * compilerebbe.
+   */
   juventus: {
+    /**
+     * La classifica non prende la squadra: il payload e' identico per tutte e
+     * venti. Metterla nella chiave moltiplicherebbe per venti le stesse righe
+     * e farebbe ricominciare da un caricamento a ogni cambio squadra.
+     */
     standings: (season: number) => ["juventus", "standings", season] as const,
     /**
      * `page` e `pageSize` fanno parte della chiave anche quando sono assenti:
      * la richiesta senza paginazione restituisce l'intera stagione ed e' una
      * voce di cache diversa da quella della prima pagina.
      */
-    calendar: (season: number, page?: number, pageSize?: number, upcomingOnly = false) =>
-      ["juventus", "calendar", season, page ?? null, pageSize ?? null, upcomingOnly] as const,
-    info: (season: number) => ["juventus", "info", season] as const,
+    calendar: (
+      team: string,
+      season: number,
+      page?: number,
+      pageSize?: number,
+      upcomingOnly = false,
+    ) =>
+      ["juventus", "calendar", team, season, page ?? null, pageSize ?? null, upcomingOnly] as const,
+    /** Il calendario ricomposto da tutte le pagine, per la vista aggregata. */
+    calendarAll: (team: string, season: number, cap: number) =>
+      ["juventus", "calendar-all", team, season, cap] as const,
+    info: (team: string, season: number) => ["juventus", "info", team, season] as const,
   },
   sinner: {
     info: () => ["sinner", "info"] as const,

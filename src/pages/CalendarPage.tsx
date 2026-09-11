@@ -29,6 +29,7 @@ import { SPORT_BADGE, SPORT_DOT, SPORT_LABEL } from "@/components/calendar/sport
 import LoadingState from "@/components/common/LoadingState";
 import { useNowMinute } from "@/hooks/useNow";
 import { useSyncAll } from "@/hooks/useSyncAll";
+import { DEFAULT_TEAM } from "@/lib/serieATeams";
 import {
   useCalendarEvents,
   type CalendarItem,
@@ -97,8 +98,8 @@ export default function CalendarPage() {
     [sections],
   );
 
-  const { events, isLoading, refetchAll } = useCalendarEvents();
-  const { sync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll();
+  const { events, isLoading, refetchAll } = useCalendarEvents(DEFAULT_TEAM.slug);
+  const { sync, syncing, syncStep, syncProgress, lastSyncAt } = useSyncAll(DEFAULT_TEAM.slug);
 
   // "Passato" = orario di inizio < ora corrente, ricalcolato ogni minuto
   // per ingrigire gli eventi appena conclusi. L'ora arriva dal clock
