@@ -88,6 +88,14 @@ export const queryKeys = {
     constructorStandings: (season: number) => ["motogp", "constructor-standings", season] as const,
   },
   highlights: (sport: HighlightSport, limit: number) => ["highlights", sport, limit] as const,
+  /**
+   * Il profilo dell'utente. `userId` puo' essere `null`: senza sessione la
+   * query e' disabilitata, ma la chiave deve comunque esistere ed essere
+   * stabile. La scrivono in tre — `onMutate`, `onError`, `onSuccess` — e un
+   * aggiornamento ottimistico che leggesse una chiave diversa da quella che
+   * scrive non fallirebbe: rimetterebbe a posto il niente.
+   */
+  profile: (userId: string | null) => ["profile", userId] as const,
   streaming: {
     tv: (family: StreamingFamilyId) => ["streaming-tv", family] as const,
     releases: (provider: StreamingProviderId, dateFrom?: string, dateTo?: string) =>

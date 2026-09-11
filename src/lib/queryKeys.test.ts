@@ -76,6 +76,10 @@ describe("queryKeys", () => {
       // torna.
       "src/pages/SinnerPage.tsx",
       "src/pages/JuventusPage.tsx",
+      // E il profilo: la stessa chiave la scrivono `onMutate`, `onError` e
+      // `onSuccess`, e un aggiornamento ottimistico che leggesse una chiave
+      // diversa da quella che scrive rimetterebbe a posto il niente.
+      "src/hooks/useProfile.ts",
     ]) {
       read(file)
         .split("\n")

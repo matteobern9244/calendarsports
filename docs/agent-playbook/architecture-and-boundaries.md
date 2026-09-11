@@ -70,6 +70,30 @@ l'intestazione di quella nuova — senza errore e senza spinner. Si usa
 Il controllo eseguibile e' il guardiano in `src/lib/queryPlaceholder.test.ts`,
 non questa sintesi.
 
+### Una richiesta possiede esattamente i campi che ha toccato
+
+Le preferenze si scrivono in anticipo sul server (`onMutate` in
+`src/hooks/useProfile.ts`): `UserPrefsContext` legge il profilo prima del
+valore locale, quindi senza anticipo dal clic alla risposta della rete la
+pagina non e' lenta, mostra la preferenza **precedente** come se fosse quella
+scelta.
+
+L'unita' di misura dell'anticipo e' l'insieme dei campi del `patch`, non il
+profilo intero — in avanti, all'indietro sul rollback, e anche quando si
+scrive la risposta del server. Tema, squadra e sezioni partono come tre
+richieste separate a un istante di distanza: fotografare e ripristinare tutto
+il profilo farebbe disfare, al fallimento di una, la modifica accanto che il
+server aveva gia' accettato; e copiare in cache per intero la riga che il
+server restituisce riporterebbe indietro un campo che quella richiesta non
+aveva nemmeno chiesto di cambiare, perche' la riga e' stata letta prima.
+
+`onMutate` comincia con `cancelQueries`: una lettura gia' in volo risponde con
+la riga di prima e, atterrando dopo, cancella l'anticipo — stesso sintomo, da
+un'altra porta.
+
+I controlli eseguibili sono in `src/hooks/useProfile.test.tsx` e `src/contexts/UserPrefsContext.test.tsx`, non questa
+sintesi.
+
 ### Lo stato si aggiusta durante il render, non in un effect
 
 Per azzerare la paginazione quando cambia un filtro, confronta il valore con
