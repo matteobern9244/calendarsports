@@ -407,6 +407,22 @@
     --team-accent-on-dark: var(--gold);
   }
 
+  /* La variante di testo va scelta **anche sulla radice**, non solo dentro la
+   * sezione squadra: da quando `TeamPalette` scrive il colore della squadra
+   * preferita su `<html>`, il calendario aggregato e i suoi dialoghi leggono
+   * `--team-accent-text` senza avere nessun `.team-theme` sopra di loro.
+   *
+   * La sostituzione avviene sull'elemento che dichiara la regola, quindi qui
+   * `var(--team-accent-on-light)` vale quello che sta su `<html>` — il ripiego
+   * oro, o la squadra preferita se `TeamPalette` l'ha scritto — mentre dentro
+   * `.team-theme` vale quello della squadra dell'indirizzo. La piu' vicina
+   * vince, come deve. */
+  :root {
+    --team-accent-text: var(--team-accent-on-light);
+  }
+  html.dark {
+    --team-accent-text: var(--team-accent-on-dark);
+  }
   .team-theme {
     --team-accent-text: var(--team-accent-on-light);
   }

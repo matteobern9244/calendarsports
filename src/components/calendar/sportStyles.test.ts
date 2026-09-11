@@ -52,6 +52,21 @@ describe("token dei colori", () => {
     }
   });
 
+  /**
+   * Da quando il calcio segue la squadra, `sportStyles.ts` legge anche
+   * `--team-accent` e `--team-accent-text`. Quelle variabili le scrive
+   * `TeamPalette` su `<html>` a runtime, ma **devono esistere anche senza**:
+   * il ripiego su `:root` in `index.css` e' cio' che tiene in vita il pallino
+   * prima che React monti, e in una pagina che `TeamPalette` non raggiungesse.
+   */
+  it("anche i token della squadra hanno un ripiego in index.css", () => {
+    const usati = [...new Set([...stili.matchAll(/--team-[a-z0-9-]+/g)].map((m) => m[0]))];
+    expect(usati.length, "il calcio non legge piu' nessun token squadra").toBeGreaterThan(0);
+    for (const token of usati) {
+      expect(css, `${token} usato da sportStyles.ts ma senza ripiego`).toContain(`${token}:`);
+    }
+  });
+
   it("ogni token e' definito sia in chiaro sia in scuro", () => {
     // I due blocchi hanno valori diversi: lo stesso oro su fondo chiaro e su
     // fondo scuro non ha lo stesso contrasto. Definirne uno solo darebbe un

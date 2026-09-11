@@ -60,6 +60,15 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Corretto
 
+- **Nel calendario aggregato anche il colore del calcio segue la squadra**: il
+  pallino e la pastiglia prendono il colore sociale della squadra scelta, che
+  fino a ieri restavano bianconeri accanto a un'etichetta che diceva «Napoli».
+  Chiude il secondo limite dichiarato nella 3.0.0.
+- Il colore della squadra preferita vive ora sulla radice del documento, non
+  su un contenitore della pagina: e' l'unico modo perche' arrivi anche ai
+  **dialoghi**, che Radix monta fuori dall'albero React. Dentro una pagina
+  squadra continua a vincere l'indirizzo, perche' la dichiarazione piu' vicina
+  vince.
 - **L'intestazione non sborda piu', e nessuna etichetta va a capo.** «JANNIK
   SINNER» e «FORMULA 1» si spezzavano dentro la pastiglia — «FORMULA» sopra e
   «1» sotto — sfasando tutta la riga. Le due soglie ora sono **misurate**: il
@@ -87,6 +96,12 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Limiti noti
 
+- Nel calendario aggregato il calcio **puo' avvicinarsi** al colore della F1 o
+  della MotoGP: il rosso di Genoa, Milan e Monza al rosso della F1, il viola
+  della Fiorentina a quello della MotoGP. Resta leggibile perche' accanto al
+  pallino c'e' sempre l'etichetta, che per il calcio e' il nome della squadra:
+  a distinguere e' il testo, non il solo colore — che e' anche la regola giusta
+  per chi i colori non li distingue.
 - **Non ci sono statistiche per singolo giocatore** — minuti, gol, assist,
   cartellini. Richiedono API-Football, e nessuna delle fonti gia' in uso le
   espone: l'API della Lega Serie A risponde `404` a `players` e `statistics`.

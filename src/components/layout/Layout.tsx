@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { PreferencesPanelProvider } from "@/contexts/PreferencesPanelContext";
 import PreferencesPanel from "@/components/preferences/PreferencesPanel";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
+import TeamPalette from "@/components/common/TeamPalette";
 
 export default function Layout() {
   const { justReconnected } = useOnlineStatus();
@@ -23,6 +24,9 @@ export default function Layout() {
 
   return (
     <PreferencesPanelProvider>
+      {/* Scrive il colore della squadra preferita su `<html>`: da li' arriva
+          anche ai dialoghi, che Radix monta fuori da questo albero. */}
+      <TeamPalette />
       <div className="min-h-screen flex flex-col">
         <Header />
         <OfflineIndicator />

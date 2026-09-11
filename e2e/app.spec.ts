@@ -701,3 +701,64 @@ test("intestazione: nessuna etichetta va a capo e la riga non sborda mai", async
     ).toBeLessThan(48);
   }
 });
+
+test("calendario: il colore del calcio segue la squadra, dialoghi compresi", async ({ page }) => {
+  // Le fixture vivono nel maggio 2099: senza fissare l'orologio la griglia si
+  // apre sul mese corrente, che e' vuoto, e non ci sarebbe nessun evento da
+  // aprire.
+  await page.clock.setFixedTime(new Date("2099-05-05T10:00:00Z"));
+  await installSportsApiMocks(page);
+  // La preferenza va scritta prima del caricamento: il `beforeEach` di questo
+  // file pulisce `localStorage`, quindi un `setItem` dopo `goto` arriverebbe
+  // tardi e la pagina nascerebbe juventina.
+  await page.addInitScript(() => {
+    window.localStorage.setItem("cse-favorite-team", "napoli");
+  });
+  await page.goto("/calendario");
+
+  const legenda = page.getByRole("button", { name: /Napoli/ }).first();
+  await expect(legenda).toBeVisible();
+
+  const colori = await page.evaluate(() => {
+    const pallino = (bottone: Element | null) =>
+      bottone
+        ? getComputedStyle(bottone.querySelector('span[class*="rounded-full"]')!).backgroundColor
+        : null;
+    const bottoni = [...document.querySelectorAll("button")];
+    const trova = (testo: RegExp) => bottoni.find((b) => testo.test(b.textContent ?? "")) ?? null;
+    return {
+      accento: document.documentElement.style.getPropertyValue("--team-accent").trim(),
+      calcio: pallino(trova(/^\s*Napoli\s*$/)),
+      f1: pallino(trova(/^\s*F1\s*$/)),
+      motogp: pallino(trova(/^\s*MotoGP\s*$/)),
+    };
+  });
+
+  // La squadra arriva davvero fino alla radice del documento.
+  expect(colori.accento, "TeamPalette non ha scritto il colore su <html>").toBe("205 95% 42%");
+  // Il pallino del calcio e' quello della squadra, e resta distinto dagli
+  // altri due sport: e' il timore su cui si era deciso di procedere lo stesso.
+  expect(colori.calcio).toBe("rgb(5, 124, 209)");
+  expect(colori.calcio).not.toBe(colori.f1);
+  expect(colori.calcio).not.toBe(colori.motogp);
+
+  // La trappola vera: i dialoghi di Radix si montano sotto `document.body`,
+  // fuori da qualunque contenitore React. Se il colore vivesse su un div della
+  // pagina, il calendario sarebbe verde e i suoi dialoghi oro.
+  await page.locator('[aria-label*="Apri i dettagli"]').first().click();
+  const dialogo = page.getByRole("dialog");
+  await expect(dialogo).toBeVisible();
+
+  const dentro = await page.evaluate(() => {
+    const d = document.querySelector('[role="dialog"]')!;
+    return {
+      fuoriDaRoot: d.closest("#root") === null,
+      accento: getComputedStyle(d).getPropertyValue("--team-accent").trim(),
+    };
+  });
+  expect(
+    dentro.fuoriDaRoot,
+    "il dialogo non e' piu' in un portale: il test non prova piu' niente",
+  ).toBe(true);
+  expect(dentro.accento, "il colore della squadra non raggiunge il portale").toBe("205 95% 42%");
+});
