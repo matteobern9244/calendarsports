@@ -453,3 +453,37 @@ test("squadra: la preferenza guida il calendario aggregato, l'indirizzo la scava
   await page.goto("/calendario");
   await expect(page.getByRole("link", { name: "NAPOLI", exact: true })).toBeVisible();
 });
+
+test("squadra: la scheda Rosa mostra reparti, allenatore e stadio", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await page.goto("/squadra/juventus");
+
+  // La rosa non si scarica finche' non si apre la scheda: `TabsContent` non
+  // rende il contenuto delle schede chiuse, ed e' il motivo per cui la
+  // richiesta vive dentro `SquadPanel` e non nella pagina.
+  const richieste: string[] = [];
+  page.on("request", (r) => {
+    if (r.url().includes("action=team-squad")) richieste.push(r.url());
+  });
+  await expect(page.getByRole("tab", { name: "Rosa" })).toBeVisible();
+  expect(richieste, "la rosa si e' scaricata senza che nessuno aprisse la scheda").toHaveLength(0);
+
+  await page.getByRole("tab", { name: "Rosa" }).click();
+
+  await expect(page.getByText("Portiere Juve")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Portieri" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Difensori" })).toBeVisible();
+
+  // L'allenatore ha una sezione sua: se finisse fra i giocatori, il conteggio
+  // di un reparto sarebbe sbagliato.
+  await expect(page.getByRole("heading", { name: "Allenatore" })).toBeVisible();
+  await expect(page.getByText("Allenatore Juve")).toBeVisible();
+
+  await expect(page.getByText("Stadio della Juventus")).toBeVisible();
+  await expect(page.getByText(/45\.666 posti/)).toBeVisible();
+
+  // L'eta', mai una data di nascita: la fonte non la espone.
+  await expect(page.getByText("29 anni")).toBeVisible();
+
+  expect(richieste.length, "la scheda aperta deve aver chiesto la rosa").toBeGreaterThan(0);
+});

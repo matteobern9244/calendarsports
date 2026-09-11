@@ -8,6 +8,7 @@ type EndpointName =
   | "sports-f1:next-race"
   | "sports-football:calendar"
   | "sports-football:standings"
+  | "sports-football:team-squad"
   | "sports-tennis:player-info"
   | "sports-tennis:results"
   | "sports-tennis:schedule"
@@ -96,6 +97,52 @@ const payloads: Record<EndpointName, unknown> = {
   },
   "sports-football:calendar": FOOTBALL_CALENDAR,
   "sports-football:standings": FOOTBALL_STANDINGS,
+  // La rosa dipende dalla squadra come il calendario: il nome del giocatore e
+  // l'allenatore la nominano, cosi' una e2e che apra la scheda Rosa del
+  // Napoli e veda un giocatore juventino fallisce invece di passare.
+  "sports-football:team-squad": {
+    players: [
+      {
+        name: "Portiere Juve",
+        role: "Portieri",
+        shirtNumber: 1,
+        countryCode: "ita",
+        ageYears: 29,
+        heightCm: 190,
+        weightKg: 82,
+        playerId: "1",
+        profileUrl: "https://sport.sky.it/calcio/atleti/portiere-juve/1",
+      },
+      {
+        name: "Difensore Juve",
+        role: "Difensori",
+        shirtNumber: 4,
+        countryCode: "ita",
+        ageYears: 27,
+        heightCm: 185,
+        weightKg: 78,
+        playerId: "2",
+        profileUrl: null,
+      },
+    ],
+    manager: {
+      name: "Allenatore Juve",
+      shirtNumber: null,
+      countryCode: null,
+      ageYears: 60,
+      heightCm: null,
+      weightKg: null,
+      playerId: null,
+      profileUrl: null,
+    },
+    stadium: {
+      name: "Stadio della Juventus",
+      cityName: "Torino",
+      address: "Corso Gaetano Scirea, 50",
+      capacity: 45666,
+      yearOfConstruction: 2011,
+    },
+  },
   "sports-tennis:player-info": {
     name: "Jannik Sinner",
     ranking: 2,

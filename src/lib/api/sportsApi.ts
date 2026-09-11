@@ -12,6 +12,7 @@ import {
   footballStandingsSchema,
   highlightsSchema,
   footballInfoSchema,
+  teamSquadSchema,
   motogpCalendarSchema,
   motogpConstructorStandingsSchema,
   motogpNextEventSchema,
@@ -187,6 +188,16 @@ export const footballApi = {
     if (upcomingOnly) params.upcoming = "1";
     return callEdgeFunction("sports-football", params, footballCalendarSchema);
   },
+  /**
+   * Rosa, allenatore e stadio. Due fonti dietro un'azione sola: la rosa da
+   * Sky, lo stadio dall'API della Lega — che Sky non espone.
+   */
+  getSquad: (team: string, season: number) =>
+    callEdgeFunction(
+      "sports-football",
+      { action: "team-squad", season: String(season), team },
+      teamSquadSchema,
+    ),
   getTeamInfo: (team: string, season: number) =>
     callEdgeFunction(
       "sports-football",

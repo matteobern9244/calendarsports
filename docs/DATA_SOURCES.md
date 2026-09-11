@@ -64,7 +64,27 @@ classifica è la stessa per tutte e venti.
   Coppa Italia) più ventiquattro sondati in modo opportunistico, ignorando i 404.
   E l'elenco delle venti squadre, in `_shared/serieATeams.ts`, copia generata di
   `src/lib/serieATeams.ts`.
+- **HTML scrapato (`team-squad`)**: la pagina rosa di Sky,
+  `sport.sky.it/calcio/squadre/{slug}/rosa`. Non è un widget e non è JSON: è una
+  tabella `ftbl__team-players-table` server-rendered, parsata da
+  `teamSquad.ts`. Verificata dal vivo sulle venti squadre l'11 settembre 2026:
+  struttura identica, quattro reparti, allenatore sempre presente.
+  **La fonte non espone la data di nascita** — solo l'età in anni — **e non
+  espone le foto dei giocatori**: la tabella ha solo bandiere. Il ruolo è una
+  riga-intestazione, non una colonna, e l'allenatore chiude la tabella con il
+  nome in uno `<span>` invece che in un `<a>`, perché non ha scheda atleta.
+- **API reale (`team-squad`)**: Lega Serie A `/seasons/{id}/teams` per lo
+  **stadio**, che Sky non dà: nome, città, indirizzo, capienza, anno. Presente
+  per tutte e venti, ma **quattro squadre non dichiarano la capienza**, che va
+  quindi mostrata solo quando c'è. L'abbinamento fra le due fonti prova sia
+  `shortName` sia `officialName` con `matchesTeam`: i due campi non coincidono
+  sempre con il nome usato da Sky.
 - **Cache**: nessuna sulle partite. È l'unica funzione senza cache lato server.
+- `meta.dataSource` vale **`unavailable`** quando `team-squad` torna con zero
+  giocatori: una rosa vuota non è una squadra senza calciatori, è la fonte che
+  non ha risposto o ha cambiato forma, e dichiararlo evita che la pagina mostri
+  un vuoto convincente. Stessa logica del `configured: false` di
+  `streaming-releases`.
 - `meta.dataSource` vale `fallback-previous-season` quando la stagione richiesta
   non è ancora pubblicata e si ripiega su quella prima. `calendar` non lo fa di
   proposito: riempirebbe il calendario con le partite dell'anno scorso.

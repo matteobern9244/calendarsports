@@ -3,9 +3,12 @@
  *
  * Vive fuori da `index.ts` per la stessa ragione di `matchId.ts`: `index.ts`
  * chiama `Deno.serve` a livello di modulo, quindi importarlo da un test
- * farebbe partire un server. E `tsconfig.app.json` include solo `src`, per cui
- * le edge function non passano nemmeno da `tsc -b`: se questa logica restasse
- * dentro `index.ts` non avrebbe né test né typecheck.
+ * farebbe partire un server. Dentro `index.ts` questa logica non avrebbe test.
+ *
+ * Il typecheck invece **ci arriva**, da `tsconfig.edge.json`. Fino a poco fa
+ * qui c'era scritto il contrario, ed era vero quando questo file è nato: il
+ * commit successivo ha portato ogni file TypeScript del repository dentro
+ * `tsc -b`, e la frase è rimasta indietro di un commit.
  *
  * Qui dentro ci sono due formati di partita, non uno, perché le due fonti
  * scrivono i nomi in campi diversi. Tenerli distinti e nominati evita che

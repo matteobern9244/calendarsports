@@ -1,5 +1,6 @@
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/security.ts";
 import { buildMatchId, romeDateKeyOf } from "./matchId.ts";
+import { parseSquad, type Squad } from "./teamSquad.ts";
 import { matchesTeam, type SerieATeam } from "../_shared/serieATeams.ts";
 import {
   legaMatchInvolvesTeam,
@@ -96,6 +97,84 @@ async function fetchSeasonId(season: string): Promise<string | null> {
     return seasonId;
   } catch (e) {
     console.error("Lega API seasons fetch error:", e);
+    return null;
+  }
+}
+
+/**
+ * La rosa dalla pagina squadra di Sky.
+ *
+ * Una pagina che non risponde non e' un errore da propagare: e' una rosa che
+ * per ora non c'e'. Chi chiama lo dichiara con `dataSource: "unavailable"`,
+ * che e' la verita', invece di un 500 che non lo e'.
+ *
+ * Lo slug arriva dalla whitelist di `resolveRequestedTeam`, quindi non e'
+ * input arbitrario; resta codificato lo stesso, perche' la regola vale per
+ * ogni parametro che finisce in una URL a monte, non solo per quelli sospetti.
+ */
+async function fetchSquad(team: SerieATeam): Promise<Squad> {
+  const url = `${SKY_BASE}/calcio/squadre/${encodeURIComponent(team.slug)}/rosa`;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+    });
+    if (!res.ok) {
+      console.warn(`Rosa non disponibile per ${team.slug}: ${res.status}`);
+      return { players: [], manager: null };
+    }
+    return parseSquad(await res.text());
+  } catch (e) {
+    console.error(`Errore nel recupero della rosa di ${team.slug}:`, e);
+    return { players: [], manager: null };
+  }
+}
+
+export interface StadiumInfo {
+  name: string;
+  cityName: string | null;
+  address: string | null;
+  /** Manca per alcune squadre: va mostrata solo quando c'e'. */
+  capacity: number | null;
+  yearOfConstruction: number | null;
+}
+
+/**
+ * Lo stadio dall'API della Lega, che Sky non da'.
+ *
+ * L'abbinamento passa da `matchesTeam` e prova **due** campi: la Lega scrive
+ * `shortName` e `officialName`, e i due non coincidono sempre con il nome che
+ * usa Sky. Con l'uguaglianza esatta su un campo solo, una squadra resterebbe
+ * senza stadio senza che niente lo segnali.
+ */
+async function fetchStadium(season: string, team: SerieATeam): Promise<StadiumInfo | null> {
+  const seasonId = await fetchSeasonId(season);
+  if (!seasonId) return null;
+  try {
+    const url = `${LEGA_API}/seasons/${encodeURIComponent(seasonId)}/teams?locale=it-IT`;
+    const res = await fetch(url, { headers: LEGA_HEADERS });
+    if (!res.ok) {
+      console.warn(`Lega API teams error: ${res.status}`);
+      return null;
+    }
+    const body = await res.json();
+    const riga = (body?.teams ?? []).find(
+      (x: any) => matchesTeam(x?.shortName, team) || matchesTeam(x?.officialName, team),
+    );
+    const s = riga?.stadium;
+    if (!s?.name) return null;
+    return {
+      name: String(s.name),
+      cityName: s.cityName ? String(s.cityName) : null,
+      address: s.address ? String(s.address) : null,
+      capacity:
+        Number.isFinite(Number(s.capacity)) && Number(s.capacity) > 0 ? Number(s.capacity) : null,
+      yearOfConstruction:
+        Number.isFinite(Number(s.yearOfConstruction)) && Number(s.yearOfConstruction) > 0
+          ? Number(s.yearOfConstruction)
+          : null,
+    };
+  } catch (e) {
+    console.error("Lega API teams fetch error:", e);
     return null;
   }
 }
@@ -366,6 +445,9 @@ Deno.serve(async (req) => {
 
     let data: any;
     let seasonUsed = season;
+    // Alcune azioni non hanno un ripiego di stagione ma possono comunque
+    // tornare a mani vuote: devono poterlo dire invece di sembrare «live».
+    let dataSourceDegradato: "unavailable" | null = null;
     let calendarMeta: {
       competitionsIncluded: string[];
       competitionsUnavailable: string[];
@@ -562,9 +644,24 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "team-squad": {
+        // Due fonti in parallelo: la rosa da Sky, lo stadio dalla Lega.
+        // `Promise.all` e non due `await` in fila perche' non dipendono l'una
+        // dall'altra, e lo stadio non deve far aspettare la rosa.
+        const [rosa, stadium] = await Promise.all([fetchSquad(team), fetchStadium(season, team)]);
+        data = { players: rosa.players, manager: rosa.manager, stadium };
+        // Una rosa vuota non e' una squadra senza giocatori: e' la fonte che
+        // non ha risposto o ha cambiato forma. Dichiararlo qui evita che la
+        // pagina mostri un vuoto convincente.
+        if (rosa.players.length === 0) dataSourceDegradato = "unavailable";
+        break;
+      }
+
       default:
         return new Response(
-          JSON.stringify({ error: "Azione non valida. Usa: standings, calendar, next-match" }),
+          JSON.stringify({
+            error: "Azione non valida. Usa: standings, calendar, next-match, team-squad",
+          }),
           {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -575,8 +672,8 @@ Deno.serve(async (req) => {
     // dataSource:
     //  - "live" se la stagione richiesta e' stata effettivamente servita da Sky;
     //  - "fallback-previous-season" se l'helper ha dovuto ripiegare su season-1.
-    const dataSource: "live" | "fallback-previous-season" =
-      seasonUsed === season ? "live" : "fallback-previous-season";
+    const dataSource: "live" | "fallback-previous-season" | "unavailable" =
+      dataSourceDegradato ?? (seasonUsed === season ? "live" : "fallback-previous-season");
     const meta = {
       dataSource,
       season: /^\d{4}$/.test(season) ? parseInt(season, 10) : season,

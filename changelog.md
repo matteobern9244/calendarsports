@@ -17,6 +17,28 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [Non rilasciato]
+
+### Aggiunto
+
+- La pagina di una squadra ha una scheda **Rosa**: giocatori per reparto con
+  numero di maglia, nazionalita', eta', altezza e peso, l'allenatore in una
+  sezione sua, e lo **stadio** con citta', indirizzo, capienza e anno di
+  costruzione. Chi ha una scheda su Sky Sport e' un link, chi non ce l'ha resta
+  testo.
+- La rosa si scarica **solo quando si apre la scheda**, non a ogni visita della
+  pagina squadra: la pagina da cui viene pesa oltre duecento kilobyte.
+
+### Limiti noti
+
+- **Si mostra l'eta', non la data di nascita**: la fonte pubblica «29 anni» e
+  nient'altro. Ricavare una data all'indietro darebbe un giorno preciso e
+  falso.
+- **Niente foto dei giocatori**: nella rosa di Sky ci sono solo bandiere. Le
+  foto esistono, ma in un'altra pagina e solo per gli undici titolari.
+- **Quattro stadi su venti non dichiarano la capienza**: in quei casi il dato
+  non compare, invece di comparire a zero.
+
 ## [3.0.0] — La squadra di calcio si sceglie (2026-09-11)
 
 Bump applicativo `2.10.0` → `3.0.0`, esposto da `src/lib/version.ts` e

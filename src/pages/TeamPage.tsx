@@ -6,6 +6,7 @@ import OfflinePageFallback from "@/components/common/OfflinePageFallback";
 import SportTabs from "@/components/common/SportTabs";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
 import CalendarList from "@/components/team/CalendarList";
+import SquadPanel from "@/components/team/SquadPanel";
 import NextMatchCard from "@/components/team/NextMatchCard";
 import StandingsTable from "@/components/team/StandingsTable";
 import { TabsContent } from "@/components/ui/tabs";
@@ -42,6 +43,7 @@ const FILTER_STORAGE_KEY = "juventus-calendar-filter";
 const TABS = [
   { value: "calendario", label: "Calendario" },
   { value: "classifica", label: "Classifica" },
+  { value: "rosa", label: "Rosa" },
   { value: "highlights", label: "Highlights" },
 ] as const;
 
@@ -276,6 +278,10 @@ export default function TeamPage({ team }: TeamPageProps) {
             />
           )}
         </DataSection>
+      </TabsContent>
+
+      <TabsContent value="rosa">
+        <SquadPanel team={team} season={season} source={scheduleSource} />
       </TabsContent>
 
       <TabsContent value="highlights">

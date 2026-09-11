@@ -80,6 +80,21 @@ export function useFootballInfo(teamSlug: string, season: number) {
   });
 }
 
+/**
+ * Rosa, allenatore e stadio della squadra.
+ *
+ * `staleTime` lungo di proposito: una rosa cambia due volte l'anno, alle
+ * finestre di mercato. Ricaricarla ogni minuto come la classifica sarebbe
+ * traffico verso Sky senza nessuna informazione in cambio.
+ */
+export function useTeamSquad(teamSlug: string, season: number) {
+  return useQuery({
+    queryKey: queryKeys.football.squad(teamSlug, season),
+    queryFn: () => footballApi.getSquad(teamSlug, season),
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
 // === Tennis/Sinner Hooks ===
 export function useSinnerInfo() {
   return useQuery({

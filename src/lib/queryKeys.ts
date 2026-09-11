@@ -73,6 +73,14 @@ export const queryKeys = {
     calendarAll: (team: string, season: number, cap: number) =>
       ["football", "calendar-all", team, season, cap] as const,
     info: (team: string, season: number) => ["football", "info", team, season] as const,
+    /**
+     * La rosa **prende la stagione** anche se la pagina Sky da cui viene non
+     * la nomina: cambiando stagione la rosa cambia davvero, e lo stadio che
+     * viaggia con lei arriva da un endpoint della Lega che e' per stagione.
+     * Una chiave senza stagione servirebbe la rosa di quest'anno sotto il
+     * titolo di un'altra.
+     */
+    squad: (team: string, season: number) => ["football", "squad", team, season] as const,
   },
   sinner: {
     info: () => ["sinner", "info"] as const,

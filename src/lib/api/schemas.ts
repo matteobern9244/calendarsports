@@ -259,6 +259,57 @@ export const footballCalendarSchema = z.union([
   }),
 ]);
 
+/**
+ * Una riga della rosa: giocatore o allenatore.
+ *
+ * I numeri arrivano gia' come numeri, perche' e' la nostra edge function a
+ * convertirli — `1,94 m` diventa `194` li', non qui. Restano `nullish` perche'
+ * la fonte li omette davvero: un giocatore senza numero di maglia esiste (ne
+ * ho contati tre al Genoa e tre al Venezia), e quattro stadi su venti non
+ * dichiarano la capienza.
+ */
+const squadRowSchema = z.looseObject({
+  name: z.string(),
+  shirtNumber: scrapedNumber.nullish(),
+  countryCode: z.string().nullish(),
+  ageYears: scrapedNumber.nullish(),
+  heightCm: scrapedNumber.nullish(),
+  weightKg: scrapedNumber.nullish(),
+  playerId: z.string().nullish(),
+  profileUrl: z.string().nullish(),
+});
+
+const squadPlayerSchema = squadRowSchema.extend({
+  /**
+   * L'etichetta del reparto come la scrive Sky. Non e' un `z.enum`: un
+   * insieme chiuso qui farebbe sparire i giocatori il giorno in cui la fonte
+   * rinominasse un reparto, che e' il modo peggiore di reagire a una scritta
+   * diversa.
+   */
+  role: z.string(),
+});
+
+const stadiumSchema = z
+  .looseObject({
+    name: z.string(),
+    cityName: z.string().nullish(),
+    address: z.string().nullish(),
+    capacity: scrapedNumber.nullish(),
+    yearOfConstruction: scrapedNumber.nullish(),
+  })
+  .nullable();
+
+export const teamSquadSchema = z.looseObject({
+  players: tolerantArray(squadPlayerSchema, "sports-football:team-squad.players"),
+  manager: squadRowSchema.nullable(),
+  stadium: stadiumSchema,
+});
+
+export type SquadPlayer = z.infer<typeof squadPlayerSchema>;
+export type SquadRow = z.infer<typeof squadRowSchema>;
+export type TeamSquad = z.infer<typeof teamSquadSchema>;
+export type Stadium = z.infer<typeof stadiumSchema>;
+
 export type FootballMatch = z.infer<typeof footballMatchSchema>;
 export type FootballStandingRow = z.infer<typeof footballStandingRowSchema>;
 export type FootballInfo = z.infer<typeof footballInfoSchema>;
