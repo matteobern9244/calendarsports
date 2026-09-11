@@ -6,11 +6,14 @@ della tua squadra di Serie A, della Formula 1 e della MotoGP, oltre a
 palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `2.3.6` (consolidamento Streaming →
-Catalogo Italia sopra la baseline UI/UX `2.2.0` e il rebrand `2.1.0`).
-Il footer dell'app mostra la versione corrente leggendola da
-`src/lib/version.ts` nel formato `Calendar Events · v2.3.6` (con `v`
+Versione repository corrente: `3.0.0` (la squadra di calcio si sceglie fra le
+venti di Serie A, sopra il rilascio `2.10.0` che ha portato utenti, profilo e
+preferenze sincronizzate). Il footer dell'app mostra la versione leggendola da
+`src/lib/version.ts` nel formato `Calendar Events · v3.0.0` (con `v`
 minuscola).
+
+Questa riga è sorvegliata da `src/test/tooling/version.test.ts`: era rimasta
+ferma alla `2.3.6` per sei rilasci senza che niente se ne accorgesse.
 
 ## Origine del progetto
 

@@ -17,12 +17,24 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
-## [Non rilasciato]
+## [3.0.0] — La squadra di calcio si sceglie (2026-09-11)
 
-Lavoro in corso sulla squadra di calcio configurabile. La squadra scelta ora
-**si vede davvero**: il menu, la Home e il calendario aggregato la seguono, e
-ogni squadra ha un indirizzo suo. Restano juventini gli highlights, il tema
-visivo della pagina squadra e le notifiche push, per i motivi spiegati sotto.
+Bump applicativo `2.10.0` → `3.0.0`, esposto da `src/lib/version.ts` e
+`package.json`. Nota di rilascio in
+[`docs/releases/3.0.0-squadra-configurabile.md`](docs/releases/3.0.0-squadra-configurabile.md).
+
+**Perche' un major e non un minore.** L'app e' nata con la Juventus scritta
+dentro: la sezione calcio _era_ quella squadra. Da questa versione e' una delle
+venti di Serie A, scelta da chi usa l'app — cambia l'identita' del prodotto, non
+si aggiunge una funzione. Cambiano con lei gli **indirizzi** (`/juventus`
+diventa `/squadra/<slug>`, il vecchio redirige) e la **forma del valore**
+conservato nel profilo, che era un nome scritto a mano e ora e' un
+identificatore.
+
+La squadra scelta **si vede davvero**: il menu, la Home e il calendario
+aggregato la seguono, e ogni squadra ha un indirizzo suo. Restano juventini gli
+highlights, il tema visivo della pagina squadra e le notifiche push, per i
+motivi spiegati sotto.
 
 ### Aggiunto
 
@@ -101,9 +113,11 @@ visivo della pagina squadra e le notifiche push, per i motivi spiegati sotto.
   affrontato sul layout dell'intestazione, non qui.
 - Gli **highlights restano juventini**: `highlights-youtube` ha tre elenchi di
   playlist cablati, e per venti squadre servirebbero venti identificativi da
-  verificare a mano.
+  verificare a mano. Nella versione prossima la scheda sparira' per le altre
+  diciannove, invece di mostrare loro video juventini.
 - Il **tema visivo** della pagina squadra resta bianconero: oro e blu-navy sono
-  ovunque, e il Napoli si vede con la livrea juventina.
+  ovunque, e il Napoli si vede con la livrea juventina. Anche questo e' previsto
+  per la versione prossima, con i colori sociali di ogni squadra.
 - Le **notifiche push** continuano a riguardare la Juventus: cambiarlo richiede
   una colonna squadra su `push_subscriptions` e una modifica al dispatcher.
 
