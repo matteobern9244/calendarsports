@@ -1,6 +1,22 @@
 import type { HighlightSport, StreamingFamilyId, StreamingProviderId } from "@/lib/api/sportsApi";
 
 /**
+ * L'identita' della *lista* di partite: squadra, stagione, filtro. Le sue
+ * pagine ci aggiungono `page` e `pageSize` in coda, quindi questa chiave e'
+ * il loro prefisso — ed e' quello che permette a `keepPreviousPageOf` di
+ * distinguere «un'altra pagina» da «un'altra squadra» senza contare le
+ * posizioni a mano.
+ *
+ * Sta fuori dall'oggetto perche' `calendar` la richiama: un riferimento a
+ * `queryKeys` dentro il proprio inizializzatore renderebbe il tipo `any`.
+ */
+const calendarList = (team: string, season: number, upcomingOnly = false) =>
+  ["juventus", "calendar", team, season, upcomingOnly] as const;
+
+/** Stesso ruolo per i risultati di Sinner: la lista e' la stagione. */
+const resultsList = (season: number) => ["sinner", "results", season] as const;
+
+/**
  * Le chiavi di cache di React Query, definite in un posto solo.
  *
  * `setQueryData` e `getQueryData` richiedono la corrispondenza **esatta** della
@@ -37,10 +53,13 @@ export const queryKeys = {
      * e farebbe ricominciare da un caricamento a ogni cambio squadra.
      */
     standings: (season: number) => ["juventus", "standings", season] as const,
+    calendarList,
     /**
      * `page` e `pageSize` fanno parte della chiave anche quando sono assenti:
      * la richiesta senza paginazione restituisce l'intera stagione ed e' una
-     * voce di cache diversa da quella della prima pagina.
+     * voce di cache diversa da quella della prima pagina. Stanno **in coda**
+     * di proposito: tutto cio' che identifica la lista viene prima, cosi' una
+     * pagina si riconosce dal prefisso.
      */
     calendar: (
       team: string,
@@ -48,8 +67,7 @@ export const queryKeys = {
       page?: number,
       pageSize?: number,
       upcomingOnly = false,
-    ) =>
-      ["juventus", "calendar", team, season, page ?? null, pageSize ?? null, upcomingOnly] as const,
+    ) => [...calendarList(team, season, upcomingOnly), page ?? null, pageSize ?? null] as const,
     /** Il calendario ricomposto da tutte le pagine, per la vista aggregata. */
     calendarAll: (team: string, season: number, cap: number) =>
       ["juventus", "calendar-all", team, season, cap] as const,
@@ -59,8 +77,9 @@ export const queryKeys = {
     info: () => ["sinner", "info"] as const,
     nextEvent: () => ["sinner", "next-event"] as const,
     schedule: (season: number) => ["sinner", "schedule", season] as const,
+    resultsList,
     results: (season: number, page?: number, pageSize?: number) =>
-      ["sinner", "results", season, page ?? null, pageSize ?? null] as const,
+      [...resultsList(season), page ?? null, pageSize ?? null] as const,
   },
   motogp: {
     calendar: (season: number) => ["motogp", "calendar", season] as const,

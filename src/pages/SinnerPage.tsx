@@ -12,6 +12,7 @@ import { getCurrentSinnerSeason } from "@/lib/currentSeason";
 import { allSectionsUnavailable } from "@/lib/offlineSections";
 import { useSinnerInfo, useSinnerResults, useSinnerSchedule } from "@/hooks/useSportsData";
 import { tennisApi } from "@/lib/api/sportsApi";
+import { queryKeys } from "@/lib/queryKeys";
 import { formatDateIT, getEventStatus, prioritizeNextUpcoming } from "@/lib/dateUtils";
 import { motion } from "framer-motion";
 import { TabsContent } from "@/components/ui/tabs";
@@ -93,7 +94,7 @@ export default function SinnerPage() {
     const nextPage = resultsPage + 1;
     if (nextPage > totalResultPages) return;
     queryClient.prefetchQuery({
-      queryKey: ["sinner", "results", season, nextPage, RESULTS_PAGE_SIZE],
+      queryKey: queryKeys.sinner.results(season, nextPage, RESULTS_PAGE_SIZE),
       queryFn: () => tennisApi.getResults(season, nextPage, RESULTS_PAGE_SIZE),
       staleTime: 5 * 60 * 1000,
     });

@@ -53,6 +53,23 @@ con backoff. Il `QueryClient` non deve riprovare a sua volta, altrimenti i due
 livelli si moltiplicano e una edge function fredda produce una raffica di
 richieste per ogni query in pagina.
 
+### Le chiavi si compongono, e il placeholder si ferma al confine della lista
+
+Le chiavi di cache stanno tutte in `src/lib/queryKeys.ts`, anche quelle di un
+`prefetchQuery` dentro una pagina. Una chiave paginata si compone: prima cio'
+che identifica la lista (`calendarList`: squadra, stagione, filtro), poi
+`page` e `pageSize` in coda. Quel prefisso non e' cosmetico — e' come
+`keepPreviousPageOf` distingue «un'altra pagina» da «un'altra squadra».
+
+`placeholderData: (prev) => prev` e' **vietato**: React Query passa i dati
+dell'ultima query osservata dallo stesso hook qualunque fosse la sua chiave,
+quindi al cambio squadra serve le partite di quella precedente sotto
+l'intestazione di quella nuova — senza errore e senza spinner. Si usa
+`keepPreviousPageOf(<chiave della lista>)` da `src/lib/queryPlaceholder.ts`.
+
+Il controllo eseguibile e' il guardiano in `src/lib/queryPlaceholder.test.ts`,
+non questa sintesi.
+
 ### Lo stato si aggiusta durante il render, non in un effect
 
 Per azzerare la paginazione quando cambia un filtro, confronta il valore con

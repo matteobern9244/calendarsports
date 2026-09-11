@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
+import { keepPreviousPageOf } from "@/lib/queryPlaceholder";
 import {
   f1Api,
   footballApi,
@@ -62,7 +63,12 @@ export function useJuventusCalendar(
     queryKey: queryKeys.juventus.calendar(teamSlug, season, page, pageSize, upcomingOnly),
     queryFn: () => footballApi.getCalendar(teamSlug, season, page, pageSize, upcomingOnly),
     staleTime: 5 * 60 * 1000,
-    placeholderData: (prev) => prev,
+    // Niente flash di skeleton al click su Successiva, ma il placeholder si
+    // ferma al confine della lista: cambiare squadra, stagione o filtro
+    // mostra il caricamento, non le partite di prima.
+    placeholderData: keepPreviousPageOf(
+      queryKeys.juventus.calendarList(teamSlug, season, upcomingOnly),
+    ),
   });
 }
 
@@ -104,9 +110,10 @@ export function useSinnerResults(season: number, page?: number, pageSize?: numbe
     queryKey: queryKeys.sinner.results(season, page, pageSize),
     queryFn: () => tennisApi.getResults(season, page, pageSize),
     staleTime: 5 * 60 * 1000,
-    // Mantieni i risultati della pagina precedente durante il fetch
-    // della nuova: niente flash di skeleton al click su Successiva.
-    placeholderData: (prev) => prev,
+    // Mantieni i risultati della pagina precedente durante il fetch della
+    // nuova: niente flash di skeleton al click su Successiva. Al rollover di
+    // stagione la lista cambia, e li' il placeholder si ferma.
+    placeholderData: keepPreviousPageOf(queryKeys.sinner.resultsList(season)),
   });
 }
 

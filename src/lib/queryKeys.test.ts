@@ -23,9 +23,9 @@ describe("queryKeys", () => {
       "calendar",
       "juventus",
       2026,
-      null,
-      null,
       false,
+      null,
+      null,
     ]);
     expect(queryKeys.juventus.calendar("juventus", 2026, 1, 12)).not.toEqual(
       queryKeys.juventus.calendar("juventus", 2026),
@@ -70,6 +70,12 @@ describe("queryKeys", () => {
       // Mancava, e infatti dentro c'erano quattro chiavi scritte a mano —
       // fra cui una, `calendar-all`, che non aveva nemmeno una fabbrica.
       "src/hooks/useCalendarEvents.ts",
+      // Anche le pagine: il prefetch della pagina successiva costruisce una
+      // chiave, e una chiave scritta a mano accanto a un placeholder che
+      // ragiona sulla forma della chiave e' il modo in cui questo difetto
+      // torna.
+      "src/pages/SinnerPage.tsx",
+      "src/pages/JuventusPage.tsx",
     ]) {
       read(file)
         .split("\n")
