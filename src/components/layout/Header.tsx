@@ -16,6 +16,8 @@ import {
 import { SparkleLoop } from "./SparkleLoop";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 import { useUserPrefs } from "@/contexts/useUserPrefs";
+import { DEFAULT_TEAM } from "@/lib/serieATeams";
+import { teamPath } from "@/lib/teamRoutes";
 
 // Header non riceve piu' props: tema e preferenze sono in /preferenze.
 
@@ -30,7 +32,10 @@ const ALL_NAV_ITEMS = [
     Icon: TennisBrandIcon,
     section: "sinner",
   },
-  { label: "JUVENTUS", shortLabel: "JUVE", path: "/juventus", Icon: JuveBrandIcon },
+  // La squadra e' ancora quella predefinita: la voce seguira' la preferenza
+  // quando la preferenza arrivera' fino alla navigazione. Il percorso e' pero'
+  // gia' quello nuovo, cosi' il menu non passa da un redirect a ogni clic.
+  { label: "JUVENTUS", shortLabel: "JUVE", path: teamPath(DEFAULT_TEAM), Icon: JuveBrandIcon },
   { label: "FORMULA 1", shortLabel: "F1", path: "/formula1", Icon: F1BrandIcon, section: "f1" },
   {
     label: "MOTOGP",

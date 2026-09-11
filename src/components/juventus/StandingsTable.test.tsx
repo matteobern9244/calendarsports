@@ -2,6 +2,10 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { FootballStandingRow } from "@/lib/api/schemas";
 import StandingsTable from "./StandingsTable";
+import { resolveTeam } from "@/lib/serieATeams";
+
+const JUVE = resolveTeam("juventus");
+const MILAN = resolveTeam("milan");
 
 const row = (over: Partial<FootballStandingRow>): FootballStandingRow => ({
   team: "Squadra",
@@ -19,6 +23,7 @@ describe("StandingsTable", () => {
   it("una riga per squadra, con la differenza reti col segno", () => {
     render(
       <StandingsTable
+        team={JUVE}
         standings={[
           row({ position: 1, team: "Milan", goalDiff: 5 }),
           row({ position: 2, team: "Juventus", goalDiff: 0 }),
@@ -34,13 +39,14 @@ describe("StandingsTable", () => {
   });
 
   it("dichiara la fonte, perche' e' scraping e non un'API ufficiale", () => {
-    render(<StandingsTable standings={[row({ team: "Juventus" })]} />);
+    render(<StandingsTable team={JUVE} standings={[row({ team: "Juventus" })]} />);
     expect(screen.getByText("Fonte: Sky Sport Italia")).toBeInTheDocument();
   });
 
-  it("la riga della Juventus e' quella evidenziata, e solo quella", () => {
+  it("la riga evidenziata e' quella della squadra scelta, e solo quella", () => {
     render(
       <StandingsTable
+        team={JUVE}
         standings={[row({ position: 1, team: "Milan" }), row({ position: 2, team: "Juventus" })]}
       />,
     );
@@ -49,5 +55,26 @@ describe("StandingsTable", () => {
     const milan = screen.getByRole("cell", { name: /Milan/ }).closest("tr");
     expect(juve?.className).toContain("border-l-4");
     expect(milan?.className).not.toContain("border-l-4");
+  });
+
+  /**
+   * La classifica e' la stessa per tutte e venti le squadre — e' il motivo per
+   * cui la sua chiave di cache non porta la squadra. Cambia solo quale riga
+   * viene evidenziata, e quella e' la squadra della pagina.
+   */
+  it("su un'altra pagina squadra si illumina un'altra riga", () => {
+    render(
+      <StandingsTable
+        team={MILAN}
+        standings={[row({ position: 1, team: "Milan" }), row({ position: 2, team: "Juventus" })]}
+      />,
+    );
+
+    expect(screen.getByRole("cell", { name: /Milan/ }).closest("tr")?.className).toContain(
+      "border-l-4",
+    );
+    expect(screen.getByRole("cell", { name: /Juventus/ }).closest("tr")?.className).not.toContain(
+      "border-l-4",
+    );
   });
 });

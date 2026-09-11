@@ -8,6 +8,8 @@ import {
 } from "@/lib/currentSeason";
 import { toRomeDate } from "@/lib/dateUtils";
 import { queryKeys } from "@/lib/queryKeys";
+import { DEFAULT_TEAM } from "@/lib/serieATeams";
+import { teamMatchPath } from "@/lib/teamRoutes";
 
 /**
  * Tipo unificato che alimenta la vista mese del calendario
@@ -174,7 +176,11 @@ function expandJuventus(items: unknown[] | undefined): CalendarItem[] {
       shortLabel: `${isHome ? "vs" : "@"} ${opponent}`,
       context: [competition, ctxNum].filter(Boolean).join(" · "),
       title: `${home} - ${away}`,
-      href: `/juventus/partite/${encodeURIComponent(id)}`,
+      // La squadra qui e' ancora quella predefinita, ma la **forma**
+      // dell'indirizzo e' gia' quella nuova: un link e una rotta che si
+      // dicono cose diverse sono un link rotto, e un link rotto non fa
+      // fallire nessun typecheck.
+      href: teamMatchPath(DEFAULT_TEAM, id),
       broadcaster: m.broadcaster ? String(m.broadcaster) : undefined,
     });
   }

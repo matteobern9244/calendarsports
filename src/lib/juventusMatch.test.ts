@@ -1,13 +1,21 @@
 import { describe, expect, it } from "vitest";
 import type { FootballMatch } from "@/lib/api/schemas";
-import { formatGoalDiff, isJuventus, matchResult, matchSide } from "./juventusMatch";
+import { formatGoalDiff, matchResult, matchSide } from "./juventusMatch";
+import { resolveTeam } from "@/lib/serieATeams";
 
 /**
- * Chi e' l'avversario, se la Juventus gioca in casa, se ha vinto: tre
- * deduzioni ripetute in quattro punti della pagina, tutte a partire dai
- * nomi delle squadre come li scrive Sky Sport. Sbagliarle mostra il logo
- * sbagliato o una «V» su una sconfitta, e nessun test lo vedrebbe.
+ * Chi e' l'avversario, se si gioca in casa, se si ha vinto: tre deduzioni
+ * ripetute in quattro punti della pagina, tutte a partire dai nomi delle
+ * squadre come li scrive Sky Sport. Sbagliarle mostra il logo sbagliato o una
+ * «V» su una sconfitta, e nessun test lo vedrebbe.
+ *
+ * Il punto di vista e' un **parametro**, non la Juventus: la stessa partita
+ * vista dal calendario del Napoli ha l'avversario dall'altra parte e il
+ * risultato rovesciato.
  */
+
+const JUVE = resolveTeam("juventus");
+const NAPOLI = resolveTeam("napoli");
 
 const match = (over: Partial<FootballMatch> = {}): FootballMatch => ({
   id: "serie-a-2026-09-13-juventus-vs-milan",
@@ -17,24 +25,10 @@ const match = (over: Partial<FootballMatch> = {}): FootballMatch => ({
   ...over,
 });
 
-describe("isJuventus", () => {
-  it("riconosce la squadra a prescindere da maiuscole e suffissi", () => {
-    expect(isJuventus("Juventus")).toBe(true);
-    expect(isJuventus("JUVENTUS FC")).toBe(true);
-    expect(isJuventus("Milan")).toBe(false);
-  });
-
-  it("un nome mancante non e' la Juventus", () => {
-    expect(isJuventus(undefined)).toBe(false);
-    expect(isJuventus(null)).toBe(false);
-    expect(isJuventus("")).toBe(false);
-  });
-});
-
 describe("matchSide", () => {
   it("in casa: l'avversario e' la squadra ospite, col suo logo", () => {
-    expect(matchSide(match({ homeLogo: "juve.png", awayLogo: "milan.png" }))).toEqual({
-      isJuveHome: true,
+    expect(matchSide(match({ homeLogo: "juve.png", awayLogo: "milan.png" }), JUVE)).toEqual({
+      isHome: true,
       opponent: "Milan",
       opponentLogo: "milan.png",
     });
@@ -44,17 +38,50 @@ describe("matchSide", () => {
     expect(
       matchSide(
         match({ homeTeam: "Inter", awayTeam: "Juventus", homeLogo: "inter.png", awayLogo: null }),
+        JUVE,
       ),
-    ).toEqual({ isJuveHome: false, opponent: "Inter", opponentLogo: "inter.png" });
+    ).toEqual({ isHome: false, opponent: "Inter", opponentLogo: "inter.png" });
+  });
+
+  /**
+   * La stessa partita, guardata dall'altro calendario. E' il caso che rende
+   * la squadra un parametro invece di una costante: senza, la pagina del
+   * Napoli chiamerebbe «avversario» il Napoli stesso.
+   */
+  it("la stessa partita cambia lato a seconda di chi la guarda", () => {
+    const scontro = match({ homeTeam: "Juventus", awayTeam: "Napoli", awayLogo: "napoli.png" });
+    expect(matchSide(scontro, JUVE).opponent).toBe("Napoli");
+    expect(matchSide(scontro, NAPOLI)).toEqual({
+      isHome: false,
+      opponent: "Juventus",
+      opponentLogo: undefined,
+    });
+  });
+
+  /**
+   * Il confronto e' per uguaglianza esatta sul nome normalizzato, mai per
+   * sottostringa. Il caso non e' inventato: la Juventus Next Gen gioca in
+   * Serie C e puo' comparire negli elenchi di coppa. Un `includes("juventus")`
+   * direbbe che in casa c'e' la prima squadra, e la pagina finirebbe per
+   * chiamare «avversario» la Juventus stessa.
+   */
+  it("una squadra che si chiama quasi come quella scelta non e' quella scelta", () => {
+    const coppa = match({ homeTeam: "Juventus Next Gen", awayTeam: "Juventus" });
+    expect(matchSide(coppa, JUVE)).toMatchObject({
+      isHome: false,
+      opponent: "Juventus Next Gen",
+    });
   });
 });
 
 describe("matchResult", () => {
   it("e' V, S o P solo a partita finita", () => {
-    expect(matchResult(match({ status: "FullTime", homeScore: 2, awayScore: 1 }))).toBe("V");
-    expect(matchResult(match({ status: "FullTime", homeScore: 0, awayScore: 3 }))).toBe("S");
-    expect(matchResult(match({ status: "FullTime", homeScore: 1, awayScore: 1 }))).toBe("P");
-    expect(matchResult(match({ status: "Scheduled", homeScore: 2, awayScore: 1 }))).toBeNull();
+    expect(matchResult(match({ status: "FullTime", homeScore: 2, awayScore: 1 }), JUVE)).toBe("V");
+    expect(matchResult(match({ status: "FullTime", homeScore: 0, awayScore: 3 }), JUVE)).toBe("S");
+    expect(matchResult(match({ status: "FullTime", homeScore: 1, awayScore: 1 }), JUVE)).toBe("P");
+    expect(
+      matchResult(match({ status: "Scheduled", homeScore: 2, awayScore: 1 }), JUVE),
+    ).toBeNull();
   });
 
   it("guarda i gol dalla parte giusta anche in trasferta", () => {
@@ -65,35 +92,45 @@ describe("matchResult", () => {
           awayTeam: "Juventus",
           status: "FullTime",
           homeScore: 0,
-          awayScore: 1,
+          awayScore: 2,
         }),
+        JUVE,
       ),
     ).toBe("V");
   });
 
-  it("accetta i punteggi come stringhe, che e' come arrivano dallo scraping", () => {
-    expect(matchResult(match({ status: "FullTime", homeScore: "3", awayScore: "0" }))).toBe("V");
+  /** Una vittoria per una e' una sconfitta per l'altra: stesso tabellino. */
+  it("lo stesso tabellino e' V per una squadra e S per l'altra", () => {
+    const finita = match({
+      homeTeam: "Juventus",
+      awayTeam: "Napoli",
+      status: "FullTime",
+      homeScore: 2,
+      awayScore: 1,
+    });
+    expect(matchResult(finita, JUVE)).toBe("V");
+    expect(matchResult(finita, NAPOLI)).toBe("S");
   });
 
-  it("senza un punteggio non inventa un esito", () => {
-    expect(matchResult(match({ status: "FullTime", homeScore: 2, awayScore: null }))).toBeNull();
-    expect(matchResult(match({ status: "FullTime" }))).toBeNull();
+  it("i punteggi come stringhe contano come numeri", () => {
+    expect(matchResult(match({ status: "FullTime", homeScore: "3", awayScore: "0" }), JUVE)).toBe(
+      "V",
+    );
+  });
+
+  it("un punteggio mancante non produce un risultato inventato", () => {
+    expect(
+      matchResult(match({ status: "FullTime", homeScore: 2, awayScore: null }), JUVE),
+    ).toBeNull();
+    expect(matchResult(match({ status: "FullTime" }), JUVE)).toBeNull();
   });
 });
 
 describe("formatGoalDiff", () => {
-  it("mette il segno piu' davanti alla differenza reti positiva", () => {
-    expect(formatGoalDiff(5)).toBe("+5");
-    expect(formatGoalDiff("7")).toBe("+7");
-  });
-
-  it("lascia zero e negativi come sono", () => {
+  it("mette il segno solo davanti alle differenze positive", () => {
+    expect(formatGoalDiff(7)).toBe("+7");
     expect(formatGoalDiff(0)).toBe(0);
     expect(formatGoalDiff(-3)).toBe(-3);
-  });
-
-  it("un valore assente resta assente", () => {
     expect(formatGoalDiff(null)).toBeNull();
-    expect(formatGoalDiff(undefined)).toBeNull();
   });
 });

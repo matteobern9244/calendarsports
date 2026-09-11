@@ -75,7 +75,7 @@ describe("queryKeys", () => {
       // ragiona sulla forma della chiave e' il modo in cui questo difetto
       // torna.
       "src/pages/SinnerPage.tsx",
-      "src/pages/JuventusPage.tsx",
+      "src/pages/TeamPage.tsx",
       // E il profilo: la stessa chiave la scrivono `onMutate`, `onError` e
       // `onSuccess`, e un aggiornamento ottimistico che leggesse una chiave
       // diversa da quella che scrive rimetterebbe a posto il niente.

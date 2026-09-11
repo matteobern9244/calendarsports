@@ -27,7 +27,7 @@ test("loads home and navigates across all main sections with mocked sports data"
   await expect(page.getByText("Internazionali d'Italia")).toBeVisible();
 
   await page.getByRole("link", { name: "JUVENTUS" }).click();
-  await expect(page).toHaveURL(/\/juventus$/);
+  await expect(page).toHaveURL(/\/squadra\/juventus$/);
   await expect(page.getByRole("heading", { name: "Juventus" })).toBeVisible();
   await expect(page.getByText("vs Milan").first()).toBeVisible();
   // Il badge emittente compare sia nella card "Prossima Partita" sia nella
@@ -98,28 +98,80 @@ test("Stasera in TV: separatore oro tra famiglie e etichette mobile visibili", a
   await expect(mobileLabels.nth(1)).toBeVisible();
 });
 
-test("dettaglio partita Juventus: raggiungibile dal calendario e con id diretto", async ({
-  page,
-}) => {
+test("dettaglio partita: raggiungibile dal calendario e con id diretto", async ({ page }) => {
   await installSportsApiMocks(page);
 
   // Percorso reale dell'utente: dal calendario si apre la scheda partita.
-  await page.goto("/juventus");
+  await page.goto("/squadra/juventus");
   await page
     .getByRole("link", { name: /vs Milan/ })
     .first()
     .click();
-  await expect(page).toHaveURL(/\/juventus\/partite\//);
+  await expect(page).toHaveURL(/\/squadra\/juventus\/partite\//);
   await expect(page.getByRole("heading", { name: /Juventus – Milan/ })).toBeVisible();
   await expect(page.getByText("DAZN").first()).toBeVisible();
 
   // Deep-link diretto: la partita si trova anche senza passare dal calendario.
-  await page.goto("/juventus/partite/champions-league-2099-05-03-inter-vs-juventus");
+  await page.goto("/squadra/juventus/partite/champions-league-2099-05-03-inter-vs-juventus");
   await expect(page.getByRole("heading", { name: /Inter – Juventus/ })).toBeVisible();
 
   // Un id inesistente non deve dare pagina bianca ne' caricamento infinito.
-  await page.goto("/juventus/partite/partita-che-non-esiste");
+  await page.goto("/squadra/juventus/partite/partita-che-non-esiste");
   await expect(page.getByText("Partita non trovata nel calendario")).toBeVisible();
+});
+
+/**
+ * I vecchi indirizzi `/juventus*` sono stati condivisi, messi nei preferiti e
+ * indicizzati: continuano a funzionare, e portano al loro equivalente nuovo
+ * conservando l'id della partita.
+ */
+test("squadra: i vecchi indirizzi /juventus portano alla rotta parametrica", async ({ page }) => {
+  await installSportsApiMocks(page);
+
+  await page.goto("/");
+  await page.goto("/juventus");
+  await expect(page).toHaveURL(/\/squadra\/juventus$/);
+  await expect(page.getByRole("heading", { name: "Juventus" }).first()).toBeVisible();
+
+  // Il redirect **sostituisce** la voce di cronologia. Senza, «indietro»
+  // tornerebbe su /juventus, che rimanda subito avanti: una trappola da cui
+  // non si esce piu' con il tasto indietro.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.goto("/juventus/partite/champions-league-2099-05-03-inter-vs-juventus");
+  await expect(page).toHaveURL(
+    /\/squadra\/juventus\/partite\/champions-league-2099-05-03-inter-vs-juventus$/,
+  );
+  await expect(page.getByRole("heading", { name: /Inter – Juventus/ })).toBeVisible();
+});
+
+/**
+ * La domanda che solo il browser puo' rispondere: l'indirizzo, non la
+ * preferenza, decide cosa si vede. Napoli-Lazio esiste solo nel calendario del
+ * Napoli, quindi la sua presenza dimostra che la pagina ha davvero seguito lo
+ * slug e non e' rimasta sulla squadra predefinita.
+ */
+test("squadra: l'indirizzo decide la squadra, e uno slug inventato e' un 404", async ({ page }) => {
+  await installSportsApiMocks(page);
+
+  await page.goto("/squadra/napoli");
+  await expect(page.getByRole("heading", { name: "Napoli" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Apri dettaglio Napoli vs Lazio" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Apri dettaglio Juventus vs Milan" })).toHaveCount(0);
+
+  // Il dettaglio aperto dal calendario del Napoli resta nel ramo del Napoli:
+  // e' quello che permette al «Torna al calendario» di riportare indietro.
+  await page.getByRole("link", { name: "Apri dettaglio Napoli vs Lazio" }).click();
+  await expect(page).toHaveURL(/\/squadra\/napoli\/partite\//);
+  await page.getByRole("link", { name: "Torna al calendario" }).click();
+  await expect(page).toHaveURL(/\/squadra\/napoli$/);
+
+  // Uno slug che non e' una squadra non deve diventare la Juventus: un
+  // indirizzo che annuncia una squadra e ne mostra un'altra e' un dato falso,
+  // per di piu' condivisibile.
+  await page.goto("/squadra/squadra-inventata");
+  await expect(page.getByText("Pagina non trovata")).toBeVisible();
 });
 
 test("PWA: l'app si apre senza rete grazie al service worker", async ({ page, context }) => {

@@ -8,18 +8,22 @@ import type { FootballMatch } from "@/lib/api/schemas";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { formatJuventusDateTime } from "@/lib/dateUtils";
 import { matchSide } from "@/lib/juventusMatch";
+import type { SerieATeam } from "@/lib/serieATeams";
+import { teamMatchPath } from "@/lib/teamRoutes";
 import { cn } from "@/lib/utils";
 import { COMPETITION_COLORS } from "./competitionColors";
 
 interface NextMatchCardProps {
+  /** La squadra dal cui calendario si guarda la partita. */
+  team: SerieATeam;
   match: FootballMatch;
   /** Il «Riprova» del conto alla rovescia: un refetch del calendario. */
   onRetry: () => void;
 }
 
-/** La card «Prossima Partita» in testa alla pagina Juventus. */
-export default function NextMatchCard({ match, onRetry }: NextMatchCardProps) {
-  const { isJuveHome, opponent, opponentLogo } = matchSide(match);
+/** La card «Prossima Partita» in testa alla pagina squadra. */
+export default function NextMatchCard({ team, match, onRetry }: NextMatchCardProps) {
+  const { isHome, opponent, opponentLogo } = matchSide(match, team);
   const { date: dateStr, time: timeStr } = formatJuventusDateTime(match.date);
   const compColor = COMPETITION_COLORS[match.competition] || "";
   return (
@@ -34,8 +38,8 @@ export default function NextMatchCard({ match, onRetry }: NextMatchCardProps) {
       )}
     >
       <Link
-        to={`/juventus/partite/${encodeURIComponent(match.id ?? "")}`}
-        aria-label={`Apri dettaglio ${isJuveHome ? "Juventus vs " + opponent : opponent + " vs Juventus"}`}
+        to={teamMatchPath(team, match.id)}
+        aria-label={`Apri dettaglio ${isHome ? `${team.name} vs ${opponent}` : `${opponent} vs ${team.name}`}`}
         className="block px-5 py-5 sm:px-6 sm:py-6 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
       >
         <span
@@ -62,10 +66,10 @@ export default function NextMatchCard({ match, onRetry }: NextMatchCardProps) {
             <TeamLogo src={opponentLogo} name={opponent} size={48} shape="circle" />
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground font-heading uppercase tracking-wider">
-                {isJuveHome ? "Juventus vs" : `${opponent} @`}
+                {isHome ? `${team.name} vs` : `${opponent} @`}
               </p>
               <p className="text-xl sm:text-2xl font-heading font-bold text-foreground truncate">
-                {isJuveHome ? opponent : "Juventus"}
+                {isHome ? opponent : team.name}
               </p>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {dateStr}

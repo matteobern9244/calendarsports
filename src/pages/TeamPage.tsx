@@ -11,13 +11,14 @@ import StandingsTable from "@/components/juventus/StandingsTable";
 import { TabsContent } from "@/components/ui/tabs";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSerieAStandings, useJuventusCalendar } from "@/hooks/useSportsData";
-import { DEFAULT_TEAM } from "@/lib/serieATeams";
+import { type SerieATeam } from "@/lib/serieATeams";
 import { paginatedCalendarOf } from "@/lib/api/schemas";
 import { footballApi } from "@/lib/api/sportsApi";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
 import { pageOfIndex, pickNextMatch } from "@/lib/juventusCalendar";
 import { allSectionsUnavailable } from "@/lib/offlineSections";
 import { queryKeys } from "@/lib/queryKeys";
+import { skyTeamPageUrl } from "@/lib/teamRoutes";
 
 const PAGE_SIZE = 12;
 
@@ -27,20 +28,28 @@ const TABS = [
   { value: "highlights", label: "Highlights" },
 ] as const;
 
-// Le due sezioni Juventus non offrono il link a Sky Sport durante il
-// caricamento (nessun `loadingLabel`): lo propongono solo quando c'e'
+// Le due sezioni della pagina squadra non offrono il link a Sky Sport durante
+// il caricamento (nessun `loadingLabel`): lo propongono solo quando c'e'
 // davvero qualcosa da aggirare, cioe' in errore o a fonte vuota.
 const STANDINGS_SOURCE: ExternalSource = {
   href: "https://sport.sky.it/calcio/serie-a/classifica",
   label: "Vedi classifica su Sky Sport",
 };
 
-const SCHEDULE_SOURCE: ExternalSource = {
-  href: "https://sport.sky.it/calcio/serie-a/squadre/juventus",
-  label: "Vedi calendario su Sky Sport",
-};
+interface TeamPageProps {
+  /**
+   * La squadra **dell'indirizzo**, gia' risolta da `TeamRoute`. Arriva da li'
+   * e non dalle preferenze: fra URL e preferenza vince l'URL, altrimenti un
+   * link condiviso mostrerebbe cose diverse a chi lo apre.
+   */
+  team: SerieATeam;
+}
 
-export default function JuventusPage() {
+export default function TeamPage({ team }: TeamPageProps) {
+  const scheduleSource: ExternalSource = {
+    href: skyTeamPageUrl(team),
+    label: `Vedi ${team.name} su Sky Sport`,
+  };
   const season = getCurrentJuventusSeason();
   const queryClient = useQueryClient();
   const {
@@ -62,7 +71,7 @@ export default function JuventusPage() {
     isLoading: calLoading,
     error: calError,
     refetch: calRefetch,
-  } = useJuventusCalendar(DEFAULT_TEAM.slug, season, page, PAGE_SIZE, upcomingOnly);
+  } = useJuventusCalendar(team.slug, season, page, PAGE_SIZE, upcomingOnly);
   const { isOnline } = useOnlineStatus();
 
   const calendar = paginatedCalendarOf(calendarData);
@@ -72,7 +81,7 @@ export default function JuventusPage() {
   const nextMatchPage = calendar ? pageOfIndex(calendar.nextUpcomingIndex, PAGE_SIZE) : null;
   const nextOnCurrentPage = calendar && nextMatchPage !== null && nextMatchPage === calendar.page;
   const { data: nextMatchData, isLoading: nextMatchLoading } = useJuventusCalendar(
-    DEFAULT_TEAM.slug,
+    team.slug,
     season,
     nextOnCurrentPage || nextMatchPage === null ? undefined : nextMatchPage,
     nextOnCurrentPage || nextMatchPage === null ? undefined : PAGE_SIZE,
@@ -94,7 +103,7 @@ export default function JuventusPage() {
     if (nextMatchPage !== calendar.page) setPage(nextMatchPage);
   }
 
-  // Prefetch della pagina successiva del calendario Juventus quando la
+  // Prefetch della pagina successiva del calendario quando la
   // pagina corrente e' stabile, cosi' lo scorrimento "Successiva" e'
   // istantaneo. Inoltre, se la "Prossima Partita" risiede su una pagina
   // diversa da quella visualizzata, garantiamo il prefetch di quella
@@ -110,15 +119,8 @@ export default function JuventusPage() {
     if (totalPages > 0 && currentPage + 1 <= totalPages) {
       const next = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: queryKeys.juventus.calendar(
-          DEFAULT_TEAM.slug,
-          season,
-          next,
-          PAGE_SIZE,
-          upcomingOnly,
-        ),
-        queryFn: () =>
-          footballApi.getCalendar(DEFAULT_TEAM.slug, season, next, PAGE_SIZE, upcomingOnly),
+        queryKey: queryKeys.juventus.calendar(team.slug, season, next, PAGE_SIZE, upcomingOnly),
+        queryFn: () => footballApi.getCalendar(team.slug, season, next, PAGE_SIZE, upcomingOnly),
         staleTime: 5 * 60 * 1000,
       });
     }
@@ -134,24 +136,18 @@ export default function JuventusPage() {
     ) {
       queryClient.prefetchQuery({
         queryKey: queryKeys.juventus.calendar(
-          DEFAULT_TEAM.slug,
+          team.slug,
           season,
           nextMatchPage,
           PAGE_SIZE,
           upcomingOnly,
         ),
         queryFn: () =>
-          footballApi.getCalendar(
-            DEFAULT_TEAM.slug,
-            season,
-            nextMatchPage,
-            PAGE_SIZE,
-            upcomingOnly,
-          ),
+          footballApi.getCalendar(team.slug, season, nextMatchPage, PAGE_SIZE, upcomingOnly),
         staleTime: 5 * 60 * 1000,
       });
     }
-  }, [queryClient, season, calendar, nextMatchPage, page, upcomingOnly]);
+  }, [queryClient, season, calendar, nextMatchPage, page, upcomingOnly, team.slug]);
 
   const changeFilter = (onlyUpcoming: boolean) => {
     setUpcomingOnly(onlyUpcoming);
@@ -185,7 +181,7 @@ export default function JuventusPage() {
     );
   }
 
-  // Spinner di atterraggio: la pagina Juventus deve apparire "completa"
+  // Spinner di atterraggio: la pagina squadra deve apparire "completa"
   // solo quando tutti i dati strutturali (calendario corrente, eventuale
   // pagina contenente la "Prossima Partita", classifica Serie A) sono
   // sincronizzati. Senza questo gate l'utente vedeva la pagina renderizzare
@@ -201,15 +197,17 @@ export default function JuventusPage() {
   const isInitialLoading =
     !calError && !stError && (calLoading || stLoading || isAwaitingNextMatch);
   if (isInitialLoading) {
-    return <LandingSpinner title="Juventus" message="Caricamento dati Juventus..." />;
+    return <LandingSpinner title={team.name} message={`Caricamento dati ${team.name}...`} />;
   }
 
   return (
     <SportTabs
-      title="Juventus"
+      title={team.name}
       defaultValue="calendario"
       tabs={TABS}
-      beforeTabs={nextMatch && <NextMatchCard match={nextMatch} onRetry={() => calRefetch()} />}
+      beforeTabs={
+        nextMatch && <NextMatchCard team={team} match={nextMatch} onRetry={() => calRefetch()} />
+      }
     >
       <TabsContent value="classifica">
         <DataSection
@@ -226,7 +224,7 @@ export default function JuventusPage() {
           emptyDescription="La classifica della Serie A per questa stagione non è ancora disponibile dalla nostra fonte. Apri la classifica ufficiale Sky Sport qui sotto per consultare la graduatoria aggiornata, con punti, vittorie, pareggi e differenza reti di tutte le squadre del campionato."
           emptyCtaHint="Tocca qui per la graduatoria completa"
         >
-          <StandingsTable standings={standings ?? []} />
+          <StandingsTable team={team} standings={standings ?? []} />
         </DataSection>
       </TabsContent>
 
@@ -241,18 +239,19 @@ export default function JuventusPage() {
           isLoading={calLoading && !calendar}
           error={calError}
           isEmpty={!calendar?.items.length}
-          source={SCHEDULE_SOURCE}
+          source={scheduleSource}
           loadingMessage="Caricamento calendario da Sky Sport..."
-          errorMessage={`Calendario Juventus ${season} non disponibile`}
-          errorDetail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la pagina ufficiale Juventus su Sky Sport per consultare tutti gli appuntamenti."
-          errorCtaHint="Tocca qui per tutte le partite bianconere"
+          errorMessage={`Calendario ${team.name} ${season} non disponibile`}
+          errorDetail={`La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la pagina ufficiale su Sky Sport per consultare tutti gli appuntamenti.`}
+          errorCtaHint="Tocca qui per il calendario completo"
           onRetry={() => calRefetch()}
-          emptyTitle={`Calendario Juventus ${season}`}
-          emptyDescription="Il calendario delle partite Juventus per questa stagione non è ancora disponibile dalla nostra fonte. Apri la pagina ufficiale Sky Sport qui sotto per consultare tutti gli appuntamenti del club bianconero, con giornate, orari e competizioni (Serie A, Coppa Italia, Champions League)."
-          emptyCtaHint="Tocca qui per tutte le partite bianconere"
+          emptyTitle={`Calendario ${team.name} ${season}`}
+          emptyDescription={`Il calendario delle partite di questa stagione non è ancora disponibile dalla nostra fonte. Apri la pagina ufficiale Sky Sport qui sotto per consultare tutti gli appuntamenti della squadra, con giornate, orari e competizioni (Serie A, Coppa Italia, Champions League).`}
+          emptyCtaHint="Tocca qui per il calendario completo"
         >
           {calendar && (
             <CalendarList
+              team={team}
               calendar={calendar}
               upcomingOnly={upcomingOnly}
               onChangeFilter={changeFilter}

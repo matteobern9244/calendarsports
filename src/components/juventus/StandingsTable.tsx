@@ -8,15 +8,18 @@ import {
 } from "@/components/ui/table";
 import TeamLogo from "@/components/common/TeamLogo";
 import type { FootballStandingRow } from "@/lib/api/schemas";
-import { formatGoalDiff, isJuventus } from "@/lib/juventusMatch";
+import { formatGoalDiff } from "@/lib/juventusMatch";
+import { matchesTeam, type SerieATeam } from "@/lib/serieATeams";
 import { cn } from "@/lib/utils";
 
 interface StandingsTableProps {
+  /** La squadra di cui evidenziare la riga. */
+  team: SerieATeam;
   standings: FootballStandingRow[];
 }
 
-/** La classifica di Serie A, con la riga bianconera evidenziata. */
-export default function StandingsTable({ standings }: StandingsTableProps) {
+/** La classifica di Serie A, con la riga della squadra scelta evidenziata. */
+export default function StandingsTable({ team, standings }: StandingsTableProps) {
   return (
     <div className="rounded-xl border border-border overflow-hidden">
       <Table>
@@ -48,26 +51,27 @@ export default function StandingsTable({ standings }: StandingsTableProps) {
         </TableHeader>
         <TableBody>
           {standings.map((s) => {
-            const isJuve = isJuventus(s.team);
+            const evidenziata = matchesTeam(s.team, team);
             return (
               <TableRow
                 key={s.position}
                 className={cn(
-                  isJuve &&
+                  evidenziata &&
                     "relative bg-linear-to-r from-[hsl(var(--gold))]/20 via-[hsl(var(--gold))]/8 to-transparent border-l-4 border-[hsl(var(--gold))] hover:bg-linear-to-r hover:from-[hsl(var(--gold))]/25 hover:via-[hsl(var(--gold))]/10 hover:to-transparent",
                 )}
               >
                 <TableCell
                   className={cn(
                     "font-heading font-bold",
-                    isJuve && "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] text-base",
+                    evidenziata &&
+                      "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] text-base",
                   )}
                 >
                   {s.position}
                 </TableCell>
                 <TableCell
                   className={cn(
-                    isJuve
+                    evidenziata
                       ? "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-heading font-bold text-base"
                       : "font-semibold",
                   )}
@@ -76,10 +80,10 @@ export default function StandingsTable({ standings }: StandingsTableProps) {
                     <TeamLogo
                       src={s.logoUrl}
                       name={s.team}
-                      size={isJuve ? 28 : 20}
+                      size={evidenziata ? 28 : 20}
                       shape="circle"
                       className={
-                        isJuve
+                        evidenziata
                           ? "ring-2 ring-[hsl(var(--gold))]/60 ring-offset-1 ring-offset-background"
                           : undefined
                       }
@@ -97,7 +101,7 @@ export default function StandingsTable({ standings }: StandingsTableProps) {
                 <TableCell
                   className={cn(
                     "text-center font-bold",
-                    isJuve &&
+                    evidenziata &&
                       "text-[hsl(var(--gold-dark))] dark:text-[hsl(var(--gold))] font-heading text-base",
                   )}
                 >

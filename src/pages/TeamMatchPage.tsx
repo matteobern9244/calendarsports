@@ -14,11 +14,13 @@ import EmptyState from "@/components/common/EmptyState";
 import TeamLogo from "@/components/common/TeamLogo";
 import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
 import { useJuventusCalendar } from "@/hooks/useSportsData";
-import { DEFAULT_TEAM } from "@/lib/serieATeams";
+import { type SerieATeam } from "@/lib/serieATeams";
 import { getCurrentJuventusSeason } from "@/lib/currentSeason";
-import { matchesOf, toNumber, type FootballCalendar, type FootballMatch } from "@/lib/api/schemas";
+import { matchesOf, type FootballCalendar, type FootballMatch } from "@/lib/api/schemas";
+import { matchResult, matchSide } from "@/lib/juventusMatch";
 import { formatJuventusDateTime } from "@/lib/dateUtils";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
+import { skyTeamPageUrl, teamPath } from "@/lib/teamRoutes";
 
 const COMPETITION_COLORS: Record<string, string> = {
   "Serie A":
@@ -45,7 +47,16 @@ function findMatch(calendar: FootballCalendar | undefined, matchId: string) {
   );
 }
 
-export default function JuventusMatchPage() {
+interface TeamMatchPageProps {
+  /**
+   * La squadra **del calendario da cui si e' arrivati**, gia' risolta da
+   * `TeamRoute`. E' anche quella a cui riporta il «Torna al calendario»: la
+   * stessa Juventus-Napoli si apre da due indirizzi, e ognuno torna al suo.
+   */
+  team: SerieATeam;
+}
+
+export default function TeamMatchPage({ team }: TeamMatchPageProps) {
   const { matchId = "" } = useParams<{ matchId: string }>();
   const decodedMatchId = useMemo(() => {
     try {
@@ -62,7 +73,7 @@ export default function JuventusMatchPage() {
   // alla volta costava fino a `totalPages` round-trip in sequenza, ognuno in
   // attesa del precedente. E' anche la stessa chiave di cache che usa la Home,
   // quindi arrivando da li' il dato e' gia' pronto.
-  const calendarQuery = useJuventusCalendar(DEFAULT_TEAM.slug, season);
+  const calendarQuery = useJuventusCalendar(team.slug, season);
 
   const foundMatch = useMemo(
     () => findMatch(calendarQuery.data, decodedMatchId),
@@ -85,15 +96,15 @@ export default function JuventusMatchPage() {
       <div className="container py-8 sm:py-12">
         <ErrorState
           message="Dettaglio partita non disponibile"
-          detail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la pagina ufficiale Juventus su Sky Sport."
+          detail="La nostra fonte dati (Sky Sport) non risponde in questo momento. Riprova oppure apri direttamente la pagina ufficiale su Sky Sport."
           onRetry={() => calendarQuery.refetch()}
-          externalLink="https://sport.sky.it/calcio/serie-a/squadre/juventus"
-          externalLabel="Vedi calendario su Sky Sport"
+          externalLink={skyTeamPageUrl(team)}
+          externalLabel={`Vedi ${team.name} su Sky Sport`}
           ctaHint="Tocca qui per le info ufficiali della partita"
         />
         <div className="mt-4 text-center">
           <Button asChild variant="outline" size="sm">
-            <Link to="/juventus">
+            <Link to={teamPath(team)}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Torna al calendario
             </Link>
@@ -108,14 +119,14 @@ export default function JuventusMatchPage() {
       <div className="container py-8 sm:py-12">
         <ErrorState
           message="Partita non trovata nel calendario"
-          detail="Questa partita non risulta più nel calendario aggiornato. Puoi tornare alla pagina Juventus oppure consultare il calendario completo su Sky Sport."
-          externalLink="https://sport.sky.it/calcio/serie-a/squadre/juventus"
-          externalLabel="Vedi calendario su Sky Sport"
+          detail={`Questa partita non risulta più nel calendario aggiornato. Puoi tornare alla pagina ${team.name} oppure consultare il calendario completo su Sky Sport.`}
+          externalLink={skyTeamPageUrl(team)}
+          externalLabel={`Vedi ${team.name} su Sky Sport`}
           ctaHint="Tocca qui per cercare la partita su Sky Sport"
         />
         <div className="mt-4 text-center">
           <Button asChild variant="outline" size="sm">
-            <Link to="/juventus">
+            <Link to={teamPath(team)}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Torna al calendario
             </Link>
@@ -125,23 +136,27 @@ export default function JuventusMatchPage() {
     );
   }
 
-  return <MatchDetail match={foundMatch} onRetry={() => calendarQuery.refetch()} />;
+  return <MatchDetail team={team} match={foundMatch} onRetry={() => calendarQuery.refetch()} />;
 }
 
-function MatchDetail({ match, onRetry }: { match: FootballMatch; onRetry: () => void }) {
+function MatchDetail({
+  team,
+  match,
+  onRetry,
+}: {
+  team: SerieATeam;
+  match: FootballMatch;
+  onRetry: () => void;
+}) {
   const isFinished = match.status === "FullTime";
-  const isJuveHome = match.homeTeam?.toLowerCase().includes("juventus");
+  // Casa/trasferta e risultato arrivano da `juventusMatch`, non da un confronto
+  // scritto qui: erano una seconda implementazione delle stesse due deduzioni,
+  // per di piu' con `includes("juventus")`, che in Coppa Italia avrebbe preso
+  // la Juve Stabia per la Juventus.
+  const { isHome } = matchSide(match, team);
+  const risultato = matchResult(match, team);
   const { date: dateStr, time: timeStr, full: fullStr } = formatJuventusDateTime(match.date);
   const compColor = COMPETITION_COLORS[match.competition] || "";
-
-  const juveGoals = toNumber(isJuveHome ? match.homeScore : match.awayScore);
-  const oppGoals = toNumber(isJuveHome ? match.awayScore : match.homeScore);
-  const juveResult = useMemo(() => {
-    if (!isFinished || juveGoals === null || oppGoals === null) return null;
-    if (juveGoals > oppGoals) return "V" as const;
-    if (juveGoals < oppGoals) return "S" as const;
-    return "P" as const;
-  }, [isFinished, juveGoals, oppGoals]);
 
   const broadcasters: string[] = match.broadcaster
     ? String(match.broadcaster)
@@ -154,7 +169,7 @@ function MatchDetail({ match, onRetry }: { match: FootballMatch; onRetry: () => 
     <div className="container py-8 sm:py-12">
       <div className="mb-4">
         <Button asChild variant="ghost" size="sm">
-          <Link to="/juventus">
+          <Link to={teamPath(team)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Torna al calendario
           </Link>
@@ -280,8 +295,8 @@ function MatchDetail({ match, onRetry }: { match: FootballMatch; onRetry: () => 
             )}
             <InfoRow label="Data" value={dateStr} />
             <InfoRow label="Ora (Italia)" value={timeStr || "—"} />
-            <InfoRow label="Squadra di casa" value={match.homeTeam} highlighted={isJuveHome} />
-            <InfoRow label="Squadra ospite" value={match.awayTeam} highlighted={!isJuveHome} />
+            <InfoRow label="Squadra di casa" value={match.homeTeam} highlighted={isHome} />
+            <InfoRow label="Squadra ospite" value={match.awayTeam} highlighted={!isHome} />
             <InfoRow
               label="Diretta TV"
               value={broadcasters.length > 0 ? broadcasters.join(" · ") : "—"}
@@ -341,18 +356,18 @@ function MatchDetail({ match, onRetry }: { match: FootballMatch; onRetry: () => 
                   <span className="text-2xl text-muted-foreground">–</span>
                   <span className="text-5xl sm:text-7xl">{match.awayScore}</span>
                 </div>
-                {juveResult && (
+                {risultato && (
                   <span
                     className={cn(
                       "text-sm font-heading font-bold uppercase tracking-widest",
-                      juveResult === "V" && "text-green-500",
-                      juveResult === "S" && "text-red-500",
-                      juveResult === "P" && "text-yellow-500",
+                      risultato === "V" && "text-green-500",
+                      risultato === "S" && "text-red-500",
+                      risultato === "P" && "text-yellow-500",
                     )}
                   >
-                    {juveResult === "V" && "Vittoria Juventus"}
-                    {juveResult === "S" && "Sconfitta Juventus"}
-                    {juveResult === "P" && "Pareggio"}
+                    {risultato === "V" && `Vittoria ${team.name}`}
+                    {risultato === "S" && `Sconfitta ${team.name}`}
+                    {risultato === "P" && "Pareggio"}
                   </span>
                 )}
                 <p className="text-xs text-muted-foreground text-center max-w-md">

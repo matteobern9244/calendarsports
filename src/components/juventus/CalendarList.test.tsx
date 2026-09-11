@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { FootballMatch } from "@/lib/api/schemas";
 import type { PaginatedCalendar } from "@/lib/juventusCalendar";
 import CalendarList from "./CalendarList";
+import { resolveTeam, type SerieATeam } from "@/lib/serieATeams";
+
+const JUVE = resolveTeam("juventus");
 
 const match = (id: string, over: Partial<FootballMatch> = {}): FootballMatch => ({
   id,
@@ -27,12 +30,13 @@ function calendar(over: Partial<PaginatedCalendar> = {}): PaginatedCalendar {
   };
 }
 
-function renderList(cal: PaginatedCalendar, upcomingOnly = true) {
+function renderList(cal: PaginatedCalendar, upcomingOnly = true, team: SerieATeam = JUVE) {
   const onChangeFilter = vi.fn();
   const onGoToPage = vi.fn();
   render(
     <MemoryRouter>
       <CalendarList
+        team={team}
         calendar={cal}
         upcomingOnly={upcomingOnly}
         onChangeFilter={onChangeFilter}
@@ -50,11 +54,29 @@ describe("CalendarList", () => {
     expect(screen.getByText("Partite 1–2 di 2")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Apri dettaglio Juventus vs Milan" })).toHaveAttribute(
       "href",
-      "/juventus/partite/a",
+      "/squadra/juventus/partite/a",
     );
     expect(
       screen.getByRole("link", { name: "Apri dettaglio Juventus vs Inter" }),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * Lo stesso calendario letto dall'altra squadra: «vs» diventa «@», e i link
+   * restano nel ramo della squadra da cui si sta guardando.
+   */
+  it("dall'altra squadra la partita cambia lato e il link cambia ramo", () => {
+    renderList(
+      calendar({ items: [match("a", { homeTeam: "Juventus", awayTeam: "Napoli" })], total: 1 }),
+      true,
+      resolveTeam("napoli"),
+    );
+
+    expect(screen.getByText("@ Juventus")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Apri dettaglio Juventus vs Napoli" })).toHaveAttribute(
+      "href",
+      "/squadra/napoli/partite/a",
+    );
   });
 
   it("evidenzia come «Prossima» solo la partita indicata dal server", () => {

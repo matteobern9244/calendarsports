@@ -1,15 +1,22 @@
 import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Layout from "@/components/layout/Layout";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import LoadingState from "@/components/common/LoadingState";
 import SectionRoute from "@/components/common/SectionRoute";
+import TeamRoute from "@/components/common/TeamRoute";
+import { DEFAULT_TEAM } from "@/lib/serieATeams";
+import { teamMatchPath, teamPath } from "@/lib/teamRoutes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { UserPrefsProvider } from "@/contexts/UserPrefsContext";
 import Index from "./pages/Index";
+// `NotFound` non e' piu' pigra: `TeamRoute` la mostra quando lo slug non e' una
+// squadra, e quell'import statico rendeva il `lazy` inefficace: il bundler la
+// metteva comunque nel chunk principale, piu' un chunk separato mai usato.
+import NotFound from "./pages/NotFound";
 
 // La Home resta nel bundle iniziale: e' la pagina su cui si atterra, caricarla
 // in un secondo momento aggiungerebbe un'attesa invece di toglierla. Tutte le
@@ -18,14 +25,13 @@ import Index from "./pages/Index";
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const StreamingPage = lazy(() => import("./pages/StreamingPage"));
 const SinnerPage = lazy(() => import("./pages/SinnerPage"));
-const JuventusPage = lazy(() => import("./pages/JuventusPage"));
-const JuventusMatchPage = lazy(() => import("./pages/JuventusMatchPage"));
+const TeamPage = lazy(() => import("./pages/TeamPage"));
+const TeamMatchPage = lazy(() => import("./pages/TeamMatchPage"));
 const Formula1Page = lazy(() => import("./pages/Formula1Page"));
 const MotoGPPage = lazy(() => import("./pages/MotoGPPage"));
 const PreferencesPage = lazy(() => import("./pages/PreferencesPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
-const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +48,22 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * I vecchi indirizzi della pagina Juventus.
+ *
+ * Sono stati condivisi, messi nei preferiti e indicizzati per anni: toglierli
+ * trasformerebbe in 404 dei link che continuano a circolare. Il redirect
+ * **sostituisce** la voce di cronologia, altrimenti il tasto «indietro»
+ * tornerebbe su un indirizzo che rimanda subito avanti, cioe' una trappola da
+ * cui non si esce piu'.
+ */
+const RedirectSquadraStorica = () => <Navigate to={teamPath(DEFAULT_TEAM)} replace />;
+
+const RedirectPartitaStorica = () => {
+  const { matchId = "" } = useParams<{ matchId: string }>();
+  return <Navigate to={teamMatchPath(DEFAULT_TEAM, matchId)} replace />;
+};
 
 /** Mostrato mentre arriva il bundle di una pagina. */
 const RouteFallback = () => (
@@ -72,8 +94,16 @@ const App = () => (
                         </SectionRoute>
                       }
                     />
-                    <Route path="/juventus" element={<JuventusPage />} />
-                    <Route path="/juventus/partite/:matchId" element={<JuventusMatchPage />} />
+                    <Route
+                      path="/squadra/:teamSlug"
+                      element={<TeamRoute>{(team) => <TeamPage team={team} />}</TeamRoute>}
+                    />
+                    <Route
+                      path="/squadra/:teamSlug/partite/:matchId"
+                      element={<TeamRoute>{(team) => <TeamMatchPage team={team} />}</TeamRoute>}
+                    />
+                    <Route path="/juventus" element={<RedirectSquadraStorica />} />
+                    <Route path="/juventus/partite/:matchId" element={<RedirectPartitaStorica />} />
                     <Route
                       path="/formula1"
                       element={

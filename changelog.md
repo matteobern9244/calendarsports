@@ -19,13 +19,30 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Non rilasciato]
 
-Lavoro in corso sulla squadra di calcio configurabile. **Nessuna pagina legge
-ancora la preferenza**: il calendario, la Home e la pagina squadra mostrano
-tuttora la Juventus qualunque cosa si scelga. Quello che cambia adesso e' dove
-la preferenza viene conservata e come si comporta quando si salva.
+Lavoro in corso sulla squadra di calcio configurabile. **La preferenza non
+guida ancora la navigazione**: il menu, la Home e il calendario aggregato
+portano tuttora alla Juventus qualunque cosa si scelga. La pagina squadra pero'
+non e' piu' juventina: segue l'indirizzo, e ogni squadra ha il suo.
+
+### Aggiunto
+
+- La pagina di una squadra ha ora un **indirizzo suo**: `/squadra/napoli`
+  mostra il calendario, la classifica con la riga del Napoli evidenziata e il
+  dettaglio delle sue partite. Il dettaglio partita sta dentro il ramo della
+  squadra da cui lo si apre, cosi' «Torna al calendario» riporta dove si era.
+  Uno slug che non e' una squadra e' una pagina non trovata, non la Juventus:
+  un indirizzo che annuncia una squadra e ne mostra un'altra sarebbe un dato
+  falso, per di piu' condivisibile.
 
 ### Modificato
 
+- I vecchi indirizzi `/juventus` e `/juventus/partite/...` **continuano a
+  funzionare** e portano ai nuovi conservando la partita. Sono stati condivisi
+  e messi nei preferiti per anni.
+- Il link esterno di scampo verso Sky Sport, quello offerto quando la nostra
+  fonte non risponde, **portava a una pagina che non esiste**
+  (`/calcio/serie-a/squadre/juventus`). Ora usa la forma che Sky pubblica
+  davvero, ed e' quella della squadra che si sta guardando.
 - La **squadra preferita si sceglie da un elenco** delle venti squadre di Serie
   A, in ordine alfabetico, invece di scriverla a mano. La casella di testo
   libero accettava qualunque cosa, e quella cosa finiva nel profilo. L'elenco

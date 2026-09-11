@@ -24,13 +24,13 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const TARGETS = [
-  "src/pages/JuventusPage.tsx",
+  "src/pages/TeamPage.tsx",
   "src/pages/Index.tsx",
   "src/pages/Formula1Page.tsx",
   "src/pages/MotoGPPage.tsx",
   "src/pages/SinnerPage.tsx",
   "src/pages/StreamingPage.tsx",
-  "src/pages/JuventusMatchPage.tsx",
+  "src/pages/TeamMatchPage.tsx",
   "src/pages/CalendarPage.tsx",
 ];
 const TARGET_DIRS = [

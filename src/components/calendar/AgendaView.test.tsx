@@ -10,7 +10,7 @@ const evento = (id: string, over: Partial<CalendarItem> = {}): CalendarItem => (
   shortLabel: "vs Milan",
   context: "Serie A · Giornata 3",
   title: "Juventus - Milan",
-  href: "/juventus",
+  href: "/squadra/juventus",
   ...over,
 });
 

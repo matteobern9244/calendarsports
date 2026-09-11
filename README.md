@@ -245,7 +245,7 @@ File di riferimento:
 - [src/App.tsx](./src/App.tsx)
 - [src/pages/Index.tsx](./src/pages/Index.tsx)
 - [src/pages/SinnerPage.tsx](./src/pages/SinnerPage.tsx)
-- [src/pages/JuventusPage.tsx](./src/pages/JuventusPage.tsx)
+- [src/pages/TeamPage.tsx](./src/pages/TeamPage.tsx)
 - [src/pages/Formula1Page.tsx](./src/pages/Formula1Page.tsx)
 - [src/pages/MotoGPPage.tsx](./src/pages/MotoGPPage.tsx)
 
@@ -311,7 +311,7 @@ Rischi:
 - dipendenza da competition ID e season ID esterni;
 - eventuali cambi strutturali sui siti Sky o Lega possono rompere la feature.
 
-Pagina dettaglio partita (`/juventus/partite/:matchId`):
+Pagina dettaglio partita (`/squadra/:teamSlug/partite/:matchId`):
 
 - mostra solo dati realmente disponibili dal payload Sky/Lega del calendario
   (data e ora in `Europe/Rome`, competizione, broadcaster, score finale,
@@ -325,7 +325,7 @@ Pagina dettaglio partita (`/juventus/partite/:matchId`):
 
 ### Highlights video (Juventus, F1, MotoGP)
 
-Le tab "Highlights" su `/juventus`, `/formula1` e `/motogp` sono alimentate
+Le tab "Highlights" su `/squadra/:teamSlug`, `/formula1` e `/motogp` sono alimentate
 dai **feed RSS pubblici** delle 3 playlist YouTube ufficiali, esposti
 dall'edge function `supabase/functions/highlights-youtube`:
 

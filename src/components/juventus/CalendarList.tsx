@@ -16,11 +16,15 @@ import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { formatJuventusDateTime } from "@/lib/dateUtils";
 import { highlightIndexOnPage, pageRange, type PaginatedCalendar } from "@/lib/juventusCalendar";
 import { matchResult, matchSide } from "@/lib/juventusMatch";
+import type { SerieATeam } from "@/lib/serieATeams";
+import { teamMatchPath } from "@/lib/teamRoutes";
 import { buildPageList } from "@/lib/pageList";
 import { cn } from "@/lib/utils";
 import { COMPETITION_COLORS } from "./competitionColors";
 
 interface CalendarListProps {
+  /** La squadra di cui e' questo calendario: decide l'avversario e i link. */
+  team: SerieATeam;
   calendar: PaginatedCalendar;
   upcomingOnly: boolean;
   onChangeFilter: (onlyUpcoming: boolean) => void;
@@ -28,10 +32,11 @@ interface CalendarListProps {
 }
 
 /**
- * Una pagina del calendario Juventus: intestazione con filtro e conteggio,
- * le partite come link al dettaglio, la barra di paginazione.
+ * Una pagina del calendario di una squadra: intestazione con filtro e
+ * conteggio, le partite come link al dettaglio, la barra di paginazione.
  */
 export default function CalendarList({
+  team,
   calendar,
   upcomingOnly,
   onChangeFilter,
@@ -81,8 +86,8 @@ export default function CalendarList({
       >
         {items.map((m, i) => {
           const isFinished = m.status === "FullTime";
-          const { isJuveHome, opponent, opponentLogo } = matchSide(m);
-          const result = matchResult(m);
+          const { isHome, opponent, opponentLogo } = matchSide(m, team);
+          const result = matchResult(m, team);
           const resultColor =
             result === "V" ? "text-green-500" : result === "S" ? "text-red-500" : "text-yellow-500";
           const { date: dateStr, time: timeStr } = formatJuventusDateTime(m.date);
@@ -105,7 +110,7 @@ export default function CalendarList({
               )}
             >
               <Link
-                to={`/juventus/partite/${encodeURIComponent(m.id ?? "")}`}
+                to={teamMatchPath(team, m.id)}
                 aria-label={`Apri dettaglio ${m.homeTeam} vs ${m.awayTeam}`}
                 className="flex items-center gap-3 px-4 py-3.5 rounded-2xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--gold))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
@@ -135,7 +140,7 @@ export default function CalendarList({
                   <TeamLogo src={opponentLogo} name={opponent} size={24} shape="circle" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate text-foreground">
-                      {isJuveHome ? "vs" : "@"} {opponent}
+                      {isHome ? "vs" : "@"} {opponent}
                     </p>
                     <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                       <Badge

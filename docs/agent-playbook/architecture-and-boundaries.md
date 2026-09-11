@@ -127,6 +127,41 @@ eseguibile e' `src/components/preferences/TeamSelect.test.tsx`: e' l'unica
 verifica che uccide quella mutazione, perche' la e2e non ha modo di far
 cambiare la preferenza da fuori senza una sessione.
 
+### Fra URL e preferenza, per il rendering vince l'URL
+
+Le pagine di una squadra sono parametriche: `/squadra/:teamSlug` e
+`/squadra/:teamSlug/partite/:matchId`. La squadra mostrata è **quella
+dell'indirizzo**, mai la preferenza: un link si copia e si incolla, e se
+l'indirizzo dicesse `juventus` mentre lo schermo mostra il Napoli sarebbe un
+dato falso, per di più condivisibile.
+
+Lo slug si valida con `resolveTeamStrict`, non con `resolveTeam`. La forma
+totale ripiegherebbe sulla Juventus, ed è esattamente il difetto appena
+descritto: uno slug inventato mostrerebbe i bianconeri sotto un indirizzo che
+ne annuncia un'altra. Chi non è una squadra è un 404. La validazione sta in
+`components/common/TeamRoute.tsx`, **fuori** dalla pagina, perché la pagina apre
+una dozzina di hook prima di poter decidere qualcosa e un `return` anticipato
+dopo un hook non si può scrivere; il wrapper consegna la squadra già risolta,
+così dentro la pagina il caso «non è una squadra» non esiste più.
+
+Gli indirizzi si compongono in un posto solo, `src/lib/teamRoutes.ts`, e le
+funzioni prendono una `SerieATeam`, non uno slug — stessa ragione per cui
+`favoriteTeam` non è una stringa. La forma della URL è un contratto fra la
+rotta dichiarata in `App.tsx`, i link del calendario, la card della prossima
+partita, il redirect dai vecchi `/juventus*` e il calendario aggregato:
+scritta a mano in sei punti, basta che uno resti indietro perché un link porti
+a una pagina che non c'è, e un link rotto non fa fallire nessun typecheck.
+
+I vecchi `/juventus*` continuano a funzionare e redirigono con `replace`. Senza
+`replace`, «indietro» tornerebbe su un indirizzo che rimanda subito avanti:
+una trappola da cui non si esce. Lo verifica `e2e/app.spec.ts`, perché la
+cronologia del browser non esiste in jsdom.
+
+Il punto di vista sulla singola partita è un parametro, non la Juventus:
+`matchSide` e `matchResult` in `src/lib/juventusMatch.ts` prendono la squadra.
+La stessa Juventus-Napoli compare in due calendari, e in quello del Napoli
+l'avversario è dall'altra parte e il risultato è rovesciato.
+
 ### Lo stato si aggiusta durante il render, non in un effect
 
 Per azzerare la paginazione quando cambia un filtro, confronta il valore con
@@ -175,7 +210,7 @@ stesso modo:
 | `sports-tennis:results`    | array nudo              | `{ items, pagination: { page, pageSize, total, totalPages } }`    |
 
 Le due forme sono diverse per ragioni storiche, non per disegno. Chi legge deve
-accettarle entrambe: `matchesOf` in `src/pages/JuventusMatchPage.tsx` è
+accettarle entrambe: `matchesOf` in `src/pages/TeamMatchPage.tsx` è
 l'esempio. **Le fixture end-to-end replicano questo contratto** (`paginate` in
 `e2e/support/mockSportsApi.ts`): una fixture che restituisce sempre l'array nudo
 ha già nascosto per mesi un crash della pagina Juventus, perché il codice reale

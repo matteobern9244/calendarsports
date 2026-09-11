@@ -1,41 +1,52 @@
 import { toNumber, type FootballMatch } from "@/lib/api/schemas";
+import { matchesTeam, type SerieATeam } from "@/lib/serieATeams";
 
 /**
- * Le deduzioni sulla singola partita Juventus, a partire dai nomi delle
- * squadre come li scrive Sky Sport: chi e' l'avversario, se si gioca in
- * casa, come e' finita. Erano ripetute in quattro punti della pagina, e un
- * errore avrebbe mostrato il logo sbagliato o una «V» su una sconfitta senza
- * che nessun test se ne accorgesse.
+ * Le deduzioni sulla singola partita a partire dai nomi delle squadre come li
+ * scrive Sky Sport: chi e' l'avversario, se si gioca in casa, come e' finita.
+ * Erano ripetute in quattro punti della pagina, e un errore avrebbe mostrato
+ * il logo sbagliato o una «V» su una sconfitta senza che nessun test se ne
+ * accorgesse.
+ *
+ * Il punto di vista e' un **parametro**. Finche' la pagina era solo quella
+ * della Juventus la costante bastava; ora la stessa Juventus-Napoli compare in
+ * due calendari, e in quello del Napoli l'avversario e' dall'altra parte e il
+ * risultato e' rovesciato. Una costante avrebbe fatto chiamare «avversario» il
+ * Napoli sulla pagina del Napoli.
+ *
+ * Il confronto e' `matchesTeam`, cioe' uguaglianza esatta sul nome
+ * normalizzato: in Coppa Italia gioca la Juve Stabia, e un confronto per
+ * sottostringa la scambierebbe per la Juventus in casa.
  */
 
-export function isJuventus(team: string | null | undefined): boolean {
-  return Boolean(team?.toLowerCase().includes("juventus"));
-}
-
-export function matchSide(match: FootballMatch): {
-  isJuveHome: boolean;
+export function matchSide(
+  match: FootballMatch,
+  team: SerieATeam,
+): {
+  /** La squadra scelta gioca in casa. */
+  isHome: boolean;
   opponent: string;
   opponentLogo: string | null | undefined;
 } {
-  const isJuveHome = isJuventus(match.homeTeam);
+  const isHome = matchesTeam(match.homeTeam, team);
   return {
-    isJuveHome,
-    opponent: isJuveHome ? match.awayTeam : match.homeTeam,
-    opponentLogo: isJuveHome ? match.awayLogo : match.homeLogo,
+    isHome,
+    opponent: isHome ? match.awayTeam : match.homeTeam,
+    opponentLogo: isHome ? match.awayLogo : match.homeLogo,
   };
 }
 
-/** Vittoria, Sconfitta o Pareggio dal punto di vista bianconero. */
+/** Vittoria, Sconfitta o Pareggio dal punto di vista della squadra scelta. */
 export type MatchResult = "V" | "S" | "P";
 
 /** Solo a partita finita e con entrambi i punteggi: altrimenti null. */
-export function matchResult(match: FootballMatch): MatchResult | null {
+export function matchResult(match: FootballMatch, team: SerieATeam): MatchResult | null {
   if (match.status !== "FullTime") return null;
-  const { isJuveHome } = matchSide(match);
-  const juveGoals = toNumber(isJuveHome ? match.homeScore : match.awayScore);
-  const oppGoals = toNumber(isJuveHome ? match.awayScore : match.homeScore);
-  if (juveGoals === null || oppGoals === null) return null;
-  return juveGoals > oppGoals ? "V" : juveGoals < oppGoals ? "S" : "P";
+  const { isHome } = matchSide(match, team);
+  const own = toNumber(isHome ? match.homeScore : match.awayScore);
+  const other = toNumber(isHome ? match.awayScore : match.homeScore);
+  if (own === null || other === null) return null;
+  return own > other ? "V" : own < other ? "S" : "P";
 }
 
 /** La differenza reti con il segno davanti quando e' positiva. */

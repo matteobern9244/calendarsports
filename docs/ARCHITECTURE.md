@@ -77,20 +77,22 @@ src/
 
 Tutte figlie di `Layout`, tranne il catch-all.
 
-| Path                         | Componente          |
-| ---------------------------- | ------------------- |
-| `/`                          | `Index`             |
-| `/calendario`                | `CalendarPage`      |
-| `/streaming`                 | `StreamingPage`     |
-| `/sinner`                    | `SinnerPage`        |
-| `/juventus`                  | `JuventusPage`      |
-| `/juventus/partite/:matchId` | `JuventusMatchPage` |
-| `/formula1`                  | `Formula1Page`      |
-| `/motogp`                    | `MotoGPPage`        |
-| `/preferenze`                | `PreferencesPage`   |
-| `/accedi`                    | `AuthPage`          |
-| `/reimposta-password`        | `ResetPasswordPage` |
-| `*`                          | `NotFound`          |
+| Path                                  | Componente                           |
+| ------------------------------------- | ------------------------------------ |
+| `/`                                   | `Index`                              |
+| `/calendario`                         | `CalendarPage`                       |
+| `/streaming`                          | `StreamingPage`                      |
+| `/sinner`                             | `SinnerPage`                         |
+| `/squadra/:teamSlug`                  | `TeamPage`                           |
+| `/squadra/:teamSlug/partite/:matchId` | `TeamMatchPage`                      |
+| `/juventus`                           | redirect a `/squadra/juventus`       |
+| `/juventus/partite/:matchId`          | redirect al ramo `/squadra/juventus` |
+| `/formula1`                           | `Formula1Page`                       |
+| `/motogp`                             | `MotoGPPage`                         |
+| `/preferenze`                         | `PreferencesPage`                    |
+| `/accedi`                             | `AuthPage`                           |
+| `/reimposta-password`                 | `ResetPasswordPage`                  |
+| `*`                                   | `NotFound`                           |
 
 Routing dichiarativo con react-router 8: nessun data router, nessun loader.
 
