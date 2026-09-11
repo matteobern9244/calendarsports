@@ -79,9 +79,31 @@ classifica è la stessa per tutte e venti.
   quindi mostrata solo quando c'è. L'abbinamento fra le due fonti prova sia
   `shortName` sia `officialName` con `matchesTeam`: i due campi non coincidono
   sempre con il nome usato da Sky.
+- **JSON incorporato (`lineups`)**: le probabili formazioni da
+  `sport.sky.it/calcio/serie-a/probabili-formazioni/{slug}`. **Non è scraping**:
+  la pagina porta un `<script type="application/json" data-props="true">`, lo
+  stesso formato dei widget. L'indirizzo è **per squadra**, non per partita, e
+  contiene la prossima partita di quella squadra; `/partite/.../formazioni` è
+  un'altra cosa — la formazione effettiva — e risponde 404 per una partita
+  inesistente. Il legame con il nostro dataset è `seoName`, che è già il nostro
+  slug. Verificato sulle venti squadre l'11 settembre 2026: quaranta formazioni,
+  tutte con undici titolari e allenatore.
+  **Nella stessa risposta convivono due qualità di dato**: `startingLineup` sono
+  oggetti completi con numero, ruolo, foto e link; `substitutes`,
+  `unavailables`, `disqualifieds` e `potentialPlayers` sono invece **un solo
+  elemento** con `id: null` e i cognomi in una stringa separata da virgola. La
+  categoria vuota è `fullName: ""`, non un array vuoto.
+  Le **linee del campo** non sono nella fonte: si ricavano dalle cifre di
+  `formation` e dall'ordine di `formationPlace`, e se i conti non tornano si
+  ripiega sull'elenco invece di disegnare una formazione diversa da quella
+  pubblicata.
+  Sono **previsioni editoriali**, non formazioni ufficiali, e la fonte non
+  pubblica quando le ha aggiornate: l'interfaccia lo dichiara e non inventa un
+  «ultimo aggiornamento».
 - **Cache**: nessuna sulle partite. È l'unica funzione senza cache lato server.
 - `meta.dataSource` vale **`unavailable`** quando `team-squad` torna con zero
-  giocatori: una rosa vuota non è una squadra senza calciatori, è la fonte che
+  giocatori, o quando `lineups` non trova nessuno dei due lati — fuori dalle
+  finestre di campionato Sky non pubblica probabili, e non è un guasto: una rosa vuota non è una squadra senza calciatori, è la fonte che
   non ha risposto o ha cambiato forma, e dichiararlo evita che la pagina mostri
   un vuoto convincente. Stessa logica del `configured: false` di
   `streaming-releases`.

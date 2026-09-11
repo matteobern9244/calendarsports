@@ -95,6 +95,22 @@ export function useTeamSquad(teamSlug: string, season: number) {
   });
 }
 
+/**
+ * Probabili formazioni della prossima partita.
+ *
+ * `staleTime` breve rispetto alla rosa: sono previsioni editoriali, e nei
+ * giorni prima della partita cambiano anche piu' volte. Ricaricarle ogni
+ * cinque minuti e' il minimo per non mostrare una formazione superata come se
+ * fosse l'ultima.
+ */
+export function useLineups(teamSlug: string, season: number) {
+  return useQuery({
+    queryKey: queryKeys.football.lineups(teamSlug, season),
+    queryFn: () => footballApi.getLineups(teamSlug, season),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 // === Tennis/Sinner Hooks ===
 export function useSinnerInfo() {
   return useQuery({

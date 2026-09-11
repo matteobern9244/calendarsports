@@ -7,6 +7,7 @@ import SportTabs from "@/components/common/SportTabs";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
 import CalendarList from "@/components/team/CalendarList";
 import SquadPanel from "@/components/team/SquadPanel";
+import LineupsPanel from "@/components/team/LineupsPanel";
 import NextMatchCard from "@/components/team/NextMatchCard";
 import StandingsTable from "@/components/team/StandingsTable";
 import { TabsContent } from "@/components/ui/tabs";
@@ -44,12 +45,18 @@ const TABS = [
   { value: "calendario", label: "Calendario" },
   { value: "classifica", label: "Classifica" },
   { value: "rosa", label: "Rosa" },
+  { value: "formazioni", label: "Formazioni" },
   { value: "highlights", label: "Highlights" },
 ] as const;
 
 // Le due sezioni della pagina squadra non offrono il link a Sky Sport durante
 // il caricamento (nessun `loadingLabel`): lo propongono solo quando c'e'
 // davvero qualcosa da aggirare, cioe' in errore o a fonte vuota.
+const LINEUPS_SOURCE: ExternalSource = {
+  href: "https://sport.sky.it/calcio/serie-a/probabili-formazioni",
+  label: "Vedi le probabili su Sky Sport",
+};
+
 const STANDINGS_SOURCE: ExternalSource = {
   href: "https://sport.sky.it/calcio/serie-a/classifica",
   label: "Vedi classifica su Sky Sport",
@@ -282,6 +289,10 @@ export default function TeamPage({ team }: TeamPageProps) {
 
       <TabsContent value="rosa">
         <SquadPanel team={team} season={season} source={scheduleSource} />
+      </TabsContent>
+
+      <TabsContent value="formazioni">
+        <LineupsPanel team={team} season={season} source={LINEUPS_SOURCE} />
       </TabsContent>
 
       <TabsContent value="highlights">

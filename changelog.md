@@ -28,6 +28,12 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   testo.
 - La rosa si scarica **solo quando si apre la scheda**, non a ogni visita della
   pagina squadra: la pagina da cui viene pesa oltre duecento kilobyte.
+- La pagina di una squadra ha una scheda **Formazioni** con le **probabili**
+  della prossima partita: modulo, undici in campo con foto e numero di maglia,
+  panchina, squalificati, indisponibili, in dubbio e allenatore, per entrambe le
+  squadre. Sono previsioni di Sky Sport e la pagina lo dice: possono cambiare
+  fino al fischio d'inizio.
+- Anche le formazioni si scaricano solo all'apertura della scheda.
 
 ### Limiti noti
 
@@ -38,6 +44,13 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   foto esistono, ma in un'altra pagina e solo per gli undici titolari.
 - **Quattro stadi su venti non dichiarano la capienza**: in quei casi il dato
   non compare, invece di comparire a zero.
+- Di **panchina, squalificati, indisponibili e giocatori in dubbio** la fonte
+  pubblica **soltanto i cognomi**, in una riga sola. Si vedono come elenco di
+  testo, senza foto e senza link, mentre gli undici titolari hanno entrambi: e'
+  una differenza voluta, perche' dare loro la stessa veste prometterebbe un
+  dettaglio che non esiste.
+- Fuori dalle finestre di campionato le probabili formazioni **non esistono**, e
+  la scheda lo dice con parole sue invece di sembrare un errore.
 
 ## [3.0.0] — La squadra di calcio si sceglie (2026-09-11)
 

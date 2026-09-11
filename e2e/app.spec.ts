@@ -487,3 +487,31 @@ test("squadra: la scheda Rosa mostra reparti, allenatore e stadio", async ({ pag
 
   expect(richieste.length, "la scheda aperta deve aver chiesto la rosa").toBeGreaterThan(0);
 });
+
+test("squadra: le probabili formazioni si dichiarano tali e distinguono i dati", async ({
+  page,
+}) => {
+  await installSportsApiMocks(page);
+  await page.goto("/squadra/juventus");
+  await page.getByRole("tab", { name: "Formazioni" }).click();
+
+  await expect(page.getByText("Probabili formazioni")).toBeVisible();
+  await expect(page.getByText(/non formazioni ufficiali/)).toBeVisible();
+
+  // Il modulo si legge separato, e i due lati possono averne due diversi.
+  await expect(page.getByText("4-2-3-1")).toBeVisible();
+  await expect(page.getByText("4-3-3")).toBeVisible();
+
+  // 18:45 UTC sono le 20:45 italiane: la data passa dal fuso di Roma.
+  await expect(page.getByText(/Milan - Juventus · 05\/05\/2099 20:45/)).toBeVisible();
+
+  // La distinzione che regge la schermata: gli undici sono link, la panchina
+  // e' testo, perche' la fonte per lei da' soltanto i cognomi.
+  await expect(page.getByRole("link", { name: /Undici1/ }).first()).toBeVisible();
+  await expect(page.getByText(/PanchinaUno, PanchinaDue/).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /PanchinaUno/ })).toHaveCount(0);
+
+  // Una categoria vuota non lascia un'etichetta orfana.
+  await expect(page.getByText(/Squalificati/)).toHaveCount(0);
+  await expect(page.getByText(/IndisponibileUno/).first()).toBeVisible();
+});

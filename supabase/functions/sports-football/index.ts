@@ -1,6 +1,7 @@
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/security.ts";
 import { buildMatchId, romeDateKeyOf } from "./matchId.ts";
 import { parseSquad, type Squad } from "./teamSquad.ts";
+import { parseLineups, type Lineups } from "./lineups.ts";
 import { matchesTeam, type SerieATeam } from "../_shared/serieATeams.ts";
 import {
   legaMatchInvolvesTeam,
@@ -126,6 +127,34 @@ async function fetchSquad(team: SerieATeam): Promise<Squad> {
   } catch (e) {
     console.error(`Errore nel recupero della rosa di ${team.slug}:`, e);
     return { players: [], manager: null };
+  }
+}
+
+/**
+ * Le probabili formazioni della prossima partita della squadra.
+ *
+ * L'indirizzo e' **per squadra**, non per partita: Sky pubblica
+ * `/probabili-formazioni/{slug}` e dentro ci mette la partita che quella
+ * squadra deve giocare. L'indirizzo per partita esiste ma serve un'altra cosa
+ * — la formazione effettiva — e risponde 404 per una partita inesistente.
+ *
+ * Come per la rosa, una pagina che non risponde non e' un errore da
+ * propagare: sono formazioni che per ora non ci sono.
+ */
+async function fetchLineups(team: SerieATeam): Promise<Lineups> {
+  const url = `${SKY_BASE}/calcio/serie-a/probabili-formazioni/${encodeURIComponent(team.slug)}`;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+    });
+    if (!res.ok) {
+      console.warn(`Probabili formazioni non disponibili per ${team.slug}: ${res.status}`);
+      return { date: null, matchUrl: null, home: null, away: null };
+    }
+    return parseLineups(await res.text());
+  } catch (e) {
+    console.error(`Errore nel recupero delle formazioni di ${team.slug}:`, e);
+    return { date: null, matchUrl: null, home: null, away: null };
   }
 }
 
@@ -657,10 +686,20 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "lineups": {
+        const formazioni = await fetchLineups(team);
+        data = formazioni;
+        // Fuori dal calendario — d'estate, o dopo l'ultima giornata — Sky non
+        // pubblica niente. Non e' un guasto, ed e' diverso da «non risponde»:
+        // in entrambi i casi pero' la pagina non deve fingere una formazione.
+        if (!formazioni.home && !formazioni.away) dataSourceDegradato = "unavailable";
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({
-            error: "Azione non valida. Usa: standings, calendar, next-match, team-squad",
+            error: "Azione non valida. Usa: standings, calendar, next-match, team-squad, lineups",
           }),
           {
             status: 400,

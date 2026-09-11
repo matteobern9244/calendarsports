@@ -81,6 +81,8 @@ export const queryKeys = {
      * titolo di un'altra.
      */
     squad: (team: string, season: number) => ["football", "squad", team, season] as const,
+    /** Le probabili della prossima partita della squadra. */
+    lineups: (team: string, season: number) => ["football", "lineups", team, season] as const,
   },
   sinner: {
     info: () => ["sinner", "info"] as const,

@@ -13,6 +13,7 @@ import {
   highlightsSchema,
   footballInfoSchema,
   teamSquadSchema,
+  lineupsSchema,
   motogpCalendarSchema,
   motogpConstructorStandingsSchema,
   motogpNextEventSchema,
@@ -197,6 +198,13 @@ export const footballApi = {
       "sports-football",
       { action: "team-squad", season: String(season), team },
       teamSquadSchema,
+    ),
+  /** Probabili formazioni della prossima partita: sono previsioni, non l'ufficiale. */
+  getLineups: (team: string, season: number) =>
+    callEdgeFunction(
+      "sports-football",
+      { action: "lineups", season: String(season), team },
+      lineupsSchema,
     ),
   getTeamInfo: (team: string, season: number) =>
     callEdgeFunction(

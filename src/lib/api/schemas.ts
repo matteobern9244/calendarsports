@@ -310,6 +310,49 @@ export type SquadRow = z.infer<typeof squadRowSchema>;
 export type TeamSquad = z.infer<typeof teamSquadSchema>;
 export type Stadium = z.infer<typeof stadiumSchema>;
 
+const lineupPlayerSchema = z.looseObject({
+  name: z.string(),
+  surname: z.string().nullish(),
+  shirtNumber: scrapedNumber.nullish(),
+  role: z.string().nullish(),
+  playerId: z.string().nullish(),
+  photoUrl: z.string().nullish(),
+  profileUrl: z.string().nullish(),
+});
+
+const lineupSideSchema = z
+  .looseObject({
+    teamSlug: z.string().nullish(),
+    teamName: z.string(),
+    formation: z.string().nullish(),
+    logoUrl: z.string().nullish(),
+    startingLineup: tolerantArray(lineupPlayerSchema, "sports-football:lineups.startingLineup"),
+    lines: z.array(z.array(lineupPlayerSchema)),
+    /**
+     * Quattro elenchi di **soli cognomi**, ed e' tutto quello che la fonte da':
+     * arrivano come una stringa separata da virgola, senza id e senza ruolo.
+     * Il tipo lo dice — `string[]` e non un array di giocatori — cosi' nessuno
+     * puo' provare a mostrarli con la stessa veste degli undici.
+     */
+    substitutes: z.array(z.string()),
+    unavailables: z.array(z.string()),
+    disqualifieds: z.array(z.string()),
+    doubtful: z.array(z.string()),
+    manager: z.string().nullish(),
+  })
+  .nullable();
+
+export const lineupsSchema = z.looseObject({
+  date: z.string().nullish(),
+  matchUrl: z.string().nullish(),
+  home: lineupSideSchema,
+  away: lineupSideSchema,
+});
+
+export type LineupPlayer = z.infer<typeof lineupPlayerSchema>;
+export type LineupSide = NonNullable<z.infer<typeof lineupSideSchema>>;
+export type Lineups = z.infer<typeof lineupsSchema>;
+
 export type FootballMatch = z.infer<typeof footballMatchSchema>;
 export type FootballStandingRow = z.infer<typeof footballStandingRowSchema>;
 export type FootballInfo = z.infer<typeof footballInfoSchema>;
