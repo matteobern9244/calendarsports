@@ -98,4 +98,41 @@ describe("useSwipeFromLeft", () => {
 
     expect(onSwipe).not.toHaveBeenCalled();
   });
+
+  /**
+   * Il caso del telefono vero. Chrome per Android e Safari su iOS, quando
+   * decidono che il dito sta facendo scorrere la pagina, chiudono la
+   * sequenza con `touchcancel` e non con `touchend`: il gesto che aspettava
+   * la fine non la vedeva mai. Il gesto si decide **mentre** il dito si
+   * muove, e la cancellazione arrivata dopo non lo annulla.
+   */
+  it("si decide durante il movimento, cosi' un touchcancel del browser non lo perde", () => {
+    const onSwipe = vi.fn();
+    const { getByTestId } = render(<Prova onSwipe={onSwipe} />);
+    const pagina = getByTestId("pagina");
+
+    tocco("touchstart", [{ x: 20, y: 300 }], pagina);
+    tocco("touchmove", [{ x: 60, y: 302 }], pagina);
+    expect(onSwipe).not.toHaveBeenCalled();
+    tocco("touchmove", [{ x: 120, y: 304 }], pagina);
+    expect(onSwipe).toHaveBeenCalledTimes(1);
+
+    tocco("touchcancel", [{ x: 120, y: 304 }], pagina);
+    tocco("touchend", [{ x: 200, y: 304 }], pagina);
+    // Una volta sola: ne' la cancellazione ne' la fine lo ripetono.
+    expect(onSwipe).toHaveBeenCalledTimes(1);
+  });
+
+  it("un movimento che sbanda in verticale non apre, nemmeno se poi torna dritto", () => {
+    const onSwipe = vi.fn();
+    const { getByTestId } = render(<Prova onSwipe={onSwipe} />);
+    const pagina = getByTestId("pagina");
+
+    tocco("touchstart", [{ x: 20, y: 300 }], pagina);
+    tocco("touchmove", [{ x: 60, y: 380 }], pagina);
+    tocco("touchmove", [{ x: 140, y: 302 }], pagina);
+    tocco("touchend", [{ x: 140, y: 302 }], pagina);
+
+    expect(onSwipe).not.toHaveBeenCalled();
+  });
 });

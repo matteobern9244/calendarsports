@@ -263,13 +263,22 @@ React Compiler, Vitest 4 su jsdom, Playwright su Chromium.
 `public/manifest.webmanifest` dichiara l'app installabile, in italiano, verticale,
 con tema `#0B1A33`.
 
-`public/sw.js` gestisce **solo le notifiche push**: non c'è un handler `fetch`,
-quindi nessuna cache e nessun funzionamento offline a freddo. I componenti
-`OfflineFallback` e `OfflineIndicator` coprono il caso in cui l'app è già aperta
-e la rete cade, non il caso in cui viene aperta senza rete.
+`public/sw.js` fa due cose: le notifiche push e la cache offline. Il documento
+è network-first (la copia in cache serve solo senza rete), gli asset con hash
+nel nome sono cache-first. I dati sportivi non entrano mai in cache.
 
-La registrazione (`src/main.tsx`) si disattiva dentro l'iframe di Lovable e sugli
-host di preview, dove anzi rimuove le registrazioni esistenti.
+**L'app installata si aggiorna da sola all'ultima versione.** `src/main.tsx`
+registra lo script a un indirizzo che porta l'identificativo della build
+(`/sw.js?build=…`, iniettato da `define` in `vite.config.ts`): un indirizzo
+nuovo è uno script che il browser deve scaricare, senza aspettare la scadenza
+della cache HTTP. Lo script nuovo fa `skipWaiting` e `clients.claim`, e quando
+prende il controllo la pagina si ricarica, una volta sola e solo se c'era già
+un controllore. Al ritorno in primo piano la registrazione chiede
+un aggiornamento, per la PWA lasciata aperta per giorni. Lo scope resta `/`:
+la registrazione, e con lei l'iscrizione push, è sempre la stessa.
+
+La registrazione si disattiva dentro l'iframe di Lovable e sugli host di
+preview, dove anzi rimuove le registrazioni esistenti.
 
 ## Riferimenti
 

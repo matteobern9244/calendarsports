@@ -6,6 +6,12 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Identificativo della build, diverso a ogni `vite build`: finisce
+  // nell'indirizzo con cui `src/main.tsx` registra il service worker, ed e'
+  // cio' che costringe la PWA installata a scaricare lo script nuovo.
+  define: {
+    __BUILD_ID__: JSON.stringify(Date.now().toString(36)),
+  },
   server: {
     host: "::",
     port: 8080,

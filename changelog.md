@@ -21,6 +21,19 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Corretto
 
+- **Lo swipe da sinistra apre le preferenze anche sul telefono vero.** Il
+  gesto aspettava `touchend`, e in emulazione arrivava; su Android e iOS il
+  browser, appena decide che il dito sta scorrendo la pagina, chiude la
+  sequenza con `touchcancel`, e il gesto non vedeva mai la fine. Ora si decide
+  durante il movimento, e scatta la prima volta che supera le soglie.
+  **Verificato solo con test unitari e in emulazione**: manca la prova su un
+  dispositivo fisico.
+- **La PWA installata si aggiorna da sola all'ultima versione.** Il service
+  worker si registra a un indirizzo che porta l'identificativo della build,
+  quindi ogni distribuzione è uno script nuovo che il browser deve scaricare;
+  quando prende il controllo, la pagina si ricarica una volta. Prima la cache
+  HTTP poteva tenersi il vecchio `sw.js` fino a un giorno, e la PWA aperta
+  dalla schermata Home restava alla versione precedente.
 - **Le notifiche push seguono la squadra scelta.** Il dispatcher leggeva
   soltanto il calendario della Juventus, qualunque squadra fosse nelle
   preferenze: chi aveva scelto il Milan riceveva «Juventus vs Inter sta per
