@@ -189,6 +189,8 @@ const STATI: Array<{ nome: string; pagina: string; scheda: string | RegExp }> = 
   { nome: "squadra · rosa", pagina: "/squadra/juventus", scheda: "Rosa" },
   { nome: "squadra · statistiche", pagina: "/squadra/juventus", scheda: "Statistiche" },
   { nome: "squadra · highlights", pagina: "/squadra/juventus", scheda: "Highlights" },
+  { nome: "squadra · formazioni", pagina: "/squadra/juventus", scheda: "Formazioni" },
+  { nome: "squadra · formazioni (milan)", pagina: "/squadra/milan", scheda: "Formazioni" },
   { nome: "partita · formazione", pagina: PARTITA, scheda: "Formazione" },
   { nome: "partita · cronologia", pagina: PARTITA, scheda: "Cronologia eventi" },
   { nome: "sinner · tornei", pagina: "/sinner", scheda: "Tornei" },

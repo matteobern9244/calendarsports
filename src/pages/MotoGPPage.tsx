@@ -272,12 +272,22 @@ export default function MotoGPPage() {
                     <TableCell className="font-heading font-bold">{s.position}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        {/* Sotto i 380px la foto sparisce, e con lei gli otto
+                            pixel di distanza che la separano dal resto: sono i
+                            quaranta pixel che facevano scorrere la tabella di
+                            lato sui nomi veri piu' lunghi della griglia. E' la
+                            parte piu' decorativa della riga — il nome, la
+                            bandiera e il numero di gara dicono gia' di chi si
+                            tratta — ed e' quindi la sola che si possa togliere
+                            senza togliere informazione. La soglia e' la piu'
+                            stretta possibile e non `sm`: a 400px la foto ci sta
+                            benissimo, e toglierla li' sarebbe un danno gratuito. */}
                         <TeamLogo
                           src={s.photoUrl}
                           name={s.name}
                           size={32}
                           shape="circle"
-                          className="object-cover p-0"
+                          className="object-cover p-0 max-[380px]:hidden"
                         />
                         {s.number != null && (
                           <span
