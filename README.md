@@ -6,12 +6,12 @@ della tua squadra di Serie A, della Formula 1 e della MotoGP, oltre a
 palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `3.3.0` (l'app si apre dove vuoi tu: chi ha
-effettuato l'accesso sceglie la pagina iniziale fra sette, nasconde le voci del
-menù che non usa e apre le preferenze con uno swipe da sinistra; più gli
-highlights del Milan e l'app resa responsive su qualsiasi schermo). Il footer
+Versione repository corrente: `3.3.1` (le notifiche push seguono la squadra
+scelta e si spengono per sport; lo swipe da sinistra apre le preferenze anche
+sul telefono vero; la PWA installata si aggiorna da sola all'ultima versione;
+quattro correzioni di stile nella pagina squadra). Il footer
 dell'app mostra la versione leggendola da `src/lib/version.ts` nel formato
-`Calendar Events · v3.3.0` (con `v` minuscola).
+`Calendar Events · v3.3.1` (con `v` minuscola).
 
 Questa riga è sorvegliata da `src/test/tooling/version.test.ts`: era rimasta
 ferma alla `2.3.6` per sei rilasci senza che niente se ne accorgesse.

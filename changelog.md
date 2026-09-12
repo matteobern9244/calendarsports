@@ -17,7 +17,13 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
-## [Non rilasciato]
+## [3.3.1] — Le notifiche seguono la squadra, e la PWA si aggiorna da sola (2026-09-12)
+
+Bump applicativo `3.3.0` → `3.3.1`. Nota di rilascio in
+[`docs/releases/3.3.1-notifiche-per-squadra-e-pwa.md`](docs/releases/3.3.1-notifiche-per-squadra-e-pwa.md).
+
+**Patch.** Una migration additiva, nessuna rotta cambiata. Due edge function da
+ridistribuire (`push-subscribe`, `push-dispatcher`).
 
 ### Corretto
 
