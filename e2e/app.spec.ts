@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { installSportsApiMocks } from "./support/mockSportsApi";
 import { accediComeUtente } from "./support/auth";
 
@@ -545,17 +545,37 @@ test("squadra: le probabili formazioni si dichiarano tali e distinguono i dati",
   await expect(page.getByText(/IndisponibileUno/).first()).toBeVisible();
 });
 
-test("squadra: gli highlights esistono solo per la Juventus", async ({ page }) => {
+test("squadra: gli highlights esistono solo per Juventus e Milan", async ({ page }) => {
   await installSportsApiMocks(page);
 
   await page.goto("/squadra/juventus");
   await expect(page.getByRole("tab", { name: "Highlights" })).toBeVisible();
 
+  await page.goto("/squadra/milan");
+  await expect(page.getByRole("tab", { name: "Highlights" })).toBeVisible();
+
   await page.goto("/squadra/napoli");
   await expect(page.getByRole("tab", { name: "Calendario" })).toBeVisible();
   // Sparisce la scheda, non il suo contenuto: una linguetta che si apre sul
-  // vuoto prometterebbe dei video che per le altre diciannove non esistono.
+  // vuoto prometterebbe dei video che per le altre diciotto non esistono.
   await expect(page.getByRole("tab", { name: "Highlights" })).toHaveCount(0);
+});
+
+test("squadra: ogni playlist e' quella della sua squadra, non dell'altra", async ({ page }) => {
+  await installSportsApiMocks(page);
+
+  // Il difetto che conta non e' la scheda mancante, e' la scheda presente che
+  // porta ai video di un'altra squadra: il nome giusto sopra il dato di
+  // qualcun altro. Si guarda dove punta il collegamento, non cosa c'e' scritto.
+  const link = page.getByRole("link", { name: /Vedi playlist completa/i });
+
+  await page.goto("/squadra/juventus");
+  await page.getByRole("tab", { name: "Highlights" }).click();
+  await expect(link).toHaveAttribute("href", /list=PLVuEWoNX08GA$/);
+
+  await page.goto("/squadra/milan");
+  await page.getByRole("tab", { name: "Highlights" }).click();
+  await expect(link).toHaveAttribute("href", /list=PLW7Xs51ob1LI$/);
 });
 
 test("squadra: la livrea segue la squadra, il carattere resta juventino", async ({ page }) => {
@@ -578,16 +598,27 @@ test("squadra: la livrea segue la squadra, il carattere resta juventino", async 
   // Il titolo va **atteso** prima di misurarlo: `evaluate` non ha i tentativi
   // automatici di `expect`, e sotto carico arrivava prima che React rendesse
   // qualcosa. Il test falliva a intermittenza per una corsa, non per il font.
-  const titoloNapoli = napoli.locator("h1, h2, h3").first();
-  await expect(titoloNapoli).toBeVisible();
-  const fontNapoli = await titoloNapoli.evaluate((el) => getComputedStyle(el).fontFamily);
-  expect(fontNapoli).toContain("Inter");
+  //
+  // Non basta pero' attenderlo: `toBeVisible` risolve l'elemento, non impedisce
+  // che React lo sostituisca un istante dopo, e `getComputedStyle` su un nodo
+  // ormai staccato non da' un errore — da' stringhe vuote. Il test cadeva solo
+  // quando la suite girava intera, cioe' sotto carico, e mai da solo. La
+  // misura va quindi **ritentata**, non fatta una volta sola.
+  const attendiFont = async (dentro: Locator, atteso: string) => {
+    await expect
+      .poll(() =>
+        dentro
+          .locator("h1, h2, h3")
+          .first()
+          .evaluate((el) => getComputedStyle(el).fontFamily),
+      )
+      .toContain(atteso);
+  };
+
+  await attendiFont(napoli, "Inter");
 
   await page.goto("/squadra/juventus");
-  const titoloJuve = page.locator(".team-theme").locator("h1, h2, h3").first();
-  await expect(titoloJuve).toBeVisible();
-  const fontJuve = await titoloJuve.evaluate((el) => getComputedStyle(el).fontFamily);
-  expect(fontJuve).toContain("Oswald");
+  await attendiFont(page.locator(".team-theme"), "Oswald");
 });
 
 test("preferenze: la scelta chiude il pannello e si vede subito, senza ricaricare", async ({
