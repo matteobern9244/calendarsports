@@ -90,6 +90,50 @@ describe("apreLePreferenze", () => {
   it("non apre su larghezza zero, invece di dividere per zero", () => {
     expect(gesto({ larghezza: 0 })).toBe(false);
   });
+
+  /**
+   * La linguetta sta proprio nei pixel del bordo che il gesto libero
+   * esclude: un trascinamento che parte da li' sopra e' inequivocabile, e
+   * la zona di partenza non conta. Tutto il resto — distanza, deriva,
+   * durata, direzione — conta come prima.
+   */
+  describe("dalla linguetta", () => {
+    it("apre anche partendo dal bordo estremo", () => {
+      expect(gesto({ startX: LARGHEZZA - 5, endX: 200, dallaLinguetta: true })).toBe(true);
+      expect(gesto({ startX: LARGHEZZA - 5, endX: 200 })).toBe(false);
+    });
+
+    it("apre anche partendo fuori dalla fascia destra", () => {
+      expect(gesto({ startX: 100, endX: 20, dallaLinguetta: true })).toBe(true);
+    });
+
+    it("le altre soglie valgono ancora", () => {
+      expect(
+        gesto({
+          startX: LARGHEZZA - 5,
+          endX: LARGHEZZA - 5 - SWIPE_MIN_DISTANZA + 1,
+          dallaLinguetta: true,
+        }),
+      ).toBe(false);
+      expect(
+        gesto({
+          startX: LARGHEZZA - 5,
+          endX: 200,
+          endY: 300 + SWIPE_MAX_DERIVA + 1,
+          dallaLinguetta: true,
+        }),
+      ).toBe(false);
+      expect(
+        gesto({
+          startX: LARGHEZZA - 5,
+          endX: 200,
+          durataMs: SWIPE_MAX_DURATA + 1,
+          dallaLinguetta: true,
+        }),
+      ).toBe(false);
+      expect(gesto({ startX: 200, endX: LARGHEZZA - 5, dallaLinguetta: true })).toBe(false);
+    });
+  });
 });
 
 /** Finge un elemento che scorre, come jsdom non sa fare da solo. */

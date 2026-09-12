@@ -6,12 +6,12 @@ della tua squadra di Serie A, della Formula 1 e della MotoGP, oltre a
 palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `3.3.1` (le notifiche push seguono la squadra
-scelta e si spengono per sport; lo swipe da destra apre le preferenze anche
-sul telefono vero; la PWA installata si aggiorna da sola all'ultima versione;
-quattro correzioni di stile nella pagina squadra). Il footer
-dell'app mostra la versione leggendola da `src/lib/version.ts` nel formato
-`Calendar Events · v3.3.1` (con `v` minuscola).
+Versione repository corrente: `3.3.2` (una linguetta dorata sempre visibile
+sul bordo destro apre le preferenze al tocco o con lo swipe, su ogni schermata
+e per chi ha l'accesso su schermo tattile; il documento dichiara
+`touch-action: pan-y` così il browser del telefono non si prende più il gesto).
+Il footer dell'app mostra la versione leggendola da `src/lib/version.ts` nel
+formato `Calendar Events · v3.3.2` (con `v` minuscola).
 
 Questa riga è sorvegliata da `src/test/tooling/version.test.ts`: era rimasta
 ferma alla `2.3.6` per sei rilasci senza che niente se ne accorgesse.

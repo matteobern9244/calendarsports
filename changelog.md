@@ -17,6 +17,44 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [3.3.2] — La linguetta delle preferenze (2026-09-12)
+
+Bump applicativo `3.3.1` → `3.3.2`. Nota di rilascio in
+[`docs/releases/3.3.2-linguetta-preferenze.md`](docs/releases/3.3.2-linguetta-preferenze.md).
+
+**Patch.** Solo frontend: nessuna migration, nessuna edge function, nessuna
+rotta cambiata.
+
+### Corretto
+
+- **Lo swipe delle preferenze si vede, e ha un ripiego.** Il proprietario del
+  prodotto, sulla PWA installata su iOS e su Android, non ha mai visto
+  l'indizio della 3.3.1 e il gesto non gli ha mai aperto niente. L'indagine
+  ha escluso il deploy (il bundle live conteneva il gesto) e trovato due cause:
+  - l'indizio era invisibile per costruzione — oro al 22% di alpha, per
+    un'animazione che scendeva al 20% di opacità, su 20px sfumati da una
+    maschera: sul navy scuro l'oro effettivo era intorno al 12%. In più
+    durava 12 secondi contati dal montaggio, cioè da prima che la sessione
+    fosse ripristinata, e dopo il primo swipe non tornava più;
+  - nessun `touch-action` in tutta l'app: Chrome per Android e Safari su iOS
+    possono prendersi un movimento orizzontale come tentativo di scorrimento e
+    chiudere la sequenza con `touchcancel` prima dei 72px richiesti. Decidere
+    «durante il movimento» (3.3.1) non basta se il movimento non arriva.
+
+  Ora al posto dell'indizio c'è una **linguetta** dorata sul bordo destro,
+  sempre visibile per chi ha l'accesso su uno schermo tattile, su ogni
+  schermata sotto il `Layout`: si **tocca** per aprire il pannello, o si
+  **trascina** verso sinistra. Pulsa finché non è stata usata una volta, poi
+  resta ferma; non sparisce più. Un trascinamento che parte da lei vale anche
+  se parte dai 28px di bordo che il gesto libero lascia al telefono. Il
+  documento dichiara `touch-action: pan-y pinch-zoom`, quindi lo scorrimento
+  verticale e lo zoom restano al browser, e le tabelle con `overflow-x-auto`
+  continuano a scorrere di lato perché sono scroll container propri.
+  Il pulsante «Preferenze» nell'intestazione resta la strada principale.
+  **Verificato con test unitari ed e2e in emulazione (Pixel 5)**: la prova
+  sul telefono fisico spetta al proprietario dopo il deploy. Se il gesto
+  ancora non arrivasse, il tocco sulla linguetta funziona comunque.
+
 ## [3.3.1] — Le notifiche seguono la squadra, e la PWA si aggiorna da sola (2026-09-12)
 
 Bump applicativo `3.3.0` → `3.3.1`. Nota di rilascio in
