@@ -17,6 +17,8 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { useCountdownMode } from "@/hooks/useCountdownMode";
 import TeamSelect from "@/components/preferences/TeamSelect";
+import StartPageSelect from "@/components/preferences/StartPageSelect";
+import { startPageLabel, type StartPage } from "@/lib/startPage";
 import { resolveTeam } from "@/lib/serieATeams";
 import { teamPath, teamSlugFromPath } from "@/lib/teamRoutes";
 import { usePushNotifications, type LeadTime } from "@/hooks/usePushNotifications";
@@ -24,7 +26,16 @@ import { usePushNotifications, type LeadTime } from "@/hooks/usePushNotification
 export default function PreferencesPanel() {
   const { open, setOpen } = usePreferencesPanel();
   const isMobile = useIsMobile();
-  const { theme, setTheme, favoriteTeam, setFavoriteTeam, sections, setSection } = useUserPrefs();
+  const {
+    theme,
+    setTheme,
+    favoriteTeam,
+    setFavoriteTeam,
+    sections,
+    setSection,
+    startPage,
+    setStartPage,
+  } = useUserPrefs();
   const { user, signOut } = useAuth();
   const { mode: countdownMode, setMode: setCountdownMode } = useCountdownMode();
   const push = usePushNotifications();
@@ -57,6 +68,20 @@ export default function PreferencesPanel() {
     setFavoriteTeam(slug);
     setOpen(false);
     if (teamSlugFromPath(location.pathname)) navigate(teamPath(resolveTeam(slug)));
+  };
+
+  /**
+   * La pagina iniziale non cambia quello che si sta guardando adesso: cambia
+   * dove si atterrera' alla prossima apertura. Il pannello resta percio'
+   * aperto — al contrario della squadra, che e' una scelta conclusa — e il
+   * messaggio dice esplicitamente quando avra' effetto, altrimenti chi sceglie
+   * non vede succedere niente e conclude che non abbia funzionato.
+   */
+  const scegliPaginaIniziale = (value: StartPage) => {
+    setStartPage(value);
+    toast.success("Pagina iniziale aggiornata", {
+      description: `Alla prossima apertura dell'app atterrerai su ${startPageLabel(value)}.`,
+    });
   };
 
   const LEAD_OPTIONS: Array<{ value: LeadTime; label: string }> = [
@@ -298,7 +323,7 @@ export default function PreferencesPanel() {
               ) : (
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-xs text-muted-foreground">
-                    Accedi per salvare tema, squadra preferita e sezioni visibili.
+                    Accedi per salvare tema, pagina iniziale, squadra preferita e sezioni visibili.
                   </p>
                   <Link
                     to="/accedi"
@@ -307,6 +332,22 @@ export default function PreferencesPanel() {
                   >
                     Accedi
                   </Link>
+                </div>
+              )}
+
+              {user && (
+                <div className="space-y-2">
+                  <p className="text-sm font-heading uppercase tracking-wider text-foreground">
+                    Pagina iniziale
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    L'app si apre su questa pagina. La Home resta raggiungibile dal menù.
+                  </p>
+                  <StartPageSelect
+                    value={startPage}
+                    sections={sections}
+                    onChange={scegliPaginaIniziale}
+                  />
                 </div>
               )}
 

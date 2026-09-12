@@ -80,19 +80,54 @@ export function resolveStartPage(value: string | null | undefined): StartPage {
 }
 
 /**
- * L'indirizzo su cui mandare chi apre la radice.
+ * La pagina su cui l'applicazione si apre **davvero**, che non sempre e'
+ * quella scritta nel profilo.
  *
- * Il ripiego sulla Home quando la sezione scelta e' nascosta non e' una
- * cortesia: `SectionRoute` rimanda alla radice chi apre una sezione spenta, e
- * la radice rimanda alla pagina iniziale. Con la pagina iniziale su una
- * sezione nascosta i due si passerebbero il controllo all'infinito. Questa
- * riga e' cio' che rompe il ciclo.
+ * Chi sceglie MotoGP e poi nasconde la sezione MotoGP lascia nella colonna un
+ * valore che ha smesso di descrivere la realta'. Il ripiego sulla Home non e'
+ * una cortesia: `SectionRoute` rimanda alla radice chi apre una sezione
+ * spenta, e la radice rimanda alla pagina iniziale — con la pagina iniziale
+ * su una sezione nascosta i due si passerebbero il controllo all'infinito.
+ *
+ * E' anche cio' che si mostra nel pannello, perche' la domanda a cui la
+ * tendina risponde e' «dove si apre l'app», non «cosa c'e' scritto nella
+ * colonna». Il valore grezzo resta pero' dov'e': se la sezione torna
+ * visibile, torna anche la sua pagina.
+ */
+export function effectiveStartPage(startPage: StartPage, sections: Sections): StartPage {
+  const option = START_PAGES.find((candidate) => candidate.value === startPage);
+  if (!option) return DEFAULT_START_PAGE;
+  return option.section && !sections[option.section] ? DEFAULT_START_PAGE : startPage;
+}
+
+/**
+ * Le voci che la tendina puo' offrire.
+ *
+ * Offrire una sezione nascosta vorrebbe dire offrire un comando inefficace:
+ * la si sceglierebbe e al primo avvio `effectiveStartPage` ripiegherebbe
+ * comunque sulla Home.
+ */
+export function startPageOptions(sections: Sections): readonly StartPageOption[] {
+  return START_PAGES.filter((option) => !option.section || sections[option.section]);
+}
+
+/**
+ * L'etichetta con cui la pagina si mostra all'utente.
+ *
+ * Sta qui e non nel componente perche' un `find` scritto in la' avrebbe avuto
+ * bisogno di un ripiego per un caso che il tipo esclude gia', e un
+ * `?? "Home"` sparso nella UI e' un ripiego che nessuno verifica mai.
+ */
+export function startPageLabel(startPage: StartPage): string {
+  return START_PAGES.find((option) => option.value === startPage)?.label ?? START_PAGES[0].label;
+}
+
+/**
+ * L'indirizzo su cui mandare chi apre la radice.
  *
  * Non restituisce mai `/`: sarebbe la radice che manda su se stessa.
  */
 export function startPagePath(startPage: StartPage, team: SerieATeam, sections: Sections): string {
-  const option = START_PAGES.find((candidate) => candidate.value === startPage);
-  if (!option) return HOME_PATH;
-  if (option.section && !sections[option.section]) return HOME_PATH;
-  return startPage === "squadra" ? teamPath(team) : PERCORSI_FISSI[startPage];
+  const effettiva = effectiveStartPage(startPage, sections);
+  return effettiva === "squadra" ? teamPath(team) : PERCORSI_FISSI[effettiva];
 }

@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import { DEFAULT_TEAM, resolveTeam, type SerieATeam } from "@/lib/serieATeams";
+import type { StartPage } from "@/lib/startPage";
 
 export type SectionKey = "sinner" | "f1" | "motogp";
 export type Sections = Record<SectionKey, boolean>;
@@ -25,6 +26,25 @@ export interface UserPrefsValue {
   setFavoriteTeam: (value: string) => void;
   sections: Sections;
   setSection: (key: SectionKey, value: boolean) => void;
+  /**
+   * La pagina su cui l'applicazione si apre, **gia' effettiva**: se la
+   * sezione scelta e' nascosta qui c'e' gia' scritto `home`, perche' la
+   * domanda a cui questo valore risponde e' «dove si apre l'app» e non «cosa
+   * c'e' scritto nella colonna». E' la stessa ragione per cui `favoriteTeam`
+   * non e' la stringa grezza del profilo.
+   */
+  startPage: StartPage;
+  /**
+   * Salva la scelta sul profilo. Senza accesso non fa niente: a differenza
+   * delle altre tre, questa preferenza non ha uno specchio sul dispositivo.
+   */
+  setStartPage: (value: StartPage) => void;
+  /**
+   * `false` finche' non si sa dove mandare chi apre la radice — la sessione
+   * si sta ancora leggendo, o il profilo non e' ancora arrivato. Dipingere
+   * qualcosa prima vorrebbe dire mostrare una pagina e poi saltare altrove.
+   */
+  startPageReady: boolean;
   /** `true` se l'utente ha effettuato l'accesso (preferenze salvate sul profilo). */
   isAuthenticated: boolean;
 }

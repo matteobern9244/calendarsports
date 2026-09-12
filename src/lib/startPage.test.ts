@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_START_PAGE,
   START_PAGES,
+  effectiveStartPage,
   resolveStartPage,
+  startPageLabel,
+  startPageOptions,
   startPagePath,
   type StartPage,
 } from "./startPage";
@@ -163,5 +166,85 @@ describe("START_PAGES", () => {
     for (const option of START_PAGES) {
       expect(resolveStartPage(option.value)).toBe(option.value);
     }
+  });
+});
+
+describe("effectiveStartPage", () => {
+  /**
+   * Chi sceglie MotoGP e **poi** nasconde la sezione MotoGP lascia nella
+   * colonna un valore che non descrive piu' dove l'app si apre. La preferenza
+   * effettiva e' cio' che si mostra e cio' su cui si naviga: il pannello che
+   * dicesse ancora «MotoGP» racconterebbe una cosa falsa.
+   *
+   * Il valore grezzo non viene cancellato: se la sezione torna visibile,
+   * torna anche la sua pagina.
+   */
+  it("una sezione nascosta rende effettiva la Home", () => {
+    expect(effectiveStartPage("motogp", { ...TUTTE_VISIBILI, motogp: false })).toBe("home");
+    expect(effectiveStartPage("sinner", { ...TUTTE_VISIBILI, sinner: false })).toBe("home");
+    expect(effectiveStartPage("f1", { ...TUTTE_VISIBILI, f1: false })).toBe("home");
+  });
+
+  it("una sezione visibile lascia la scelta com'e'", () => {
+    expect(effectiveStartPage("motogp", TUTTE_VISIBILI)).toBe("motogp");
+    expect(effectiveStartPage("sinner", TUTTE_VISIBILI)).toBe("sinner");
+  });
+
+  it("le voci che nessuna sezione puo' nascondere restano sempre", () => {
+    expect(effectiveStartPage("calendario", NESSUNA_VISIBILE)).toBe("calendario");
+    expect(effectiveStartPage("streaming", NESSUNA_VISIBILE)).toBe("streaming");
+    expect(effectiveStartPage("squadra", NESSUNA_VISIBILE)).toBe("squadra");
+    expect(effectiveStartPage("home", NESSUNA_VISIBILE)).toBe("home");
+  });
+});
+
+describe("startPageOptions", () => {
+  /**
+   * La tendina non deve offrire una pagina che l'utente ha nascosto: sarebbe
+   * una scelta che al primo avvio ripiega comunque sulla Home, cioe' un
+   * comando che non fa quello che dice.
+   */
+  it("non offre le sezioni nascoste", () => {
+    const valori = startPageOptions({ sinner: false, f1: true, motogp: false }).map((o) => o.value);
+    expect(valori).toEqual(["home", "calendario", "streaming", "squadra", "f1"]);
+  });
+
+  it("con tutte le sezioni visibili le offre tutte e sette", () => {
+    expect(startPageOptions(TUTTE_VISIBILI)).toHaveLength(7);
+    expect(startPageOptions(TUTTE_VISIBILI).map((o) => o.value)).toEqual(
+      START_PAGES.map((o) => o.value),
+    );
+  });
+
+  /**
+   * Qualunque cosa la tendina offra deve essere una scelta che poi resta
+   * effettiva: offrire una voce che `effectiveStartPage` riporterebbe alla
+   * Home significa offrire un comando inefficace.
+   */
+  it("ogni voce offerta resta effettiva", () => {
+    for (const sections of COMBINAZIONI_SEZIONI) {
+      for (const option of startPageOptions(sections)) {
+        expect(effectiveStartPage(option.value, sections)).toBe(option.value);
+      }
+    }
+  });
+});
+
+describe("startPageLabel", () => {
+  /**
+   * Serve al messaggio di conferma, e un `find` scritto nel componente
+   * avrebbe avuto bisogno di un ripiego per un caso che non puo' accadere:
+   * il tipo garantisce gia' che il valore sia una delle sette voci. Meglio
+   * quel ripiego qui, verificato una volta sola, che un `?? "Home"` sparso
+   * nella UI.
+   */
+  it("restituisce l'etichetta mostrata all'utente", () => {
+    expect(startPageLabel("home")).toBe("Home (predefinita)");
+    expect(startPageLabel("squadra")).toBe("Squadra di calcio");
+    expect(startPageLabel("f1")).toBe("Formula 1");
+  });
+
+  it("ogni voce dell'elenco ha la sua", () => {
+    for (const option of START_PAGES) expect(startPageLabel(option.value)).toBe(option.label);
   });
 });

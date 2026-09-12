@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/useAuth";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
 import { useTheme } from "@/hooks/useTheme";
 import { resolveTeam } from "@/lib/serieATeams";
+import { effectiveStartPage, resolveStartPage, type StartPage } from "@/lib/startPage";
 import {
   DEFAULT_SECTIONS,
   SECTIONS_STORAGE_KEY,
@@ -40,9 +41,9 @@ function removeLocal(key: string) {
  * presenti sul dispositivo vengono trasferite nel profilo.
  */
 export function UserPrefsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { theme, setTheme: setThemeLocal } = useTheme();
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const updateProfile = useUpdateProfile();
 
   const [localSections, setLocalSections] = useState<Sections>(() => loadLocalSections());
@@ -106,6 +107,26 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
   }, [profile, localSections]);
 
   /**
+   * La pagina iniziale, gia' ripiegata sulla Home se la sezione scelta e'
+   * nascosta. Il valore grezzo resta nella colonna: se la sezione torna
+   * visibile, torna anche la sua pagina.
+   */
+  const startPage = effectiveStartPage(resolveStartPage(profile?.start_page), sections);
+
+  /**
+   * Si sa dove mandare chi apre la radice solo quando la sessione e' stata
+   * letta e, se c'e' un utente, la lettura del profilo si e' conclusa —
+   * riuscita o fallita che sia. `useProfile` e' disabilitata senza sessione,
+   * e una query disabilitata non sta caricando: il caso «nessun accesso» e'
+   * percio' pronto subito.
+   *
+   * Fallita compresa, di proposito: restare in attesa di un profilo che non
+   * arrivera' mai vorrebbe dire uno spinner senza fine davanti a chi apre
+   * l'app con la rete a pezzi. La Home e' un ripiego, un blocco no.
+   */
+  const startPageReady = !authLoading && !profileLoading;
+
+  /**
    * La preferenza grezza si ferma qui: da questa riga in poi esiste solo una
    * squadra dell'elenco. `resolveTeam` e' totale, quindi un valore legacy —
    * un nome digitato nella vecchia casella di testo, o una stringa vuota — non
@@ -164,6 +185,19 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
     [user, updateProfile, localTeam, ricordaSquadra],
   );
 
+  /**
+   * Nessuno specchio locale da ripristinare al fallimento: questa preferenza
+   * vive solo sul profilo, e il ritorno indietro della cache in
+   * `useUpdateProfile` e' tutto quello che serve.
+   */
+  const setStartPage = useCallback(
+    (value: StartPage) => {
+      if (!user) return;
+      updateProfile.mutate({ start_page: value });
+    },
+    [user, updateProfile],
+  );
+
   const setSection = useCallback(
     (key: SectionKey, value: boolean) => {
       const base = profile
@@ -193,9 +227,23 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
       setFavoriteTeam,
       sections,
       setSection,
+      startPage,
+      setStartPage,
+      startPageReady,
       isAuthenticated,
     }),
-    [theme, setTheme, favoriteTeam, setFavoriteTeam, sections, setSection, isAuthenticated],
+    [
+      theme,
+      setTheme,
+      favoriteTeam,
+      setFavoriteTeam,
+      sections,
+      setSection,
+      startPage,
+      setStartPage,
+      startPageReady,
+      isAuthenticated,
+    ],
   );
 
   return <UserPrefsContext.Provider value={value}>{children}</UserPrefsContext.Provider>;
