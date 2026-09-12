@@ -8,7 +8,7 @@ export default function EmptyState({ message = "Nessun evento disponibile" }: Em
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
       <CalendarX className="h-10 w-10" />
-      <p className="text-sm">{message}</p>
+      <p className="text-sm text-center">{message}</p>
     </div>
   );
 }

@@ -151,6 +151,11 @@ describe("StatsBoard", () => {
     // Piu' gol subiti della media non e' una buona notizia, e non va scritto
     // con il colore con cui si scrivono le buone notizie.
     expect(verde("Gol subiti a partita")).not.toContain("text-success");
+    // E deve dirlo con un colore suo: fino al 12 settembre 2026 la cattiva
+    // notizia era grigia come il testo intorno, e a colpo d'occhio si vedeva
+    // «verde» su una riga e niente sull'altra. Chi ha segnalato il difetto
+    // l'ha letto come «verde per entrambi»: il grigio non era un segnale.
+    expect(verde("Gol subiti a partita")).toContain("text-destructive");
   });
 
   /**

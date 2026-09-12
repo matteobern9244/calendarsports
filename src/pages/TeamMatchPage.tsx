@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router";
-import { ArrowLeft, ExternalLink, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarClock, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -191,7 +191,7 @@ function MatchDetail({
           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--team-accent))] to-transparent opacity-80"
         />
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <Sparkles className="h-4 w-4 text-[hsl(var(--team-accent))]" aria-hidden="true" />
+          <CalendarClock className="h-4 w-4 text-[hsl(var(--team-accent))]" aria-hidden="true" />
           <Badge
             variant="outline"
             className={cn(

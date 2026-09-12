@@ -157,7 +157,10 @@ export function ConfrontoMedia({ righe }: { righe: RigaConfronto[] }) {
                 <span
                   className={cn(
                     "ml-1.5 font-medium",
-                    bene ? "text-success" : "text-muted-foreground",
+                    // Due colori, uno per verdetto: la cattiva notizia in grigio
+                    // spariva nel testo intorno e la riga sembrava «senza
+                    // giudizio», mentre quella accanto era verde.
+                    bene ? "text-success" : "text-destructive",
                   )}
                 >
                   ({sopra ? "sopra" : "sotto"} la media)

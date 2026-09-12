@@ -128,4 +128,27 @@ describe("NextMatchCard", () => {
 
     expect(screen.getByText(/20:45/)).toBeInTheDocument();
   });
+
+  /**
+   * Il conto alla rovescia sta **sulla stessa riga** delle emittenti: prima
+   * stava sotto, in una colonna, e fra chip e timer restava una fascia vuota
+   * che in mobile spingeva tutta la card piu' in basso.
+   */
+  it("il conto alla rovescia sta nella stessa riga dei chip delle emittenti", () => {
+    renderCard(match());
+    const timer = screen.getByLabelText("Tempo mancante all'evento");
+    const chip = screen.getByText("DAZN");
+    expect(timer.parentElement).toBe(chip.parentElement);
+    expect(timer.parentElement!.className).toContain("flex-wrap");
+  });
+
+  /**
+   * Le stelline sono l'icona con cui mezzo web segnala «generato da AI»: qui
+   * non c'e' nessuna AI, e un'icona che promette una cosa che non c'e' e'
+   * un dato falso come un altro.
+   */
+  it("non usa l'icona delle stelline, che oggi significa «AI»", () => {
+    const { container } = renderCard(match());
+    expect(container.querySelector(".lucide-sparkles")).toBeNull();
+  });
 });

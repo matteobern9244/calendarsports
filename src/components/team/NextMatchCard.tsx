@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import EventCountdown from "@/components/common/EventCountdown";
@@ -54,7 +54,7 @@ export default function NextMatchCard({ team, match, onRetry }: NextMatchCardPro
           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--team-accent))] to-transparent opacity-80"
         />
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="h-4 w-4 text-[hsl(var(--team-accent))]" aria-hidden="true" />
+          <CalendarClock className="h-4 w-4 text-[hsl(var(--team-accent))]" aria-hidden="true" />
           <span className="font-heading text-[10px] tracking-[0.2em] uppercase text-[hsl(var(--team-accent-text))] font-bold">
             Prossima Partita
           </span>
@@ -93,25 +93,27 @@ export default function NextMatchCard({ team, match, onRetry }: NextMatchCardPro
               </p>
             </div>
           </div>
-          <div className="flex flex-col items-start sm:items-end gap-2">
-            {match.broadcaster && (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {match.broadcaster.split(" | ").map((b: string) => {
-                  const { className } = getBroadcasterStyle(b);
-                  return (
-                    <span
-                      key={b}
-                      className={cn(
-                        "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
-                        className,
-                      )}
-                    >
-                      {b.trim()}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
+          {/*
+            Emittenti e conto alla rovescia sulla **stessa riga**, che va a
+            capo solo se non ci sta. Prima erano due righe in colonna, e fra le
+            due restava una fascia vuota che in mobile allungava la card senza
+            dire niente.
+          */}
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            {match.broadcaster?.split(" | ").map((b: string) => {
+              const { className } = getBroadcasterStyle(b);
+              return (
+                <span
+                  key={b}
+                  className={cn(
+                    "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
+                    className,
+                  )}
+                >
+                  {b.trim()}
+                </span>
+              );
+            })}
             {match.date && <EventCountdown startDate={match.date} onRetry={onRetry} />}
           </div>
         </div>
