@@ -366,7 +366,12 @@ export const motogpApi = {
 };
 
 // === Highlights API (YouTube RSS) ===
-export type HighlightSport = "juventus" | "f1" | "motogp";
+// Il tipo e' definito dal catalogo delle playlist, che e' l'unico posto dove
+// si decide quali raccolte esistono; qui si ri-esporta perche' i chiamanti
+// storici lo importano da `@/lib/api/sportsApi` e non c'e' motivo di
+// spostarglielo sotto i piedi.
+export type { HighlightSport } from "@/lib/highlightPlaylists";
+import type { HighlightSport } from "@/lib/highlightPlaylists";
 
 export const highlightsApi = {
   list: (sport: HighlightSport, limit = 12) =>

@@ -1,11 +1,16 @@
 // Edge Function: highlights-youtube
-// Espone gli ultimi video di tre playlist YouTube ufficiali (Juventus, F1, MotoGP)
+// Espone gli ultimi video di quattro playlist YouTube ufficiali (Juventus, Milan, F1, MotoGP)
 // leggendo direttamente i feed RSS pubblici (`https://www.youtube.com/feeds/videos.xml?playlist_id=...`).
 // Nessuna API key richiesta. Cache HTTP 10 minuti per ridurre il carico verso YouTube.
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/security.ts";
 
+// Seconda copia di `src/lib/highlightPlaylists.ts`: Deno carica solo cio' che
+// sta sotto `supabase/functions/`, e un import che risalga in `src/` supera il
+// typecheck locale e si rompe al deploy. Il guardiano che tiene allineate le
+// due copie e' in `src/lib/highlightPlaylists.test.ts`.
 const PLAYLIST_IDS: Record<string, string> = {
-  juventus: "PLamQuNkRTV0eQ-UiYDCuz_WUHOlri1BY3",
+  juventus: "PLVuEWoNX08GA",
+  milan: "PLW7Xs51ob1LI",
   f1: "PLZbcTUGG8ELs188DCvpKMVFsnia-uB3j8",
   motogp: "PLMgcIchslSqgqxtkUg4iiqc1UL8u8uFey",
 };
@@ -84,7 +89,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Parametro 'sport' richiesto: juventus | f1 | motogp",
+          error: "Parametro 'sport' richiesto: juventus | milan | f1 | motogp",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
