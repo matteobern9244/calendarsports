@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import SectionHeader from "@/components/common/SectionHeader";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,12 @@ interface LandingSpinnerProps {
    * "pronto", evitando un riposizionamento del titolo dopo il fetch.
    */
   title?: string;
+  /**
+   * Lo stesso stemma che l'intestazione mostrera' a dati pronti. Va passato
+   * anche qui per la ragione per cui esiste `title`: senza, il titolo
+   * scivolerebbe di lato nel momento in cui il caricamento finisce.
+   */
+  crest?: ReactNode;
   /**
    * Messaggio italiano sotto lo spinner. Default coerente con la
    * policy di lingua del progetto.
@@ -45,6 +52,7 @@ interface LandingSpinnerProps {
  */
 export default function LandingSpinner({
   title,
+  crest,
   message = "Caricamento in corso...",
   minHeightClassName = "min-h-[60vh]",
   className,
@@ -53,7 +61,7 @@ export default function LandingSpinner({
     <div className={cn("container py-8 sm:py-12", className)}>
       {title && (
         <div className="mb-2">
-          <SectionHeader title={title} />
+          <SectionHeader title={title} crest={crest} />
         </div>
       )}
       <div

@@ -23,7 +23,7 @@ interface NextMatchCardProps {
 
 /** La card «Prossima Partita» in testa alla pagina squadra. */
 export default function NextMatchCard({ team, match, onRetry }: NextMatchCardProps) {
-  const { isHome, opponent, opponentLogo } = matchSide(match, team);
+  const { isHome, opponent, opponentLogo, prefix, venue } = matchSide(match, team);
   const { date: dateStr, time: timeStr } = formatFootballDateTime(match.date);
   const compColor = COMPETITION_COLORS[match.competition] || "";
   return (
@@ -37,9 +37,16 @@ export default function NextMatchCard({ team, match, onRetry }: NextMatchCardPro
         "shadow-[0_18px_44px_-22px_hsl(var(--team-accent)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]",
       )}
     >
+      {/*
+        Il lato entra nel nome accessibile del collegamento e non in un testo
+        nascosto accanto al segno: `aria-label` **sostituisce** il nome
+        calcolato dal sottoalbero, quindi uno `sr-only` la' dentro non verrebbe
+        mai letto. La squadra e' nominata perche' «in trasferta» da solo non
+        dice di chi.
+      */}
       <Link
         to={teamMatchPath(team, match.id)}
-        aria-label={`Apri dettaglio ${isHome ? `${team.name} vs ${opponent}` : `${opponent} vs ${team.name}`}`}
+        aria-label={`Apri dettaglio ${isHome ? `${team.name} vs ${opponent}` : `${opponent} vs ${team.name}`}, ${team.name} ${venue}`}
         className="block px-5 py-5 sm:px-6 sm:py-6 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--team-accent))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
       >
         <span
@@ -63,13 +70,22 @@ export default function NextMatchCard({ team, match, onRetry }: NextMatchCardPro
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <TeamLogo src={opponentLogo} name={opponent} size={48} shape="circle" />
+            {/* Decorativo: il nome dell'avversario e' scritto qui accanto. */}
+            <span aria-hidden="true" className="flex shrink-0">
+              <TeamLogo src={opponentLogo} name={opponent} size={48} shape="circle" />
+            </span>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground font-heading uppercase tracking-wider">
-                {isHome ? `${team.name} vs` : `${opponent} @`}
-              </p>
+              {/*
+                Una riga sola, e nomina **solo l'avversario**. Prima ce n'erano
+                due — «LAZIO @» sopra, «Milan» sotto — e componevano una frase
+                che diceva l'opposto del dato: il Milan in casa mentre il
+                calendario, tre centimetri piu' giu', scriveva «@ Lazio». Che
+                la squadra della pagina sia il Milan lo dice gia' il titolo, e
+                lo stemma qui accanto e' dell'avversario: nominarlo qui
+                significava mettere un nome accanto allo stemma di un altro.
+              */}
               <p className="text-xl sm:text-2xl font-heading font-bold text-foreground truncate">
-                {isHome ? opponent : team.name}
+                {prefix} {opponent}
               </p>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {dateStr}

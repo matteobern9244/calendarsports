@@ -10,6 +10,8 @@ export interface SportTab {
 interface SportTabsProps {
   /** Titolo della pagina: diventa l'`h1`, sopra le schede. */
   title: string;
+  /** Stemma accanto al titolo: lo usa la pagina squadra, le altre no. */
+  crest?: ReactNode;
   /** Scheda aperta all'arrivo sulla pagina. */
   defaultValue: string;
   /** Le schede, nell'ordine in cui vanno mostrate. */
@@ -44,6 +46,7 @@ const DEFAULT_LIST_CLASS = "mb-6 bg-muted flex-wrap h-auto gap-1 p-1";
  */
 export default function SportTabs({
   title,
+  crest,
   defaultValue,
   tabs,
   listClassName,
@@ -54,7 +57,7 @@ export default function SportTabs({
   return (
     <div className="container py-8 sm:py-12">
       <div className="mb-2">
-        <SectionHeader title={title} />
+        <SectionHeader title={title} crest={crest} />
       </div>
 
       {beforeTabs}

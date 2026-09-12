@@ -19,6 +19,28 @@ import { matchesTeam, type SerieATeam } from "@/lib/serieATeams";
  * sottostringa la scambierebbe per la Juventus in casa.
  */
 
+/**
+ * La convenzione con cui l'app scrive il lato: «vs» in casa, «@» in trasferta.
+ *
+ * Vive qui e non nei componenti perche' era un letterale ripetuto in cinque
+ * punti, e uno dei cinque lo scriveva al contrario: la card della prossima
+ * partita componeva «LAZIO @» sopra e «Milan» sotto, cioe' il Milan in casa,
+ * mentre la riga di calendario della stessa partita diceva «@ Lazio». Due
+ * viste che si contraddicono su un dato che l'app non possiede.
+ */
+export function matchPrefix(isHome: boolean): "vs" | "@" {
+  return isHome ? "vs" : "@";
+}
+
+/**
+ * La stessa informazione a parole. `@` e `vs` sono segni, e un segno da solo
+ * non arriva a chi la pagina se la fa leggere: questa forma entra nel nome
+ * accessibile del collegamento.
+ */
+export function matchVenue(isHome: boolean): "in casa" | "in trasferta" {
+  return isHome ? "in casa" : "in trasferta";
+}
+
 export function matchSide(
   match: FootballMatch,
   team: SerieATeam,
@@ -27,12 +49,23 @@ export function matchSide(
   isHome: boolean;
   opponent: string;
   opponentLogo: string | null | undefined;
+  /**
+   * Lo stemma della squadra **scelta**, dalla parte giusta. Senza, chi lo
+   * vuole (l'intestazione della pagina squadra) dovrebbe dedurre il lato una
+   * seconda volta, ed e' da una seconda deduzione che nasce una divergenza.
+   */
+  teamLogo: string | null | undefined;
+  prefix: "vs" | "@";
+  venue: "in casa" | "in trasferta";
 } {
   const isHome = matchesTeam(match.homeTeam, team);
   return {
     isHome,
     opponent: isHome ? match.awayTeam : match.homeTeam,
     opponentLogo: isHome ? match.awayLogo : match.homeLogo,
+    teamLogo: isHome ? match.homeLogo : match.awayLogo,
+    prefix: matchPrefix(isHome),
+    venue: matchVenue(isHome),
   };
 }
 

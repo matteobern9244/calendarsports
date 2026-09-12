@@ -26,25 +26,80 @@ function renderCard(m: FootballMatch, team: SerieATeam = JUVE) {
 }
 
 describe("NextMatchCard", () => {
+  /**
+   * **Le asserzioni su «Juventus vs» / «Inter @» sono state sostituite, non
+   * indebolite.** Descrivevano una card che componeva una frase con due
+   * squadre su due righe, e quella frase in trasferta diceva l'opposto del
+   * dato: «LAZIO @» sopra e «Milan» sotto si legge «Lazio in casa del Milan»,
+   * mentre la riga di calendario della stessa partita scriveva «@ Lazio».
+   * Il requisito e' cambiato: la card nomina solo l'avversario, con lo stesso
+   * prefisso della lista. I casi coperti restano gli stessi — casa, trasferta,
+   * punto di vista rovesciato — e se ne aggiungono sulla coppia stemma/nome.
+   */
   it("in casa mostra l'avversario e porta al dettaglio della partita", () => {
     renderCard(match());
 
     expect(screen.getByText("Prossima Partita")).toBeInTheDocument();
-    expect(screen.getByText("Juventus vs")).toBeInTheDocument();
-    expect(screen.getByText("Milan")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Apri dettaglio Juventus vs Milan" })).toHaveAttribute(
-      "href",
-      "/squadra/juventus/partite/serie-a-2099-09-13-juventus-vs-milan",
-    );
+    expect(screen.getByText("vs Milan")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Apri dettaglio Juventus vs Milan, Juventus in casa" }),
+    ).toHaveAttribute("href", "/squadra/juventus/partite/serie-a-2099-09-13-juventus-vs-milan");
   });
 
   it("in trasferta dice da chi si gioca", () => {
     renderCard(match({ homeTeam: "Inter", awayTeam: "Juventus" }));
 
-    expect(screen.getByText("Inter @")).toBeInTheDocument();
+    expect(screen.getByText("@ Inter")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Apri dettaglio Inter vs Juventus" }),
+      screen.getByRole("link", { name: "Apri dettaglio Inter vs Juventus, Juventus in trasferta" }),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * Il cuore del difetto: la card diceva «Milan» in grande accanto allo stemma
+   * della Lazio. Chi guardava leggeva un nome e vedeva lo stemma di un altro,
+   * e in piu' la frase rovesciava il lato. Ora la squadra della pagina non
+   * compare affatto nella card — la nomina il titolo, appena sopra.
+   */
+  it("nomina soltanto l'avversario, mai la squadra della pagina", () => {
+    renderCard(
+      match({ homeTeam: "Lazio", awayTeam: "Milan", homeLogo: "lazio.png", awayLogo: "milan.png" }),
+      resolveTeam("milan"),
+    );
+
+    expect(screen.getByText("@ Lazio")).toBeInTheDocument();
+    expect(screen.queryByText("Milan")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lazio @")).not.toBeInTheDocument();
+  });
+
+  it("lo stemma e' quello dell'avversario, non quello della squadra della pagina", () => {
+    renderCard(
+      match({ homeTeam: "Lazio", awayTeam: "Milan", homeLogo: "lazio.png", awayLogo: "milan.png" }),
+      resolveTeam("milan"),
+    );
+
+    expect(screen.getByAltText("Lazio")).toHaveAttribute("src", "lazio.png");
+    expect(screen.queryByAltText("Milan")).not.toBeInTheDocument();
+  });
+
+  /** Fonte senza logo: iniziali dell'avversario, nella stessa scatola. */
+  it("senza logo dalla fonte mostra le iniziali dell'avversario", () => {
+    renderCard(match({ homeLogo: null, awayLogo: null }));
+
+    expect(screen.queryByAltText("Milan")).not.toBeInTheDocument();
+    const segnaposto = screen.getByText("MI");
+    expect(segnaposto.parentElement).toHaveStyle({ width: "48px", height: "48px" });
+  });
+
+  /**
+   * «@» e «vs» sono segni, e un segno non arriva a chi la pagina se la fa
+   * leggere. Il posto giusto e' il nome accessibile del collegamento: un testo
+   * nascosto la' dentro non servirebbe, perche' `aria-label` sostituisce il
+   * nome calcolato dal sottoalbero.
+   */
+  it("il lato non resta informazione solo visiva", () => {
+    renderCard(match({ homeTeam: "Inter", awayTeam: "Juventus" }));
+    expect(screen.getByRole("link", { name: /Juventus in trasferta$/ })).toBeInTheDocument();
   });
 
   it("un'emittente per chip, separate dalla barra come le scrive la fonte", () => {
@@ -62,12 +117,10 @@ describe("NextMatchCard", () => {
   it("dal calendario dell'altra squadra l'avversario e il link si rovesciano", () => {
     renderCard(match({ homeTeam: "Juventus", awayTeam: "Napoli" }), resolveTeam("napoli"));
 
-    expect(screen.getByText("Juventus @")).toBeInTheDocument();
-    expect(screen.getByText("Napoli")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Apri dettaglio Juventus vs Napoli" })).toHaveAttribute(
-      "href",
-      "/squadra/napoli/partite/serie-a-2099-09-13-juventus-vs-milan",
-    );
+    expect(screen.getByText("@ Juventus")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Apri dettaglio Juventus vs Napoli, Napoli in trasferta" }),
+    ).toHaveAttribute("href", "/squadra/napoli/partite/serie-a-2099-09-13-juventus-vs-milan");
   });
 
   it("l'orario e' in fuso italiano: 18:45 UTC sono le 20:45", () => {
