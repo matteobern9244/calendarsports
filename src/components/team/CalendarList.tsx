@@ -86,7 +86,7 @@ export default function CalendarList({
       >
         {items.map((m, i) => {
           const isFinished = m.status === "FullTime";
-          const { isHome, opponent, opponentLogo } = matchSide(m, team);
+          const { opponent, opponentLogo, prefix, venue } = matchSide(m, team);
           const result = matchResult(m, team);
           const resultColor =
             result === "V" ? "text-green-500" : result === "S" ? "text-red-500" : "text-yellow-500";
@@ -109,9 +109,15 @@ export default function CalendarList({
                   : "border-[hsl(var(--team-accent))]/20 hover:border-[hsl(var(--team-accent))]/55",
               )}
             >
+              {/*
+                Il lato sta nel nome accessibile della riga e non in un testo
+                nascosto accanto al segno: `aria-label` **sostituisce** il nome
+                calcolato dal sottoalbero, quindi uno `sr-only` la' dentro non
+                verrebbe mai letto e «@» resterebbe informazione solo visiva.
+              */}
               <Link
                 to={teamMatchPath(team, m.id)}
-                aria-label={`Apri dettaglio ${m.homeTeam} vs ${m.awayTeam}`}
+                aria-label={`Apri dettaglio ${m.homeTeam} vs ${m.awayTeam}, ${team.name} ${venue}`}
                 className="flex items-center gap-3 px-4 py-3.5 rounded-2xl focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--team-accent))] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <span
@@ -136,12 +142,25 @@ export default function CalendarList({
                         : "—"}
                   </span>
                 </div>
-                <div className="relative z-1 flex items-center gap-2 flex-1 min-w-0">
-                  <TeamLogo src={opponentLogo} name={opponent} size={24} shape="circle" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate text-foreground">
-                      {isHome ? "vs" : "@"} {opponent}
-                    </p>
+                <div className="relative z-1 flex-1 min-w-0">
+                  <div className="min-w-0">
+                    {/*
+                      Lo stemma sta **dopo** il nome. Prima lo precedeva, e
+                      «[stemma Lecce] vs Lecce» si leggeva come il Lecce contro
+                      se' stesso. Qui e' decorativo — il nome e' li' accanto —
+                      quindi non entra nel nome accessibile della riga.
+                      `min-w-0` sul nome e `shrink-0` sullo stemma tengono il
+                      troncamento sul nome: senza, «Borussia Moenchengladbach»
+                      spingerebbe fuori lo stemma e poi il conto alla rovescia.
+                    */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="min-w-0 text-sm font-semibold truncate text-foreground">
+                        {prefix} {opponent}
+                      </p>
+                      <span aria-hidden="true" className="flex shrink-0">
+                        <TeamLogo src={opponentLogo} name={opponent} size={24} shape="circle" />
+                      </span>
+                    </div>
                     <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                       <Badge
                         variant="outline"

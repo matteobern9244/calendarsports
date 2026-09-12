@@ -4,6 +4,7 @@ import DataSection, { type ExternalSource } from "@/components/common/DataSectio
 import LandingSpinner from "@/components/common/LandingSpinner";
 import OfflinePageFallback from "@/components/common/OfflinePageFallback";
 import SportTabs from "@/components/common/SportTabs";
+import TeamLogo from "@/components/common/TeamLogo";
 import HighlightsSection from "@/components/highlights/HighlightsSection";
 import CalendarList from "@/components/team/CalendarList";
 import SquadPanel from "@/components/team/SquadPanel";
@@ -19,6 +20,7 @@ import { paginatedCalendarOf } from "@/lib/api/schemas";
 import { footballApi } from "@/lib/api/sportsApi";
 import { getCurrentFootballSeason } from "@/lib/currentSeason";
 import { pageOfIndex, pickNextMatch } from "@/lib/teamCalendar";
+import { teamCrest } from "@/lib/teamCrest";
 import { allSectionsUnavailable } from "@/lib/offlineSections";
 import { queryKeys } from "@/lib/queryKeys";
 import { skyTeamPageUrl } from "@/lib/teamRoutes";
@@ -222,6 +224,29 @@ export default function TeamPage({ team }: TeamPageProps) {
     setPage(p);
   };
 
+  /*
+   * Lo stemma della squadra dell'indirizzo. Tutte le avversarie ne hanno uno e
+   * lei no, perche' e' l'unica a non essere descritta da un payload: e' una
+   * `SerieATeam`, e quel dataset i loghi non li ospita.
+   *
+   * E' decorativo — il titolo accanto dice gia' il nome — quindi non entra nel
+   * nome accessibile dell'intestazione. Va passato anche allo spinner: e'
+   * scritto nel suo commento che l'intestazione dei due stati deve combaciare,
+   * e senza stemma li' il titolo scivolerebbe di lato a caricamento finito.
+   * Prima che la classifica risponda `teamCrest` restituisce `null` e
+   * `TeamLogo` riempie lo stesso spazio con le iniziali.
+   */
+  const crest = (
+    <span aria-hidden="true" className="flex">
+      <TeamLogo
+        src={teamCrest(team, { standings, match: nextMatch })}
+        name={team.name}
+        size={44}
+        shape="circle"
+      />
+    </span>
+  );
+
   // Il calendario entra con `calendarData` grezzo, non con `calendar`
   // validato: e' quello che la condizione guardava prima, e un payload
   // che non passa lo schema non e' un'assenza di rete.
@@ -256,12 +281,19 @@ export default function TeamPage({ team }: TeamPageProps) {
   const isInitialLoading =
     !calError && !stError && (calLoading || stLoading || isAwaitingNextMatch);
   if (isInitialLoading) {
-    return <LandingSpinner title={team.name} message={`Caricamento dati ${team.name}...`} />;
+    return (
+      <LandingSpinner
+        title={team.name}
+        crest={crest}
+        message={`Caricamento dati ${team.name}...`}
+      />
+    );
   }
 
   return (
     <SportTabs
       title={team.name}
+      crest={crest}
       defaultValue="calendario"
       tabs={tabs}
       beforeTabs={

@@ -128,11 +128,11 @@ export default function HomePage() {
         // il confronto e' per uguaglianza esatta, e il verso dipende da chi
         // guarda. Il vecchio `includes("juventus")` sbagliava due volte —
         // sulla squadra e sul confronto.
-        const { isHome, opponent } = matchSide(nextMatch, favoriteTeam);
+        const { opponent, prefix } = matchSide(nextMatch, favoriteTeam);
         const { date: dateStr, time: timeStr } = formatFootballDateTime(nextMatch.date);
         upcoming.push({
           sport: `Calcio · ${favoriteTeam.name}`,
-          title: `${isHome ? "vs" : "@"} ${opponent}`,
+          title: `${prefix} ${opponent}`,
           subtitle: `${nextMatch.competition || "Serie A"} · ${nextMatch.competition === "Serie A" ? `Giornata ${nextMatch.matchday || "—"}` : `Turno ${nextMatch.matchday || "—"}`}`,
           rawDate: nextMatch.date,
           date: dateStr,

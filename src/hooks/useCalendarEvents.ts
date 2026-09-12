@@ -10,6 +10,7 @@ import { toRomeDate } from "@/lib/dateUtils";
 import { queryKeys } from "@/lib/queryKeys";
 import { matchesTeam, type SerieATeam } from "@/lib/serieATeams";
 import { teamMatchPath } from "@/lib/teamRoutes";
+import { matchPrefix } from "@/lib/teamMatch";
 
 /**
  * Tipo unificato che alimenta la vista mese del calendario
@@ -181,7 +182,7 @@ function expandFootball(items: unknown[] | undefined, team: SerieATeam): Calenda
       id: `football-`,
       sport: "football",
       date,
-      shortLabel: `${isHome ? "vs" : "@"} ${opponent}`,
+      shortLabel: `${matchPrefix(isHome)} ${opponent}`,
       context: [competition, ctxNum].filter(Boolean).join(" · "),
       title: `${home} - ${away}`,
       href: teamMatchPath(team, id),
