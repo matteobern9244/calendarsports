@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { installSportsApiMocks } from "./support/mockSportsApi";
+import { accediComeUtente } from "./support/auth";
 
 /**
  * Una voce della barra di navigazione, comunque sia scritta a questa larghezza.
@@ -335,6 +336,9 @@ test("preferenze: la tendina si apre e si chiude senza travolgere il pannello", 
   page,
 }) => {
   await installSportsApiMocks(page);
+  // Le preferenze esistono solo con l'accesso: senza sessione il pannello
+  // non c'e' nemmeno da aprire.
+  await accediComeUtente(page);
   await page.goto("/");
 
   await page.getByRole("button", { name: "Preferenze" }).click();
@@ -397,6 +401,9 @@ test("preferenze: la tendina si apre e si chiude senza travolgere il pannello", 
  */
 test("squadra: la preferenza arriva al menu e alla Home", async ({ page }) => {
   await installSportsApiMocks(page);
+  // Le preferenze esistono solo con l'accesso: senza sessione il pannello
+  // non c'e' nemmeno da aprire.
+  await accediComeUtente(page);
   await page.goto("/");
 
   await page.getByRole("button", { name: "Preferenze" }).click();
@@ -587,6 +594,9 @@ test("preferenze: la scelta chiude il pannello e si vede subito, senza ricaricar
   page,
 }) => {
   await installSportsApiMocks(page);
+  // Le preferenze esistono solo con l'accesso: senza sessione il pannello
+  // non c'e' nemmeno da aprire.
+  await accediComeUtente(page);
   await page.goto("/");
 
   await page.getByRole("button", { name: "Preferenze" }).click();
@@ -607,6 +617,9 @@ test("preferenze: scegliere da dentro una pagina squadra porta sulla squadra sce
   page,
 }) => {
   await installSportsApiMocks(page);
+  // Le preferenze esistono solo con l'accesso: senza sessione il pannello
+  // non c'e' nemmeno da aprire.
+  await accediComeUtente(page);
   await page.goto("/squadra/juventus");
 
   await page.getByRole("button", { name: "Preferenze" }).click();
@@ -883,4 +896,80 @@ test("dettaglio partita: senza id della fonte lo dice, invece di caricare all'in
   await page.goto("/squadra/juventus/partite/champions-league-2099-05-03-inter-vs-juventus");
   await page.getByRole("tab", { name: "Formazione" }).click();
   await expect(page.getByText(/non pubblica un identificativo/)).toBeVisible();
+});
+
+/**
+ * Cambio di specifica della 3.3.0: le preferenze esistono **solo** per chi ha
+ * effettuato l'accesso. Il pulsante che le apre non deve comparire agli altri
+ * — un comando che apre qualcosa di vuoto e' peggio di un comando assente — e
+ * al suo posto ci va la porta d'ingresso, perche' il collegamento all'accesso
+ * viveva dentro il pannello e toglierlo senza rimpiazzarlo lascerebbe chi non
+ * e' registrato senza nessun modo di diventarlo.
+ */
+test("preferenze: senza accesso non c'e' il pannello, ma c'e' la porta d'ingresso", async ({
+  page,
+}) => {
+  await installSportsApiMocks(page);
+  await page.goto("/");
+
+  await expect(page.getByRole("button", { name: "Preferenze" })).toHaveCount(0);
+
+  const accedi = page.getByRole("link", { name: "Accedi" });
+  await expect(accedi).toBeVisible();
+  await accedi.click();
+  await expect(page).toHaveURL(/\/accedi$/);
+});
+
+/** Anche l'indirizzo diretto: chi non ha l'accesso finisce dove puo' farlo. */
+test("preferenze: /preferenze senza accesso porta alla pagina di accesso", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await page.goto("/preferenze");
+  await expect(page).toHaveURL(/\/accedi$/);
+});
+
+/**
+ * La pagina iniziale, provata dove conta: nel browser, con una sessione vera.
+ * Fino a che l'impalcatura dell'accesso non e' esistita, questo percorso era
+ * coperto solo dai test unitari — che non hanno un indirizzo da guardare.
+ */
+test("avvio: la pagina scelta vince sulla radice", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await accediComeUtente(page, { start_page: "calendario" });
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/calendario$/);
+});
+
+/**
+ * «Squadra di calcio» e' una sezione, non un indirizzo memorizzato: si compone
+ * al momento sulla squadra preferita, altrimenti chi cambia squadra resterebbe
+ * con la pagina iniziale puntata su quella vecchia.
+ */
+test("avvio: la squadra come pagina iniziale segue la preferenza", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await accediComeUtente(page, { start_page: "squadra", favorite_team: "napoli" });
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/squadra\/napoli$/);
+});
+
+/** La Home non sparisce: ha un indirizzo suo, e la voce del menu' ci porta. */
+test("avvio: la Home resta raggiungibile anche se non e' la pagina iniziale", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await accediComeUtente(page, { start_page: "calendario" });
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/calendario$/);
+
+  await voceMenu(page, "HOME").click();
+  await expect(page).toHaveURL(/\/home$/);
+});
+
+/**
+ * Il caso piu' frequente non paga niente: senza accesso la radice mostra la
+ * Home dov'e' sempre stata, senza rimbalzi, e i link verso `/` gia' in
+ * circolazione continuano a valere.
+ */
+test("avvio: senza accesso la radice resta la Home", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("button", { name: "Preferenze" })).toHaveCount(0);
 });

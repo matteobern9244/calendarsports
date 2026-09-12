@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { installSportsApiMocks } from "./support/mockSportsApi";
+import { accediComeUtente } from "./support/auth";
 
 /**
  * Un vero gesto tattile, non eventi sintetici.
@@ -36,6 +37,9 @@ test("preferenze: lo swipe da sinistra apre il pannello, e l'indizio smette di s
   page,
 }) => {
   await installSportsApiMocks(page);
+  // Le preferenze esistono solo con l'accesso: senza sessione il pannello
+  // non c'e' nemmeno da aprire.
+  await accediComeUtente(page);
   await page.goto("/");
 
   // L'indizio esiste finche' il gesto non e' stato imparato.
@@ -59,6 +63,9 @@ test("preferenze: lo swipe da sinistra apre il pannello, e l'indizio smette di s
  */
 test("preferenze: il pulsante in cima continua a funzionare accanto al gesto", async ({ page }) => {
   await installSportsApiMocks(page);
+  // Le preferenze esistono solo con l'accesso: senza sessione il pannello
+  // non c'e' nemmeno da aprire.
+  await accediComeUtente(page);
   await page.goto("/");
 
   await page.getByRole("button", { name: "Preferenze" }).click();
@@ -216,6 +223,9 @@ for (const { nome, pagina, scheda } of STATI) {
  */
 test("niente scorrimento orizzontale: pannello preferenze", async ({ page }) => {
   await installSportsApiMocks(page);
+  // Le preferenze esistono solo con l'accesso: senza sessione il pannello
+  // non c'e' nemmeno da aprire.
+  await accediComeUtente(page);
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Preferenze" }).click();
@@ -229,4 +239,19 @@ test("niente scorrimento orizzontale: pannello preferenze", async ({ page }) => 
     );
     expect(await chiScorreInOrizzontale(page), `a ${larghezza}px`).toEqual([]);
   }
+});
+
+/**
+ * Il gesto apre le preferenze, e le preferenze esistono solo con l'accesso:
+ * senza sessione non c'e' niente da aprire, e un indizio che suggerisce un
+ * gesto inefficace e' peggio di nessun indizio.
+ */
+test("preferenze: senza accesso il gesto e il suo indizio non esistono", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await page.goto("/");
+
+  await expect(page.getByTestId("indizio-swipe")).toHaveCount(0);
+
+  await swipe(page, { x: 24, y: 400 }, { x: 240, y: 406 });
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });

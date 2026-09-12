@@ -1,6 +1,6 @@
 import { useRef, useState, MouseEvent as ReactMouseEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { Menu, X, Settings } from "lucide-react";
+import { Menu, X, Settings, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
@@ -16,6 +16,7 @@ import {
 import { SparkleLoop } from "./SparkleLoop";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 import { useUserPrefs, type SectionKey } from "@/contexts/useUserPrefs";
+import { useAuth } from "@/contexts/useAuth";
 import { resolveTeamStrict } from "@/lib/serieATeams";
 import { teamPath, teamSlugFromPath } from "@/lib/teamRoutes";
 import { HOME_PATH } from "@/lib/startPage";
@@ -88,6 +89,7 @@ export default function Header() {
   const burstSeq = useRef(0);
   const { open: prefsOpen, toggle: togglePrefs } = usePreferencesPanel();
   const { sections, favoriteTeam } = useUserPrefs();
+  const { user } = useAuth();
 
   /**
    * Dentro una pagina squadra comanda l'**indirizzo**, fuori la preferenza.
@@ -267,22 +269,46 @@ export default function Header() {
 
         {/* Theme toggle + mobile menu */}
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Preferenze"
-            aria-expanded={prefsOpen}
-            aria-controls="preferences-panel"
-            onClick={togglePrefs}
-            className={cn(
-              "rounded-full border transition-colors",
-              prefsOpen
-                ? "border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))] shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
-                : "border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10",
-            )}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          {/*
+            Le preferenze esistono solo per chi ha effettuato l'accesso, quindi
+            il pulsante che le apre non compare agli altri: un comando che apre
+            qualcosa di vuoto e' peggio di un comando assente.
+
+            Al suo posto ci va la porta d'ingresso, e non e' un di piu'. Il
+            collegamento all'accesso viveva **dentro** il pannello: toglierlo
+            senza rimpiazzarlo lascerebbe chi non e' registrato senza nessun
+            modo di diventarlo.
+          */}
+          {user ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Preferenze"
+              aria-expanded={prefsOpen}
+              aria-controls="preferences-panel"
+              onClick={togglePrefs}
+              className={cn(
+                "rounded-full border transition-colors",
+                prefsOpen
+                  ? "border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))] shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
+                  : "border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10",
+              )}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Link
+              to="/accedi"
+              aria-label="Accedi"
+              className={cn(
+                "inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
+                "border-border/60 text-muted-foreground",
+                "hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10 hover:text-[hsl(var(--gold))]",
+              )}
+            >
+              <LogIn className="h-4 w-4" />
+            </Link>
+          )}
           <Button
             variant="ghost"
             size="icon"

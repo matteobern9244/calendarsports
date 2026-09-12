@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
+import { useAuth } from "@/contexts/useAuth";
 import { useSwipeFromLeft, useTouchDevice } from "@/hooks/useSwipeFromLeft";
 
 const CHIAVE_VISTO = "cse-swipe-preferenze";
@@ -45,8 +46,15 @@ function segnaVisto() {
  */
 export default function SwipeToPreferences() {
   const { open, setOpen } = usePreferencesPanel();
+  const { user } = useAuth();
   const tattile = useTouchDevice();
   const [mostraIndizio, setMostraIndizio] = useState(() => tattile && !giaVisto());
+  /*
+    Il gesto apre le preferenze, e le preferenze esistono solo con l'accesso:
+    senza sessione non c'e' niente da aprire, e un indizio che suggerisce un
+    gesto inefficace e' peggio di nessun indizio.
+  */
+  const disponibile = tattile && Boolean(user);
 
   const apri = useCallback(() => {
     setOpen(true);
@@ -54,7 +62,7 @@ export default function SwipeToPreferences() {
     setMostraIndizio(false);
   }, [setOpen]);
 
-  useSwipeFromLeft(apri, tattile);
+  useSwipeFromLeft(apri, disponibile);
 
   useEffect(() => {
     if (!mostraIndizio) return;
@@ -62,7 +70,7 @@ export default function SwipeToPreferences() {
     return () => window.clearTimeout(attesa);
   }, [mostraIndizio]);
 
-  if (!mostraIndizio || open) return null;
+  if (!disponibile || !mostraIndizio || open) return null;
 
   return (
     <div

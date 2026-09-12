@@ -10,7 +10,17 @@ const { preferenze } = vi.hoisted(() => ({
   preferenze: {
     squadra: null as SerieATeam | null,
     sezioni: null as Record<string, boolean> | null,
+    utente: { id: "u1" } as { id: string } | null,
   },
+}));
+
+vi.mock("@/contexts/useAuth", () => ({
+  useAuth: () => ({
+    session: null,
+    user: preferenze.utente,
+    loading: false,
+    signOut: vi.fn(),
+  }),
 }));
 
 vi.mock("@/contexts/useUserPrefs", async (originale) => {
@@ -33,9 +43,11 @@ function intestazione(
   indirizzo: string,
   squadra: SerieATeam = NAPOLI,
   sezioni: Record<string, boolean> | null = null,
+  utente: { id: string } | null = { id: "u1" },
 ) {
   preferenze.squadra = squadra;
   preferenze.sezioni = sezioni;
+  preferenze.utente = utente;
   render(
     <MemoryRouter initialEntries={[indirizzo]}>
       <Header />
@@ -195,5 +207,35 @@ describe("Header, le voci nascoste", () => {
       motogp: false,
     });
     expect(voci(/^HOME|^CALENDARIO|^STREAMING|^JANNIK|^NAPOLI|^FORMULA|^MOTOGP/)).toHaveLength(0);
+  });
+});
+
+describe("Header, il varco alle preferenze", () => {
+  /**
+   * Cambio di specifica: le preferenze esistono solo per chi ha effettuato
+   * l'accesso. Il pulsante che le apre non deve nemmeno comparire agli altri:
+   * un comando che apre qualcosa di vuoto e' peggio di un comando assente.
+   */
+  it("senza accesso il pulsante Preferenze non c'e'", () => {
+    intestazione("/home", NAPOLI, null, null);
+    expect(screen.queryByRole("button", { name: "Preferenze" })).not.toBeInTheDocument();
+  });
+
+  /**
+   * E al suo posto ci deve essere un modo per entrare. Il collegamento
+   * all'accesso viveva **dentro** il pannello: nasconderlo senza mettere
+   * niente al suo posto avrebbe tolto a chi non e' registrato l'unica porta
+   * per diventarlo.
+   */
+  it("senza accesso offre comunque la porta d'ingresso", () => {
+    intestazione("/home", NAPOLI, null, null);
+    const accedi = screen.getAllByRole("link", { name: "Accedi" })[0];
+    expect(accedi).toHaveAttribute("href", "/accedi");
+  });
+
+  it("con l'accesso torna il pulsante, e la porta non serve piu'", () => {
+    intestazione("/home", NAPOLI, null, { id: "u1" });
+    expect(screen.getByRole("button", { name: "Preferenze" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Accedi" })).not.toBeInTheDocument();
   });
 });
