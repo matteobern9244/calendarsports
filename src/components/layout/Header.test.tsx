@@ -73,3 +73,34 @@ describe("Header, la voce della squadra", () => {
     expect(voce).toHaveAttribute("href", "/squadra/napoli");
   });
 });
+
+describe("Header, la voce Home", () => {
+  // La voce rende insieme etichetta lunga e corta ("HOMEHOME"), come quella
+  // della squadra: a questa risoluzione jsdom non ne nasconde nessuna.
+  const voceHome = () => screen.getAllByRole("link", { name: /^HOME/ })[0];
+
+  /**
+   * La Home ha un indirizzo suo perche' la radice ha smesso di essere «la
+   * Home»: e' la decisione su dove atterrare. Senza `/home`, far vincere la
+   * pagina iniziale avrebbe reso la Home irraggiungibile dal menu'.
+   */
+  it("porta all'indirizzo proprio della Home", () => {
+    intestazione("/home");
+    expect(voceHome()).toHaveAttribute("href", "/home");
+  });
+
+  it("e' evidenziata sul suo indirizzo", () => {
+    intestazione("/home");
+    expect(voceHome()).toHaveAttribute("aria-current", "page");
+  });
+
+  /**
+   * Quando la preferenza e' la Home, la radice la mostra restando su `/`:
+   * i due indirizzi sono lo stesso posto, e una voce non evidenziata mentre
+   * si sta guardando proprio quella pagina direbbe il falso.
+   */
+  it("resta evidenziata anche sulla radice", () => {
+    intestazione("/");
+    expect(voceHome()).toHaveAttribute("aria-current", "page");
+  });
+});

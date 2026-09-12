@@ -7,9 +7,11 @@ import Layout from "@/components/layout/Layout";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import LoadingState from "@/components/common/LoadingState";
 import SectionRoute from "@/components/common/SectionRoute";
+import StartRoute from "@/components/common/StartRoute";
 import TeamRoute from "@/components/common/TeamRoute";
 import { DEFAULT_TEAM } from "@/lib/serieATeams";
 import { teamMatchPath, teamPath } from "@/lib/teamRoutes";
+import { HOME_PATH } from "@/lib/startPage";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { UserPrefsProvider } from "@/contexts/UserPrefsContext";
 import Index from "./pages/Index";
@@ -83,7 +85,23 @@ const App = () => (
               <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route element={<Layout />}>
-                    <Route path="/" element={<Index />} />
+                    {/*
+                      `/` non e' piu' «la Home»: e' la decisione su dove
+                      atterrare. Quando la preferenza e' la Home, `StartRoute`
+                      la mostra qui senza rimbalzare — cosi' il caso piu'
+                      frequente non paga un reindirizzamento e i link verso `/`
+                      gia' in circolazione continuano a valere.
+                    */}
+                    <Route
+                      path="/"
+                      element={
+                        <StartRoute>
+                          <Index />
+                        </StartRoute>
+                      }
+                    />
+                    {/* L'indirizzo proprio della Home, quello del menu'. */}
+                    <Route path={HOME_PATH} element={<Index />} />
                     <Route path="/calendario" element={<CalendarPage />} />
                     <Route path="/streaming" element={<StreamingPage />} />
                     <Route

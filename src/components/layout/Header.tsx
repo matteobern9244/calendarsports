@@ -18,11 +18,15 @@ import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 import { useUserPrefs } from "@/contexts/useUserPrefs";
 import { resolveTeamStrict } from "@/lib/serieATeams";
 import { teamPath, teamSlugFromPath } from "@/lib/teamRoutes";
+import { HOME_PATH } from "@/lib/startPage";
 
 // Header non riceve piu' props: tema e preferenze sono in /preferenze.
 
 const ALL_NAV_ITEMS = [
-  { label: "HOME", shortLabel: "HOME", path: "/", Icon: HomeBrandIcon },
+  // La Home ha un indirizzo proprio: `/` e' diventata la decisione su dove
+  // atterrare, e senza `HOME_PATH` la voce del menu' non avrebbe piu' un posto
+  // dove portare chi ha scelto di aprire l'app altrove.
+  { label: "HOME", shortLabel: "HOME", path: HOME_PATH, Icon: HomeBrandIcon },
   { label: "CALENDARIO", shortLabel: "AGENDA", path: "/calendario", Icon: CalendarBrandIcon },
   { label: "STREAMING", shortLabel: "STREAMING", path: "/streaming", Icon: StreamingBrandIcon },
   {
@@ -83,6 +87,14 @@ export default function Header() {
    * starci dentro: qui i parametri della rotta non arrivano.
    */
   const team = resolveTeamStrict(teamSlugFromPath(location.pathname) ?? undefined) ?? favoriteTeam;
+
+  /**
+   * La radice e la Home sono lo stesso posto quando la pagina iniziale e' la
+   * Home: `StartRoute` la mostra su `/` senza rimbalzare, per non far pagare
+   * un reindirizzamento al caso piu' frequente. Una voce non evidenziata
+   * mentre si sta guardando proprio quella pagina direbbe il falso.
+   */
+  const indirizzoAttivo = location.pathname === "/" ? HOME_PATH : location.pathname;
 
   // Le sezioni disattivate nel profilo spariscono dal menu.
   const navItems: NavItem[] = ALL_NAV_ITEMS.filter(
@@ -152,7 +164,7 @@ export default function Header() {
             )}
           >
             {navItems.map((item) => {
-              const active = location.pathname === item.path;
+              const active = indirizzoAttivo === item.path;
               const Icon = item.Icon;
               const burst = bursts[item.path];
               return (
@@ -275,7 +287,7 @@ export default function Header() {
           >
             <div className="container py-4 flex flex-col gap-2">
               {navItems.map((item, idx) => {
-                const active = location.pathname === item.path;
+                const active = indirizzoAttivo === item.path;
                 const Icon = item.Icon;
                 const burst = bursts[item.path];
                 return (
