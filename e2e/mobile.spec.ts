@@ -78,3 +78,155 @@ test("preferenze: un gesto nella direzione sbagliata non apre niente", async ({ 
   await swipe(page, { x: 40, y: 200 }, { x: 46, y: 520 });
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
+
+/**
+ * Le pagine da visitare. Sono tutte quelle raggiungibili dal menu' piu' il
+ * dettaglio di una partita, che ha una struttura sua fatta di schede.
+ */
+const PAGINE = [
+  "/",
+  "/calendario",
+  "/streaming",
+  "/sinner",
+  "/squadra/juventus",
+  "/squadra/juventus/partite/champions-league-2099-05-03-inter-vs-juventus",
+  "/formula1",
+  "/motogp",
+] as const;
+
+/**
+ * Le larghezze su cui si misura. Non basta quella del dispositivo emulato: un
+ * contenuto deborda quando lo schermo si stringe, e fra un telefono grande e
+ * uno piccolo ci sono piu' di cento pixel di differenza. Si va dai 430 dei
+ * modelli maggiori ai 320, il piu' angusto ancora in circolazione.
+ */
+const LARGHEZZE = [430, 412, 393, 360, 320] as const;
+
+/**
+ * Chi scorre in orizzontale, e di quanto.
+ *
+ * Il controllo lo fa il browser e non un `grep` sulle classi: `overflow-x`
+ * dichiarato non significa niente finche' il contenuto non deborda davvero, e
+ * un elemento puo' debordare senza che nessuno abbia scritto `overflow-x`
+ * perche' l'ha ereditato o perche' e' semplicemente troppo largo.
+ */
+async function chiScorreInOrizzontale(page: import("@playwright/test").Page) {
+  return page.evaluate(() => {
+    const descrivi = (el: Element) => {
+      const classi = (el.getAttribute("class") ?? "").split(/\s+/).slice(0, 6).join(" ");
+      return `${el.tagName.toLowerCase()}${classi ? `.${classi.replace(/\s+/g, ".")}` : ""}`;
+    };
+    const colpevoli: string[] = [];
+    const radice = document.documentElement;
+    // Una tolleranza di 1px: gli arrotondamenti sub-pixel non sono un difetto.
+    if (radice.scrollWidth > radice.clientWidth + 1) {
+      colpevoli.push(`pagina intera (${radice.scrollWidth} > ${radice.clientWidth})`);
+    }
+    for (const el of Array.from(document.querySelectorAll("*"))) {
+      const stile = window.getComputedStyle(el);
+      const scorre = stile.overflowX === "auto" || stile.overflowX === "scroll";
+      if (scorre && el.scrollWidth > el.clientWidth + 1) {
+        colpevoli.push(`${descrivi(el)} (${el.scrollWidth} > ${el.clientWidth})`);
+      }
+    }
+    return colpevoli;
+  });
+}
+
+/**
+ * Su uno schermo stretto **niente** deve scorrere lateralmente: ne' la pagina,
+ * ne' una riga di filtri, ne' una tabella. Un contenuto che si raggiunge solo
+ * trascinando di lato e' un contenuto che meta' delle persone non trova, e la
+ * barra che compare sotto lo annuncia senza renderlo piu' trovabile. Le voci
+ * devono andare a capo, non mettersi in fila indiana.
+ *
+ * Il guardiano vale anche come rete per lo swipe: un'area che scorre in
+ * orizzontale gli ruberebbe il gesto, quindi non averne e' due cose giuste
+ * in una.
+ */
+for (const pagina of PAGINE) {
+  test(`niente scorrimento orizzontale: ${pagina}`, async ({ page }) => {
+    await installSportsApiMocks(page);
+    await page.goto(pagina);
+    // Il contenuto arriva dai mock: si aspetta che la pagina abbia finito di
+    // comporsi, altrimenti si misura uno scheletro.
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("footer")).toBeVisible();
+
+    for (const larghezza of LARGHEZZE) {
+      await page.setViewportSize({ width: larghezza, height: 780 });
+      // Il riflusso del layout non e' istantaneo: senza questa attesa si
+      // misurerebbe la disposizione precedente.
+      await page.waitForFunction(
+        (attesa) => document.documentElement.clientWidth === attesa,
+        larghezza,
+      );
+      expect(await chiScorreInOrizzontale(page), `a ${larghezza}px`).toEqual([]);
+    }
+  });
+}
+
+/**
+ * Gli stati che una pagina assume solo se qualcuno la tocca.
+ *
+ * Il guardiano sopra misura le pagine a riposo, e a riposo meta' del
+ * contenuto non e' nemmeno montata: schede, viste alternative e pannelli
+ * arrivano dopo un clic. Una tabella che sborda dentro una scheda chiusa non
+ * si vede finche' non la si apre — ed e' esattamente li' che si nasconde.
+ */
+const PARTITA = "/squadra/juventus/partite/champions-league-2099-05-03-inter-vs-juventus";
+
+const STATI: Array<{ nome: string; pagina: string; scheda: string | RegExp }> = [
+  { nome: "streaming · nuove uscite", pagina: "/streaming", scheda: /Nuove uscite/i },
+  { nome: "calendario · agenda", pagina: "/calendario", scheda: "Agenda" },
+  { nome: "squadra · rosa", pagina: "/squadra/juventus", scheda: "Rosa" },
+  { nome: "squadra · statistiche", pagina: "/squadra/juventus", scheda: "Statistiche" },
+  { nome: "squadra · highlights", pagina: "/squadra/juventus", scheda: "Highlights" },
+  { nome: "partita · formazione", pagina: PARTITA, scheda: "Formazione" },
+  { nome: "partita · cronologia", pagina: PARTITA, scheda: "Cronologia eventi" },
+  { nome: "sinner · tornei", pagina: "/sinner", scheda: "Tornei" },
+  { nome: "squadra · classifica", pagina: "/squadra/juventus", scheda: "Classifica" },
+  { nome: "formula 1 · piloti", pagina: "/formula1", scheda: "Classifica Piloti" },
+  { nome: "formula 1 · costruttori", pagina: "/formula1", scheda: "Costruttori" },
+  { nome: "motogp · piloti", pagina: "/motogp", scheda: "Classifica Piloti" },
+];
+
+for (const { nome, pagina, scheda } of STATI) {
+  test(`niente scorrimento orizzontale: ${nome}`, async ({ page }) => {
+    await installSportsApiMocks(page);
+    await page.goto(pagina);
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("tab", { name: scheda }).click();
+
+    for (const larghezza of LARGHEZZE) {
+      await page.setViewportSize({ width: larghezza, height: 780 });
+      await page.waitForFunction(
+        (attesa) => document.documentElement.clientWidth === attesa,
+        larghezza,
+      );
+      expect(await chiScorreInOrizzontale(page), `a ${larghezza}px`).toEqual([]);
+    }
+  });
+}
+
+/**
+ * Il pannello delle preferenze e' un foglio che su mobile arriva dal basso e
+ * contiene tendine, interruttori e pillole: e' il posto piu' facile in cui
+ * qualcosa sbordi, e sarebbe anche il piu' fastidioso.
+ */
+test("niente scorrimento orizzontale: pannello preferenze", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Preferenze" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+
+  for (const larghezza of LARGHEZZE) {
+    await page.setViewportSize({ width: larghezza, height: 780 });
+    await page.waitForFunction(
+      (attesa) => document.documentElement.clientWidth === attesa,
+      larghezza,
+    );
+    expect(await chiScorreInOrizzontale(page), `a ${larghezza}px`).toEqual([]);
+  }
+});

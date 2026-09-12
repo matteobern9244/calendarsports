@@ -12,24 +12,25 @@ export default function FamilySelector({
   onChange: (v: StreamingFamilyId) => void;
 }) {
   return (
-    <div className="-mx-4 px-4 overflow-x-auto">
-      <div className="flex gap-2 min-w-max">
-        {STREAMING_FAMILIES.map((f) => (
-          <Button
-            key={f.id}
-            size="sm"
-            variant={value === f.id ? "default" : "outline"}
-            aria-pressed={value === f.id}
-            onClick={() => onChange(f.id)}
-            className={cn(
-              "rounded-full font-heading uppercase tracking-wider text-xs",
-              value === f.id && "shadow-md",
-            )}
-          >
-            {f.label}
-          </Button>
-        ))}
-      </div>
+    /* Va a capo, non in fila indiana. Una riga che scorre di lato nasconde
+       meta' delle scelte dietro un gesto che nessuno sa di dover fare, e la
+       barra che compare sotto lo annuncia senza renderle piu' trovabili. */
+    <div className="flex flex-wrap gap-2">
+      {STREAMING_FAMILIES.map((f) => (
+        <Button
+          key={f.id}
+          size="sm"
+          variant={value === f.id ? "default" : "outline"}
+          aria-pressed={value === f.id}
+          onClick={() => onChange(f.id)}
+          className={cn(
+            "rounded-full font-heading uppercase tracking-wider text-xs",
+            value === f.id && "shadow-md",
+          )}
+        >
+          {f.label}
+        </Button>
+      ))}
     </div>
   );
 }

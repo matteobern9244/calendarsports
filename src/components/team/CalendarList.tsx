@@ -100,7 +100,14 @@ export default function CalendarList({
               variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
               whileHover={{ y: -3 }}
               className={cn(
-                "group relative rounded-2xl border bg-card",
+                // Un elemento di una griglia ha `min-width: auto`, cioe' si
+                // rifiuta di scendere sotto la larghezza minima del proprio
+                // contenuto: su uno schermo stretto la scheda pretendeva i
+                // suoi pixel e sbordava, trascinando fuori l'intera pagina.
+                // `min-w-0` le da' il permesso di stringersi, e da li' in poi
+                // il troncamento del nome e il ritorno a capo dei dettagli —
+                // gia' previsti qui sotto — fanno il loro lavoro.
+                "group relative min-w-0 rounded-2xl border bg-card",
                 "transition-[box-shadow,border-color,transform] duration-300 ease-out",
                 "shadow-[0_2px_10px_-6px_hsl(var(--navy-dark)/0.25)]",
                 "hover:shadow-[0_16px_36px_-18px_hsl(var(--team-accent)/0.45),0_4px_12px_-6px_hsl(var(--navy-dark)/0.35)]",

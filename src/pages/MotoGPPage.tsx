@@ -253,7 +253,12 @@ export default function MotoGPPage() {
                   <TableHead className="font-heading text-xs tracking-wider uppercase">
                     Pilota
                   </TableHead>
-                  <TableHead className="font-heading text-xs tracking-wider uppercase">
+                  {/* Come la Scuderia in Formula 1: su uno schermo stretto la
+                      squadra e' la colonna che si puo' perdere senza perdere
+                      la classifica, e tenerla costringeva la tabella a
+                      scorrere di lato. Nella classifica costruttori qui sotto
+                      resta, perche' li' e' la classifica. */}
+                  <TableHead className="font-heading text-xs tracking-wider uppercase hidden sm:table-cell">
                     Team
                   </TableHead>
                   <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
@@ -299,7 +304,7 @@ export default function MotoGPPage() {
                         <span className="font-semibold">{s.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
                       {s.team ? (
                         <div className="flex items-center gap-2">
                           <TeamLogo src={s.teamLogoUrl} name={s.team} size={20} shape="rounded" />

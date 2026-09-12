@@ -146,6 +146,29 @@
 }
 
 /*
+  Su schermo stretto le tabelle stringono le celle invece di scorrere.
+
+  Le celle generate da shadcn hanno `p-4`: trentadue pixel per colonna di soli
+  margini interni, che su una classifica a cinque colonne sono centosessanta
+  pixel spesi prima di scrivere un numero. Su un telefono e' la differenza fra
+  una tabella che sta nello schermo e una che si raggiunge trascinando di lato.
+
+  La regola sta qui e non su ogni tabella perche' e' una regola del progetto —
+  **niente scorre in orizzontale su mobile** — e vale anche per le tabelle che
+  non sono ancora state scritte. `src/components/ui/table.tsx` e' generato
+  dalla CLI shadcn e non si modifica: si interviene da fuori.
+
+  Il guardiano eseguibile e' `e2e/mobile.spec.ts`, non questo commento.
+*/
+@media (max-width: 639px) {
+  table th,
+  table td {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+/*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
   looks the same as it did with Tailwind CSS v3.

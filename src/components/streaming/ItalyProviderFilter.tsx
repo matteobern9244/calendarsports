@@ -16,24 +16,25 @@ export default function ItalyProviderFilter({
     ...STREAMING_PROVIDERS,
   ];
   return (
-    <div className="-mx-4 px-4 overflow-x-auto">
-      <div className="flex gap-2 min-w-max">
-        {options.map((p) => (
-          <Button
-            key={p.id}
-            size="sm"
-            variant={value === p.id ? "default" : "outline"}
-            aria-pressed={value === p.id}
-            onClick={() => onChange(p.id)}
-            className={cn(
-              "rounded-full font-heading uppercase tracking-wider text-xs",
-              value === p.id && "shadow-md",
-            )}
-          >
-            {p.label}
-          </Button>
-        ))}
-      </div>
+    /* Va a capo, non in fila indiana. Una riga che scorre di lato nasconde
+       meta' delle scelte dietro un gesto che nessuno sa di dover fare, e la
+       barra che compare sotto lo annuncia senza renderle piu' trovabili. */
+    <div className="flex flex-wrap gap-2">
+      {options.map((p) => (
+        <Button
+          key={p.id}
+          size="sm"
+          variant={value === p.id ? "default" : "outline"}
+          aria-pressed={value === p.id}
+          onClick={() => onChange(p.id)}
+          className={cn(
+            "rounded-full font-heading uppercase tracking-wider text-xs",
+            value === p.id && "shadow-md",
+          )}
+        >
+          {p.label}
+        </Button>
+      ))}
     </div>
   );
 }

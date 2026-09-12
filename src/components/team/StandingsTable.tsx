@@ -35,10 +35,10 @@ export default function StandingsTable({ team, standings }: StandingsTableProps)
             <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
               V
             </TableHead>
-            <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
+            <TableHead className="text-center font-heading text-xs tracking-wider uppercase max-[380px]:hidden">
               N
             </TableHead>
-            <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
+            <TableHead className="text-center font-heading text-xs tracking-wider uppercase max-[380px]:hidden">
               P
             </TableHead>
             <TableHead className="text-center font-heading text-xs tracking-wider uppercase hidden sm:table-cell">
@@ -92,8 +92,15 @@ export default function StandingsTable({ team, standings }: StandingsTableProps)
                 </TableCell>
                 <TableCell className="text-center">{s.played}</TableCell>
                 <TableCell className="text-center">{s.wins}</TableCell>
-                <TableCell className="text-center">{s.draws}</TableCell>
-                <TableCell className="text-center">{s.losses}</TableCell>
+                {/*
+                  Pareggi e sconfitte spariscono **solo** sotto i 380px, non su
+                  tutto il mobile: su un telefono normale ci stanno, e togliere
+                  contenuto dove ci starebbe e' un danno gratuito. Sotto quella
+                  soglia la classifica resta leggibile con posizione, squadra,
+                  giocate, vinte e punti — e soprattutto non scorre di lato.
+                */}
+                <TableCell className="text-center max-[380px]:hidden">{s.draws}</TableCell>
+                <TableCell className="text-center max-[380px]:hidden">{s.losses}</TableCell>
                 <TableCell className="text-center hidden sm:table-cell">
                   {formatGoalDiff(s.goalDiff)}
                 </TableCell>
