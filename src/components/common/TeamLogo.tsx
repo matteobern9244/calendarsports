@@ -74,7 +74,16 @@ export default function TeamLogo({
       decoding="async"
       referrerPolicy="no-referrer"
       onError={() => setFailedSrc(src)}
-      className={cn("object-contain shrink-0 bg-background/40", shapeClass, className)}
+      // La placca non segue il tema: gli stemmi sono disegnati per fondo
+      // chiaro, e con un fondo scuro quello nero della Juventus spariva. Il
+      // bordo evita che il disco chiaro galleggi sulla card, il padding tiene
+      // il disegno staccato dal contorno. Con `box-sizing: border-box`
+      // l'ingombro resta quello dichiarato da `size`.
+      className={cn(
+        "object-contain shrink-0 bg-logo-plate border border-border/40 p-0.5",
+        shapeClass,
+        className,
+      )}
     />
   );
 }

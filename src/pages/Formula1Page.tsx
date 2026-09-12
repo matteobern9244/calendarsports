@@ -363,15 +363,18 @@ export default function Formula1Page() {
                     <TableCell className="font-heading font-bold">{c.position}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-12 items-center justify-center rounded-md bg-white p-0.5 border border-border/40 shrink-0">
-                          <TeamLogo
-                            src={c.logoUrl}
-                            name={c.constructor}
-                            size={32}
-                            shape="rounded"
-                            className="h-7 w-11 bg-transparent border-0"
-                          />
-                        </div>
+                        {/*
+                          La placca chiara sotto il logo la mette `TeamLogo`.
+                          Qui c'era un involucro con `bg-white` scritto a mano:
+                          era la stessa correzione, tenuta in un posto solo e
+                          con un colore fuori dai token.
+                        */}
+                        <TeamLogo
+                          src={c.logoUrl}
+                          name={c.constructor}
+                          size={32}
+                          shape="rounded"
+                        />
                         <span className="font-semibold">{c.constructor}</span>
                       </div>
                     </TableCell>

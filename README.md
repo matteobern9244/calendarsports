@@ -6,12 +6,12 @@ della tua squadra di Serie A, della Formula 1 e della MotoGP, oltre a
 palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `3.2.1` (la pagina di una squadra smette di
-contraddirsi su casa e trasferta, e ogni stemma sta accanto al nome giusto;
-sopra la `3.2.0`, che ha portato formazioni, modulo, risultato e cronologia
-dentro il dettaglio di una partita). Il footer dell'app mostra la versione
-leggendola da `src/lib/version.ts` nel formato `Calendar Events · v3.2.1` (con
-`v` minuscola).
+Versione repository corrente: `3.2.2` (gli stemmi si vedono in tutti e due i
+temi: il fondo sotto il logo non segue piu' il tema, e quello nero della
+Juventus non sparisce piu' sullo scuro; sopra la `3.2.1`, che ha rimesso
+d'accordo casa e trasferta nella pagina squadra). Il footer dell'app mostra la
+versione leggendola da `src/lib/version.ts` nel formato
+`Calendar Events · v3.2.2` (con `v` minuscola).
 
 Questa riga è sorvegliata da `src/test/tooling/version.test.ts`: era rimasta
 ferma alla `2.3.6` per sei rilasci senza che niente se ne accorgesse.

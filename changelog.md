@@ -17,6 +17,41 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [3.2.2] — Gli stemmi si vedono in tutti e due i temi (2026-09-12)
+
+Bump applicativo `3.2.1` → `3.2.2`. Nota di rilascio in
+[`docs/releases/3.2.2-stemmi-visibili.md`](docs/releases/3.2.2-stemmi-visibili.md).
+
+**Correttiva.** In tema scuro lo stemma della Juventus non si vedeva: e' nero su
+trasparente, e sotto aveva un fondo che seguiva il tema. Nero su nero.
+
+### Corretto
+
+- **Il fondo sotto uno stemma non segue piu' il tema.** Era `bg-background/40`,
+  cioe' quasi nero in tema scuro e quasi bianco in tema chiaro: nel primo caso
+  spariva uno stemma nero, nel secondo ne sarebbe sparito uno bianco. Adesso e'
+  una placca chiara costante (`--logo-plate`), perche' gli stemmi sono disegnati
+  per stare su fondo chiaro. Vale ovunque, non solo dove il difetto e' stato
+  notato: intestazione della pagina squadra, card della prossima partita, riga
+  di calendario, classifica, dettaglio partita, classifiche MotoGP.
+- **Il logo squadra nelle classifiche MotoGP** riportava a mano il fondo che
+  segue il tema, e quel fondo avrebbe vinto sulla placca: la' il difetto sarebbe
+  sopravvissuto alla correzione.
+
+### Cambiato
+
+- **I loghi costruttori di Formula 1** non hanno piu' un involucro con `bg-white`
+  scritto a mano: era la stessa correzione tenuta in un secondo posto, con un
+  colore fuori dai token. Ora passano dalla placca condivisa, quindi il
+  rettangolo bianco attorno al logo e' un po' meno largo di prima.
+
+### Rischio noto, non corretto qui
+
+Nelle classifiche costruttori MotoGP resta un involucro con `bg-white` scritto a
+mano. Non e' la stessa duplicazione: il suo bordo porta il colore del
+costruttore, quindi toglierlo perderebbe un'informazione. Il colore hardcoded
+resta da sistemare a parte.
+
 ## [3.2.1] — La pagina squadra smette di contraddirsi (2026-09-12)
 
 Bump applicativo `3.2.0` → `3.2.1`. Nota di rilascio in

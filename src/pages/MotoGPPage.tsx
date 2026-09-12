@@ -272,7 +272,7 @@ export default function MotoGPPage() {
                           name={s.name}
                           size={32}
                           shape="circle"
-                          className="object-cover"
+                          className="object-cover p-0"
                         />
                         {s.number != null && (
                           <span
@@ -307,7 +307,6 @@ export default function MotoGPPage() {
                             name={s.team}
                             size={20}
                             shape="rounded"
-                            className="bg-background"
                           />
                           <span>{s.team}</span>
                         </div>
