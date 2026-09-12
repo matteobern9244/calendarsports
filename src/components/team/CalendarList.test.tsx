@@ -33,7 +33,7 @@ function calendar(over: Partial<PaginatedCalendar> = {}): PaginatedCalendar {
 function renderList(cal: PaginatedCalendar, upcomingOnly = true, team: SerieATeam = JUVE) {
   const onChangeFilter = vi.fn();
   const onGoToPage = vi.fn();
-  render(
+  const view = render(
     <MemoryRouter>
       <CalendarList
         team={team}
@@ -44,7 +44,7 @@ function renderList(cal: PaginatedCalendar, upcomingOnly = true, team: SerieATea
       />
     </MemoryRouter>,
   );
-  return { onChangeFilter, onGoToPage };
+  return { onChangeFilter, onGoToPage, ...view };
 }
 
 describe("CalendarList", () => {
