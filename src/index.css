@@ -72,6 +72,8 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
+  --color-logo-plate: hsl(var(--logo-plate));
+
   --color-gold: hsl(var(--gold));
   --color-gold-light: hsl(var(--gold-light));
   --color-gold-dark: hsl(var(--gold-dark));
@@ -253,6 +255,11 @@
 
     --radius: 0.75rem;
 
+    /* La placca sotto uno stemma. Costante nei due temi di proposito: gli
+       stemmi sono disegnati per fondo chiaro, e un fondo che seguiva il tema
+       faceva sparire del tutto quello nero della Juventus in tema scuro. */
+    --logo-plate: 220 20% 97%;
+
     --gold: 43 96% 56%;
     --gold-light: 43 90% 70%;
     --gold-dark: 43 90% 42%;
@@ -325,6 +332,11 @@
     --border: 220 25% 16%;
     --input: 220 25% 16%;
     --ring: 43 96% 56%;
+
+    /* La placca sotto uno stemma. Costante nei due temi di proposito: gli
+       stemmi sono disegnati per fondo chiaro, e un fondo che seguiva il tema
+       faceva sparire del tutto quello nero della Juventus in tema scuro. */
+    --logo-plate: 220 20% 97%;
 
     --gold: 43 96% 56%;
     --gold-light: 43 90% 70%;
