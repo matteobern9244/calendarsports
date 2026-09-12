@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FootballMatch } from "@/lib/api/schemas";
-import { formatGoalDiff, matchResult, matchSide } from "./teamMatch";
+import { formatGoalDiff, matchPrefix, matchResult, matchSide, matchVenue } from "./teamMatch";
 import { resolveTeam } from "@/lib/serieATeams";
 
 /**
@@ -31,6 +31,9 @@ describe("matchSide", () => {
       isHome: true,
       opponent: "Milan",
       opponentLogo: "milan.png",
+      teamLogo: "juve.png",
+      prefix: "vs",
+      venue: "in casa",
     });
   });
 
@@ -40,7 +43,14 @@ describe("matchSide", () => {
         match({ homeTeam: "Inter", awayTeam: "Juventus", homeLogo: "inter.png", awayLogo: null }),
         JUVE,
       ),
-    ).toEqual({ isHome: false, opponent: "Inter", opponentLogo: "inter.png" });
+    ).toEqual({
+      isHome: false,
+      opponent: "Inter",
+      opponentLogo: "inter.png",
+      teamLogo: null,
+      prefix: "@",
+      venue: "in trasferta",
+    });
   });
 
   /**
@@ -55,6 +65,9 @@ describe("matchSide", () => {
       isHome: false,
       opponent: "Juventus",
       opponentLogo: undefined,
+      teamLogo: "napoli.png",
+      prefix: "@",
+      venue: "in trasferta",
     });
   });
 
@@ -71,6 +84,59 @@ describe("matchSide", () => {
       isHome: false,
       opponent: "Juventus Next Gen",
     });
+  });
+
+  /**
+   * Il difetto che ha motivato questo lavoro: la card della prossima partita
+   * componeva a mano «LAZIO @» sopra e «Milan» sotto, mentre la riga di
+   * calendario scriveva «@ Lazio». Due viste della stessa partita dicevano il
+   * contrario l'una dell'altra. Finche' il prefisso e' un letterale dentro un
+   * componente, ogni nuova vista puo' sbagliarlo di nuovo: qui diventa un dato,
+   * e la convenzione ha un posto solo.
+   */
+  it("porta con se' la convenzione, invece di lasciarla scrivere a chi rende", () => {
+    expect(matchSide(match(), JUVE)).toMatchObject({ prefix: "vs", venue: "in casa" });
+    expect(matchSide(match({ homeTeam: "Lazio", awayTeam: "Juventus" }), JUVE)).toMatchObject({
+      prefix: "@",
+      venue: "in trasferta",
+    });
+  });
+
+  /** Lo stesso incontro letto dalle due parti: i prefissi sono opposti. */
+  it("la stessa partita ha prefissi opposti nei due calendari", () => {
+    const scontro = match({ homeTeam: "Juventus", awayTeam: "Napoli" });
+    expect(matchSide(scontro, JUVE).prefix).toBe("vs");
+    expect(matchSide(scontro, NAPOLI).prefix).toBe("@");
+  });
+
+  /**
+   * Il logo della squadra **scelta**, non dell'avversario: senza, chi ha
+   * bisogno dello stemma della squadra seguita dovrebbe dedurre il lato una
+   * seconda volta, ed e' esattamente da li' che nasce una divergenza.
+   */
+  it("espone anche il logo della squadra scelta, dalla parte giusta", () => {
+    const fuori = match({
+      homeTeam: "Lazio",
+      awayTeam: "Juventus",
+      homeLogo: "lazio.png",
+      awayLogo: "juve.png",
+    });
+    expect(matchSide(fuori, JUVE).teamLogo).toBe("juve.png");
+    expect(matchSide(fuori, JUVE).opponentLogo).toBe("lazio.png");
+  });
+});
+
+describe("matchPrefix e matchVenue", () => {
+  /**
+   * La convenzione in forma minima, per chi ha gia' `isHome` e non ha in mano
+   * una `FootballMatch` tipizzata: `useCalendarEvents` lavora su campi
+   * `String(...)` di un oggetto sconosciuto e non puo' chiamare `matchSide`.
+   */
+  it("dicono la stessa cosa in simbolo e a parole", () => {
+    expect(matchPrefix(true)).toBe("vs");
+    expect(matchPrefix(false)).toBe("@");
+    expect(matchVenue(true)).toBe("in casa");
+    expect(matchVenue(false)).toBe("in trasferta");
   });
 });
 

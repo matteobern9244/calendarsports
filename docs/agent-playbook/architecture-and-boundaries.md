@@ -162,6 +162,24 @@ Il punto di vista sulla singola partita è un parametro, non la Juventus:
 La stessa Juventus-Napoli compare in due calendari, e in quello del Napoli
 l'avversario è dall'altra parte e il risultato è rovesciato.
 
+E la **convenzione** con cui quel lato si scrive — `vs` in casa, `@` in
+trasferta, «in casa» / «in trasferta» a parole — esce da lì insieme
+all'avversario, invece di essere un letterale nel componente che rende. Era
+scritta a mano in cinque punti, e uno dei cinque la componeva al contrario: la
+card della prossima partita metteva l'avversario prima del segno e la squadra
+della pagina dopo, quindi «LAZIO @ / Milan» annunciava il Milan in casa mentre
+la riga di calendario della stessa partita diceva «@ Lazio». Nessuna delle due
+viste era rotta da sola, e nessun test le guardava insieme: il controllo
+eseguibile è ora `src/components/team/homeAwayConsistency.test.tsx`, che le
+monta entrambe con la stessa partita.
+
+Lo stemma della squadra **seguita** è l'altra faccia dello stesso confine.
+Un'avversaria porta il suo dentro la partita; la squadra dell'indirizzo è una
+`SerieATeam`, e quel dataset i loghi non li ospita. `teamCrest` in
+`src/lib/teamCrest.ts` lo prende dalle stesse fonti runtime — riga di
+classifica, poi partita — e restituisce `null` quando tacciono, perché il
+ripiego alle iniziali è di `TeamLogo` e non va duplicato a monte.
+
 **Dove non c'è un indirizzo, comanda la preferenza.** Home, calendario
 aggregato e streaming non hanno una squadra nella URL: la leggono da
 `useUserPrefs().favoriteTeam`, che è già una `SerieATeam` risolta. Nessuna di

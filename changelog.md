@@ -17,6 +17,64 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [3.2.1] — La pagina squadra smette di contraddirsi (2026-09-12)
+
+Bump applicativo `3.2.0` → `3.2.1`. Nota di rilascio in
+[`docs/releases/3.2.1-casa-trasferta-e-stemmi.md`](docs/releases/3.2.1-casa-trasferta-e-stemmi.md).
+
+**Correttiva.** La stessa partita era descritta in due modi opposti nella
+stessa schermata: la riga di calendario scriveva «@ Lazio» — la squadra in
+trasferta — e la card della prossima partita, poche righe piu' su, «LAZIO @»
+sopra e «Milan» sotto, che si legge «Lazio in casa del Milan». Un dato che
+l'app non possiede, mostrato in due versioni incompatibili.
+
+### Corretto
+
+- **Casa e trasferta si leggono uguali ovunque.** La convenzione («vs» in casa,
+  «@» in trasferta) era un letterale scritto a mano in cinque punti, e uno dei
+  cinque era al contrario. Ora esce da `matchSide` insieme all'avversario, e
+  card, calendario, calendario aggregato e Home la ricevono invece di
+  riscriverla. Un test monta card e lista con la stessa partita e pretende che
+  dicano la stessa cosa.
+- **Nella card della prossima partita nome e stemma sono della stessa
+  squadra.** Prima lo stemma era dell'avversario e il nome grande accanto era
+  quello della squadra della pagina. Ora la card nomina solo l'avversario: che
+  la pagina sia quella del Milan lo dice il titolo, appena sopra.
+
+### Cambiato
+
+- **Nel calendario lo stemma dell'avversario e' passato a destra del nome.**
+  A sinistra faceva leggere «[stemma Lecce] vs Lecce», cioe' il Lecce contro
+  se' stesso. La colonna di sinistra resta la sola giornata.
+- **L'intestazione della pagina squadra mostra lo stemma della squadra.** Era
+  l'unica senza: tutte le avversarie ne hanno uno perche' arriva dentro la
+  partita, mentre la squadra seguita e' un dato statico che i loghi non li
+  ospita. Lo stemma arriva dalle stesse fonti delle avversarie — la riga di
+  classifica, e in mancanza la partita — e quando nessuna delle due risponde
+  restano le iniziali, nella stessa scatola: nessuno spazio vuoto e nessun
+  salto di impaginazione.
+- **Il lato non e' piu' informazione solo visiva.** «@» e «vs» sono segni, e un
+  segno non arriva a chi la pagina se la fa leggere: il nome accessibile di
+  ogni riga e della card ora finisce con «in casa» o «in trasferta», con la
+  squadra nominata. Non poteva essere un testo nascosto dentro il
+  collegamento, perche' `aria-label` sostituisce il nome calcolato dal
+  contenuto e quel testo non sarebbe mai stato letto.
+
+### Non toccato
+
+Conto alla rovescia, badge emittente, colori di competizione, ordinamento,
+paginazione, atterraggio sulla pagina della prossima partita, chiavi di cache,
+chiamate alle edge function.
+
+### Rischio noto, non corretto qui
+
+`supabase/functions/push-dispatcher/index.ts` contiene una terza copia della
+stessa deduzione, rimasta al mondo a una squadra sola: confronta con
+`/juventus/i.test(...)` — per sottostringa, quindi prende anche la Juve Stabia
+— e compone un indirizzo `/juventus/partite/...` che non e' piu' una rotta
+viva. Non e' coperta da test e non e' stata toccata: sta dietro un invio di
+notifiche, e va affrontata con il suo piano di verifica.
+
 ## [3.2.0] — Il dettaglio partita smette di rimandare altrove (2026-09-12)
 
 Bump applicativo `3.1.0` → `3.2.0`. Nota di rilascio in

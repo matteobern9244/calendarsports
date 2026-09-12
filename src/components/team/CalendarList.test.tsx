@@ -52,12 +52,11 @@ describe("CalendarList", () => {
     renderList(calendar());
 
     expect(screen.getByText("Partite 1–2 di 2")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Apri dettaglio Juventus vs Milan" })).toHaveAttribute(
-      "href",
-      "/squadra/juventus/partite/a",
-    );
     expect(
-      screen.getByRole("link", { name: "Apri dettaglio Juventus vs Inter" }),
+      screen.getByRole("link", { name: "Apri dettaglio Juventus vs Milan, Juventus in casa" }),
+    ).toHaveAttribute("href", "/squadra/juventus/partite/a");
+    expect(
+      screen.getByRole("link", { name: "Apri dettaglio Juventus vs Inter, Juventus in casa" }),
     ).toBeInTheDocument();
   });
 
@@ -73,17 +72,19 @@ describe("CalendarList", () => {
     );
 
     expect(screen.getByText("@ Juventus")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Apri dettaglio Juventus vs Napoli" })).toHaveAttribute(
-      "href",
-      "/squadra/napoli/partite/a",
-    );
+    expect(
+      screen.getByRole("link", { name: "Apri dettaglio Juventus vs Napoli, Napoli in trasferta" }),
+    ).toHaveAttribute("href", "/squadra/napoli/partite/a");
   });
 
   it("evidenzia come «Prossima» solo la partita indicata dal server", () => {
     renderList(calendar({ nextUpcomingIndex: 1 }));
 
     const prossima = screen.getByText("Prossima").closest("a");
-    expect(prossima).toHaveAttribute("aria-label", "Apri dettaglio Juventus vs Inter");
+    expect(prossima).toHaveAttribute(
+      "aria-label",
+      "Apri dettaglio Juventus vs Inter, Juventus in casa",
+    );
   });
 
   it("il filtro Prossime/Tutte riflette lo stato e chiama il cambio", () => {
@@ -114,6 +115,35 @@ describe("CalendarList", () => {
     props.onGoToPage.mockClear();
     fireEvent.click(screen.getByRole("link", { name: "Vai alla pagina precedente" }));
     expect(props.onGoToPage).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Prima lo stemma precedeva il nome, e «[stemma Lecce] vs Lecce» si leggeva
+   * come il Lecce contro se' stesso. L'ordine nel DOM e' l'unica cosa che jsdom
+   * puo' misurare — il resto (troncamento, allineamento) va guardato — ma e'
+   * esattamente cio' che era sbagliato.
+   */
+  it("lo stemma dell'avversario segue il nome, e la colonna della giornata resta nuda", () => {
+    const { container } = renderList(
+      calendar({ items: [match("a", { awayLogo: "milan.png" })], total: 1 }),
+    );
+
+    const nome = screen.getByText("vs Milan");
+    const stemma = screen.getByAltText("Milan");
+    // Node.DOCUMENT_POSITION_FOLLOWING: lo stemma viene dopo il nome.
+    expect(nome.compareDocumentPosition(stemma) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const giornata = screen.getByText("G3");
+    expect(giornata.closest("div")?.querySelector("img")).toBeNull();
+    expect(container.querySelectorAll("img")).toHaveLength(1);
+  });
+
+  /** Senza logo dalla fonte resta una scatola della stessa misura. */
+  it("uno stemma mancante diventa iniziali, non spazio vuoto", () => {
+    renderList(calendar({ items: [match("a", { awayLogo: null })], total: 1 }));
+
+    expect(screen.queryByAltText("Milan")).not.toBeInTheDocument();
+    expect(screen.getByText("MI").parentElement).toHaveStyle({ width: "24px", height: "24px" });
   });
 
   it("mostra il risultato a partita finita, con l'esito dal punto di vista bianconero", () => {
