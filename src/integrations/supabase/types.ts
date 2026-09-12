@@ -106,7 +106,11 @@ export type Database = {
           id: string
           last_seen_at: string
           lead_times: number[]
+          notify_f1: boolean
+          notify_football: boolean
+          notify_motogp: boolean
           p256dh: string
+          team: string
           user_agent: string | null
         }
         Insert: {
@@ -117,7 +121,11 @@ export type Database = {
           id?: string
           last_seen_at?: string
           lead_times?: number[]
+          notify_f1?: boolean
+          notify_football?: boolean
+          notify_motogp?: boolean
           p256dh: string
+          team?: string
           user_agent?: string | null
         }
         Update: {
@@ -128,7 +136,11 @@ export type Database = {
           id?: string
           last_seen_at?: string
           lead_times?: number[]
+          notify_f1?: boolean
+          notify_football?: boolean
+          notify_motogp?: boolean
           p256dh?: string
+          team?: string
           user_agent?: string | null
         }
         Relationships: []
