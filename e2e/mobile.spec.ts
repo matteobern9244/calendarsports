@@ -33,27 +33,68 @@ async function swipe(page: Page, da: { x: number; y: number }, a: { x: number; y
 const pannello = (page: Page) =>
   page.getByRole("dialog").getByRole("heading", { name: "Preferenze" });
 
-test("preferenze: lo swipe da destra apre il pannello, e l'indizio smette di servire", async ({
-  page,
-}) => {
+const linguetta = (page: Page) => page.getByTestId("linguetta-preferenze");
+
+test("preferenze: lo swipe da destra apre il pannello, e la linguetta resta", async ({ page }) => {
   await installSportsApiMocks(page);
   // Le preferenze esistono solo con l'accesso: senza sessione il pannello
   // non c'e' nemmeno da aprire.
   await accediComeUtente(page);
   await page.goto("/");
 
-  // L'indizio esiste finche' il gesto non e' stato imparato.
-  const indizio = page.getByTestId("indizio-swipe");
-  await expect(indizio).toBeVisible();
+  // Il documento dichiara al browser che scorre solo in verticale: e' la
+  // condizione perche' un movimento orizzontale arrivi fino al gesto invece
+  // di finire in un `touchcancel` di sistema.
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.body).touchAction))
+    .toContain("pan-y");
+
+  // La linguetta e' un comando, ed e' visibile prima di qualunque gesto.
+  await expect(linguetta(page)).toBeVisible();
+  await expect(linguetta(page)).toHaveClass(/animate-swipe-hint/);
 
   await swipe(page, { x: 340, y: 400 }, { x: 120, y: 406 });
 
   await expect(pannello(page)).toBeVisible();
 
-  // Chi ha imparato non ha piu' niente da imparare: l'indizio non torna,
-  // nemmeno ricaricando.
+  // Chi ha imparato non ha piu' bisogno del richiamo, ma il comando resta:
+  // dopo la ricarica la linguetta c'e' ancora, solo ferma.
   await page.reload();
-  await expect(indizio).toHaveCount(0);
+  await expect(linguetta(page)).toBeVisible();
+  await expect(linguetta(page)).not.toHaveClass(/animate-swipe-hint/);
+});
+
+/**
+ * Il ripiego per quando il gesto non arriva: sul telefono vero il sistema
+ * puo' prendersi lo swipe, e allora si tocca. E' anche il modo in cui la
+ * linguetta si spiega da sola.
+ */
+test("preferenze: il tocco sulla linguetta apre il pannello", async ({ page }) => {
+  await installSportsApiMocks(page);
+  await accediComeUtente(page);
+  await page.goto("/");
+
+  await linguetta(page).tap();
+  await expect(pannello(page)).toBeVisible();
+});
+
+/**
+ * La linguetta vive nei pixel del bordo che il gesto libero lascia al
+ * telefono: un trascinamento che parte da lei deve aprire lo stesso.
+ */
+test("preferenze: un trascinamento che parte dalla linguetta apre il pannello", async ({
+  page,
+}) => {
+  await installSportsApiMocks(page);
+  await accediComeUtente(page);
+  await page.goto("/");
+
+  const box = await linguetta(page).boundingBox();
+  if (!box) throw new Error("la linguetta non ha un riquadro");
+  const partenza = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await swipe(page, partenza, { x: partenza.x - 160, y: partenza.y + 4 });
+
+  await expect(pannello(page)).toBeVisible();
 });
 
 /**
@@ -245,14 +286,14 @@ test("niente scorrimento orizzontale: pannello preferenze", async ({ page }) => 
 
 /**
  * Il gesto apre le preferenze, e le preferenze esistono solo con l'accesso:
- * senza sessione non c'e' niente da aprire, e un indizio che suggerisce un
- * gesto inefficace e' peggio di nessun indizio.
+ * senza sessione non c'e' niente da aprire, e una linguetta che non apre
+ * niente e' peggio di nessuna linguetta.
  */
-test("preferenze: senza accesso il gesto e il suo indizio non esistono", async ({ page }) => {
+test("preferenze: senza accesso il gesto e la linguetta non esistono", async ({ page }) => {
   await installSportsApiMocks(page);
   await page.goto("/");
 
-  await expect(page.getByTestId("indizio-swipe")).toHaveCount(0);
+  await expect(linguetta(page)).toHaveCount(0);
 
   await swipe(page, { x: 340, y: 400 }, { x: 120, y: 406 });
   await expect(page.getByRole("dialog")).toHaveCount(0);

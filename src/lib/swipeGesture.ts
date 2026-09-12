@@ -55,6 +55,15 @@ export interface Swipe {
   /** Larghezza della finestra: la zona di partenza e' una frazione, non un fisso. */
   larghezza: number;
   durataMs: number;
+  /**
+   * Il dito e' partito dalla linguetta sul bordo. La linguetta sta proprio
+   * nei pixel che il gesto libero lascia al telefono, e chi la tocca e
+   * trascina ha detto chiaramente cosa vuole: da li' la zona di partenza non
+   * conta. Tutto il resto — distanza, deriva, durata, direzione — conta come
+   * sempre, perche' un tocco fermo sulla linguetta e' un tocco, non uno
+   * swipe, e lo gestisce il pulsante.
+   */
+  dallaLinguetta?: boolean;
 }
 
 export function apreLePreferenze({
@@ -64,10 +73,13 @@ export function apreLePreferenze({
   endY,
   larghezza,
   durataMs,
+  dallaLinguetta = false,
 }: Swipe): boolean {
   if (larghezza <= 0) return false;
-  if (startX < larghezza * (1 - SWIPE_ZONA_INIZIALE)) return false;
-  if (startX > larghezza - SWIPE_BORDO_ESCLUSO) return false;
+  if (!dallaLinguetta) {
+    if (startX < larghezza * (1 - SWIPE_ZONA_INIZIALE)) return false;
+    if (startX > larghezza - SWIPE_BORDO_ESCLUSO) return false;
+  }
   if (durataMs > SWIPE_MAX_DURATA) return false;
 
   // Positivo quando il dito va verso sinistra.

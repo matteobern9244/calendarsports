@@ -117,20 +117,23 @@
     }
   }
   /*
-    L'indizio dello swipe: un respiro lento verso sinistra, la direzione del
-    gesto. Lento e di poca ampiezza di proposito — deve farsi notare con la
-    coda dell'occhio, non chiedere attenzione. Si applica con `motion-safe`,
-    quindi chi ha chiesto meno animazioni vede solo la striscia ferma.
+    La linguetta delle preferenze, finche' non e' stata usata: un respiro lento
+    verso sinistra, la direzione del gesto. Resta sempre ben visibile — fra il
+    70% e il 100% — perche' e' un comando, non un indizio: la versione che
+    scendeva al 20% sul navy scuro non la vedeva nessuno. Si applica con
+    `motion-safe`, quindi chi ha chiesto meno animazioni la vede ferma. Il
+    `translateY` c'e' perche' la linguetta e' gia' centrata con
+    `-translate-y-1/2`, e un `transform` nei keyframes lo sostituirebbe.
   */
   @keyframes swipe-hint {
     0%,
     100% {
-      opacity: 0.2;
-      transform: translateX(0);
+      opacity: 0.7;
+      transform: translate(0, -50%);
     }
     50% {
-      opacity: 0.55;
-      transform: translateX(-6px);
+      opacity: 1;
+      transform: translate(-4px, -50%);
     }
   }
   @keyframes fade-in {
@@ -428,6 +431,17 @@
 
   body {
     @apply bg-background text-foreground font-body antialiased;
+    /*
+      Il documento scorre solo in verticale, e lo dice al browser. Senza
+      questa riga Chrome per Android e Safari su iOS possono prendersi un
+      movimento orizzontale come tentativo di scorrimento e chiudere la
+      sequenza di tocchi prima che lo swipe delle preferenze superi la sua
+      distanza minima. Lo scorrimento verticale e lo zoom restano al
+      browser. Le tabelle e i contenitori con `overflow-x-auto` sono scroll
+      container propri, e per la specifica di `touch-action` la restrizione
+      del documento non li raggiunge: continuano a scorrere di lato.
+    */
+    touch-action: pan-y pinch-zoom;
   }
 
   h1,

@@ -31,7 +31,7 @@ script disponibili.
 | Preferenze e tema    | `components/preferences/PreferencesPanel.tsx`, `src/contexts/UserPrefsContext.tsx`, `src/hooks/useProfile.ts`, `src/hooks/useTheme.ts` — **solo con l'accesso**                     |
 | Pagina iniziale      | `src/lib/startPage.ts`, `components/common/StartRoute.tsx`, `components/preferences/StartPageSelect.tsx`, colonna `profiles.start_page`                                             |
 | Voci del menù        | `MENU_SECTIONS` in `src/contexts/useUserPrefs.ts`, `COLONNA_SEZIONE` in `UserPrefsContext.tsx`, le sette colonne `profiles.show_*`                                                  |
-| Gesto di apertura    | `src/lib/swipeGesture.ts`, `src/hooks/useSwipeFromRight.ts`, `components/layout/SwipeToPreferences.tsx`                                                                             |
+| Gesto di apertura    | `src/lib/swipeGesture.ts`, `src/hooks/useSwipeFromRight.ts`, la linguetta `components/layout/SwipeToPreferences.tsx`, `touch-action` su `body` in `src/index.css`                   |
 | Accesso e profilo    | `src/pages/AuthPage.tsx`, `src/contexts/AuthContext.tsx`, `src/hooks/useProfile.ts`, tabella `profiles` (RLS sulla propria riga)                                                    |
 | Squadra di Serie A   | `src/lib/serieATeams.ts` e la copia `supabase/functions/_shared/serieATeams.ts` con il guardiano anti-divergenza, `components/preferences/TeamSelect.tsx`                           |
 | Sincronizzazione     | `src/hooks/useSyncAll.ts`, `src/hooks/syncWarning.ts`                                                                                                                               |

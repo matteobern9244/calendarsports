@@ -1,11 +1,25 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
-import { act } from "react";
+import { act, useRef } from "react";
 import { useSwipeFromRight } from "./useSwipeFromRight";
 
 function Prova({ onSwipe }: { onSwipe: () => void }) {
   useSwipeFromRight(onSwipe, true);
   return <div data-testid="pagina">contenuto</div>;
+}
+
+/** Una pagina con la linguetta sul bordo, come nel `Layout` vero. */
+function ProvaConLinguetta({ onSwipe }: { onSwipe: () => void }) {
+  const linguetta = useRef<HTMLButtonElement>(null);
+  useSwipeFromRight(onSwipe, true, linguetta);
+  return (
+    <div data-testid="pagina">
+      contenuto
+      <button ref={linguetta} type="button" data-testid="linguetta">
+        <span data-testid="freccia">‹</span>
+      </button>
+    </div>
+  );
 }
 
 /** Un evento tattile come lo produrrebbe un dito: jsdom non ne costruisce. */
@@ -132,6 +146,34 @@ describe("useSwipeFromRight", () => {
     tocco("touchmove", [{ x: 340, y: 380 }], pagina);
     tocco("touchmove", [{ x: 260, y: 302 }], pagina);
     tocco("touchend", [{ x: 260, y: 302 }], pagina);
+
+    expect(onSwipe).not.toHaveBeenCalled();
+  });
+
+  /**
+   * La linguetta vive nei pixel del bordo che il gesto libero lascia al
+   * telefono. Chi la tocca e trascina ha detto chiaramente cosa vuole: da
+   * li' la partenza vale anche se e' sul bordo estremo, e vale anche se il
+   * dito e' posato sull'icona dentro la linguetta e non sulla linguetta.
+   */
+  it("un trascinamento che parte dalla linguetta apre anche dal bordo estremo", () => {
+    const onSwipe = vi.fn();
+    const { getByTestId } = render(<ProvaConLinguetta onSwipe={onSwipe} />);
+
+    tocco("touchstart", [{ x: 395, y: 300 }], getByTestId("freccia"));
+    tocco("touchmove", [{ x: 300, y: 302 }], getByTestId("freccia"));
+
+    expect(onSwipe).toHaveBeenCalledTimes(1);
+  });
+
+  it("dal bordo estremo, ma fuori dalla linguetta, non apre", () => {
+    const onSwipe = vi.fn();
+    const { getByTestId } = render(<ProvaConLinguetta onSwipe={onSwipe} />);
+    const pagina = getByTestId("pagina");
+
+    tocco("touchstart", [{ x: 395, y: 300 }], pagina);
+    tocco("touchmove", [{ x: 300, y: 302 }], pagina);
+    tocco("touchend", [{ x: 300, y: 302 }], pagina);
 
     expect(onSwipe).not.toHaveBeenCalled();
   });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import {
   apreLePreferenze,
   dentroUnoScorrimentoOrizzontale,
@@ -40,16 +40,26 @@ export function useTouchDevice(): boolean {
  * la fine lo ripetono. Un dito che sbanda in verticale oltre la deriva
  * ammessa chiude il gesto per questa sequenza, anche se poi torna dritto.
  *
- * Nota sul bordo: in un'app installata non c'e' nessun gesto del browser con
- * cui contendere. Dentro un browser mobile lo swipe dal bordo estremo e'
- * spesso gia' preso dal «indietro» di sistema, che lo consuma prima di noi:
- * per questo la fascia di partenza e' larga invece che appiccicata al bordo.
+ * Nota sul bordo: il bordo estremo e' del telefono («indietro» di Android su
+ * entrambi i lati, «avanti» di iOS a destra), quindi la fascia di partenza
+ * libera e' larga invece che appiccicata al bordo. L'eccezione e' la
+ * `linguetta`: un trascinamento che comincia sopra di lei vale da qualunque
+ * pixel, perche' e' lei a dire dove si tira.
+ *
+ * Perche' i `touchmove` arrivino davvero fino a qui, il documento dichiara
+ * `touch-action: pan-y` (in `index.css`): senza, il browser puo' prendersi
+ * un movimento orizzontale come tentativo di scorrimento e chiudere la
+ * sequenza prima che il gesto superi la distanza minima.
  */
-export function useSwipeFromRight(onSwipe: () => void, attivo: boolean) {
+export function useSwipeFromRight(
+  onSwipe: () => void,
+  attivo: boolean,
+  linguetta?: RefObject<HTMLElement | null>,
+) {
   useEffect(() => {
     if (!attivo || typeof window === "undefined") return;
 
-    let inizio: { x: number; y: number; t: number } | null = null;
+    let inizio: { x: number; y: number; t: number; dallaLinguetta: boolean } | null = null;
 
     const annulla = () => {
       inizio = null;
@@ -58,9 +68,15 @@ export function useSwipeFromRight(onSwipe: () => void, attivo: boolean) {
     const comincia = (evento: TouchEvent) => {
       // Due dita sono una pinza o uno zoom, non uno swipe.
       if (evento.touches.length !== 1) return annulla();
-      if (dentroUnoScorrimentoOrizzontale(evento.target as Element | null)) return annulla();
+      const bersaglio = evento.target instanceof Node ? evento.target : null;
+      const dallaLinguetta = Boolean(
+        bersaglio && linguetta?.current && linguetta.current.contains(bersaglio),
+      );
+      if (!dallaLinguetta && dentroUnoScorrimentoOrizzontale(bersaglio as Element | null)) {
+        return annulla();
+      }
       const dito = evento.touches[0];
-      inizio = { x: dito.clientX, y: dito.clientY, t: Date.now() };
+      inizio = { x: dito.clientX, y: dito.clientY, t: Date.now(), dallaLinguetta };
     };
 
     /** Valuta il punto in cui e' adesso il dito; consuma la sequenza se apre. */
@@ -74,6 +90,7 @@ export function useSwipeFromRight(onSwipe: () => void, attivo: boolean) {
         endY: dito.clientY,
         larghezza: window.innerWidth,
         durataMs: Date.now() - partenza.t,
+        dallaLinguetta: partenza.dallaLinguetta,
       };
       if (apreLePreferenze(gesto)) {
         inizio = null;
@@ -104,5 +121,5 @@ export function useSwipeFromRight(onSwipe: () => void, attivo: boolean) {
       window.removeEventListener("touchend", finisce);
       window.removeEventListener("touchcancel", annulla);
     };
-  }, [attivo, onSwipe]);
+  }, [attivo, onSwipe, linguetta]);
 }
