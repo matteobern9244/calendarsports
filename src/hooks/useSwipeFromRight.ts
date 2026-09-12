@@ -23,7 +23,7 @@ export function useTouchDevice(): boolean {
 }
 
 /**
- * Chiama `onSwipe` quando il dito attraversa lo schermo da sinistra a destra.
+ * Chiama `onSwipe` quando il dito attraversa lo schermo da destra a sinistra.
  *
  * Gli ascoltatori sono `passive`: non annullano mai l'evento, quindi lo
  * scorrimento della pagina resta fluido e nessun altro gesto viene tolto di
@@ -45,7 +45,7 @@ export function useTouchDevice(): boolean {
  * spesso gia' preso dal «indietro» di sistema, che lo consuma prima di noi:
  * per questo la fascia di partenza e' larga invece che appiccicata al bordo.
  */
-export function useSwipeFromLeft(onSwipe: () => void, attivo: boolean) {
+export function useSwipeFromRight(onSwipe: () => void, attivo: boolean) {
   useEffect(() => {
     if (!attivo || typeof window === "undefined") return;
 

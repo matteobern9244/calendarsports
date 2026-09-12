@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 import { useAuth } from "@/contexts/useAuth";
-import { useSwipeFromLeft, useTouchDevice } from "@/hooks/useSwipeFromLeft";
+import { useSwipeFromRight, useTouchDevice } from "@/hooks/useSwipeFromRight";
 
 const CHIAVE_VISTO = "cse-swipe-preferenze";
 
@@ -30,14 +30,14 @@ function segnaVisto() {
 }
 
 /**
- * Apre le preferenze con uno swipe da sinistra, e lo fa sapere.
+ * Apre le preferenze con uno swipe da destra, e lo fa sapere.
  *
  * Il pulsante nell'intestazione resta dov'e': questo e' una scorciatoia in
  * piu', non un modo diverso di fare la stessa cosa. Un gesto che sostituisse
  * un comando visibile renderebbe la funzione invisibile a chi non lo scopre.
  *
- * L'indizio e' una striscia dorata sul bordo sinistro che respira verso
- * destra — la direzione del gesto — e sparisce in tre modi: dopo dodici
+ * L'indizio e' una striscia dorata sul bordo destro che respira verso
+ * sinistra — la direzione del gesto — e sparisce in tre modi: dopo dodici
  * secondi, quando il pannello si apre, e per sempre dopo il primo swipe
  * riuscito. Chi ha imparato non ha piu' niente da imparare.
  *
@@ -62,7 +62,7 @@ export default function SwipeToPreferences() {
     setMostraIndizio(false);
   }, [setOpen]);
 
-  useSwipeFromLeft(apri, disponibile);
+  useSwipeFromRight(apri, disponibile);
 
   useEffect(() => {
     if (!mostraIndizio) return;
@@ -79,7 +79,7 @@ export default function SwipeToPreferences() {
       // cosa in piu' da ascoltare.
       aria-hidden="true"
       data-testid="indizio-swipe"
-      className="pointer-events-none fixed left-0 top-1/2 z-30 -translate-y-1/2 motion-safe:animate-swipe-hint"
+      className="pointer-events-none fixed right-0 top-1/2 z-30 -translate-y-1/2 motion-safe:animate-swipe-hint"
     >
       {/*
         La maschera sfuma la striscia in alto e in basso: senza, il rettangolo
@@ -87,8 +87,8 @@ export default function SwipeToPreferences() {
         suggerimento che sembra un comando invita a premerlo invece che a
         trascinarlo.
       */}
-      <span className="flex h-32 w-5 items-center justify-center rounded-r-2xl bg-linear-to-r from-[hsl(var(--gold))]/22 via-[hsl(var(--gold))]/10 to-transparent [mask-image:linear-gradient(to_bottom,transparent,black_30%,black_70%,transparent)]">
-        <ChevronRight className="h-3 w-3 text-[hsl(var(--gold))]/70" />
+      <span className="flex h-32 w-5 items-center justify-center rounded-l-2xl bg-linear-to-l from-[hsl(var(--gold))]/22 via-[hsl(var(--gold))]/10 to-transparent [mask-image:linear-gradient(to_bottom,transparent,black_30%,black_70%,transparent)]">
+        <ChevronLeft className="h-3 w-3 text-[hsl(var(--gold))]/70" />
       </span>
     </div>
   );

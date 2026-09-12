@@ -117,7 +117,7 @@
     }
   }
   /*
-    L'indizio dello swipe: un respiro lento verso destra, la direzione del
+    L'indizio dello swipe: un respiro lento verso sinistra, la direzione del
     gesto. Lento e di poca ampiezza di proposito — deve farsi notare con la
     coda dell'occhio, non chiedere attenzione. Si applica con `motion-safe`,
     quindi chi ha chiesto meno animazioni vede solo la striscia ferma.
@@ -130,7 +130,7 @@
     }
     50% {
       opacity: 0.55;
-      transform: translateX(6px);
+      transform: translateX(-6px);
     }
   }
   @keyframes fade-in {

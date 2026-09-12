@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SWIPE_BORDO_ESCLUSO,
   SWIPE_MAX_DERIVA,
   SWIPE_MAX_DURATA,
   SWIPE_MIN_DISTANZA,
@@ -13,9 +14,9 @@ const LARGHEZZA = 400;
 /** Un gesto valido, da cui i test cambiano una cosa per volta. */
 function gesto(modifiche: Partial<Parameters<typeof apreLePreferenze>[0]> = {}) {
   return apreLePreferenze({
-    startX: 20,
+    startX: 360,
     startY: 300,
-    endX: 160,
+    endX: 240,
     endY: 306,
     larghezza: LARGHEZZA,
     durataMs: 260,
@@ -24,7 +25,7 @@ function gesto(modifiche: Partial<Parameters<typeof apreLePreferenze>[0]> = {}) 
 }
 
 describe("apreLePreferenze", () => {
-  it("uno swipe netto da sinistra verso destra apre il pannello", () => {
+  it("uno swipe netto da destra verso sinistra apre il pannello", () => {
     expect(gesto()).toBe(true);
   });
 
@@ -32,26 +33,36 @@ describe("apreLePreferenze", () => {
    * Non si pretende che parta dal bordo esatto. Su Android il sistema
    * intercetta i primi millimetri dello schermo per il proprio gesto
    * «indietro», quindi un gesto ancorato al bordo non arriverebbe mai fino
-   * qui: si accetta tutta la fascia sinistra.
+   * qui: si accetta tutta la fascia destra.
    */
-  it("accetta anche un inizio lontano dal bordo, purche' nella fascia sinistra", () => {
-    expect(gesto({ startX: LARGHEZZA * SWIPE_ZONA_INIZIALE - 1, endX: 300 })).toBe(true);
+  it("accetta anche un inizio lontano dal bordo, purche' nella fascia destra", () => {
+    expect(gesto({ startX: LARGHEZZA * (1 - SWIPE_ZONA_INIZIALE) + 1, endX: 100 })).toBe(true);
   });
 
-  it("non apre se il gesto comincia fuori dalla fascia sinistra", () => {
-    expect(gesto({ startX: LARGHEZZA * SWIPE_ZONA_INIZIALE + 1, endX: 380 })).toBe(false);
+  it("non apre se il gesto comincia fuori dalla fascia destra", () => {
+    expect(gesto({ startX: LARGHEZZA * (1 - SWIPE_ZONA_INIZIALE) - 1, endX: 20 })).toBe(false);
   });
 
-  it("non apre se il gesto va verso sinistra", () => {
-    expect(gesto({ startX: 160, endX: 20 })).toBe(false);
+  /**
+   * Il bordo estremo e' del telefono: Android ci mette «indietro», iOS
+   * «avanti». Un tocco che parte da li' e' un gesto di sistema, anche se
+   * il sistema ce lo lascia vedere, e non deve aprire niente.
+   */
+  it("non apre se parte dal bordo estremo, che e' del sistema", () => {
+    expect(gesto({ startX: LARGHEZZA - SWIPE_BORDO_ESCLUSO + 1, endX: 200 })).toBe(false);
+    expect(gesto({ startX: LARGHEZZA - SWIPE_BORDO_ESCLUSO, endX: 200 })).toBe(true);
+  });
+
+  it("non apre se il gesto va verso destra", () => {
+    expect(gesto({ startX: 240, endX: 360 })).toBe(false);
   });
 
   it("non apre se il gesto e' troppo corto", () => {
-    expect(gesto({ endX: 20 + SWIPE_MIN_DISTANZA - 1 })).toBe(false);
+    expect(gesto({ endX: 360 - SWIPE_MIN_DISTANZA + 1 })).toBe(false);
   });
 
   it("apre esattamente alla distanza minima", () => {
-    expect(gesto({ endX: 20 + SWIPE_MIN_DISTANZA })).toBe(true);
+    expect(gesto({ endX: 360 - SWIPE_MIN_DISTANZA })).toBe(true);
   });
 
   /**
@@ -64,8 +75,8 @@ describe("apreLePreferenze", () => {
   });
 
   it("non apre se la verticale supera l'orizzontale, anche restando nei limiti", () => {
-    expect(gesto({ endX: 20 + SWIPE_MIN_DISTANZA, endY: 300 + SWIPE_MAX_DERIVA })).toBe(true);
-    expect(gesto({ endX: 60, endY: 340 })).toBe(false);
+    expect(gesto({ endX: 360 - SWIPE_MIN_DISTANZA, endY: 300 + SWIPE_MAX_DERIVA })).toBe(true);
+    expect(gesto({ endX: 340, endY: 340 })).toBe(false);
   });
 
   /**

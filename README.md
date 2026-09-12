@@ -7,7 +7,7 @@ palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
 Versione repository corrente: `3.3.1` (le notifiche push seguono la squadra
-scelta e si spengono per sport; lo swipe da sinistra apre le preferenze anche
+scelta e si spengono per sport; lo swipe da destra apre le preferenze anche
 sul telefono vero; la PWA installata si aggiorna da sola all'ultima versione;
 quattro correzioni di stile nella pagina squadra). Il footer
 dell'app mostra la versione leggendola da `src/lib/version.ts` nel formato

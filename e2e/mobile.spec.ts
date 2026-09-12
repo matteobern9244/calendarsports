@@ -33,7 +33,7 @@ async function swipe(page: Page, da: { x: number; y: number }, a: { x: number; y
 const pannello = (page: Page) =>
   page.getByRole("dialog").getByRole("heading", { name: "Preferenze" });
 
-test("preferenze: lo swipe da sinistra apre il pannello, e l'indizio smette di servire", async ({
+test("preferenze: lo swipe da destra apre il pannello, e l'indizio smette di servire", async ({
   page,
 }) => {
   await installSportsApiMocks(page);
@@ -46,7 +46,7 @@ test("preferenze: lo swipe da sinistra apre il pannello, e l'indizio smette di s
   const indizio = page.getByTestId("indizio-swipe");
   await expect(indizio).toBeVisible();
 
-  await swipe(page, { x: 24, y: 400 }, { x: 240, y: 406 });
+  await swipe(page, { x: 340, y: 400 }, { x: 120, y: 406 });
 
   await expect(pannello(page)).toBeVisible();
 
@@ -76,13 +76,13 @@ test("preferenze: un gesto nella direzione sbagliata non apre niente", async ({ 
   await installSportsApiMocks(page);
   await page.goto("/");
 
-  // Da destra verso sinistra: e' il gesto opposto.
-  await swipe(page, { x: 300, y: 400 }, { x: 60, y: 400 });
+  // Da sinistra verso destra: e' il gesto opposto.
+  await swipe(page, { x: 60, y: 400 }, { x: 300, y: 400 });
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
   // Verticale: e' lo scorrimento della pagina, e rubarglielo sarebbe il modo
   // piu' rapido di rendere l'app inutilizzabile.
-  await swipe(page, { x: 40, y: 200 }, { x: 46, y: 520 });
+  await swipe(page, { x: 360, y: 200 }, { x: 354, y: 520 });
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
@@ -254,6 +254,6 @@ test("preferenze: senza accesso il gesto e il suo indizio non esistono", async (
 
   await expect(page.getByTestId("indizio-swipe")).toHaveCount(0);
 
-  await swipe(page, { x: 24, y: 400 }, { x: 240, y: 406 });
+  await swipe(page, { x: 340, y: 400 }, { x: 120, y: 406 });
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });

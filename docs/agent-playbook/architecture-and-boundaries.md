@@ -130,7 +130,7 @@ cambiare la preferenza da fuori senza una sessione.
 ### Le preferenze esistono solo con l'accesso
 
 Cambio di specifica della 3.3.0. Senza sessione non compaiono ne' il pannello,
-ne' il pulsante che lo apre, ne' il gesto che lo richiama da sinistra, e
+ne' il pulsante che lo apre, ne' il gesto che lo richiama da destra, e
 `/preferenze` rimanda a `/accedi`. Il motivo e' che le preferenze vivono sul
 profilo: offrirle a chi non ha un profilo prometterebbe che si salvino.
 

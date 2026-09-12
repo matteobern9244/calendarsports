@@ -27,7 +27,14 @@ ridistribuire (`push-subscribe`, `push-dispatcher`).
 
 ### Corretto
 
-- **Lo swipe da sinistra apre le preferenze anche sul telefono vero.** Il
+- **Lo swipe parte da destra, non più da sinistra**, con l'indizio sul bordo
+  destro: scelta del proprietario del prodotto, il pannello entra da destra.
+  I 28px del bordo estremo non contano mai come partenza: sono del telefono
+  («indietro» di Android su entrambi i bordi, «avanti» di iOS a destra), e un
+  gesto che parte da lì non apre niente anche se il sistema ce lo lascia
+  vedere. Lo scorrimento verticale resta intatto (deriva massima 48px) e i
+  contenitori che scorrono in orizzontale restano esclusi.
+- **Lo swipe apre le preferenze anche sul telefono vero.** Il
   gesto aspettava `touchend`, e in emulazione arrivava; su Android e iOS il
   browser, appena decide che il dito sta scorrendo la pagina, chiude la
   sequenza con `touchcancel`, e il gesto non vedeva mai la fine. Ora si decide

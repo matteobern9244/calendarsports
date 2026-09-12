@@ -1,10 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
 import { act } from "react";
-import { useSwipeFromLeft } from "./useSwipeFromLeft";
+import { useSwipeFromRight } from "./useSwipeFromRight";
 
 function Prova({ onSwipe }: { onSwipe: () => void }) {
-  useSwipeFromLeft(onSwipe, true);
+  useSwipeFromRight(onSwipe, true);
   return <div data-testid="pagina">contenuto</div>;
 }
 
@@ -19,30 +19,30 @@ function tocco(tipo: string, punti: Array<{ x: number; y: number }>, target: Ele
   });
 }
 
-describe("useSwipeFromLeft", () => {
+describe("useSwipeFromRight", () => {
   beforeEach(() => {
     Object.defineProperty(window, "innerWidth", { value: 400, configurable: true });
     document.body.innerHTML = "";
   });
 
-  it("un gesto netto da sinistra chiama la richiamata", () => {
+  it("un gesto netto da destra chiama la richiamata", () => {
     const onSwipe = vi.fn();
     const { getByTestId } = render(<Prova onSwipe={onSwipe} />);
     const pagina = getByTestId("pagina");
 
-    tocco("touchstart", [{ x: 20, y: 300 }], pagina);
+    tocco("touchstart", [{ x: 360, y: 300 }], pagina);
     tocco("touchend", [{ x: 200, y: 304 }], pagina);
 
     expect(onSwipe).toHaveBeenCalledTimes(1);
   });
 
-  it("un gesto verso sinistra non chiama niente", () => {
+  it("un gesto verso destra non chiama niente", () => {
     const onSwipe = vi.fn();
     const { getByTestId } = render(<Prova onSwipe={onSwipe} />);
     const pagina = getByTestId("pagina");
 
-    tocco("touchstart", [{ x: 150, y: 300 }], pagina);
-    tocco("touchend", [{ x: 20, y: 300 }], pagina);
+    tocco("touchstart", [{ x: 250, y: 300 }], pagina);
+    tocco("touchend", [{ x: 360, y: 300 }], pagina);
 
     expect(onSwipe).not.toHaveBeenCalled();
   });
@@ -56,8 +56,8 @@ describe("useSwipeFromLeft", () => {
     tocco(
       "touchstart",
       [
-        { x: 20, y: 300 },
-        { x: 60, y: 320 },
+        { x: 360, y: 300 },
+        { x: 340, y: 320 },
       ],
       pagina,
     );
@@ -81,7 +81,7 @@ describe("useSwipeFromLeft", () => {
     Object.defineProperty(scorrevole, "clientWidth", { value: 300, configurable: true });
     document.body.appendChild(scorrevole);
 
-    tocco("touchstart", [{ x: 20, y: 300 }], scorrevole);
+    tocco("touchstart", [{ x: 360, y: 300 }], scorrevole);
     tocco("touchend", [{ x: 200, y: 304 }], scorrevole);
 
     expect(onSwipe).not.toHaveBeenCalled();
@@ -92,8 +92,8 @@ describe("useSwipeFromLeft", () => {
     const { getByTestId } = render(<Prova onSwipe={onSwipe} />);
     const pagina = getByTestId("pagina");
 
-    tocco("touchstart", [{ x: 20, y: 300 }], pagina);
-    tocco("touchcancel", [{ x: 100, y: 300 }], pagina);
+    tocco("touchstart", [{ x: 360, y: 300 }], pagina);
+    tocco("touchcancel", [{ x: 300, y: 300 }], pagina);
     tocco("touchend", [{ x: 200, y: 304 }], pagina);
 
     expect(onSwipe).not.toHaveBeenCalled();
@@ -111,13 +111,13 @@ describe("useSwipeFromLeft", () => {
     const { getByTestId } = render(<Prova onSwipe={onSwipe} />);
     const pagina = getByTestId("pagina");
 
-    tocco("touchstart", [{ x: 20, y: 300 }], pagina);
-    tocco("touchmove", [{ x: 60, y: 302 }], pagina);
+    tocco("touchstart", [{ x: 360, y: 300 }], pagina);
+    tocco("touchmove", [{ x: 340, y: 302 }], pagina);
     expect(onSwipe).not.toHaveBeenCalled();
-    tocco("touchmove", [{ x: 120, y: 304 }], pagina);
+    tocco("touchmove", [{ x: 280, y: 304 }], pagina);
     expect(onSwipe).toHaveBeenCalledTimes(1);
 
-    tocco("touchcancel", [{ x: 120, y: 304 }], pagina);
+    tocco("touchcancel", [{ x: 280, y: 304 }], pagina);
     tocco("touchend", [{ x: 200, y: 304 }], pagina);
     // Una volta sola: ne' la cancellazione ne' la fine lo ripetono.
     expect(onSwipe).toHaveBeenCalledTimes(1);
@@ -128,10 +128,10 @@ describe("useSwipeFromLeft", () => {
     const { getByTestId } = render(<Prova onSwipe={onSwipe} />);
     const pagina = getByTestId("pagina");
 
-    tocco("touchstart", [{ x: 20, y: 300 }], pagina);
-    tocco("touchmove", [{ x: 60, y: 380 }], pagina);
-    tocco("touchmove", [{ x: 140, y: 302 }], pagina);
-    tocco("touchend", [{ x: 140, y: 302 }], pagina);
+    tocco("touchstart", [{ x: 360, y: 300 }], pagina);
+    tocco("touchmove", [{ x: 340, y: 380 }], pagina);
+    tocco("touchmove", [{ x: 260, y: 302 }], pagina);
+    tocco("touchend", [{ x: 260, y: 302 }], pagina);
 
     expect(onSwipe).not.toHaveBeenCalled();
   });
