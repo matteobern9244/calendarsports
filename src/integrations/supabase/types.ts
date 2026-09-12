@@ -23,6 +23,7 @@ export type Database = {
           show_f1: boolean
           show_motogp: boolean
           show_sinner: boolean
+          start_page: string
           theme: string
           updated_at: string
         }
@@ -34,6 +35,7 @@ export type Database = {
           show_f1?: boolean
           show_motogp?: boolean
           show_sinner?: boolean
+          start_page?: string
           theme?: string
           updated_at?: string
         }
@@ -45,6 +47,7 @@ export type Database = {
           show_f1?: boolean
           show_motogp?: boolean
           show_sinner?: boolean
+          start_page?: string
           theme?: string
           updated_at?: string
         }

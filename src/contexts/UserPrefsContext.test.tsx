@@ -37,6 +37,7 @@ const PROFILO: Profile = {
   show_sinner: true,
   show_f1: true,
   show_motogp: true,
+  start_page: "home",
 };
 
 const CHIAVE_MIGRAZIONE = "cse-profile-migrated:u1";

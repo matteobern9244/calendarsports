@@ -11,12 +11,26 @@ export interface Profile {
   show_sinner: boolean;
   show_f1: boolean;
   show_motogp: boolean;
+  /**
+   * La pagina su cui si atterra aprendo l'applicazione, **grezza**: qui e' la
+   * stringa che c'e' scritta nel database, come `favorite_team`. Diventa una
+   * pagina dell'elenco una volta sola, in `UserPrefsContext`, passando da
+   * `resolveStartPage`.
+   */
+  start_page: string;
 }
 
 export type ProfilePatch = Partial<Omit<Profile, "id">>;
 type CampoProfilo = keyof ProfilePatch;
 
-const PROFILE_COLUMNS = "id, display_name, theme, favorite_team, show_sinner, show_f1, show_motogp";
+/**
+ * Le colonne lette. Esportata perche' un test la confronta con i campi di
+ * `Profile`: la lettura si chiude con un cast, quindi un campo dichiarato
+ * nell'interfaccia ma assente da qui arriverebbe `undefined` senza che
+ * nessun typecheck protesti.
+ */
+export const PROFILE_COLUMNS =
+  "id, display_name, theme, favorite_team, show_sinner, show_f1, show_motogp, start_page";
 
 /**
  * I campi che una richiesta dichiara davvero di voler cambiare.
