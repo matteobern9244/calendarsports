@@ -57,18 +57,20 @@ Alcune proprietà di questo progetto non si verificano eseguendo il codice ma
 stringa, da dove si importa un client. Vivono in punti che un test di
 comportamento non raggiunge, o raggiungerebbe troppo tardi.
 
-| Guardiano                                                 | Vieta                                                                                                                                                         |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/check-rome-tz.mjs` (`bun run check:tz-football`) | `toLocale*String` senza `timeZone: "Europe/Rome"`, e `new Date(stringa)` per confrontare eventi: legge l'ISO come ora locale e sfasa il conto alla rovescia   |
-| `scripts/check-italian-ui.mjs` (`bun run check:italian`)  | testo inglese in contenuti, `aria-label`, `placeholder`, toast e titoli. Non è un parser AST: copre il caso comune, non tutti                                 |
-| `no-restricted-imports` in `eslint.config.js`             | l'import di `@/integrations/supabase/client`: senza env var iniettate produce richieste che rispondono HTML 200 e lasciano React Query in caricamento eterno  |
-| `react-hooks/set-state-in-effect`                         | il `setState` sincrono dentro un effect: gira anche al mount, e così azzerava la pagina arrivata da `?page=`                                                  |
-| `react-hooks/purity`                                      | `Math.random()` e `Date.now()` durante il render: valori che React non può ricalcolare                                                                        |
-| `tsc --strict` (`bun run typecheck`)                      | i tipi sbagliati. Ha trovato quattro `variant="outline-solid"` prodotti da un codemod che aveva scambiato una prop per una classe CSS                         |
-| `src/lib/queryKeys.test.ts`                               | le chiavi di cache scritte a mano fuori da `queryKeys.ts`: chi legge e chi scrive con chiavi diverse non condivide niente, e il prefetch viene buttato        |
-| `src/lib/queryPlaceholder.test.ts`                        | `placeholderData: (prev) => prev`: passa i dati dell'ultima query dello stesso hook qualunque fosse la chiave, quindi mostra le partite della squadra prima   |
-| `src/test/tooling/serieATeamsMirror.test.ts`              | la divergenza fra `src/lib/serieATeams.ts` e la copia in `supabase/functions/_shared/`: una tendina che offre una squadra che l'edge function rifiuta con 400 |
-| `src/test/tooling/typecheckCoverage.test.ts`              | un file TypeScript fuori da tutti i progetti `tsconfig`: il suo unico controllo resterebbe ESLint, che i tipi non li vede                                     |
+| Guardiano                                                 | Vieta                                                                                                                                                               |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/check-rome-tz.mjs` (`bun run check:tz-football`) | `toLocale*String` senza `timeZone: "Europe/Rome"`, e `new Date(stringa)` per confrontare eventi: legge l'ISO come ora locale e sfasa il conto alla rovescia         |
+| `scripts/check-italian-ui.mjs` (`bun run check:italian`)  | testo inglese in contenuti, `aria-label`, `placeholder`, toast e titoli. Non è un parser AST: copre il caso comune, non tutti                                       |
+| `no-restricted-imports` in `eslint.config.js`             | l'import di `@/integrations/supabase/client`: senza env var iniettate produce richieste che rispondono HTML 200 e lasciano React Query in caricamento eterno        |
+| `react-hooks/set-state-in-effect`                         | il `setState` sincrono dentro un effect: gira anche al mount, e così azzerava la pagina arrivata da `?page=`                                                        |
+| `react-hooks/purity`                                      | `Math.random()` e `Date.now()` durante il render: valori che React non può ricalcolare                                                                              |
+| `tsc --strict` (`bun run typecheck`)                      | i tipi sbagliati. Ha trovato quattro `variant="outline-solid"` prodotti da un codemod che aveva scambiato una prop per una classe CSS                               |
+| `src/lib/queryKeys.test.ts`                               | le chiavi di cache scritte a mano fuori da `queryKeys.ts`: chi legge e chi scrive con chiavi diverse non condivide niente, e il prefetch viene buttato              |
+| `src/lib/queryPlaceholder.test.ts`                        | `placeholderData: (prev) => prev`: passa i dati dell'ultima query dello stesso hook qualunque fosse la chiave, quindi mostra le partite della squadra prima         |
+| `src/test/tooling/serieATeamsMirror.test.ts`              | la divergenza fra `src/lib/serieATeams.ts` e la copia in `supabase/functions/_shared/`: una tendina che offre una squadra che l'edge function rifiuta con 400       |
+| `src/test/tooling/typecheckCoverage.test.ts`              | un file TypeScript fuori da tutti i progetti `tsconfig`: il suo unico controllo resterebbe ESLint, che i tipi non li vede                                           |
+| `src/lib/highlightPlaylists.test.ts`                      | la divergenza fra il catalogo delle playlist e la copia dentro `highlights-youtube`: una scheda «Highlights» che si apre su un 400, o sui video di un'altra squadra |
+| `e2e/mobile.spec.ts` (progetto Playwright `mobile`)       | qualunque scorrimento orizzontale, su 10 pagine e i loro stati interattivi a cinque larghezze da 430 a 320px. Chiede al DOM chi sborda, non alle classi CSS         |
 
 ### Regole d'uso dei guardiani
 
@@ -89,6 +91,19 @@ comportamento non raggiunge, o raggiungerebbe troppo tardi.
    basta.** La policy sul fuso era documentata, commentata e testata sugli helper
    di formattazione — ed era disattesa in ogni punto che confrontava due date.
    Serviva un guardiano.
+5. **Un guardiano vale quanto i dati che gli si danno in pasto.** Scoperto nella
+   3.3.0, collaudando dal vivo ciò che la suite dichiarava a posto: il guardiano
+   dello scorrimento orizzontale era verde mentre l'app, sui dati veri, sbordava
+   in quattro punti. Le fixture dicevano «Bagnaia F.» e «Undici1», che stanno
+   dentro qualunque schermo; i dati veri dicono «Fabio Di Giannantonio» e
+   «Varela Tavares», che non ci stanno. Peggio: `streaming-releases` non era
+   mockato affatto e rispondeva `404`, quindi la scheda che il guardiano
+   visitava era una **schermata d'errore** — verde per il motivo sbagliato,
+   perché non c'era niente da disporre. Per un test di layout la fixture non è
+   un dettaglio di comodo: **è** il caso da coprire, e deve contenere il caso
+   peggiore realistico — i nomi più lunghi, abbastanza elementi da far comparire
+   la paginazione, i campi facoltativi popolati. Una fixture più piccola del
+   vero non è più semplice: è cieca.
 
 ## Verifiche
 

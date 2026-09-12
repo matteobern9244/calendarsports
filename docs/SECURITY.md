@@ -63,6 +63,27 @@ preferenza di chi tifa una squadra retrocessa. La validazione vive nel codice
 Un valore inatteso in quella colonna non è quindi un modo per far sbagliare
 l'app: è una preferenza che ricade sul default.
 
+Dalla 3.3.0 la stessa scelta vale per `start_page`, aggiunta da
+`supabase/migrations/20260912142500_profiles_start_page.sql`: `TEXT` con
+default `'home'` e **nessun `CHECK`**. La lettura passa da `resolveStartPage`
+in `src/lib/startPage.ts`, che è totale: qualunque stringa che non sia una
+delle sette pagine previste vale `home`. Un `CHECK` avrebbe congelato nel
+database un elenco di pagine che cambia a ogni sezione aggiunta, e avrebbe
+fatto fallire la scrittura invece di ricadere su un valore sensato.
+
+Le quattro colonne `show_home`, `show_calendario`, `show_streaming` e
+`show_squadra`, aggiunte da
+`supabase/migrations/20260912144000_profiles_menu_sections.sql`, sono
+`BOOLEAN NOT NULL DEFAULT true` e affiancano le tre che già esistevano. Sono
+**preferenze di interfaccia, non permessi**: nascondono la voce nel menù e
+nient'altro, e nessuna di esse rende irraggiungibile una pagina. Chi leggesse
+`show_streaming = false` come un controllo d'accesso starebbe leggendo male:
+non protegge niente, e non c'è niente da proteggere: quei contenuti sono
+pubblici e raggiungibili anche senza sessione.
+
+Entrambe le migration usano `ADD COLUMN IF NOT EXISTS` e sono quindi
+rieseguibili su un database vuoto, come richiede il contratto.
+
 ### Retention di `push_sent_log`
 
 `supabase/migrations/20260905184700_push_sent_log_retention.sql` aggiunge un job
@@ -170,7 +191,8 @@ alla chiusura della scheda, che è ciò che rende utile un'app installata — e 
 il costo consueto: un JWT in `localStorage` è leggibile da qualunque script in
 esecuzione sulla pagina, quindi una XSS diventa un furto di sessione. Quel che
 si può rubare resta però limitato a ciò che `profiles` contiene: tema, squadra,
-sezioni visibili.
+voci di menù visibili e pagina iniziale. Nessun dato personale oltre il
+`display_name`, che l'utente scrive da sé.
 
 La anon key nel bundle **non è un segreto** e non è una credenziale d'accesso:
 identifica il progetto, e da sola non apre nessuna delle tre tabelle. Chi non è

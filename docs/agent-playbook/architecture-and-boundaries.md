@@ -127,6 +127,38 @@ eseguibile e' `src/components/preferences/TeamSelect.test.tsx`: e' l'unica
 verifica che uccide quella mutazione, perche' la e2e non ha modo di far
 cambiare la preferenza da fuori senza una sessione.
 
+### Le preferenze esistono solo con l'accesso
+
+Cambio di specifica della 3.3.0. Senza sessione non compaiono ne' il pannello,
+ne' il pulsante che lo apre, ne' il gesto che lo richiama da sinistra, e
+`/preferenze` rimanda a `/accedi`. Il motivo e' che le preferenze vivono sul
+profilo: offrirle a chi non ha un profilo prometterebbe che si salvino.
+
+Al posto dell'ingranaggio l'intestazione mostra una **porta d'ingresso** verso
+`/accedi`. Non e' decorazione: il collegamento all'accesso viveva _dentro_ il
+pannello, quindi nasconderlo e basta avrebbe lasciato chi non e' registrato
+senza alcun modo di diventarlo.
+
+### Nascondere una voce nasconde la voce, mai la rotta
+
+Le sette `show_*` tolgono la voce dal menu' e nient'altro. **Ogni indirizzo
+resta raggiungibile**: un link verso `/squadra/napoli` e' fatto per essere
+condiviso, e deve funzionare anche per chi quella voce dal proprio menu' l'ha
+tolta. Fino alla 3.3.0 tre sezioni facevano anche la seconda cosa, tramite un
+componente di rotta che per questo non esiste piu'.
+
+Ne discende che **la pagina iniziale non dipende dalle voci visibili**, e non
+e' una dimenticanza: legarcela vorrebbe dire che riordinando l'intestazione si
+cambia di nascosto dove l'app si apre. Nessuna pagina e' irraggiungibile,
+quindi nessuna scelta ha bisogno di un ripiego.
+
+La corrispondenza fra voce e colonna sta in **un posto solo**, `COLONNA_SEZIONE`
+in `UserPrefsContext.tsx`, tipizzata `Record<SectionKey, keyof ProfilePatch>`
+perche' il compilatore le pretenda tutte. Serviva in tre punti — migrazione al
+primo accesso, lettura, salvataggio — e con tre voci ripeterla passava
+inosservato; con sette, una riga dimenticata sarebbe una preferenza che si
+salva e non si rilegge.
+
 ### Fra URL e preferenza, per il rendering vince l'URL
 
 Le pagine di una squadra sono parametriche: `/squadra/:teamSlug` e

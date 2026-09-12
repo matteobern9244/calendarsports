@@ -17,6 +17,98 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [3.3.0] — L'app si apre dove vuoi tu (2026-09-12)
+
+Bump applicativo `3.2.2` → `3.3.0`. Nota di rilascio in
+[`docs/releases/3.3.0-pagina-iniziale-e-menu.md`](docs/releases/3.3.0-pagina-iniziale-e-menu.md).
+
+**Minore.** Sette lavori concordati in blocco il 12 settembre 2026 e chiusi
+insieme. Due migration, nessuna modifica distruttiva, nessuna rotta rimossa.
+
+### Aggiunto
+
+- **Pagina iniziale configurabile** (`profiles.start_page`), fra Home,
+  Calendario, STREAMING, Jannik Sinner, Squadra di calcio, Formula 1 e MotoGP.
+  Vale **sempre**: aprire l'app, toccare il logo, tornare alla radice portano
+  lì. La radice diventa un punto di decisione (`StartRoute`) e non una pagina;
+  se la scelta è `home` dipinge senza redirect, perché è il caso comune e un
+  salto in più si vedrebbe.
+- **`/home`, indirizzo proprio della Home.** Prima non serviva; ora sì, perché
+  chi sceglie un'altra pagina iniziale altrimenti non avrebbe modo di tornarci.
+- **Tutte e sette le voci del menù nascondibili**, non più solo le tre sportive:
+  `show_home`, `show_calendario`, `show_streaming`, `show_squadra` affiancano
+  `show_sinner`, `show_f1`, `show_motogp`.
+- **Swipe da sinistra per aprire le preferenze** in mobile e PWA, con
+  un'affordance discreta sul bordo che sparisce dopo dodici secondi e non torna
+  più a chi il gesto l'ha usato. Il pulsante in cima **resta**: il gesto è una
+  scorciatoia in più, non un sostituto.
+- **Highlights del Milan** (playlist `PLW7Xs51ob1LI`), visibili solo con il
+  Milan selezionato, come già per la Juventus.
+- **Due guardiani nuovi**: `src/lib/highlightPlaylists.test.ts`, che tiene
+  allineati il catalogo delle playlist e la copia dentro l'edge function, e
+  `e2e/mobile.spec.ts`, che vieta qualunque scorrimento orizzontale su dieci
+  pagine e i loro stati interattivi a cinque larghezze da 430 a 320px.
+
+### Cambiato
+
+- **Le preferenze esistono solo con l'accesso.** Cambio di specifica: senza
+  sessione non compaiono né il pannello, né il pulsante, né il gesto, e
+  `/preferenze` rimanda a `/accedi`. Al posto dell'ingranaggio l'intestazione
+  mostra una **porta d'ingresso**: il collegamento per registrarsi viveva
+  _dentro_ il pannello, e nasconderlo e basta avrebbe lasciato chi non è
+  registrato senza alcun modo di diventarlo.
+- **Nascondere una voce nasconde la voce, mai la rotta.** Prima Sinner, Formula 1
+  e MotoGP venivano anche bloccate come indirizzi: un link condiviso si apriva
+  sul nulla. Il componente di rotta che lo faceva non esiste più.
+- **Playlist della Juventus aggiornata** a `PLVuEWoNX08GA`. Non era solo un
+  indirizzo nuovo: quello in uso era la playlist **2025/26**, e la scheda
+  mostrava da mesi partite della stagione scorsa.
+- **Contratto sull'onestà delle fonti riallineato** in `AGENTS.md`. L'obbligo
+  resta intero e si assolve in `docs/DATA_SOURCES.md` e nel campo
+  `meta.dataSource` delle edge function, non più nell'interfaccia.
+
+### Rimosso
+
+- **Tre diciture sulle fonti**, su richiesta: «Fonte: Sky Sport Italia» sotto la
+  classifica, i due paragrafi sotto le statistiche (totali di Sky, e l'assenza
+  dei dati per singolo giocatore con la spiegazione su API-Football),
+  l'attribuzione di rosa, allenatore e stadio sotto l'elenco dei giocatori.
+  Restano la nota su casa e trasferta, che non attribuisce niente a nessuno, e
+  «Tocca un giocatore per le sue statistiche di stagione», che è l'unica riga ad
+  annunciare che quelle righe si aprono.
+
+### Corretto
+
+- **Bug regressivo mobile** segnalato da un utente su Samsung Galaxy S26. Non
+  una schermata: una famiglia di difetti con tre cause ricorrenti — elementi di
+  griglia con `min-width: auto` che allargano la colonna invece di comprimersi
+  (tre occorrenze), righe di pillole che scorrevano di lato invece di andare a
+  capo, padding delle celle e colonne di troppo. Eliminati ovunque.
+- **`highlightSportPerSquadra("constructor")` restituiva una funzione.** Lo slug
+  arriva dall'URL, e un oggetto letterale eredita da `Object.prototype`, quindi
+  `constructor`, `toString` e `__proto__` attraversano indenni un `?? null`.
+  Trovato da un test scritto prima del codice. Ora è una `Map`.
+- **Guardiano e2e intermittente**: «la livrea segue la squadra» cadeva sotto
+  carico e passava sempre da solo. `toBeVisible` risolve l'elemento ma non
+  impedisce a React di sostituirlo, e `getComputedStyle` su un nodo staccato
+  restituisce stringhe vuote. La misura ora si ritenta.
+- **Fixture e2e cieche.** A collaudo finito la suite era verde e l'app, sui dati
+  veri, sbordava ancora in quattro punti: le fixture dicevano «Bagnaia F.» e
+  «Undici1», e `streaming-releases` non era mockato affatto — rispondeva `404`,
+  quindi la scheda che il guardiano visitava era una schermata d'errore. Ora
+  contengono il caso peggiore realistico.
+
+### Database
+
+Due migration, entrambe con `ADD COLUMN IF NOT EXISTS` e rieseguibili su un
+database vuoto, applicate e verificate per effetto:
+
+- `20260912142500_profiles_start_page.sql` — `start_page TEXT NOT NULL DEFAULT 'home'`
+- `20260912144000_profiles_menu_sections.sql` — quattro `BOOLEAN NOT NULL DEFAULT true`
+
+Nessun `CHECK` su `start_page`, per la stessa ragione di `favorite_team`: la
+validazione vive in `resolveStartPage`, che è totale.
+
 ## [3.2.2] — Gli stemmi si vedono in tutti e due i temi (2026-09-12)
 
 Bump applicativo `3.2.1` → `3.2.2`. Nota di rilascio in
