@@ -74,7 +74,9 @@ test("preferenze: il tocco sulla linguetta apre il pannello", async ({ page }) =
   await accediComeUtente(page);
   await page.goto("/");
 
-  await linguetta(page).tap();
+  // `force`: finche' non e' stata usata la linguetta pulsa, e Playwright
+  // aspetterebbe per sempre che stia ferma. Un dito non aspetta.
+  await linguetta(page).tap({ force: true });
   await expect(pannello(page)).toBeVisible();
 });
 
@@ -109,7 +111,7 @@ test("preferenze: il pulsante in cima continua a funzionare accanto al gesto", a
   await accediComeUtente(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Preferenze" }).click();
+  await page.getByRole("button", { name: "Preferenze", exact: true }).click();
   await expect(pannello(page)).toBeVisible();
 });
 
@@ -271,7 +273,7 @@ test("niente scorrimento orizzontale: pannello preferenze", async ({ page }) => 
   await accediComeUtente(page);
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: "Preferenze" }).click();
+  await page.getByRole("button", { name: "Preferenze", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
 
   for (const larghezza of LARGHEZZE) {
