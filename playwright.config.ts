@@ -24,7 +24,18 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      // Le prove che valgono su entrambi restano qui: `mobile.spec.ts`
+      // contiene solo cio' che ha bisogno di un dito e di uno schermo
+      // stretto, e girerebbe due volte senza dire niente di nuovo.
+      testIgnore: /mobile\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "mobile",
+      testMatch: /mobile\.spec\.ts/,
+      // Pixel 5: schermo stretto e `hasTouch`, cioe' le due condizioni che
+      // separano il comportamento mobile da quello desktop.
+      use: { ...devices["Pixel 5"] },
     },
   ],
   webServer: {

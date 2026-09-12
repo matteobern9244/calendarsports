@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { PreferencesPanelProvider } from "@/contexts/PreferencesPanelContext";
 import PreferencesPanel from "@/components/preferences/PreferencesPanel";
+import SwipeToPreferences from "./SwipeToPreferences";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import TeamPalette from "@/components/common/TeamPalette";
 
@@ -49,6 +50,7 @@ export default function Layout() {
           </div>
         </footer>
         <PreferencesPanel />
+        <SwipeToPreferences />
       </div>
     </PreferencesPanelProvider>
   );
