@@ -39,7 +39,13 @@ function Giocatore({ p }: { p: LineupPlayer }) {
       ) : (
         <span className="h-9 w-9 rounded-full bg-muted" aria-hidden="true" />
       )}
-      <span className="text-[11px] leading-tight text-center max-w-[5.5rem] truncate">
+      {/*
+        `w-full` e non solo `max-w`: il nome deve poter **scendere** sotto i
+        5.5rem, non solo restare sotto. Con la sola larghezza massima lo span
+        valeva 88px anche quando il posto assegnato al giocatore ne misurava
+        57, e undici nomi cosi' spingevano il campo fuori dallo schermo.
+      */}
+      <span className="w-full max-w-[5.5rem] truncate text-center text-[11px] leading-tight">
         {numero !== null && (
           <span className="font-heading text-muted-foreground tabular-nums">{numero} </span>
         )}
@@ -53,12 +59,12 @@ function Giocatore({ p }: { p: LineupPlayer }) {
       href={p.profileUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex flex-col items-center gap-1 hover:text-primary transition-colors"
+      className="flex min-w-0 flex-1 flex-col items-center gap-1 transition-colors hover:text-primary"
     >
       {contenuto}
     </a>
   ) : (
-    <span className="flex flex-col items-center gap-1">{contenuto}</span>
+    <span className="flex min-w-0 flex-1 flex-col items-center gap-1">{contenuto}</span>
   );
 }
 
@@ -85,7 +91,12 @@ function ElencoCognomi({ titolo, nomi }: { titolo: string; nomi: string[] }) {
  */
 export function Lato({ side, casa }: { side: LineupSide; casa: boolean }) {
   return (
-    <section className="rounded-lg border border-border/60 bg-card/60 p-4 space-y-3">
+    // `min-w-0`: questa sezione e' un elemento di griglia, e un elemento di
+    // griglia ha `min-width: auto`. Non potendo scendere sotto il proprio
+    // min-content non si comprimeva — allargava la colonna oltre il
+    // contenitore, e da li' l'intera pagina. Il sintomo si vedeva sul
+    // documento, la causa era qui dentro.
+    <section className="min-w-0 rounded-lg border border-border/60 bg-card/60 p-4 space-y-3">
       <header className="flex items-center gap-2">
         {side.logoUrl && (
           <img src={side.logoUrl} alt="" aria-hidden="true" className="h-6 w-6 object-contain" />

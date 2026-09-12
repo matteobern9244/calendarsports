@@ -6,12 +6,12 @@ della tua squadra di Serie A, della Formula 1 e della MotoGP, oltre a
 palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `3.2.2` (gli stemmi si vedono in tutti e due i
-temi: il fondo sotto il logo non segue piu' il tema, e quello nero della
-Juventus non sparisce piu' sullo scuro; sopra la `3.2.1`, che ha rimesso
-d'accordo casa e trasferta nella pagina squadra). Il footer dell'app mostra la
-versione leggendola da `src/lib/version.ts` nel formato
-`Calendar Events · v3.2.2` (con `v` minuscola).
+Versione repository corrente: `3.3.0` (l'app si apre dove vuoi tu: chi ha
+effettuato l'accesso sceglie la pagina iniziale fra sette, nasconde le voci del
+menù che non usa e apre le preferenze con uno swipe da sinistra; più gli
+highlights del Milan e l'app resa responsive su qualsiasi schermo). Il footer
+dell'app mostra la versione leggendola da `src/lib/version.ts` nel formato
+`Calendar Events · v3.3.0` (con `v` minuscola).
 
 Questa riga è sorvegliata da `src/test/tooling/version.test.ts`: era rimasta
 ferma alla `2.3.6` per sei rilasci senza che niente se ne accorgesse.
@@ -146,6 +146,14 @@ L'app espone sei viste principali:
 - `Squadra di calcio`: calendario partite, classifica Serie A e dettaglio
   delle singole partite, all'indirizzo `/squadra/<slug>`. La squadra e' quella
   dell'indirizzo; il menu propone quella scelta nelle preferenze.
+
+Dalla `3.3.0` chi ha effettuato l'accesso sceglie **su quale di queste pagine
+l'app si apre** (`profiles.start_page`) e **quali voci vedere nel menu**
+(sette colonne `show_*`). Nascondere una voce tocca **solo il menu**: ogni
+indirizzo resta raggiungibile, perche' un link si condivide. Le preferenze
+esistono solo con l'accesso: senza sessione, al posto dell'ingranaggio c'e' una
+porta d'ingresso verso `/accedi`.
+
 - `Formula 1`: calendario GP, classifica piloti e costruttori.
 - `MotoGP`: calendario weekend, classifica piloti e costruttori.
 - `Calendario`: vista aggregata della squadra scelta + F1 + MotoGP con due
@@ -330,15 +338,25 @@ Pagina dettaglio partita (`/squadra/:teamSlug/partite/:matchId`):
   CTA "Apri su Sky Sport". Nessun dato finto o mock, in linea con la
   policy `no hardcoded`.
 
-### Highlights video (Juventus, F1, MotoGP)
+### Highlights video (Juventus, Milan, F1, MotoGP)
 
 Le tab "Highlights" su `/squadra/:teamSlug`, `/formula1` e `/motogp` sono alimentate
-dai **feed RSS pubblici** delle 3 playlist YouTube ufficiali, esposti
+dai **feed RSS pubblici** di 4 playlist YouTube ufficiali, esposti
 dall'edge function `supabase/functions/highlights-youtube`:
 
-- Juventus → `PLamQuNkRTV0eQ-UiYDCuz_WUHOlri1BY3` (canale ufficiale Juventus).
+- Juventus → `PLVuEWoNX08GA` (canale ufficiale Juventus, stagione 2026/27).
+- Milan → `PLW7Xs51ob1LI` (canale ufficiale AC Milan, stagione 2026/27).
 - Formula 1 → `PLZbcTUGG8ELs188DCvpKMVFsnia-uB3j8` (Sky Sport F1).
 - MotoGP → `PLMgcIchslSqgqxtkUg4iiqc1UL8u8uFey` (Sky Sport MotoGP).
+
+Gli identificativi vivono in `src/lib/highlightPlaylists.ts`, che è anche
+l'unico posto in cui si decide **quale squadra ha quale raccolta**: sono due su
+venti, perché ogni id va verificato a mano sul feed e mostrare a una squadra i
+video di un'altra sarebbe peggio di non mostrarne. Per le altre diciotto la
+scheda non compare affatto — una linguetta che si apre sul vuoto prometterebbe
+qualcosa. La copia dentro l'edge function è inevitabile (Deno carica solo
+`supabase/functions/`) ed è sorvegliata da un guardiano in
+`src/lib/highlightPlaylists.test.ts`.
 
 Per ogni video vengono estratti dati **reali** dal feed: `videoId`, `title`,
 `publishedAt` (ISO 8601), `source` (nome canale dal `<author>`) e thumbnail

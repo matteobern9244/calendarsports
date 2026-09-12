@@ -5,11 +5,12 @@ import type { ReactNode } from "react";
 import { queryKeys } from "@/lib/queryKeys";
 import type { Profile } from "@/hooks/useProfile";
 
-const { aggiorna } = vi.hoisted(() => ({
+const { aggiorna, legge } = vi.hoisted(() => ({
   aggiorna: vi.fn<(patch: Record<string, unknown>) => Promise<unknown>>(),
+  legge: vi.fn<() => Promise<unknown>>(),
 }));
 const { sessione } = vi.hoisted(() => ({
-  sessione: { user: { id: "u1" } as { id: string } | null },
+  sessione: { user: { id: "u1" } as { id: string } | null, loading: false },
 }));
 
 vi.mock("@/lib/supabaseClient", () => ({
@@ -18,12 +19,18 @@ vi.mock("@/lib/supabaseClient", () => ({
       update: (patch: Record<string, unknown>) => ({
         eq: () => ({ select: () => ({ single: () => aggiorna(patch) }) }),
       }),
+      select: () => ({ eq: () => ({ maybeSingle: () => legge() }) }),
     }),
   },
 }));
 
 vi.mock("@/contexts/useAuth", () => ({
-  useAuth: () => ({ session: null, user: sessione.user, loading: false, signOut: vi.fn() }),
+  useAuth: () => ({
+    session: null,
+    user: sessione.user,
+    loading: sessione.loading,
+    signOut: vi.fn(),
+  }),
 }));
 
 import { UserPrefsProvider } from "./UserPrefsContext";
@@ -37,14 +44,33 @@ const PROFILO: Profile = {
   show_sinner: true,
   show_f1: true,
   show_motogp: true,
+  show_home: true,
+  show_calendario: true,
+  show_streaming: true,
+  show_squadra: true,
+  start_page: "home",
 };
 
 const CHIAVE_MIGRAZIONE = "cse-profile-migrated:u1";
 
 function Spia() {
-  const { favoriteTeam, setFavoriteTeam, sections, setSection, theme, setTheme } = useUserPrefs();
+  const {
+    favoriteTeam,
+    setFavoriteTeam,
+    sections,
+    setSection,
+    theme,
+    setTheme,
+    startPage,
+    setStartPage,
+    startPageReady,
+  } = useUserPrefs();
   return (
     <>
+      <button type="button" data-testid="pagina-iniziale" onClick={() => setStartPage("streaming")}>
+        {startPage}
+      </button>
+      <span data-testid="pronta">{String(startPageReady)}</span>
       <button type="button" data-testid="squadra" onClick={() => setFavoriteTeam("napoli")}>
         {favoriteTeam.slug}
       </button>
@@ -69,12 +95,15 @@ const ricordoLocale = (chiave: string) => window.localStorage.getItem(chiave);
  * Il sentinella e' `null` e non `undefined` perche' `undefined` farebbe
  * scattare il valore di default del parametro.
  */
-function monta({ profilo = PROFILO }: { profilo?: Profile | null } = {}) {
+function monta({
+  profilo = PROFILO,
+  inCache = true,
+}: { profilo?: Profile | null; inCache?: boolean } = {}) {
   sessione.user = profilo ? { id: "u1" } : null;
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  if (profilo) client.setQueryData(queryKeys.profile("u1"), profilo);
+  if (profilo && inCache) client.setQueryData(queryKeys.profile("u1"), profilo);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <UserPrefsProvider>{children}</UserPrefsProvider>
@@ -219,5 +248,107 @@ describe("UserPrefsProvider", () => {
 
       await waitFor(() => expect(ricordoLocale(CHIAVE_MIGRAZIONE)).toBe(null));
     });
+  });
+});
+
+describe("UserPrefsProvider — pagina iniziale", () => {
+  beforeEach(() => {
+    aggiorna.mockReset();
+    legge.mockReset();
+    legge.mockRejectedValue(new Error("il profilo non arriva"));
+    sessione.loading = false;
+    window.localStorage.clear();
+    window.localStorage.setItem(CHIAVE_MIGRAZIONE, "1");
+  });
+
+  /**
+   * A differenza di tema, squadra e sezioni, questa preferenza vive **solo**
+   * sul profilo: non ha uno specchio in `localStorage`. Chi non ha effettuato
+   * l'accesso atterra sulla Home, che e' anche il default della colonna.
+   */
+  it("senza accesso la pagina iniziale e' la Home", () => {
+    monta({ profilo: null });
+    expect(bottone("pagina-iniziale")).toHaveTextContent("home");
+  });
+
+  it("con l'accesso vale quella scritta nel profilo", () => {
+    monta({ profilo: { ...PROFILO, start_page: "calendario" } });
+    expect(bottone("pagina-iniziale")).toHaveTextContent("calendario");
+  });
+
+  /**
+   * La colonna e' un TEXT senza CHECK: li' dentro puo' finire qualunque cosa,
+   * e niente di tutto cio' deve arrivare a una `<Navigate>`.
+   */
+  it("un valore che non e' una pagina torna alla Home", () => {
+    monta({ profilo: { ...PROFILO, start_page: "una-pagina-che-non-esiste" } });
+    expect(bottone("pagina-iniziale")).toHaveTextContent("home");
+  });
+
+  /**
+   * Le due preferenze sono indipendenti, e non per dimenticanza: nascondere
+   * una voce tocca il menu' e nient'altro. Legarci anche la pagina iniziale
+   * vorrebbe dire che riordinando l'intestazione si cambia di nascosto dove
+   * l'app si apre — un terzo effetto, oltre a quello dichiarato.
+   */
+  it("nascondere la voce dal menu' non cambia la pagina iniziale", () => {
+    monta({ profilo: { ...PROFILO, start_page: "motogp", show_motogp: false } });
+    expect(bottone("pagina-iniziale")).toHaveTextContent("motogp");
+  });
+
+  /**
+   * La regola del profilo vale anche qui: una richiesta possiede esattamente
+   * i campi che ha toccato. Salvare l'intero profilo farebbe disfare, al
+   * fallimento di questa, la modifica accanto che il server aveva accettato.
+   */
+  it("la scelta si salva sul profilo, toccando solo quel campo", async () => {
+    aggiorna.mockResolvedValueOnce({ data: { ...PROFILO, start_page: "streaming" }, error: null });
+    monta();
+
+    await act(async () => bottone("pagina-iniziale").click());
+
+    await waitFor(() => expect(aggiorna).toHaveBeenCalledTimes(1));
+    expect(aggiorna).toHaveBeenCalledWith({ start_page: "streaming" });
+  });
+
+  it("senza accesso la scelta non scrive niente", async () => {
+    monta({ profilo: null });
+    await act(async () => bottone("pagina-iniziale").click());
+    expect(aggiorna).not.toHaveBeenCalled();
+  });
+
+  /**
+   * `startPageReady` esiste perche' la radice deve decidere dove mandare chi
+   * apre l'app, e finche' la risposta non c'e' dipingere la Home vorrebbe
+   * dire mostrarla per un istante e poi saltare altrove.
+   */
+  it("mentre la sessione si sta leggendo non si sa ancora dove andare", () => {
+    sessione.loading = true;
+    monta({ profilo: null });
+    expect(screen.getByTestId("pronta")).toHaveTextContent("false");
+  });
+
+  it("senza accesso si sa subito: e' la Home", () => {
+    monta({ profilo: null });
+    expect(screen.getByTestId("pronta")).toHaveTextContent("true");
+  });
+
+  it("col profilo gia' letto si sa subito", () => {
+    monta();
+    expect(screen.getByTestId("pronta")).toHaveTextContent("true");
+  });
+
+  /**
+   * Il caso che trasformerebbe l'attesa in un blocco: se la lettura del
+   * profilo fallisce, `startPageReady` deve arrivare comunque a `true`.
+   * Altrimenti chi apre l'app con la rete a pezzi resta davanti a uno spinner
+   * che non finisce mai.
+   */
+  it("se il profilo non arriva si smette comunque di aspettare, sulla Home", async () => {
+    monta({ inCache: false });
+    expect(screen.getByTestId("pronta")).toHaveTextContent("false");
+
+    await waitFor(() => expect(screen.getByTestId("pronta")).toHaveTextContent("true"));
+    expect(bottone("pagina-iniziale")).toHaveTextContent("home");
   });
 });

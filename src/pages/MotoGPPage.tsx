@@ -253,7 +253,12 @@ export default function MotoGPPage() {
                   <TableHead className="font-heading text-xs tracking-wider uppercase">
                     Pilota
                   </TableHead>
-                  <TableHead className="font-heading text-xs tracking-wider uppercase">
+                  {/* Come la Scuderia in Formula 1: su uno schermo stretto la
+                      squadra e' la colonna che si puo' perdere senza perdere
+                      la classifica, e tenerla costringeva la tabella a
+                      scorrere di lato. Nella classifica costruttori qui sotto
+                      resta, perche' li' e' la classifica. */}
+                  <TableHead className="font-heading text-xs tracking-wider uppercase hidden sm:table-cell">
                     Team
                   </TableHead>
                   <TableHead className="text-center font-heading text-xs tracking-wider uppercase">
@@ -267,12 +272,22 @@ export default function MotoGPPage() {
                     <TableCell className="font-heading font-bold">{s.position}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        {/* Sotto i 380px la foto sparisce, e con lei gli otto
+                            pixel di distanza che la separano dal resto: sono i
+                            quaranta pixel che facevano scorrere la tabella di
+                            lato sui nomi veri piu' lunghi della griglia. E' la
+                            parte piu' decorativa della riga — il nome, la
+                            bandiera e il numero di gara dicono gia' di chi si
+                            tratta — ed e' quindi la sola che si possa togliere
+                            senza togliere informazione. La soglia e' la piu'
+                            stretta possibile e non `sm`: a 400px la foto ci sta
+                            benissimo, e toglierla li' sarebbe un danno gratuito. */}
                         <TeamLogo
                           src={s.photoUrl}
                           name={s.name}
                           size={32}
                           shape="circle"
-                          className="object-cover p-0"
+                          className="object-cover p-0 max-[380px]:hidden"
                         />
                         {s.number != null && (
                           <span
@@ -299,7 +314,7 @@ export default function MotoGPPage() {
                         <span className="font-semibold">{s.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
                       {s.team ? (
                         <div className="flex items-center gap-2">
                           <TeamLogo src={s.teamLogoUrl} name={s.team} size={20} shape="rounded" />

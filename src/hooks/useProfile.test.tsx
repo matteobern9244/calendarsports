@@ -33,7 +33,7 @@ vi.mock("@/contexts/useAuth", () => ({
   useAuth: () => ({ session: null, user: sessione.user, loading: false, signOut: vi.fn() }),
 }));
 
-import { useProfile, useUpdateProfile, type Profile } from "./useProfile";
+import { PROFILE_COLUMNS, useProfile, useUpdateProfile, type Profile } from "./useProfile";
 
 const PROFILO: Profile = {
   id: "u1",
@@ -43,6 +43,11 @@ const PROFILO: Profile = {
   show_sinner: true,
   show_f1: true,
   show_motogp: true,
+  show_home: true,
+  show_calendario: true,
+  show_streaming: true,
+  show_squadra: true,
+  start_page: "home",
 };
 
 /**
@@ -224,5 +229,36 @@ describe("useUpdateProfile", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(aggiorna, "senza utente non si chiama il server").not.toHaveBeenCalled();
     expect(inCache()?.favorite_team).toBe("juventus");
+  });
+});
+
+describe("PROFILE_COLUMNS", () => {
+  /**
+   * La lettura si chiude con `data as Profile`, che e' un'affermazione e non
+   * un controllo: un campo aggiunto all'interfaccia ma dimenticato nella
+   * select arriverebbe `undefined` senza che nessun typecheck se ne accorga,
+   * e la preferenza corrispondente tornerebbe al default a ogni lettura.
+   *
+   * L'oggetto qui sotto e' esaustivo per costruzione — TypeScript pretende
+   * tutte le chiavi di `Profile` — quindi questo test e' il punto in cui le
+   * due cose non possono piu' divergere in silenzio.
+   */
+  it("legge tutti i campi che Profile dichiara", () => {
+    const campi: Record<keyof Profile, true> = {
+      id: true,
+      display_name: true,
+      theme: true,
+      favorite_team: true,
+      show_sinner: true,
+      show_f1: true,
+      show_motogp: true,
+      show_home: true,
+      show_calendario: true,
+      show_streaming: true,
+      show_squadra: true,
+      start_page: true,
+    };
+    const lette = PROFILE_COLUMNS.split(",").map((colonna) => colonna.trim());
+    for (const campo of Object.keys(campi)) expect(lette).toContain(campo);
   });
 });

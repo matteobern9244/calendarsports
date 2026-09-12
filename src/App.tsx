@@ -6,10 +6,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Layout from "@/components/layout/Layout";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import LoadingState from "@/components/common/LoadingState";
-import SectionRoute from "@/components/common/SectionRoute";
+import StartRoute from "@/components/common/StartRoute";
 import TeamRoute from "@/components/common/TeamRoute";
 import { DEFAULT_TEAM } from "@/lib/serieATeams";
 import { teamMatchPath, teamPath } from "@/lib/teamRoutes";
+import { HOME_PATH } from "@/lib/startPage";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { UserPrefsProvider } from "@/contexts/UserPrefsContext";
 import Index from "./pages/Index";
@@ -83,17 +84,26 @@ const App = () => (
               <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route element={<Layout />}>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/calendario" element={<CalendarPage />} />
-                    <Route path="/streaming" element={<StreamingPage />} />
+                    {/*
+                      `/` non e' piu' «la Home»: e' la decisione su dove
+                      atterrare. Quando la preferenza e' la Home, `StartRoute`
+                      la mostra qui senza rimbalzare — cosi' il caso piu'
+                      frequente non paga un reindirizzamento e i link verso `/`
+                      gia' in circolazione continuano a valere.
+                    */}
                     <Route
-                      path="/sinner"
+                      path="/"
                       element={
-                        <SectionRoute section="sinner">
-                          <SinnerPage />
-                        </SectionRoute>
+                        <StartRoute>
+                          <Index />
+                        </StartRoute>
                       }
                     />
+                    {/* L'indirizzo proprio della Home, quello del menu'. */}
+                    <Route path={HOME_PATH} element={<Index />} />
+                    <Route path="/calendario" element={<CalendarPage />} />
+                    <Route path="/streaming" element={<StreamingPage />} />
+                    <Route path="/sinner" element={<SinnerPage />} />
                     <Route
                       path="/squadra/:teamSlug"
                       element={<TeamRoute>{(team) => <TeamPage team={team} />}</TeamRoute>}
@@ -104,22 +114,8 @@ const App = () => (
                     />
                     <Route path="/juventus" element={<RedirectSquadraStorica />} />
                     <Route path="/juventus/partite/:matchId" element={<RedirectPartitaStorica />} />
-                    <Route
-                      path="/formula1"
-                      element={
-                        <SectionRoute section="f1">
-                          <Formula1Page />
-                        </SectionRoute>
-                      }
-                    />
-                    <Route
-                      path="/motogp"
-                      element={
-                        <SectionRoute section="motogp">
-                          <MotoGPPage />
-                        </SectionRoute>
-                      }
-                    />
+                    <Route path="/formula1" element={<Formula1Page />} />
+                    <Route path="/motogp" element={<MotoGPPage />} />
                     <Route path="/preferenze" element={<PreferencesPage />} />
                     <Route path="/accedi" element={<AuthPage />} />
                     <Route path="/reimposta-password" element={<ResetPasswordPage />} />

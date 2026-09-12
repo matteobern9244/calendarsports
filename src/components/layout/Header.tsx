@@ -1,6 +1,6 @@
 import { useRef, useState, MouseEvent as ReactMouseEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { Menu, X, Settings } from "lucide-react";
+import { Menu, X, Settings, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
@@ -15,32 +15,55 @@ import {
 } from "./BrandIcons";
 import { SparkleLoop } from "./SparkleLoop";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
-import { useUserPrefs } from "@/contexts/useUserPrefs";
+import { useUserPrefs, type SectionKey } from "@/contexts/useUserPrefs";
+import { useAuth } from "@/contexts/useAuth";
 import { resolveTeamStrict } from "@/lib/serieATeams";
 import { teamPath, teamSlugFromPath } from "@/lib/teamRoutes";
+import { HOME_PATH } from "@/lib/startPage";
 
 // Header non riceve piu' props: tema e preferenze sono in /preferenze.
 
+/**
+ * Le voci dell'intestazione, in ordine e con la sezione che le governa.
+ *
+ * La voce della squadra sta **dentro** l'elenco, con etichetta e indirizzo
+ * vuoti che `navItems` riempie: dipendono da un hook e non si possono
+ * scrivere qui. Prima veniva inserita dopo, con uno `splice` calcolato
+ * cercando `/formula1` — e con la Formula 1 nascosta quella ricerca falliva,
+ * mandando la squadra in fondo al menu'. Il suo posto nell'ordine e' un fatto,
+ * e i fatti si dichiarano una volta sola.
+ */
 const ALL_NAV_ITEMS = [
-  { label: "HOME", shortLabel: "HOME", path: "/", Icon: HomeBrandIcon },
-  { label: "CALENDARIO", shortLabel: "AGENDA", path: "/calendario", Icon: CalendarBrandIcon },
-  { label: "STREAMING", shortLabel: "STREAMING", path: "/streaming", Icon: StreamingBrandIcon },
+  { section: "home", label: "HOME", shortLabel: "HOME", path: HOME_PATH, Icon: HomeBrandIcon },
   {
+    section: "calendario",
+    label: "CALENDARIO",
+    shortLabel: "AGENDA",
+    path: "/calendario",
+    Icon: CalendarBrandIcon,
+  },
+  {
+    section: "streaming",
+    label: "STREAMING",
+    shortLabel: "STREAMING",
+    path: "/streaming",
+    Icon: StreamingBrandIcon,
+  },
+  {
+    section: "sinner",
     label: "JANNIK SINNER",
     shortLabel: "SINNER",
     path: "/sinner",
     Icon: TennisBrandIcon,
-    section: "sinner",
   },
-  // La voce della squadra e' l'unica che cambia da utente a utente: si
-  // aggiunge qui sotto, in `navItems`, perche' dipende da un hook.
-  { label: "FORMULA 1", shortLabel: "F1", path: "/formula1", Icon: F1BrandIcon, section: "f1" },
+  { section: "squadra", label: "", shortLabel: "", path: "", Icon: FootballBrandIcon },
+  { section: "f1", label: "FORMULA 1", shortLabel: "F1", path: "/formula1", Icon: F1BrandIcon },
   {
+    section: "motogp",
     label: "MOTOGP",
     shortLabel: "MOTOGP",
     path: "/motogp",
     Icon: MotoGPBrandIcon,
-    section: "motogp",
   },
 ] as const;
 
@@ -49,7 +72,7 @@ interface NavItem {
   shortLabel: string;
   path: string;
   Icon: (typeof ALL_NAV_ITEMS)[number]["Icon"];
-  section?: string;
+  section: SectionKey;
 }
 
 interface Burst {
@@ -66,6 +89,7 @@ export default function Header() {
   const burstSeq = useRef(0);
   const { open: prefsOpen, toggle: togglePrefs } = usePreferencesPanel();
   const { sections, favoriteTeam } = useUserPrefs();
+  const { user } = useAuth();
 
   /**
    * Dentro una pagina squadra comanda l'**indirizzo**, fuori la preferenza.
@@ -84,19 +108,29 @@ export default function Header() {
    */
   const team = resolveTeamStrict(teamSlugFromPath(location.pathname) ?? undefined) ?? favoriteTeam;
 
-  // Le sezioni disattivate nel profilo spariscono dal menu.
-  const navItems: NavItem[] = ALL_NAV_ITEMS.filter(
-    (item) => !("section" in item) || sections[item.section as keyof typeof sections],
+  /**
+   * La radice e la Home sono lo stesso posto quando la pagina iniziale e' la
+   * Home: `StartRoute` la mostra su `/` senza rimbalzare, per non far pagare
+   * un reindirizzamento al caso piu' frequente. Una voce non evidenziata
+   * mentre si sta guardando proprio quella pagina direbbe il falso.
+   */
+  const indirizzoAttivo = location.pathname === "/" ? HOME_PATH : location.pathname;
+
+  /**
+   * Le voci nascoste nelle preferenze spariscono da qui, e **solo** da qui:
+   * le pagine restano raggiungibili per indirizzo, perche' un link condiviso
+   * deve funzionare anche per chi quella voce l'ha tolta dal proprio menu'.
+   */
+  const navItems: NavItem[] = ALL_NAV_ITEMS.filter((item) => sections[item.section]).map((item) =>
+    item.section === "squadra"
+      ? {
+          ...item,
+          label: team.name.toUpperCase(),
+          shortLabel: team.name.toUpperCase(),
+          path: teamPath(team),
+        }
+      : item,
   );
-  // La voce della squadra torna dov'era: fra Sinner e Formula 1.
-  const posizioneSquadra = navItems.findIndex((item) => item.path === "/formula1");
-  const squadra: NavItem = {
-    label: team.name.toUpperCase(),
-    shortLabel: team.name.toUpperCase(),
-    path: teamPath(team),
-    Icon: FootballBrandIcon,
-  };
-  navItems.splice(posizioneSquadra === -1 ? navItems.length : posizioneSquadra, 0, squadra);
 
   const triggerBurst = (path: string, e: ReactMouseEvent<HTMLAnchorElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -152,7 +186,7 @@ export default function Header() {
             )}
           >
             {navItems.map((item) => {
-              const active = location.pathname === item.path;
+              const active = indirizzoAttivo === item.path;
               const Icon = item.Icon;
               const burst = bursts[item.path];
               return (
@@ -235,22 +269,46 @@ export default function Header() {
 
         {/* Theme toggle + mobile menu */}
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Preferenze"
-            aria-expanded={prefsOpen}
-            aria-controls="preferences-panel"
-            onClick={togglePrefs}
-            className={cn(
-              "rounded-full border transition-colors",
-              prefsOpen
-                ? "border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))] shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
-                : "border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10",
-            )}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          {/*
+            Le preferenze esistono solo per chi ha effettuato l'accesso, quindi
+            il pulsante che le apre non compare agli altri: un comando che apre
+            qualcosa di vuoto e' peggio di un comando assente.
+
+            Al suo posto ci va la porta d'ingresso, e non e' un di piu'. Il
+            collegamento all'accesso viveva **dentro** il pannello: toglierlo
+            senza rimpiazzarlo lascerebbe chi non e' registrato senza nessun
+            modo di diventarlo.
+          */}
+          {user ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Preferenze"
+              aria-expanded={prefsOpen}
+              aria-controls="preferences-panel"
+              onClick={togglePrefs}
+              className={cn(
+                "rounded-full border transition-colors",
+                prefsOpen
+                  ? "border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/15 text-[hsl(var(--gold))] shadow-[0_4px_14px_-6px_hsl(var(--gold)/0.55)]"
+                  : "border-border/60 hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10",
+              )}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Link
+              to="/accedi"
+              aria-label="Accedi"
+              className={cn(
+                "inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
+                "border-border/60 text-muted-foreground",
+                "hover:border-[hsl(var(--gold))]/50 hover:bg-[hsl(var(--gold))]/10 hover:text-[hsl(var(--gold))]",
+              )}
+            >
+              <LogIn className="h-4 w-4" />
+            </Link>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -275,7 +333,7 @@ export default function Header() {
           >
             <div className="container py-4 flex flex-col gap-2">
               {navItems.map((item, idx) => {
-                const active = location.pathname === item.path;
+                const active = indirizzoAttivo === item.path;
                 const Icon = item.Icon;
                 const burst = bursts[item.path];
                 return (

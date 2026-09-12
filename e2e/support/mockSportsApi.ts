@@ -70,6 +70,21 @@ const payloads: Record<EndpointName, unknown> = {
       constructor: "Ferrari",
       photoUrl: null,
     },
+    // Il caso peggiore **realistico**, non un nome inventato corto: e' la riga
+    // che decide se la tabella sta in 320px, ed e' quella che il guardiano
+    // dello scorrimento orizzontale deve poter misurare. Con soli «Lando
+    // Norris» e «Charles Leclerc» il guardiano restava verde mentre l'app,
+    // sui dati veri, sbordava di quaranta pixel.
+    {
+      position: 3,
+      points: 208,
+      wins: 1,
+      driver: "Andrea Kimi Antonelli",
+      driverCode: "ANT",
+      nationality: "Italian",
+      constructor: "Mercedes",
+      photoUrl: "https://example.invalid/antonelli.png",
+    },
   ],
   "sports-f1:constructor-standings": [
     {
@@ -199,8 +214,8 @@ const payloads: Record<EndpointName, unknown> = {
       logoUrl: null,
       startingLineup: [
         {
-          name: "Undici1 J.",
-          surname: "Undici1",
+          name: "Undici1 Varela Tavares J.",
+          surname: "Undici1 Varela Tavares",
           shirtNumber: 1,
           role: "Midfielder",
           playerId: "1",
@@ -208,8 +223,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici1/1",
         },
         {
-          name: "Undici2 J.",
-          surname: "Undici2",
+          name: "Undici2 Varela Tavares J.",
+          surname: "Undici2 Varela Tavares",
           shirtNumber: 2,
           role: "Midfielder",
           playerId: "2",
@@ -217,8 +232,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici2/2",
         },
         {
-          name: "Undici3 J.",
-          surname: "Undici3",
+          name: "Undici3 Varela Tavares J.",
+          surname: "Undici3 Varela Tavares",
           shirtNumber: 3,
           role: "Midfielder",
           playerId: "3",
@@ -226,8 +241,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici3/3",
         },
         {
-          name: "Undici4 J.",
-          surname: "Undici4",
+          name: "Undici4 Varela Tavares J.",
+          surname: "Undici4 Varela Tavares",
           shirtNumber: 4,
           role: "Midfielder",
           playerId: "4",
@@ -235,8 +250,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici4/4",
         },
         {
-          name: "Undici5 J.",
-          surname: "Undici5",
+          name: "Undici5 Varela Tavares J.",
+          surname: "Undici5 Varela Tavares",
           shirtNumber: 5,
           role: "Midfielder",
           playerId: "5",
@@ -244,8 +259,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici5/5",
         },
         {
-          name: "Undici6 J.",
-          surname: "Undici6",
+          name: "Undici6 Varela Tavares J.",
+          surname: "Undici6 Varela Tavares",
           shirtNumber: 6,
           role: "Midfielder",
           playerId: "6",
@@ -253,8 +268,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici6/6",
         },
         {
-          name: "Undici7 J.",
-          surname: "Undici7",
+          name: "Undici7 Varela Tavares J.",
+          surname: "Undici7 Varela Tavares",
           shirtNumber: 7,
           role: "Midfielder",
           playerId: "7",
@@ -262,8 +277,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici7/7",
         },
         {
-          name: "Undici8 J.",
-          surname: "Undici8",
+          name: "Undici8 Varela Tavares J.",
+          surname: "Undici8 Varela Tavares",
           shirtNumber: 8,
           role: "Midfielder",
           playerId: "8",
@@ -271,8 +286,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici8/8",
         },
         {
-          name: "Undici9 J.",
-          surname: "Undici9",
+          name: "Undici9 Varela Tavares J.",
+          surname: "Undici9 Varela Tavares",
           shirtNumber: 9,
           role: "Midfielder",
           playerId: "9",
@@ -280,8 +295,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici9/9",
         },
         {
-          name: "Undici10 J.",
-          surname: "Undici10",
+          name: "Undici10 Varela Tavares J.",
+          surname: "Undici10 Varela Tavares",
           shirtNumber: 10,
           role: "Midfielder",
           playerId: "10",
@@ -289,8 +304,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici10/10",
         },
         {
-          name: "Undici11 J.",
-          surname: "Undici11",
+          name: "Undici11 Varela Tavares J.",
+          surname: "Undici11 Varela Tavares",
           shirtNumber: 11,
           role: "Midfielder",
           playerId: "11",
@@ -301,8 +316,8 @@ const payloads: Record<EndpointName, unknown> = {
       lines: [
         [
           {
-            name: "Undici1 J.",
-            surname: "Undici1",
+            name: "Undici1 Varela Tavares J.",
+            surname: "Undici1 Varela Tavares",
             shirtNumber: 1,
             role: "Midfielder",
             playerId: "1",
@@ -312,8 +327,8 @@ const payloads: Record<EndpointName, unknown> = {
         ],
         [
           {
-            name: "Undici2 J.",
-            surname: "Undici2",
+            name: "Undici2 Varela Tavares J.",
+            surname: "Undici2 Varela Tavares",
             shirtNumber: 2,
             role: "Midfielder",
             playerId: "2",
@@ -321,8 +336,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici2/2",
           },
           {
-            name: "Undici3 J.",
-            surname: "Undici3",
+            name: "Undici3 Varela Tavares J.",
+            surname: "Undici3 Varela Tavares",
             shirtNumber: 3,
             role: "Midfielder",
             playerId: "3",
@@ -330,8 +345,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici3/3",
           },
           {
-            name: "Undici4 J.",
-            surname: "Undici4",
+            name: "Undici4 Varela Tavares J.",
+            surname: "Undici4 Varela Tavares",
             shirtNumber: 4,
             role: "Midfielder",
             playerId: "4",
@@ -339,8 +354,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici4/4",
           },
           {
-            name: "Undici5 J.",
-            surname: "Undici5",
+            name: "Undici5 Varela Tavares J.",
+            surname: "Undici5 Varela Tavares",
             shirtNumber: 5,
             role: "Midfielder",
             playerId: "5",
@@ -350,8 +365,8 @@ const payloads: Record<EndpointName, unknown> = {
         ],
         [
           {
-            name: "Undici6 J.",
-            surname: "Undici6",
+            name: "Undici6 Varela Tavares J.",
+            surname: "Undici6 Varela Tavares",
             shirtNumber: 6,
             role: "Midfielder",
             playerId: "6",
@@ -359,8 +374,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici6/6",
           },
           {
-            name: "Undici7 J.",
-            surname: "Undici7",
+            name: "Undici7 Varela Tavares J.",
+            surname: "Undici7 Varela Tavares",
             shirtNumber: 7,
             role: "Midfielder",
             playerId: "7",
@@ -368,8 +383,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici7/7",
           },
           {
-            name: "Undici8 J.",
-            surname: "Undici8",
+            name: "Undici8 Varela Tavares J.",
+            surname: "Undici8 Varela Tavares",
             shirtNumber: 8,
             role: "Midfielder",
             playerId: "8",
@@ -379,8 +394,8 @@ const payloads: Record<EndpointName, unknown> = {
         ],
         [
           {
-            name: "Undici9 J.",
-            surname: "Undici9",
+            name: "Undici9 Varela Tavares J.",
+            surname: "Undici9 Varela Tavares",
             shirtNumber: 9,
             role: "Midfielder",
             playerId: "9",
@@ -388,8 +403,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici9/9",
           },
           {
-            name: "Undici10 J.",
-            surname: "Undici10",
+            name: "Undici10 Varela Tavares J.",
+            surname: "Undici10 Varela Tavares",
             shirtNumber: 10,
             role: "Midfielder",
             playerId: "10",
@@ -397,8 +412,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici10/10",
           },
           {
-            name: "Undici11 J.",
-            surname: "Undici11",
+            name: "Undici11 Varela Tavares J.",
+            surname: "Undici11 Varela Tavares",
             shirtNumber: 11,
             role: "Midfielder",
             playerId: "11",
@@ -420,8 +435,8 @@ const payloads: Record<EndpointName, unknown> = {
       logoUrl: null,
       startingLineup: [
         {
-          name: "Undici1 J.",
-          surname: "Undici1",
+          name: "Undici1 Varela Tavares J.",
+          surname: "Undici1 Varela Tavares",
           shirtNumber: 1,
           role: "Midfielder",
           playerId: "1",
@@ -429,8 +444,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici1/1",
         },
         {
-          name: "Undici2 J.",
-          surname: "Undici2",
+          name: "Undici2 Varela Tavares J.",
+          surname: "Undici2 Varela Tavares",
           shirtNumber: 2,
           role: "Midfielder",
           playerId: "2",
@@ -438,8 +453,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici2/2",
         },
         {
-          name: "Undici3 J.",
-          surname: "Undici3",
+          name: "Undici3 Varela Tavares J.",
+          surname: "Undici3 Varela Tavares",
           shirtNumber: 3,
           role: "Midfielder",
           playerId: "3",
@@ -447,8 +462,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici3/3",
         },
         {
-          name: "Undici4 J.",
-          surname: "Undici4",
+          name: "Undici4 Varela Tavares J.",
+          surname: "Undici4 Varela Tavares",
           shirtNumber: 4,
           role: "Midfielder",
           playerId: "4",
@@ -456,8 +471,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici4/4",
         },
         {
-          name: "Undici5 J.",
-          surname: "Undici5",
+          name: "Undici5 Varela Tavares J.",
+          surname: "Undici5 Varela Tavares",
           shirtNumber: 5,
           role: "Midfielder",
           playerId: "5",
@@ -465,8 +480,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici5/5",
         },
         {
-          name: "Undici6 J.",
-          surname: "Undici6",
+          name: "Undici6 Varela Tavares J.",
+          surname: "Undici6 Varela Tavares",
           shirtNumber: 6,
           role: "Midfielder",
           playerId: "6",
@@ -474,8 +489,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici6/6",
         },
         {
-          name: "Undici7 J.",
-          surname: "Undici7",
+          name: "Undici7 Varela Tavares J.",
+          surname: "Undici7 Varela Tavares",
           shirtNumber: 7,
           role: "Midfielder",
           playerId: "7",
@@ -483,8 +498,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici7/7",
         },
         {
-          name: "Undici8 J.",
-          surname: "Undici8",
+          name: "Undici8 Varela Tavares J.",
+          surname: "Undici8 Varela Tavares",
           shirtNumber: 8,
           role: "Midfielder",
           playerId: "8",
@@ -492,8 +507,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici8/8",
         },
         {
-          name: "Undici9 J.",
-          surname: "Undici9",
+          name: "Undici9 Varela Tavares J.",
+          surname: "Undici9 Varela Tavares",
           shirtNumber: 9,
           role: "Midfielder",
           playerId: "9",
@@ -501,8 +516,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici9/9",
         },
         {
-          name: "Undici10 J.",
-          surname: "Undici10",
+          name: "Undici10 Varela Tavares J.",
+          surname: "Undici10 Varela Tavares",
           shirtNumber: 10,
           role: "Midfielder",
           playerId: "10",
@@ -510,8 +525,8 @@ const payloads: Record<EndpointName, unknown> = {
           profileUrl: "https://sport.sky.it/calcio/atleti/undici10/10",
         },
         {
-          name: "Undici11 J.",
-          surname: "Undici11",
+          name: "Undici11 Varela Tavares J.",
+          surname: "Undici11 Varela Tavares",
           shirtNumber: 11,
           role: "Midfielder",
           playerId: "11",
@@ -522,8 +537,8 @@ const payloads: Record<EndpointName, unknown> = {
       lines: [
         [
           {
-            name: "Undici1 J.",
-            surname: "Undici1",
+            name: "Undici1 Varela Tavares J.",
+            surname: "Undici1 Varela Tavares",
             shirtNumber: 1,
             role: "Midfielder",
             playerId: "1",
@@ -533,8 +548,8 @@ const payloads: Record<EndpointName, unknown> = {
         ],
         [
           {
-            name: "Undici2 J.",
-            surname: "Undici2",
+            name: "Undici2 Varela Tavares J.",
+            surname: "Undici2 Varela Tavares",
             shirtNumber: 2,
             role: "Midfielder",
             playerId: "2",
@@ -542,8 +557,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici2/2",
           },
           {
-            name: "Undici3 J.",
-            surname: "Undici3",
+            name: "Undici3 Varela Tavares J.",
+            surname: "Undici3 Varela Tavares",
             shirtNumber: 3,
             role: "Midfielder",
             playerId: "3",
@@ -551,8 +566,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici3/3",
           },
           {
-            name: "Undici4 J.",
-            surname: "Undici4",
+            name: "Undici4 Varela Tavares J.",
+            surname: "Undici4 Varela Tavares",
             shirtNumber: 4,
             role: "Midfielder",
             playerId: "4",
@@ -560,8 +575,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici4/4",
           },
           {
-            name: "Undici5 J.",
-            surname: "Undici5",
+            name: "Undici5 Varela Tavares J.",
+            surname: "Undici5 Varela Tavares",
             shirtNumber: 5,
             role: "Midfielder",
             playerId: "5",
@@ -571,8 +586,8 @@ const payloads: Record<EndpointName, unknown> = {
         ],
         [
           {
-            name: "Undici6 J.",
-            surname: "Undici6",
+            name: "Undici6 Varela Tavares J.",
+            surname: "Undici6 Varela Tavares",
             shirtNumber: 6,
             role: "Midfielder",
             playerId: "6",
@@ -580,8 +595,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici6/6",
           },
           {
-            name: "Undici7 J.",
-            surname: "Undici7",
+            name: "Undici7 Varela Tavares J.",
+            surname: "Undici7 Varela Tavares",
             shirtNumber: 7,
             role: "Midfielder",
             playerId: "7",
@@ -591,8 +606,8 @@ const payloads: Record<EndpointName, unknown> = {
         ],
         [
           {
-            name: "Undici8 J.",
-            surname: "Undici8",
+            name: "Undici8 Varela Tavares J.",
+            surname: "Undici8 Varela Tavares",
             shirtNumber: 8,
             role: "Midfielder",
             playerId: "8",
@@ -600,8 +615,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici8/8",
           },
           {
-            name: "Undici9 J.",
-            surname: "Undici9",
+            name: "Undici9 Varela Tavares J.",
+            surname: "Undici9 Varela Tavares",
             shirtNumber: 9,
             role: "Midfielder",
             playerId: "9",
@@ -609,8 +624,8 @@ const payloads: Record<EndpointName, unknown> = {
             profileUrl: "https://sport.sky.it/calcio/atleti/undici9/9",
           },
           {
-            name: "Undici10 J.",
-            surname: "Undici10",
+            name: "Undici10 Varela Tavares J.",
+            surname: "Undici10 Varela Tavares",
             shirtNumber: 10,
             role: "Midfielder",
             playerId: "10",
@@ -620,8 +635,8 @@ const payloads: Record<EndpointName, unknown> = {
         ],
         [
           {
-            name: "Undici11 J.",
-            surname: "Undici11",
+            name: "Undici11 Varela Tavares J.",
+            surname: "Undici11 Varela Tavares",
             shirtNumber: 11,
             role: "Midfielder",
             playerId: "11",
@@ -742,6 +757,20 @@ const payloads: Record<EndpointName, unknown> = {
   "sports-motogp:standings": [
     { position: 1, name: "Bagnaia F.", team: "Ducati Lenovo Team", points: 101, photoUrl: null },
     { position: 2, name: "Marquez M.", team: "Gresini Racing", points: 97, photoUrl: null },
+    // Come per la Formula 1: la riga che conta e' la piu' larga possibile, con
+    // tutto quello che la cella puo' contenere — foto, numero di gara,
+    // bandiera e il nome piu' lungo della griglia. Senza `number` e
+    // `nationality` la fixture produceva una riga di un centinaio di pixel
+    // piu' stretta di quella vera, e il guardiano misurava quella.
+    {
+      position: 3,
+      name: "Fabio Di Giannantonio",
+      team: "Pertamina Enduro VR46 Racing Team",
+      points: 208,
+      photoUrl: "https://example.invalid/diggia.png",
+      number: 49,
+      nationality: "it",
+    },
   ],
   "sports-motogp:constructor-standings": [
     // `constructor` (la casa, in minuscolo) e' parte del contratto reale:
@@ -834,6 +863,25 @@ function buildTvPayload(family: string, date: string) {
       familyLabel: "RAI",
       date,
       channels: [
+        // Tredici canali e non due: sotto i sette la paginazione non compare
+        // affatto (`CHANNELS_PER_PAGE` vale 6), e il guardiano dello
+        // scorrimento orizzontale misurava una pagina senza il componente
+        // che sbordava. Una fixture piu' piccola del vero non e' piu'
+        // semplice: e' cieca.
+        ...Array.from({ length: 11 }, (_, i) => ({
+          id: `rai-extra-${i}`,
+          name: `Rai Canale Aggiuntivo ${i + 1}`,
+          logo: null,
+          number: 100 + i,
+          programs: [
+            {
+              start: `${date}T19:15:00.000Z`,
+              end: `${date}T20:15:00.000Z`,
+              title: `Programma Aggiuntivo ${i + 1}`,
+              genre: "Documentari",
+            },
+          ],
+        })),
         {
           id: "rai-1",
           name: "Rai 1",
@@ -893,9 +941,51 @@ function buildTvPayload(family: string, date: string) {
   return { family, familyLabel: family, date, channels: [], programsAvailable: false };
 }
 
+/**
+ * Venti uscite, cioe' tre pagine da otto: abbastanza perche' `PagerNav`
+ * compaia. I titoli sono lunghi di proposito — e' la lunghezza vera dei nomi
+ * dei film, ed e' quella che decide se la griglia sta in 320px.
+ */
+function buildReleasesPayload() {
+  return {
+    region: "IT" as const,
+    dateFrom: "2099-04-01",
+    dateTo: "2099-05-01",
+    provider: null,
+    kind: "all" as const,
+    sort: "release" as const,
+    genreId: null,
+    configured: true,
+    items: Array.from({ length: 20 }, (_, i) => ({
+      tmdbId: 1000 + i,
+      type: i % 2 === 0 ? ("movie" as const) : ("tv" as const),
+      title: `Il Titolo Molto Lungo Di Una Uscita Numero ${i + 1}`,
+      releaseDate: "2099-04-15",
+      poster: null,
+      overview: "Descrizione di prova sufficientemente lunga da riempire la scheda del titolo.",
+      voteAverage: 7.4,
+      deepLink: null,
+      year: 2099,
+      genres: ["Azione", "Avventura", "Fantascienza"],
+      availableProviders: [],
+      justWatchLink: null,
+      popularity: 100 - i,
+    })),
+  };
+}
+
 export async function installSportsApiMocks(page: Page, options: MockOptions = {}) {
   await page.route("**/functions/v1/**", async (route) => {
     const url = new URL(route.request().url());
+
+    // `streaming-releases` non era mockato: rispondeva 404, e la scheda
+    // «Nuove uscite» mostrava una schermata d'errore. Il guardiano dello
+    // scorrimento orizzontale la visitava e la trovava sempre a posto — per
+    // il motivo sbagliato, cioe' perche' non c'era niente da disporre.
+    if (url.pathname.endsWith("/streaming-releases")) {
+      await fulfillJson(route, 200, { success: true, data: buildReleasesPayload() });
+      return;
+    }
 
     // Mock dedicato per streaming-tv (la scheda Stasera in TV in Home).
     if (url.pathname.endsWith("/streaming-tv")) {

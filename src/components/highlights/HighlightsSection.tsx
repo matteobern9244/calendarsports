@@ -1,7 +1,11 @@
 import { motion } from "framer-motion";
 import { ExternalLink } from "lucide-react";
 import { useHighlights } from "@/hooks/useSportsData";
-import type { HighlightSport } from "@/lib/api/sportsApi";
+import {
+  HIGHLIGHT_PLAYLISTS,
+  playlistUrl as urlPlaylist,
+  type HighlightSport,
+} from "@/lib/highlightPlaylists";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
 import UnavailableExternalSource from "@/components/common/UnavailableExternalSource";
@@ -14,12 +18,6 @@ interface HighlightsSectionProps {
   limit?: number;
 }
 
-const SPORT_LABELS: Record<HighlightSport, string> = {
-  juventus: "Juventus",
-  f1: "Formula 1",
-  motogp: "MotoGP",
-};
-
 export default function HighlightsSection({
   sport,
   accentVar = "gold",
@@ -28,16 +26,12 @@ export default function HighlightsSection({
   const { data, isLoading, error, refetch } = useHighlights(sport, limit);
   const items = data ?? [];
 
-  // L'edge function ritorna meta.playlistUrl ma `data` qui è solo l'array.
-  // Costruiamo l'URL playlist dal primo videoId? No: usiamo i playlist id pubblici noti
-  // mantenendoli sincronizzati lato client per il CTA "Vedi tutti su YouTube".
-  const PLAYLIST_URLS: Record<HighlightSport, string> = {
-    juventus: "https://www.youtube.com/playlist?list=PLamQuNkRTV0eQ-UiYDCuz_WUHOlri1BY3",
-    f1: "https://www.youtube.com/playlist?list=PLZbcTUGG8ELs188DCvpKMVFsnia-uB3j8",
-    motogp: "https://www.youtube.com/playlist?list=PLMgcIchslSqgqxtkUg4iiqc1UL8u8uFey",
-  };
-  const playlistUrl = PLAYLIST_URLS[sport];
-  const sportLabel = SPORT_LABELS[sport];
+  // `data` qui e' solo l'array: il `meta.playlistUrl` che l'edge function
+  // restituisce non arriva fin qui, quindi l'indirizzo si ricostruisce dal
+  // catalogo. Che sia lo stesso identificativo dei due lati e' garantito dal
+  // guardiano in `src/lib/highlightPlaylists.test.ts`, non dall'attenzione.
+  const playlistUrl = urlPlaylist(sport);
+  const sportLabel = HIGHLIGHT_PLAYLISTS[sport].label;
 
   return (
     <section aria-label="Highlights video">

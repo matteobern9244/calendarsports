@@ -147,12 +147,15 @@ visitava) e la selezione del programma di prima serata di
 
 ## Valutate e scartate, per ora
 
-- **Venti playlist di highlights.** `highlights-youtube` conosce tre id fissi, e
-  venti squadre ne vorrebbero venti, da raccogliere e verificare a mano uno per
-  uno. Deciso l'11 settembre 2026 di non farlo: nella 3.1.0 la **scheda sparisce**
-  per le altre diciannove, invece di mostrare loro video juventini. Togliere la
-  scheda e non il suo contenuto è la parte che conta — una linguetta che si apre
-  sul vuoto promette qualcosa che non c'è.
+- **Venti playlist di highlights.** `highlights-youtube` conosce quattro id
+  fissi, e venti squadre ne vorrebbero venti, da raccogliere e verificare a mano
+  uno per uno. Deciso l'11 settembre 2026 di non farlo in blocco: la **scheda
+  sparisce** per chi non ha una playlist, invece di mostrare video di un'altra
+  squadra. Togliere la scheda e non il suo contenuto è la parte che conta — una
+  linguetta che si apre sul vuoto promette qualcosa che non c'è.
+  Nella 3.3.0 si è aggiunto il **Milan**, su richiesta e con l'id verificato sul
+  feed: due su venti. La strada resta questa, una squadra per volta e solo con
+  un identificativo controllato, mai venti indovinati.
 - **Valori di mercato da Transfermarkt.** Risponde `200` da un IP domestico, ma
   l'IP di una edge function è datacenter — la categoria che questi siti bloccano
   — e i termini di servizio vietano lo scraping comunque. Deciso di non farlo

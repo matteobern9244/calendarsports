@@ -38,9 +38,15 @@ describe("StandingsTable", () => {
     expect(screen.getByRole("cell", { name: "-2" })).toBeInTheDocument();
   });
 
-  it("dichiara la fonte, perche' e' scraping e non un'API ufficiale", () => {
+  /**
+   * La dicitura c'era, ed e' stata tolta su richiesta: l'app non firma piu' in
+   * pagina il nome di chi le fornisce i dati. L'onesta' sulle fonti resta un
+   * obbligo, ma si assolve nella documentazione (`docs/DATA_SOURCES.md`) e nel
+   * campo `meta.dataSource` delle edge function, non addosso a una tabella.
+   */
+  it("non firma la tabella con il nome della fonte", () => {
     render(<StandingsTable team={JUVE} standings={[row({ team: "Juventus" })]} />);
-    expect(screen.getByText("Fonte: Sky Sport Italia")).toBeInTheDocument();
+    expect(screen.queryByText(/Sky Sport/i)).not.toBeInTheDocument();
   });
 
   it("la riga evidenziata e' quella della squadra scelta, e solo quella", () => {

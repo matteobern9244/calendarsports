@@ -77,24 +77,44 @@ src/
 
 Tutte figlie di `Layout`, tranne il catch-all.
 
-| Path                                  | Componente                           |
-| ------------------------------------- | ------------------------------------ |
-| `/`                                   | `Index`                              |
-| `/calendario`                         | `CalendarPage`                       |
-| `/streaming`                          | `StreamingPage`                      |
-| `/sinner`                             | `SinnerPage`                         |
-| `/squadra/:teamSlug`                  | `TeamPage`                           |
-| `/squadra/:teamSlug/partite/:matchId` | `TeamMatchPage`                      |
-| `/juventus`                           | redirect a `/squadra/juventus`       |
-| `/juventus/partite/:matchId`          | redirect al ramo `/squadra/juventus` |
-| `/formula1`                           | `Formula1Page`                       |
-| `/motogp`                             | `MotoGPPage`                         |
-| `/preferenze`                         | `PreferencesPage`                    |
-| `/accedi`                             | `AuthPage`                           |
-| `/reimposta-password`                 | `ResetPasswordPage`                  |
-| `*`                                   | `NotFound`                           |
+| Path                                  | Componente                                |
+| ------------------------------------- | ----------------------------------------- |
+| `/`                                   | `StartRoute` → `Index` o la pagina scelta |
+| `/home`                               | `Index`                                   |
+| `/calendario`                         | `CalendarPage`                            |
+| `/streaming`                          | `StreamingPage`                           |
+| `/sinner`                             | `SinnerPage`                              |
+| `/squadra/:teamSlug`                  | `TeamPage`                                |
+| `/squadra/:teamSlug/partite/:matchId` | `TeamMatchPage`                           |
+| `/juventus`                           | redirect a `/squadra/juventus`            |
+| `/juventus/partite/:matchId`          | redirect al ramo `/squadra/juventus`      |
+| `/formula1`                           | `Formula1Page`                            |
+| `/motogp`                             | `MotoGPPage`                              |
+| `/preferenze`                         | `PreferencesPage`                         |
+| `/accedi`                             | `AuthPage`                                |
+| `/reimposta-password`                 | `ResetPasswordPage`                       |
+| `*`                                   | `NotFound`                                |
 
 Routing dichiarativo con react-router 8: nessun data router, nessun loader.
+
+**La radice è un punto di decisione, non una pagina.** `StartRoute` legge
+`profiles.start_page` e, se vale qualcosa di diverso da `home`, rimanda
+altrove; se vale `home` dipinge `Index` senza redirect, perché è il caso
+comune e un salto in più si vedrebbe. La Home ha comunque un indirizzo
+proprio, `/home`, che serve a chi ha scelto un'altra pagina iniziale e vuole
+tornarci: senza, la Home sarebbe irraggiungibile per quelle persone.
+
+Finché la sessione o il profilo si stanno leggendo, `StartRoute` mostra uno
+spinner invece di dipingere: dipingere prima vorrebbe dire mostrare una pagina
+e saltare altrove un istante dopo. Se il profilo **non arriva** — rete a pezzi
+— vince la Home: un ripiego, non un blocco.
+
+Nessuna preferenza rende irraggiungibile un indirizzo. Le sette `show_*`
+tolgono la voce dal menù e nient'altro, perché un link verso
+`/squadra/napoli` è fatto per essere condiviso e deve funzionare anche per chi
+quella voce dal proprio menù l'ha tolta. Fino alla 3.3.0 tre di esse
+bloccavano anche la rotta, tramite un componente `SectionRoute` che per questo
+non esiste più.
 
 ## Hook di dati e chiavi di cache
 
@@ -191,8 +211,13 @@ profiles
 ├─ display_name           text            ← nullable, l'unico campo scritto a mano
 ├─ theme                  text  DEFAULT 'dark'
 ├─ favorite_team          text  DEFAULT 'juventus'  ← slug, non nome
-├─ show_sinner            boolean DEFAULT true
-├─ show_f1, show_motogp   boolean DEFAULT true
+├─ show_home              boolean DEFAULT true   ┐
+├─ show_calendario        boolean DEFAULT true   │ una per voce del menù:
+├─ show_streaming         boolean DEFAULT true   │ nascondono la **voce**,
+├─ show_sinner            boolean DEFAULT true   │ mai la pagina né la rotta
+├─ show_squadra           boolean DEFAULT true   │
+├─ show_f1, show_motogp   boolean DEFAULT true   ┘
+├─ start_page             text  DEFAULT 'home'  ← dove l'app si apre
 └─ created_at, updated_at timestamptz
    trigger handle_new_user: crea la riga alla registrazione
 ```

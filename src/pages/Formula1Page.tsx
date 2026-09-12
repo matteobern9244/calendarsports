@@ -268,6 +268,16 @@ export default function Formula1Page() {
                     <TableCell className="font-heading font-bold">{d.position}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        {/* Sotto i 380px la foto sparisce, e con lei gli otto
+                            pixel di distanza che la separano dal resto: sono i
+                            quaranta pixel che facevano scorrere la tabella di
+                            lato sui nomi veri piu' lunghi della griglia. E' la
+                            parte piu' decorativa della riga — il nome, la
+                            bandiera e il numero di gara dicono gia' di chi si
+                            tratta — ed e' quindi la sola che si possa togliere
+                            senza togliere informazione. La soglia e' la piu'
+                            stretta possibile e non `sm`: a 400px la foto ci sta
+                            benissimo, e toglierla li' sarebbe un danno gratuito. */}
                         {d.photoUrl ? (
                           <img
                             src={d.photoUrl}
@@ -276,13 +286,13 @@ export default function Formula1Page() {
                             decoding="async"
                             width={32}
                             height={32}
-                            className="h-8 w-8 rounded-full object-cover bg-muted shrink-0"
+                            className="h-8 w-8 rounded-full object-cover bg-muted shrink-0 max-[380px]:hidden"
                             onError={(e) => {
                               (e.currentTarget as HTMLImageElement).src = "/placeholder.svg";
                             }}
                           />
                         ) : (
-                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 max-[380px]:hidden">
                             <User className="h-4 w-4 text-muted-foreground" />
                           </div>
                         )}

@@ -195,9 +195,7 @@ export default function SquadSection({ team, squad, season }: SquadSectionProps)
       ))}
 
       <p className="text-[11px] text-muted-foreground">
-        Rosa e allenatore da Sky Sport; stadio dalla Lega Serie A. L'età è quella pubblicata dalla
-        fonte, che non espone la data di nascita. Tocca un giocatore per le sue statistiche di
-        stagione.
+        Tocca un giocatore per le sue statistiche di stagione.
       </p>
       <span className="sr-only">Rosa del {team.name}</span>
     </div>

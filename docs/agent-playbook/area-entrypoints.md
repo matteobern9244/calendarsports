@@ -26,9 +26,12 @@ script disponibili.
 | MotoGP               | `src/pages/MotoGPPage.tsx`, `sports-motogp` (Pulselive per il calendario, Sky per le classifiche)                                                                                   |
 | Sinner               | `src/pages/SinnerPage.tsx`, `components/sinner/PlayerHeader.tsx`, `sports-tennis` (Wikipedia + dataset curato)                                                                      |
 | Streaming e TV       | `src/pages/StreamingPage.tsx`, `src/hooks/useStreamingData.ts`, `streaming-tv`, `streaming-releases`                                                                                |
-| Highlights           | `components/highlights/`, `highlights-youtube`, `useHighlights`                                                                                                                     |
+| Highlights           | `src/lib/highlightPlaylists.ts` (catalogo e corrispondenza squadra→playlist), `components/highlights/`, `highlights-youtube`, `useHighlights`                                       |
 | Notifiche push       | `src/lib/pushClient.ts`, `src/hooks/usePushNotifications.ts`, `push-subscribe`, `push-vapid-key`, `push-dispatcher`, `public/sw.js`                                                 |
-| Preferenze e tema    | `components/preferences/PreferencesPanel.tsx`, `src/contexts/UserPrefsContext.tsx`, `src/hooks/useProfile.ts`, `src/hooks/useTheme.ts`                                              |
+| Preferenze e tema    | `components/preferences/PreferencesPanel.tsx`, `src/contexts/UserPrefsContext.tsx`, `src/hooks/useProfile.ts`, `src/hooks/useTheme.ts` — **solo con l'accesso**                     |
+| Pagina iniziale      | `src/lib/startPage.ts`, `components/common/StartRoute.tsx`, `components/preferences/StartPageSelect.tsx`, colonna `profiles.start_page`                                             |
+| Voci del menù        | `MENU_SECTIONS` in `src/contexts/useUserPrefs.ts`, `COLONNA_SEZIONE` in `UserPrefsContext.tsx`, le sette colonne `profiles.show_*`                                                  |
+| Gesto di apertura    | `src/lib/swipeGesture.ts`, `src/hooks/useSwipeFromLeft.ts`, `components/layout/SwipeToPreferences.tsx`                                                                              |
 | Accesso e profilo    | `src/pages/AuthPage.tsx`, `src/contexts/AuthContext.tsx`, `src/hooks/useProfile.ts`, tabella `profiles` (RLS sulla propria riga)                                                    |
 | Squadra di Serie A   | `src/lib/serieATeams.ts` e la copia `supabase/functions/_shared/serieATeams.ts` con il guardiano anti-divergenza, `components/preferences/TeamSelect.tsx`                           |
 | Sincronizzazione     | `src/hooks/useSyncAll.ts`, `src/hooks/syncWarning.ts`                                                                                                                               |
@@ -83,8 +86,15 @@ perché **non sono deducibili dal nome della pagina**.
 
 ## Mappa completa delle route
 
-- `/` → `src/pages/Index.tsx`: prossimi eventi da tutte le sezioni più la scheda
-  "Stasera in TV".
+- `/` → `components/common/StartRoute.tsx`: **non è una pagina, è una
+  decisione**. Legge `profiles.start_page` e rimanda alla pagina scelta; se la
+  scelta è `home` (il caso comune) dipinge `Index` senza redirect, perché un
+  salto in più si vedrebbe. Finché sessione e profilo si stanno leggendo mostra
+  uno spinner, e se il profilo non arriva vince la Home.
+- `/home` → `src/pages/Index.tsx`: prossimi eventi da tutte le sezioni più la
+  scheda "Stasera in TV". Ha un indirizzo proprio dalla 3.3.0: serve a chi ha
+  scelto un'altra pagina iniziale e vuole tornare qui, che altrimenti non
+  avrebbe modo di raggiungerla.
 - `/calendario` → `src/pages/CalendarPage.tsx`: vista mese e agenda con filtri per
   sport.
 - `/streaming` → `src/pages/StreamingPage.tsx`: palinsesto serale per famiglia e
@@ -92,7 +102,9 @@ perché **non sono deducibili dal nome della pagina**.
 - `/sinner` → `src/pages/SinnerPage.tsx`: profilo, risultati paginati, calendario
   tornei.
 - `/squadra/:teamSlug` → `src/pages/TeamPage.tsx`: calendario paginato,
-  classifica Serie A, highlights della squadra nell'indirizzo.
+  classifica Serie A, e la scheda highlights **solo per le squadre che hanno
+  una playlist verificata** (Juventus e Milan): lo dice
+  `highlightSportPerSquadra`, unica sede della decisione.
 - `/squadra/:teamSlug/partite/:matchId` → `src/pages/TeamMatchPage.tsx`:
   dettaglio di una partita, raggiungibile anche via deep-link. Sta **dentro** il
   ramo della squadra da cui la si apre: la stessa Juventus-Napoli ha due
@@ -104,5 +116,6 @@ perché **non sono deducibili dal nome della pagina**.
 - `/motogp` → `src/pages/MotoGPPage.tsx`: calendario weekend, classifiche piloti e
   costruttori.
 - `/preferenze` → `src/pages/PreferencesPage.tsx`: apre il pannello preferenze e
-  rimanda alla Home.
+  rimanda alla Home. **Solo con l'accesso**: senza sessione rimanda a
+  `/accedi`, perché dalla 3.3.0 le preferenze vivono solo sul profilo.
 - `*` → `src/pages/NotFound.tsx`: unica route fuori dal `Layout`.

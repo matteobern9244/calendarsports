@@ -24,16 +24,33 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      // Le prove che valgono su entrambi restano qui: `mobile.spec.ts`
+      // contiene solo cio' che ha bisogno di un dito e di uno schermo
+      // stretto, e girerebbe due volte senza dire niente di nuovo.
+      testIgnore: /mobile\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "mobile",
+      testMatch: /mobile\.spec\.ts/,
+      // Pixel 5: schermo stretto e `hasTouch`, cioe' le due condizioni che
+      // separano il comportamento mobile da quello desktop.
+      use: { ...devices["Pixel 5"] },
     },
   ],
   webServer: {
-    command: [
-      `VITE_SUPABASE_URL=${mockSupabaseUrl}`,
-      "VITE_SUPABASE_PUBLISHABLE_KEY=test-anon-key",
-      "bun run build",
-      `bun run preview -- --host ${previewHost} --port ${previewPort} --strictPort`,
-    ].join(" && "),
+    /*
+      Le due variabili sono **prefissi** della build, separati da spazi: unite
+      con `&&` diventavano comandi a se' stanti, e un'assegnazione senza
+      `export` crea una variabile di shell che i processi figli non vedono. La
+      build ripiegava percio' sull'indirizzo di produzione scritto in
+      `supabaseClient.ts`, e le prove parlavano con il Supabase vero invece che
+      con il finto — senza che niente lo segnalasse, perche' senza sessione
+      quelle richieste non servono a nessuno.
+    */
+    command:
+      `VITE_SUPABASE_URL=${mockSupabaseUrl} VITE_SUPABASE_PUBLISHABLE_KEY=test-anon-key bun run build` +
+      ` && bun run preview -- --host ${previewHost} --port ${previewPort} --strictPort`,
     url: baseURL,
     reuseExistingServer: false,
     timeout: 120_000,

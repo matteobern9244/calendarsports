@@ -235,16 +235,6 @@ export default function StatsBoard({ team, standings, matches }: StatsBoardProps
         </Sezione>
       )}
 
-      <p className="text-[11px] text-muted-foreground">
-        Totali dalla classifica di Sky Sport; andamento, casa e trasferta ricalcolati sui risultati
-        del calendario di questa stagione.
-      </p>
-      <p className="text-[11px] text-muted-foreground">
-        Le statistiche per singolo giocatore — minuti, gol, assist, cartellini — non ci sono.
-        L&apos;unica fonte che le espone, API-Football, nel piano gratuito copre solo le stagioni
-        dal 2022 al 2024, e mostrare qui i numeri di due stagioni fa significherebbe dare per
-        attuale un dato che non lo è.
-      </p>
       <span className="sr-only">Statistiche di campionato del {team.name}</span>
     </div>
   );

@@ -242,8 +242,20 @@ Azioni: `new-today`, `new-italy`, `details`, `credits`.
 
 ### `highlights-youtube`
 
-- **Feed RSS pubblico** di YouTube, senza chiave API, su tre playlist con id
-  fissi (Juventus, F1, MotoGP).
+- **Feed RSS pubblico** di YouTube, senza chiave API, su quattro playlist con id
+  fissi: **Juventus**, **Milan**, F1, MotoGP.
+- **Gli id stanno in due copie**, e non per distrazione: Deno carica solo ciò
+  che sta sotto `supabase/functions/`, quindi la funzione non può importare
+  `src/lib/highlightPlaylists.ts`. La sorgente è quel modulo; la copia è la
+  mappa `PLAYLIST_IDS` dentro la funzione. A tenerle in pari c'è un guardiano
+  in `src/lib/highlightPlaylists.test.ts`, che confronta le due mappe e
+  verifica anche che il messaggio del `400` elenchi davvero gli sport accettati.
+- **Quali squadre hanno gli highlights** lo dice `highlightSportPerSquadra`, non
+  una condizione nella pagina: sono Juventus e Milan, le altre diciotto non
+  vedono la scheda. Ogni id è stato verificato a mano sul feed — quelli attuali
+  il 12 settembre 2026, quando si è scoperto che la playlist juventina in uso
+  era ancora la **2025/26** e mostrava partite della stagione scorsa sotto il
+  titolo «Highlights».
 - **Cache**: nessuna in memoria; la risposta porta `Cache-Control: max-age=600`.
 
 ### Funzioni push

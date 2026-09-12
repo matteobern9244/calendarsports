@@ -34,7 +34,19 @@ export default function PagerNav({
   const atLast = page === pageCount;
   return (
     <Pagination>
-      <PaginationContent>
+      {/*
+        Due difese contro lo stesso difetto, perche' arriva da due direzioni.
+
+        `flex-wrap`: l'elenco delle pagine cresce con i risultati, e in fila
+        indiana su una riga sola sfondava lo schermo appena le pagine erano
+        piu' di tre. Va a capo, come ogni altra fila di pillole dell'app.
+
+        `[&>span]:hidden` sotto i 380px: «Precedente» e «Successiva» sono due
+        link da 122px ciascuno, cioe' 244 dei 360 di un telefono comune. Sotto
+        quella soglia resta la sola freccia; il nome per chi non la vede non si
+        perde, perche' e' nell'`aria-label` del link, non in quel testo.
+      */}
+      <PaginationContent className="flex-wrap justify-center">
         <PaginationItem>
           <PaginationPrevious
             href="#"
@@ -44,7 +56,10 @@ export default function PagerNav({
               e.preventDefault();
               if (page > 1) onChange(page - 1);
             }}
-            className={cn(atFirst && "pointer-events-none opacity-50")}
+            className={cn(
+              "max-[380px]:[&>span]:hidden",
+              atFirst && "pointer-events-none opacity-50",
+            )}
           />
         </PaginationItem>
         {pages.map((p) => (
@@ -70,7 +85,10 @@ export default function PagerNav({
               e.preventDefault();
               if (page < pageCount) onChange(page + 1);
             }}
-            className={cn(atLast && "pointer-events-none opacity-50")}
+            className={cn(
+              "max-[380px]:[&>span]:hidden",
+              atLast && "pointer-events-none opacity-50",
+            )}
           />
         </PaginationItem>
       </PaginationContent>

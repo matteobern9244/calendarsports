@@ -70,6 +70,19 @@ describe("SquadSection", () => {
     expect(within(sezioneAllenatore).getByText("Spalletti L.")).toBeInTheDocument();
   });
 
+  /**
+   * Tolta l'attribuzione a Sky Sport e alla Lega Serie A, come richiesto.
+   * L'invito a toccare un giocatore invece resta: non e' una fonte, e' l'unica
+   * riga che annuncia che quelle dell'elenco sono righe apribili.
+   */
+  it("non attribuisce la rosa a una fonte, ma dice ancora che le righe si aprono", () => {
+    renderRosa();
+
+    expect(screen.queryByText(/Sky Sport/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Lega Serie A/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Tocca un giocatore/i)).toBeInTheDocument();
+  });
+
   it("mostra l'eta', mai una data di nascita", () => {
     // La fonte non la espone: stamparne una significherebbe inventarla.
     renderRosa();

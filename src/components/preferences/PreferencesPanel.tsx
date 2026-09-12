@@ -11,12 +11,14 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useUserPrefs } from "@/contexts/useUserPrefs";
+import { MENU_SECTIONS, useUserPrefs } from "@/contexts/useUserPrefs";
 import { useAuth } from "@/contexts/useAuth";
-import { Link, useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { useCountdownMode } from "@/hooks/useCountdownMode";
 import TeamSelect from "@/components/preferences/TeamSelect";
+import StartPageSelect from "@/components/preferences/StartPageSelect";
+import { startPageLabel, type StartPage } from "@/lib/startPage";
 import { resolveTeam } from "@/lib/serieATeams";
 import { teamPath, teamSlugFromPath } from "@/lib/teamRoutes";
 import { usePushNotifications, type LeadTime } from "@/hooks/usePushNotifications";
@@ -24,7 +26,16 @@ import { usePushNotifications, type LeadTime } from "@/hooks/usePushNotification
 export default function PreferencesPanel() {
   const { open, setOpen } = usePreferencesPanel();
   const isMobile = useIsMobile();
-  const { theme, setTheme, favoriteTeam, setFavoriteTeam, sections, setSection } = useUserPrefs();
+  const {
+    theme,
+    setTheme,
+    favoriteTeam,
+    setFavoriteTeam,
+    sections,
+    setSection,
+    startPage,
+    setStartPage,
+  } = useUserPrefs();
   const { user, signOut } = useAuth();
   const { mode: countdownMode, setMode: setCountdownMode } = useCountdownMode();
   const push = usePushNotifications();
@@ -57,6 +68,20 @@ export default function PreferencesPanel() {
     setFavoriteTeam(slug);
     setOpen(false);
     if (teamSlugFromPath(location.pathname)) navigate(teamPath(resolveTeam(slug)));
+  };
+
+  /**
+   * La pagina iniziale non cambia quello che si sta guardando adesso: cambia
+   * dove si atterrera' alla prossima apertura. Il pannello resta percio'
+   * aperto — al contrario della squadra, che e' una scelta conclusa — e il
+   * messaggio dice esplicitamente quando avra' effetto, altrimenti chi sceglie
+   * non vede succedere niente e conclude che non abbia funzionato.
+   */
+  const scegliPaginaIniziale = (value: StartPage) => {
+    setStartPage(value);
+    toast.success("Pagina iniziale aggiornata", {
+      description: `Alla prossima apertura dell'app atterrerai su ${startPageLabel(value)}.`,
+    });
   };
 
   const LEAD_OPTIONS: Array<{ value: LeadTime; label: string }> = [
@@ -101,6 +126,14 @@ export default function PreferencesPanel() {
     }
     await push.setLeadTimes(arr);
   };
+
+  /*
+    Il pannello esiste solo per chi ha effettuato l'accesso. Il pulsante che lo
+    apre e' gia' nascosto agli altri e il gesto e' spento, ma la guardia sta
+    anche qui: e' l'ultima porta, e una porta che si fida delle altre si apre
+    il giorno in cui una delle altre cambia.
+  */
+  if (!user) return null;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -276,39 +309,34 @@ export default function PreferencesPanel() {
               Account
             </h3>
             <div className="rounded-xl border border-border/60 bg-background/40 p-4 space-y-4">
-              {user ? (
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-muted-foreground break-all">
-                    Accesso effettuato come{" "}
-                    <span className="text-foreground">{user.email ?? "utente"}</span>
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="font-heading uppercase tracking-wider text-xs shrink-0"
-                    onClick={async () => {
-                      await signOut();
-                      toast.success("Sei uscito dall'account");
-                      setOpen(false);
-                    }}
-                  >
-                    Esci
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-muted-foreground">
-                    Accedi per salvare tema, squadra preferita e sezioni visibili.
-                  </p>
-                  <Link
-                    to="/accedi"
-                    onClick={() => setOpen(false)}
-                    className="btn-gold shrink-0 rounded-full px-4 py-2 text-xs font-heading uppercase tracking-widest"
-                  >
-                    Accedi
-                  </Link>
-                </div>
-              )}
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground break-all">
+                  Accesso effettuato come{" "}
+                  <span className="text-foreground">{user.email ?? "utente"}</span>
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="font-heading uppercase tracking-wider text-xs shrink-0"
+                  onClick={async () => {
+                    await signOut();
+                    toast.success("Sei uscito dall'account");
+                    setOpen(false);
+                  }}
+                >
+                  Esci
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-heading uppercase tracking-wider text-foreground">
+                  Pagina iniziale
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  L'app si apre su questa pagina. La Home resta raggiungibile dal menù.
+                </p>
+                <StartPageSelect value={startPage} onChange={scegliPaginaIniziale} />
+              </div>
 
               <div className="space-y-2">
                 <p className="text-sm font-heading uppercase tracking-wider text-foreground">
@@ -319,21 +347,19 @@ export default function PreferencesPanel() {
 
               <div className="space-y-3">
                 <p className="text-sm font-heading uppercase tracking-wider text-foreground">
-                  Sezioni visibili
+                  Voci del menù
                 </p>
-                {(
-                  [
-                    { key: "sinner", label: "Jannik Sinner" },
-                    { key: "f1", label: "Formula 1" },
-                    { key: "motogp", label: "MotoGP" },
-                  ] as const
-                ).map(({ key, label }) => (
+                <p className="text-xs text-muted-foreground">
+                  Quali voci compaiono nell'intestazione. Le pagine restano raggiungibili dal loro
+                  indirizzo, così un collegamento condiviso funziona comunque.
+                </p>
+                {MENU_SECTIONS.map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between gap-3">
                     <span className="text-sm text-foreground">{label}</span>
                     <Switch
                       checked={sections[key]}
                       onCheckedChange={(next) => setSection(key, next)}
-                      aria-label={`Mostra la sezione ${label}`}
+                      aria-label={`Mostra la voce ${label} nel menù`}
                     />
                   </div>
                 ))}

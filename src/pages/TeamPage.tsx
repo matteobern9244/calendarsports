@@ -15,7 +15,8 @@ import StandingsTable from "@/components/team/StandingsTable";
 import { TabsContent } from "@/components/ui/tabs";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSerieAStandings, useFootballCalendar } from "@/hooks/useSportsData";
-import { DEFAULT_TEAM, type SerieATeam } from "@/lib/serieATeams";
+import type { SerieATeam } from "@/lib/serieATeams";
+import { highlightSportPerSquadra } from "@/lib/highlightPlaylists";
 import { paginatedCalendarOf } from "@/lib/api/schemas";
 import { footballApi } from "@/lib/api/sportsApi";
 import { getCurrentFootballSeason } from "@/lib/currentSeason";
@@ -53,24 +54,26 @@ const TABS_COMUNI = [
 ] as const;
 
 /**
- * Gli highlights esistono **solo per la Juventus**, e per le altre diciannove
- * la scheda non c'e' affatto.
+ * Gli highlights esistono **solo per Juventus e Milan**, e per le altre
+ * diciotto la scheda non c'e' affatto.
  *
- * `highlights-youtube` conosce tre playlist cablate, una sola delle quali e'
- * di calcio. Per venti squadre servirebbero venti identificativi che nessuno
- * puo' verificare senza controllarli a mano, e nel frattempo chi sceglie il
- * Napoli vedrebbe video juventini sotto il titolo del Napoli: un dato di
- * un'altra squadra presentato come suo.
+ * Ogni raccolta e' un identificativo YouTube verificato a mano sul feed. Per
+ * venti squadre servirebbero venti identificativi che nessuno ha controllato,
+ * e nel frattempo chi sceglie il Napoli vedrebbe video di un'altra squadra
+ * sotto il titolo del Napoli: un dato di qualcun altro presentato come suo.
  *
  * Sparisce la **scheda**, non il suo contenuto. Lasciare la linguetta con
  * dentro un vuoto sarebbe peggio dell'assenza, perche' prometterebbe qualcosa:
  * chi la tocca si aspetta dei video e trova una spiegazione.
  *
- * La edge function non si tocca: la sua mappa a tre voci resta corretta, e il
- * filtro e' una scelta di prodotto, non un limite dei dati.
+ * Quale squadra abbia quale playlist non si decide qui: lo dice
+ * `highlightSportPerSquadra`, che e' anche cio' che sceglie il `sport` passato
+ * alla sezione piu' sotto. Un solo punto per due decisioni che devono per
+ * forza coincidere — quando non coincidevano, la linguetta di una squadra
+ * poteva aprirsi sui video dell'altra.
  */
 function tabsPerSquadra(team: SerieATeam) {
-  return team.slug === DEFAULT_TEAM.slug
+  return highlightSportPerSquadra(team.slug)
     ? [...TABS_COMUNI, { value: "highlights", label: "Highlights" } as const]
     : TABS_COMUNI;
 }
@@ -103,6 +106,9 @@ export default function TeamPage({ team }: TeamPageProps) {
     label: `Vedi ${team.name} su Sky Sport`,
   };
   const tabs = tabsPerSquadra(team);
+  // La stessa decisione che fa comparire la linguetta sceglie la playlist:
+  // due letture della medesima funzione, mai due condizioni da tenere in pari.
+  const sportHighlights = highlightSportPerSquadra(team.slug);
   const season = getCurrentFootballSeason();
   const queryClient = useQueryClient();
   const {
@@ -364,9 +370,9 @@ export default function TeamPage({ team }: TeamPageProps) {
         <LineupsPanel team={team} season={season} source={LINEUPS_SOURCE} />
       </TabsContent>
 
-      {team.slug === DEFAULT_TEAM.slug && (
+      {sportHighlights && (
         <TabsContent value="highlights">
-          <HighlightsSection sport="juventus" accentVar="gold" />
+          <HighlightsSection sport={sportHighlights} accentVar="gold" />
         </TabsContent>
       )}
     </SportTabs>

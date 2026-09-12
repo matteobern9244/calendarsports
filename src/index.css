@@ -98,6 +98,7 @@
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-fade-in: fade-in 0.4s ease-out forwards;
+  --animate-swipe-hint: swipe-hint 2.8s ease-in-out infinite;
 
   @keyframes accordion-down {
     from {
@@ -115,6 +116,23 @@
       height: 0;
     }
   }
+  /*
+    L'indizio dello swipe: un respiro lento verso destra, la direzione del
+    gesto. Lento e di poca ampiezza di proposito — deve farsi notare con la
+    coda dell'occhio, non chiedere attenzione. Si applica con `motion-safe`,
+    quindi chi ha chiesto meno animazioni vede solo la striscia ferma.
+  */
+  @keyframes swipe-hint {
+    0%,
+    100% {
+      opacity: 0.2;
+      transform: translateX(0);
+    }
+    50% {
+      opacity: 0.55;
+      transform: translateX(6px);
+    }
+  }
   @keyframes fade-in {
     from {
       opacity: 0;
@@ -124,6 +142,29 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+}
+
+/*
+  Su schermo stretto le tabelle stringono le celle invece di scorrere.
+
+  Le celle generate da shadcn hanno `p-4`: trentadue pixel per colonna di soli
+  margini interni, che su una classifica a cinque colonne sono centosessanta
+  pixel spesi prima di scrivere un numero. Su un telefono e' la differenza fra
+  una tabella che sta nello schermo e una che si raggiunge trascinando di lato.
+
+  La regola sta qui e non su ogni tabella perche' e' una regola del progetto —
+  **niente scorre in orizzontale su mobile** — e vale anche per le tabelle che
+  non sono ancora state scritte. `src/components/ui/table.tsx` e' generato
+  dalla CLI shadcn e non si modifica: si interviene da fuori.
+
+  Il guardiano eseguibile e' `e2e/mobile.spec.ts`, non questo commento.
+*/
+@media (max-width: 639px) {
+  table th,
+  table td {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 }
 

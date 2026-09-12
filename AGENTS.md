@@ -25,6 +25,16 @@ reale**: verificalo e correggi la documentazione nello stesso cambiamento.
 `STREAMING` e `CALENDAR EVENTS`. Date e orari sono sempre in `Europe/Rome`. I
 nomi propri e gli acronimi tecnici restano nella loro forma.
 
+**Niente scorre in orizzontale, su nessuno schermo.** L'app è responsive su
+qualsiasi dispositivo: né una pagina, né una riga di filtri, né una tabella, né
+alcun componente devono scorrere lateralmente in mobile. Un contenuto che si
+raggiunge solo trascinando di lato è un contenuto che metà delle persone non
+trova, e ruberebbe il gesto che apre le preferenze. La scansione la fa il
+browser e non un `grep` — il guardiano è `e2e/mobile.spec.ts` — e le fixture che
+lo alimentano devono portare il **caso peggiore realistico**, perché un test di
+layout nutrito di nomi corti resta verde mentre l'app sborda. Il dettaglio è in
+[`docs/agent-playbook/verification-and-change-management.md`](docs/agent-playbook/verification-and-change-management.md).
+
 **Branch e workflow.** `main` è sincronizzato con Lovable e non riceve push
 diretti: si lavora su `develop` o su un branch che nasce da `develop`. Il deploy
 in produzione è manuale dentro Lovable. **Non fare commit, push, merge o PR se
@@ -38,8 +48,18 @@ pubblici; i segreti veri stanno nei secrets di Supabase, quelli personali in
 
 **Onestà sulle fonti.** Questa app non possiede i dati che mostra: li prende da
 API, da scraping HTML e da dataset statici scritti nel codice. **Non presentare
-mai come fonte ufficiale ciò che è statico o scrapato**, e dichiara sempre quando
-una sezione dipende da scraping.
+mai come fonte ufficiale ciò che è statico o scrapato**, e dichiara sempre da
+dove arriva ogni sezione.
+
+Dalla 3.3.0 quella dichiarazione **non sta più nell'interfaccia**: le diciture
+che nominavano la fonte sotto la classifica, sotto le statistiche e sotto la
+rosa sono state rimosse su richiesta del proprietario del prodotto. L'obbligo
+resta intero e si assolve in due posti che non si possono saltare: il catalogo
+[`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md), che dice per ogni sezione se è
+API, scraping o dataset statico, e il campo `meta.dataSource` che ogni edge
+function restituisce, che dice se sta servendo dati vivi o degradati. Togliere
+una riga dal catalogo o smettere di popolare `meta.dataSource` è la violazione:
+togliere una scritta dalla pagina non lo era.
 
 **Onestà del resoconto.** Distingui sempre azione tentata, azione riuscita e
 risultato verificato; separa fatti, ipotesi e raccomandazioni. Non dichiarare
