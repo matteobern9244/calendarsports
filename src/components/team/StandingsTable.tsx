@@ -117,9 +117,6 @@ export default function StandingsTable({ team, standings }: StandingsTableProps)
           })}
         </TableBody>
       </Table>
-      <div className="p-3 border-t border-border text-center">
-        <p className="text-[10px] text-muted-foreground">Fonte: Sky Sport Italia</p>
-      </div>
     </div>
   );
 }

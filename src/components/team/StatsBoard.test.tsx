@@ -153,6 +153,20 @@ describe("StatsBoard", () => {
     expect(verde("Gol subiti a partita")).not.toContain("text-success");
   });
 
+  /**
+   * Le due diciture sulle fonti — «Totali dalla classifica di Sky Sport...» e il
+   * paragrafo su API-Football — sono state tolte su richiesta. Resta invece la
+   * nota su casa e trasferta: quella non attribuisce niente a nessuno, dice
+   * cosa significano i numeri che le stanno sopra.
+   */
+  it("non attribuisce i numeri a una fonte in pagina", () => {
+    render(<StatsBoard team={JUVE} standings={CLASSIFICA} matches={CALENDARIO} />);
+
+    expect(screen.queryByText(/Sky Sport/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/API-Football/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/coppe e Champions non danno punti/i)).toBeInTheDocument();
+  });
+
   it("una squadra assente dalla classifica lo dice invece di mostrare zeri", () => {
     render(<StatsBoard team={resolveTeam("venezia")} standings={CLASSIFICA} matches={[]} />);
     expect(screen.getByText(/non compare nella classifica/)).toBeInTheDocument();
