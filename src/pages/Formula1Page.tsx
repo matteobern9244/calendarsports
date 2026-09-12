@@ -369,12 +369,7 @@ export default function Formula1Page() {
                           era la stessa correzione, tenuta in un posto solo e
                           con un colore fuori dai token.
                         */}
-                        <TeamLogo
-                          src={c.logoUrl}
-                          name={c.constructor}
-                          size={32}
-                          shape="rounded"
-                        />
+                        <TeamLogo src={c.logoUrl} name={c.constructor} size={32} shape="rounded" />
                         <span className="font-semibold">{c.constructor}</span>
                       </div>
                     </TableCell>

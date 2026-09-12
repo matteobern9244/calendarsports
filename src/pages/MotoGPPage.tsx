@@ -302,12 +302,7 @@ export default function MotoGPPage() {
                     <TableCell className="text-muted-foreground text-sm">
                       {s.team ? (
                         <div className="flex items-center gap-2">
-                          <TeamLogo
-                            src={s.teamLogoUrl}
-                            name={s.team}
-                            size={20}
-                            shape="rounded"
-                          />
+                          <TeamLogo src={s.teamLogoUrl} name={s.team} size={20} shape="rounded" />
                           <span>{s.team}</span>
                         </div>
                       ) : (
