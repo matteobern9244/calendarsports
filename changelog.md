@@ -17,6 +17,37 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [Non rilasciato]
+
+### Corretto
+
+- **Le notifiche push seguono la squadra scelta.** Il dispatcher leggeva
+  soltanto il calendario della Juventus, qualunque squadra fosse nelle
+  preferenze: chi aveva scelto il Milan riceveva «Juventus vs Inter sta per
+  iniziare». Ogni iscrizione porta ora lo slug della squadra
+  (`push_subscriptions.team`), l'hook la riallinea da solo quando la preferenza
+  cambia, e il dispatcher scarica un calendario per ogni squadra seguita.
+  Migration `20260912170000_push_subscriptions_team_and_sports.sql`, applicata.
+  Gli id degli eventi di calcio passano da `juve-…` a `<slug>-…`: nelle 24 ore
+  successive al deploy una partita già notificata con il vecchio id può essere
+  notificata di nuovo, una volta sola.
+- **Statistiche, «sotto la media» non è più grigio.** La cattiva notizia
+  (meno punti della media, più gol subiti) si scrive in rosso; prima era del
+  colore del testo intorno e a colpo d'occhio si leggeva «verde per entrambi».
+- **Prossima partita**: il conto alla rovescia sta sulla stessa riga dei chip
+  delle emittenti, senza la fascia vuota che c'era in mezzo. L'icona delle
+  stelline, che oggi segnala «AI», è sostituita da un calendario con orologio
+  qui e nel dettaglio partita.
+- **«Formazioni non ancora pubblicate…»** è centrato come l'icona anche quando
+  va a capo.
+
+### Aggiunto
+
+- **Notifiche per sport.** Nel pannello preferenze tre interruttori: partite
+  della squadra scelta, Formula 1, MotoGP. Tutti accesi di default; chi non
+  vuole i motori li spegne. Colonne `notify_football`, `notify_f1`,
+  `notify_motogp`; il dispatcher non scarica i calendari che nessuno vuole.
+
 ## [3.3.0] — L'app si apre dove vuoi tu (2026-09-12)
 
 Bump applicativo `3.2.2` → `3.3.0`. Nota di rilascio in

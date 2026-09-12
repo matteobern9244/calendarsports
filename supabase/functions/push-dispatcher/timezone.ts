@@ -109,7 +109,11 @@ export function getMotoGPSeason(input: Date = new Date()): number {
   return getRomeCalendarParts(input).year;
 }
 
-export function getJuventusSeason(input: Date = new Date()): number {
+/** La stagione di Serie A in corso: cambia a luglio, per tutte le squadre. */
+export function getFootballSeason(input: Date = new Date()): number {
   const { year, month } = getRomeCalendarParts(input);
   return month >= 7 ? year : year - 1;
 }
+
+/** @deprecated Nome storico: la stagione non e' della Juventus. */
+export const getJuventusSeason = getFootballSeason;

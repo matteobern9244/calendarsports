@@ -62,7 +62,40 @@ async function fetchVapidKey(): Promise<string> {
   return j.publicKey || "";
 }
 
-export async function subscribeToPush(leadTimes: number[]): Promise<{
+/** Gli sport per cui questo dispositivo vuole avvisi. */
+export interface PushSports {
+  football: boolean;
+  f1: boolean;
+  motogp: boolean;
+}
+
+/**
+ * Cio' che il server deve sapere di questa iscrizione, oltre alle chiavi.
+ * `team` e' lo slug della squadra seguita: le partite arrivano solo per lei.
+ */
+export interface PushSettings {
+  leadTimes: number[];
+  team: string;
+  sports: PushSports;
+}
+
+function subscriptionPayload(sub: PushSubscription, settings: PushSettings, enabled: boolean) {
+  const json = sub.toJSON();
+  return {
+    endpoint: sub.endpoint,
+    keys: {
+      p256dh: json?.keys?.p256dh ?? bufToB64Url(sub.getKey("p256dh")),
+      auth: json?.keys?.auth ?? bufToB64Url(sub.getKey("auth")),
+    },
+    leadTimes: settings.leadTimes,
+    team: settings.team,
+    sports: settings.sports,
+    enabled,
+    userAgent: navigator.userAgent,
+  };
+}
+
+export async function subscribeToPush(settings: PushSettings): Promise<{
   ok: boolean;
   reason?: "denied" | "unsupported" | "error";
 }> {
@@ -85,51 +118,35 @@ export async function subscribeToPush(leadTimes: number[]): Promise<{
     });
   }
 
-  const json = sub.toJSON();
-  const payload = {
-    endpoint: sub.endpoint,
-    keys: {
-      p256dh: json?.keys?.p256dh ?? bufToB64Url(sub.getKey("p256dh")),
-      auth: json?.keys?.auth ?? bufToB64Url(sub.getKey("auth")),
-    },
-    leadTimes,
-    enabled: true,
-    userAgent: navigator.userAgent,
-  };
-
-  const { error } = await supabase.functions.invoke("push-subscribe", { body: payload });
+  const { error } = await supabase.functions.invoke("push-subscribe", {
+    body: subscriptionPayload(sub, settings, true),
+  });
   if (error) return { ok: false, reason: "error" };
   return { ok: true };
 }
 
-export async function updatePushSettings(leadTimes: number[], enabled: boolean): Promise<boolean> {
+export async function updatePushSettings(
+  settings: PushSettings & { enabled: boolean },
+): Promise<boolean> {
   if (!isPushSupported()) return false;
   const reg = await ensureServiceWorker();
   if (!reg) return false;
   const sub = await reg.pushManager.getSubscription();
   if (!sub) return false;
-  const json = sub.toJSON();
   const { error } = await supabase.functions.invoke("push-subscribe", {
-    body: {
-      endpoint: sub.endpoint,
-      keys: {
-        p256dh: json?.keys?.p256dh ?? bufToB64Url(sub.getKey("p256dh")),
-        auth: json?.keys?.auth ?? bufToB64Url(sub.getKey("auth")),
-      },
-      leadTimes,
-      enabled,
-      userAgent: navigator.userAgent,
-    },
+    body: subscriptionPayload(sub, settings, settings.enabled),
   });
   return !error;
 }
 
-export async function unsubscribeFromPush(): Promise<boolean> {
+export async function unsubscribeFromPush(settings: PushSettings): Promise<boolean> {
   if (!isPushSupported()) return false;
   const reg = await navigator.serviceWorker.getRegistration(SW_PATH);
   const sub = await reg?.pushManager.getSubscription();
   if (sub) {
-    await updatePushSettings([], false);
+    // La riga viene spenta ma conserva squadra e sport: il server fa l'upsert
+    // di tutti i campi, e mandarne di vuoti la riporterebbe ai default.
+    await updatePushSettings({ ...settings, enabled: false });
     await sub.unsubscribe();
   }
   return true;

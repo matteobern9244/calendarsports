@@ -3,13 +3,15 @@ import webpush from "https://esm.sh/web-push@3.6.7";
 import { dispatcherConfig } from "./env.ts";
 import { deliverOnce, supabaseSentLogStore } from "./dedupe.ts";
 import { hasReachedHorizon, notificationHorizonMs } from "./calendarWindow.ts";
+import { footballTeamsToLoad, wantsEvent, type AudienceSubscription } from "./audience.ts";
+import { matchesTeam, resolveTeamStrict, type SerieATeam } from "../_shared/serieATeams.ts";
 import {
   ROME_TIME_ZONE,
   formatRomeEventDateTime,
   formatRomeEventTime,
   formatRomeDayLabel,
   getF1Season,
-  getJuventusSeason,
+  getFootballSeason,
   getMotoGPSeason,
   toEventTimestampMs,
 } from "./timezone.ts";
@@ -33,7 +35,9 @@ const MAX_CALENDAR_PAGES = 30;
 
 type EventItem = {
   id: string;
-  sport: "juventus" | "f1" | "motogp";
+  sport: "football" | "f1" | "motogp";
+  /** Solo per il calcio: la squadra di cui e' la partita. */
+  team?: string;
   date: string;
   title: string;
   body: string;
@@ -152,8 +156,14 @@ async function loadMotoGP(): Promise<EventItem[]> {
 }
 
 /**
- * Legge il calendario Juventus fermandosi appena supera l'orizzonte delle
- * notifiche, invece di scaricare l'intera stagione a ogni giro.
+ * Legge il calendario di **una squadra** fermandosi appena supera l'orizzonte
+ * delle notifiche, invece di scaricare l'intera stagione a ogni giro.
+ *
+ * Fino al 12 settembre 2026 leggeva solo la Juventus: il parametro `team` di
+ * `sports-football` esisteva da tre versioni e il dispatcher non lo passava.
+ * Lo slug arriva dalla colonna `team` di `push_subscriptions`, che
+ * `push-subscribe` accetta solo dalla whitelist, e qui viene comunque
+ * ri-risolto prima di finire in una URL.
  *
  * Due accorgimenti che funzionano solo insieme:
  *
@@ -170,12 +180,12 @@ async function loadMotoGP(): Promise<EventItem[]> {
  * dall'orizzonte copre quella differenza con abbondanza — il timeout del job
  * e' di due minuti.
  */
-async function loadJuventus(nowMs: number): Promise<EventItem[]> {
-  const season = getJuventusSeason();
+async function loadFootball(team: SerieATeam, nowMs: number): Promise<EventItem[]> {
+  const season = getFootballSeason();
   const horizonMs = notificationHorizonMs(nowMs, WINDOW_MS);
   const out: EventItem[] = [];
   const query = (page: number) =>
-    `action=calendar&season=${season}&page=${page}&pageSize=12&upcoming=1`;
+    `action=calendar&season=${season}&team=${encodeURIComponent(team.slug)}&page=${page}&pageSize=12&upcoming=1`;
 
   const first = await fetchFn("sports-football", query(1));
   const firstItems: any[] = Array.isArray(first?.items) ? first.items : [];
@@ -196,15 +206,16 @@ async function loadJuventus(nowMs: number): Promise<EventItem[]> {
     const home = String(m.homeTeam ?? "");
     const away = String(m.awayTeam ?? "");
     const id = String(m.id ?? `${home}-${away}-${m.date}`);
-    const isHome = /juventus/i.test(home);
+    const isHome = matchesTeam(home, team);
     const opponent = isHome ? away : home;
     out.push({
-      id: `juve-${id}`,
-      sport: "juventus",
+      id: `${team.slug}-${id}`,
+      sport: "football",
+      team: team.slug,
       date: String(m.date),
-      title: "Juventus",
+      title: team.name,
       body: `${isHome ? "vs" : "@"} ${opponent} sta per iniziare`,
-      url: `/juventus/partite/${encodeURIComponent(id)}`,
+      url: `/squadra/${team.slug}/partite/${encodeURIComponent(id)}`,
     });
   }
   return out;
@@ -226,20 +237,42 @@ Deno.serve(async (req) => {
   const sb = createClient(supabaseUrl, serviceRoleKey);
   const sentLog = supabaseSentLogStore(sb);
 
-  const startedAt = Date.now();
-  const [f1, motogp, juve] = await Promise.all([loadF1(), loadMotoGP(), loadJuventus(startedAt)]);
-  const events: EventItem[] = [...f1, ...motogp, ...juve].filter(
-    (e) => toEventTimestampMs(e.date) !== null,
-  );
-
+  // Gli iscritti si leggono **prima** dei calendari: sono loro a dire quali
+  // squadre servono. Un calendario di una squadra che nessuno segue e' una
+  // chiamata sprecata, e una squadra seguita che non si carica e' una
+  // notifica persa.
   const { data: subs, error } = await sb
     .from("push_subscriptions")
-    .select("id,endpoint,p256dh,auth,lead_times")
+    .select("id,endpoint,p256dh,auth,lead_times,team,notify_football,notify_f1,notify_motogp")
     .eq("enabled", true);
   if (error) {
     console.error("[push-dispatcher] subscriptions query failed", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500 });
   }
+  const audience = (subs ?? []) as Array<
+    AudienceSubscription & {
+      id: string;
+      endpoint: string;
+      p256dh: string;
+      auth: string;
+      lead_times: number[] | null;
+    }
+  >;
+
+  const startedAt = Date.now();
+  const teams = footballTeamsToLoad(audience)
+    .map((slug) => resolveTeamStrict(slug))
+    .filter((t): t is SerieATeam => t !== null);
+  const wantsF1 = audience.some((s) => s.notify_f1);
+  const wantsMotoGP = audience.some((s) => s.notify_motogp);
+  const [f1, motogp, ...football] = await Promise.all([
+    wantsF1 ? loadF1() : Promise.resolve([] as EventItem[]),
+    wantsMotoGP ? loadMotoGP() : Promise.resolve([] as EventItem[]),
+    ...teams.map((t) => loadFootball(t, startedAt)),
+  ]);
+  const events: EventItem[] = [...f1, ...motogp, ...football.flat()].filter(
+    (e) => toEventTimestampMs(e.date) !== null,
+  );
 
   const now = Date.now();
 
@@ -248,10 +281,11 @@ Deno.serve(async (req) => {
     removed = 0,
     errors = 0;
 
-  for (const sub of subs ?? []) {
-    for (const leadMin of (sub.lead_times as number[]) ?? []) {
+  for (const sub of audience) {
+    for (const leadMin of sub.lead_times ?? []) {
       const targetMs = now + leadMin * 60 * 1000;
       const due = events.filter((e) => {
+        if (!wantsEvent(sub, e)) return false;
         const t = toEventTimestampMs(e.date);
         return t !== null && t >= targetMs - WINDOW_MS && t <= targetMs;
       });
@@ -315,7 +349,8 @@ Deno.serve(async (req) => {
     JSON.stringify({
       ok: true,
       eventsConsidered: events.length,
-      subs: subs?.length ?? 0,
+      footballTeams: teams.map((t) => t.slug),
+      subs: audience.length,
       sent,
       skipped,
       removed,

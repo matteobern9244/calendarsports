@@ -266,6 +266,14 @@ rate limit**), `push-dispatcher` (non pubblica: protetta da segreto condiviso,
 invocata da pg_cron ogni cinque minuti, legge i calendari chiamando le altre
 funzioni di questo stesso progetto).
 
+Ogni iscrizione porta la **squadra seguita** (`team`, slug dalla whitelist) e
+tre interruttori (`notify_football`, `notify_f1`, `notify_motogp`), tutti
+accesi di default. Il dispatcher legge prima gli iscritti e poi scarica un
+calendario `sports-football?team=…` per ogni squadra seguita da almeno uno di
+loro con il calcio acceso; F1 e MotoGP si scaricano solo se qualcuno li vuole.
+Fino alla 3.3.0 leggeva soltanto la Juventus, qualunque squadra fosse stata
+scelta nelle preferenze.
+
 ## Quello che invecchia
 
 Questi valori sono corretti oggi e non lo saranno per sempre. Nessuno li

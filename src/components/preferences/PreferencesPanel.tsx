@@ -21,7 +21,7 @@ import StartPageSelect from "@/components/preferences/StartPageSelect";
 import { startPageLabel, type StartPage } from "@/lib/startPage";
 import { resolveTeam } from "@/lib/serieATeams";
 import { teamPath, teamSlugFromPath } from "@/lib/teamRoutes";
-import { usePushNotifications, type LeadTime } from "@/hooks/usePushNotifications";
+import { usePushNotifications, type LeadTime, type SportKey } from "@/hooks/usePushNotifications";
 
 export default function PreferencesPanel() {
   const { open, setOpen } = usePreferencesPanel();
@@ -38,7 +38,7 @@ export default function PreferencesPanel() {
   } = useUserPrefs();
   const { user, signOut } = useAuth();
   const { mode: countdownMode, setMode: setCountdownMode } = useCountdownMode();
-  const push = usePushNotifications();
+  const push = usePushNotifications(favoriteTeam.slug);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -92,10 +92,10 @@ export default function PreferencesPanel() {
 
   const togglePush = async (next: boolean) => {
     if (next) {
-      const res = await push.enable(push.leadTimes);
+      const res = await push.enable();
       if (res.ok) {
         toast.success("Notifiche attivate", {
-          description: "Riceverai un avviso prima di ogni evento Juventus, F1 e MotoGP.",
+          description: `Riceverai un avviso prima di ogni evento scelto qui sotto: ${favoriteTeam.name}, F1 e MotoGP.`,
         });
       } else if (res.reason === "denied") {
         toast.error("Permesso negato", {
@@ -114,6 +114,16 @@ export default function PreferencesPanel() {
       toast.success("Notifiche disattivate");
     }
   };
+
+  const SPORT_OPTIONS: Array<{ key: SportKey; label: string; hint: string }> = [
+    {
+      key: "football",
+      label: `Partite: ${favoriteTeam.name}`,
+      hint: "Segue la squadra scelta qui sopra: se la cambi, cambiano gli avvisi.",
+    },
+    { key: "f1", label: "Formula 1", hint: "Prove, qualifiche, sprint e gara." },
+    { key: "motogp", label: "MotoGP", hint: "Ogni sessione del weekend di gara." },
+  ];
 
   const toggleLead = async (value: LeadTime) => {
     const set = new Set(push.leadTimes);
@@ -385,7 +395,8 @@ export default function PreferencesPanel() {
                     Notifiche push eventi sportivi
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Ricevi un avviso prima di ogni partita Juventus, sessione F1 e sessione MotoGP.
+                    Ricevi un avviso prima di ogni partita del {favoriteTeam.name}, sessione F1 e
+                    sessione MotoGP. Sotto scegli quali.
                     {!push.supported && " Funzione non disponibile in anteprima."}
                   </p>
                 </div>
@@ -399,6 +410,35 @@ export default function PreferencesPanel() {
 
               {push.enabled && push.supported && (
                 <div>
+                  <p className="text-xs font-heading uppercase tracking-widest text-muted-foreground mb-2">
+                    Per quali eventi
+                  </p>
+                  {/*
+                    Un interruttore per sport, tutti accesi di default. Chi
+                    segue solo il calcio spegne gli altri due: prima l'unica
+                    scelta era tutto o niente.
+                  */}
+                  <ul className="mb-4 space-y-2">
+                    {SPORT_OPTIONS.map((opt) => (
+                      <li key={opt.key} className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-foreground">{opt.label}</p>
+                          <p className="text-xs text-muted-foreground">{opt.hint}</p>
+                        </div>
+                        <Switch
+                          checked={push.sports[opt.key]}
+                          disabled={push.busy}
+                          onCheckedChange={(on) => push.setSport(opt.key, on)}
+                          aria-label={`Notifiche ${opt.label}`}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  {!push.sports.football && !push.sports.f1 && !push.sports.motogp && (
+                    <p className="mb-4 text-xs text-destructive">
+                      Nessun evento selezionato: le notifiche restano attive ma non arriverà nulla.
+                    </p>
+                  )}
                   <p className="text-xs font-heading uppercase tracking-widest text-muted-foreground mb-2">
                     Anticipo notifica
                   </p>

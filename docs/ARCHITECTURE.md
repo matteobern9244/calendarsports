@@ -195,6 +195,8 @@ push_subscriptions
 ├─ p256dh, auth  text            ← chiavi di cifratura del browser
 ├─ lead_times    integer[]       ← minuti di anticipo: 15, 60, 1440
 ├─ enabled       boolean
+├─ team          text  DEFAULT 'juventus'  ← slug della squadra seguita
+├─ notify_football, notify_f1, notify_motogp  boolean DEFAULT true
 └─ created_at, last_seen_at
    indice parziale su (enabled) WHERE enabled = true
 
