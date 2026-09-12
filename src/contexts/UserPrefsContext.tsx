@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/contexts/useAuth";
-import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
+import { useProfile, useUpdateProfile, type Profile, type ProfilePatch } from "@/hooks/useProfile";
 import { useTheme } from "@/hooks/useTheme";
 import { resolveTeam } from "@/lib/serieATeams";
-import { effectiveStartPage, resolveStartPage, type StartPage } from "@/lib/startPage";
+import { resolveStartPage, type StartPage } from "@/lib/startPage";
 import {
   DEFAULT_SECTIONS,
   SECTIONS_STORAGE_KEY,
@@ -16,6 +16,41 @@ import {
   type ThemeValue,
   type UserPrefsValue,
 } from "./useUserPrefs";
+
+/**
+ * Quale colonna del profilo conserva quale voce del menu'.
+ *
+ * Sta qui, una volta sola, perche' la corrispondenza serviva in tre punti —
+ * la migrazione al primo accesso, la lettura, il salvataggio — e con tre voci
+ * ripeterla passava inosservato. Con sette, una riga dimenticata sarebbe una
+ * preferenza che si salva e non si rilegge. `Record<SectionKey, ...>` obbliga
+ * il compilatore a pretenderle tutte.
+ */
+const COLONNA_SEZIONE: Record<SectionKey, keyof ProfilePatch> = {
+  home: "show_home",
+  calendario: "show_calendario",
+  streaming: "show_streaming",
+  sinner: "show_sinner",
+  squadra: "show_squadra",
+  f1: "show_f1",
+  motogp: "show_motogp",
+};
+
+const CHIAVI_SEZIONE = Object.keys(COLONNA_SEZIONE) as SectionKey[];
+
+/** Le voci visibili secondo il profilo. */
+function sezioniDalProfilo(profile: Profile): Sections {
+  return Object.fromEntries(
+    CHIAVI_SEZIONE.map((chiave) => [chiave, profile[COLONNA_SEZIONE[chiave]] as boolean]),
+  ) as Sections;
+}
+
+/** Le stesse, nella forma che il profilo si aspetta. */
+function sezioniVersoProfilo(sections: Sections): ProfilePatch {
+  return Object.fromEntries(
+    CHIAVI_SEZIONE.map((chiave) => [COLONNA_SEZIONE[chiave], sections[chiave]]),
+  ) as ProfilePatch;
+}
 
 const MIGRATION_KEY_PREFIX = "cse-profile-migrated:";
 
@@ -70,9 +105,7 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
       {
         theme,
         favorite_team: localTeam,
-        show_sinner: localSections.sinner,
-        show_f1: localSections.f1,
-        show_motogp: localSections.motogp,
+        ...sezioniVersoProfilo(localSections),
       },
       {
         // Il segno si scrive prima di sapere com'e' andata, perche' serve a
@@ -95,23 +128,19 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
     }
   }, [profile, setThemeLocal]);
 
-  const sections: Sections = useMemo(() => {
-    if (profile) {
-      return {
-        sinner: profile.show_sinner,
-        f1: profile.show_f1,
-        motogp: profile.show_motogp,
-      };
-    }
-    return localSections;
-  }, [profile, localSections]);
+  const sections: Sections = useMemo(
+    () => (profile ? sezioniDalProfilo(profile) : localSections),
+    [profile, localSections],
+  );
 
   /**
-   * La pagina iniziale, gia' ripiegata sulla Home se la sezione scelta e'
-   * nascosta. Il valore grezzo resta nella colonna: se la sezione torna
-   * visibile, torna anche la sua pagina.
+   * La pagina iniziale **non dipende dalle voci visibili**, e non e' una
+   * dimenticanza. Nascondere una voce tocca il menu' e nient'altro: legarci
+   * anche la pagina iniziale vorrebbe dire che riordinando l'intestazione si
+   * cambia di nascosto dove l'app si apre. Nessuna pagina e' irraggiungibile,
+   * quindi nessuna scelta ha bisogno di un ripiego.
    */
-  const startPage = effectiveStartPage(resolveStartPage(profile?.start_page), sections);
+  const startPage = resolveStartPage(profile?.start_page);
 
   /**
    * Si sa dove mandare chi apre la radice solo quando la sessione e' stata
@@ -200,21 +229,14 @@ export function UserPrefsProvider({ children }: { children: ReactNode }) {
 
   const setSection = useCallback(
     (key: SectionKey, value: boolean) => {
-      const base = profile
-        ? { sinner: profile.show_sinner, f1: profile.show_f1, motogp: profile.show_motogp }
-        : localSections;
+      const base = profile ? sezioniDalProfilo(profile) : localSections;
       const next: Sections = { ...DEFAULT_SECTIONS, ...base, [key]: value };
       const precedente = localSections;
       ricordaSezioni(next);
       if (!user) return;
-      updateProfile.mutate(
-        {
-          show_sinner: next.sinner,
-          show_f1: next.f1,
-          show_motogp: next.motogp,
-        },
-        { onError: () => ricordaSezioni(precedente) },
-      );
+      updateProfile.mutate(sezioniVersoProfilo(next), {
+        onError: () => ricordaSezioni(precedente),
+      });
     },
     [profile, localSections, user, updateProfile, ricordaSezioni],
   );

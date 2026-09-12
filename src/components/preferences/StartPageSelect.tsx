@@ -5,18 +5,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Sections } from "@/contexts/useUserPrefs";
-import { startPageOptions, type StartPage } from "@/lib/startPage";
+import { START_PAGES, type StartPage } from "@/lib/startPage";
 
 interface StartPageSelectProps {
-  /**
-   * La pagina **gia' effettiva**, non quella grezza del profilo: e' cio' che
-   * risponde alla domanda «dove si apre l'app», ed e' anche l'unico valore
-   * garantito di trovarsi fra le voci offerte.
-   */
   value: StartPage;
-  /** Serve a non offrire una pagina che l'utente ha nascosto. */
-  sections: Sections;
   onChange: (value: StartPage) => void;
 }
 
@@ -28,14 +20,18 @@ interface StartPageSelectProps {
  * cinque contesti finti per arrivarci.
  *
  * E' **pilotata** (`value`, non `defaultValue`): la preferenza cambia anche
- * da fuori — il profilo che arriva dal server, un salvataggio rifiutato che
- * viene annullato, una sezione nascosta che la fa ripiegare sulla Home.
+ * da fuori — il profilo che arriva dal server, o un salvataggio rifiutato che
+ * viene annullato.
+ *
+ * Offre tutte e sette le voci, anche quelle nascoste dal menu': nascondere
+ * riguarda l'intestazione e nient'altro, e togliere una voce da qui vorrebbe
+ * dire che riordinare il menu' cambia anche dove l'app si apre.
  *
  * L'ordine delle voci e' quello di `START_PAGES`, che e' l'ordine del menu:
  * non alfabetico, perche' qui l'elenco non e' un dizionario ma il percorso
  * che l'utente ha gia' in testa guardando l'intestazione.
  */
-export default function StartPageSelect({ value, sections, onChange }: StartPageSelectProps) {
+export default function StartPageSelect({ value, onChange }: StartPageSelectProps) {
   return (
     <Select value={value} onValueChange={(next) => onChange(next as StartPage)}>
       <SelectTrigger
@@ -45,7 +41,7 @@ export default function StartPageSelect({ value, sections, onChange }: StartPage
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {startPageOptions(sections).map((option) => (
+        {START_PAGES.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}
           </SelectItem>

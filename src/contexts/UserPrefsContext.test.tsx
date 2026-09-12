@@ -44,6 +44,10 @@ const PROFILO: Profile = {
   show_sinner: true,
   show_f1: true,
   show_motogp: true,
+  show_home: true,
+  show_calendario: true,
+  show_streaming: true,
+  show_squadra: true,
   start_page: "home",
 };
 
@@ -282,14 +286,14 @@ describe("UserPrefsProvider — pagina iniziale", () => {
   });
 
   /**
-   * Chi sceglie MotoGP e poi nasconde quella sezione lascia nella colonna un
-   * valore che ha smesso di dire dove l'app si apre. Il contesto espone la
-   * preferenza **effettiva**, perche' e' quella che si mostra e quella su cui
-   * si naviga.
+   * Le due preferenze sono indipendenti, e non per dimenticanza: nascondere
+   * una voce tocca il menu' e nient'altro. Legarci anche la pagina iniziale
+   * vorrebbe dire che riordinando l'intestazione si cambia di nascosto dove
+   * l'app si apre — un terzo effetto, oltre a quello dichiarato.
    */
-  it("una sezione nascosta non lascia la pagina iniziale su di essa", () => {
+  it("nascondere la voce dal menu' non cambia la pagina iniziale", () => {
     monta({ profilo: { ...PROFILO, start_page: "motogp", show_motogp: false } });
-    expect(bottone("pagina-iniziale")).toHaveTextContent("home");
+    expect(bottone("pagina-iniziale")).toHaveTextContent("motogp");
   });
 
   /**

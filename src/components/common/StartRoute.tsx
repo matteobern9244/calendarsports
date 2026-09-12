@@ -19,18 +19,18 @@ import { HOME_PATH, startPagePath } from "@/lib/startPage";
  * circolazione.
  *
  * La Home arriva come `children` e non con un import: cosi' il suo corpo gira
- * soltanto quando la si mostra davvero, e un test puo' passarci qualunque
- * cosa. E' la stessa forma di `SectionRoute`.
+ * soltanto quando la si mostra davvero, e un test puo' passarci un paragrafo
+ * al posto di una pagina che aprirebbe una dozzina di query.
  */
 export default function StartRoute({ children }: { children: ReactNode }) {
-  const { startPage, startPageReady, favoriteTeam, sections } = useUserPrefs();
+  const { startPage, startPageReady, favoriteTeam } = useUserPrefs();
 
   // La preferenza arriva dalla rete: dipingere la Home mentre non si sa
   // ancora vorrebbe dire mostrarla per un istante e poi saltare altrove.
   // `LandingSpinner` riserva l'altezza, quindi l'attesa non sposta la pagina.
   if (!startPageReady) return <LandingSpinner message="Apertura in corso..." />;
 
-  const destinazione = startPagePath(startPage, favoriteTeam, sections);
+  const destinazione = startPagePath(startPage, favoriteTeam);
   if (destinazione === HOME_PATH) return <>{children}</>;
 
   // `replace` e non una voce nuova: altrimenti il tasto «indietro» tornerebbe

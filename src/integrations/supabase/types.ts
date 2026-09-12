@@ -20,9 +20,13 @@ export type Database = {
           display_name: string | null
           favorite_team: string
           id: string
+          show_calendario: boolean
           show_f1: boolean
+          show_home: boolean
           show_motogp: boolean
           show_sinner: boolean
+          show_squadra: boolean
+          show_streaming: boolean
           start_page: string
           theme: string
           updated_at: string
@@ -32,9 +36,13 @@ export type Database = {
           display_name?: string | null
           favorite_team?: string
           id: string
+          show_calendario?: boolean
           show_f1?: boolean
+          show_home?: boolean
           show_motogp?: boolean
           show_sinner?: boolean
+          show_squadra?: boolean
+          show_streaming?: boolean
           start_page?: string
           theme?: string
           updated_at?: string
@@ -44,9 +52,13 @@ export type Database = {
           display_name?: string | null
           favorite_team?: string
           id?: string
+          show_calendario?: boolean
           show_f1?: boolean
+          show_home?: boolean
           show_motogp?: boolean
           show_sinner?: boolean
+          show_squadra?: boolean
+          show_streaming?: boolean
           start_page?: string
           theme?: string
           updated_at?: string

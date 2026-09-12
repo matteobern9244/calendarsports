@@ -2,11 +2,51 @@ import { createContext, useContext } from "react";
 import { DEFAULT_TEAM, resolveTeam, type SerieATeam } from "@/lib/serieATeams";
 import type { StartPage } from "@/lib/startPage";
 
-export type SectionKey = "sinner" | "f1" | "motogp";
+/**
+ * Le voci dell'intestazione, tutte nascondibili.
+ *
+ * Fino alla 3.3.0 erano solo le tre sportive: l'elenco delle preferenze
+ * copriva meta' del menu', e quale meta' era una scelta di allora piu' che una
+ * regola.
+ *
+ * **Nascondere riguarda solo il menu'.** Nessuna di queste preferenze rende
+ * irraggiungibile una pagina: ogni indirizzo continua a rispondere, perche' un
+ * link verso `/squadra/napoli` e' fatto per essere condiviso e deve funzionare
+ * anche per chi quella voce l'ha tolta dal proprio. Prima le tre sportive
+ * facevano anche la seconda cosa, tramite un componente di rotta che per
+ * questo non esiste piu'.
+ */
+export type SectionKey =
+  "home" | "calendario" | "streaming" | "sinner" | "squadra" | "f1" | "motogp";
 export type Sections = Record<SectionKey, boolean>;
 export type ThemeValue = "light" | "dark";
 
-export const DEFAULT_SECTIONS: Sections = { sinner: true, f1: true, motogp: true };
+export const DEFAULT_SECTIONS: Sections = {
+  home: true,
+  calendario: true,
+  streaming: true,
+  sinner: true,
+  squadra: true,
+  f1: true,
+  motogp: true,
+};
+
+/**
+ * Le voci con la loro etichetta, nell'ordine dell'intestazione.
+ *
+ * L'ordine e' quello del menu' e non alfabetico: l'elenco delle preferenze
+ * deve somigliare a cio' che si sta configurando, altrimenti per capire quale
+ * interruttore spegne cosa bisogna tradurre mentalmente due ordini diversi.
+ */
+export const MENU_SECTIONS: ReadonlyArray<{ key: SectionKey; label: string }> = [
+  { key: "home", label: "Home" },
+  { key: "calendario", label: "Calendario" },
+  { key: "streaming", label: "STREAMING" },
+  { key: "sinner", label: "Jannik Sinner" },
+  { key: "squadra", label: "Squadra di calcio" },
+  { key: "f1", label: "Formula 1" },
+  { key: "motogp", label: "MotoGP" },
+];
 
 export const SECTIONS_STORAGE_KEY = "cse-sections";
 export const TEAM_STORAGE_KEY = "cse-favorite-team";

@@ -10,7 +10,15 @@ const { prefs } = vi.hoisted(() => ({
     startPage: "home" as StartPage,
     startPageReady: true,
     favoriteTeam: null as unknown as SerieATeam,
-    sections: { sinner: true, f1: true, motogp: true } as Sections,
+    sections: {
+      home: true,
+      calendario: true,
+      streaming: true,
+      sinner: true,
+      squadra: true,
+      f1: true,
+      motogp: true,
+    } as Sections,
   },
 }));
 
@@ -57,7 +65,15 @@ describe("StartRoute", () => {
     prefs.startPage = "home";
     prefs.startPageReady = true;
     prefs.favoriteTeam = DEFAULT_TEAM;
-    prefs.sections = { sinner: true, f1: true, motogp: true };
+    prefs.sections = {
+      home: true,
+      calendario: true,
+      streaming: true,
+      sinner: true,
+      squadra: true,
+      f1: true,
+      motogp: true,
+    };
   });
 
   /**
@@ -105,15 +121,15 @@ describe("StartRoute", () => {
   });
 
   /**
-   * Il ciclo che bloccherebbe il browser: `SectionRoute` manda alla radice
-   * chi apre una sezione nascosta, e la radice manderebbe alla pagina
-   * iniziale. Qui si ferma, perche' la preferenza effettiva e' gia' la Home.
+   * Nascondere una voce tocca il menu' e nient'altro. Chi toglie MotoGP
+   * dall'intestazione ma ha scelto di aprire l'app li' ci atterra lo stesso:
+   * la pagina non e' irraggiungibile, e legare le due cose vorrebbe dire che
+   * riordinare il menu' cambia di nascosto dove l'app si apre.
    */
-  it("una sezione nascosta non rimbalza: resta sulla Home", () => {
+  it("una voce nascosta dal menu' non sposta l'atterraggio", () => {
     prefs.startPage = "motogp";
-    prefs.sections = { sinner: true, f1: true, motogp: false };
+    prefs.sections = { ...prefs.sections, motogp: false };
     monta();
-    expect(screen.getByText(/^Home · \/ ·/)).toBeInTheDocument();
-    expect(screen.queryByText(/MotoGP/)).not.toBeInTheDocument();
+    expect(screen.getByText(/^MotoGP · \/motogp · REPLACE$/)).toBeInTheDocument();
   });
 });

@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useUserPrefs } from "@/contexts/useUserPrefs";
+import { MENU_SECTIONS, useUserPrefs } from "@/contexts/useUserPrefs";
 import { useAuth } from "@/contexts/useAuth";
 import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -343,11 +343,7 @@ export default function PreferencesPanel() {
                   <p className="text-xs text-muted-foreground">
                     L'app si apre su questa pagina. La Home resta raggiungibile dal menù.
                   </p>
-                  <StartPageSelect
-                    value={startPage}
-                    sections={sections}
-                    onChange={scegliPaginaIniziale}
-                  />
+                  <StartPageSelect value={startPage} onChange={scegliPaginaIniziale} />
                 </div>
               )}
 
@@ -360,21 +356,19 @@ export default function PreferencesPanel() {
 
               <div className="space-y-3">
                 <p className="text-sm font-heading uppercase tracking-wider text-foreground">
-                  Sezioni visibili
+                  Voci del menù
                 </p>
-                {(
-                  [
-                    { key: "sinner", label: "Jannik Sinner" },
-                    { key: "f1", label: "Formula 1" },
-                    { key: "motogp", label: "MotoGP" },
-                  ] as const
-                ).map(({ key, label }) => (
+                <p className="text-xs text-muted-foreground">
+                  Quali voci compaiono nell'intestazione. Le pagine restano raggiungibili dal loro
+                  indirizzo, così un collegamento condiviso funziona comunque.
+                </p>
+                {MENU_SECTIONS.map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between gap-3">
                     <span className="text-sm text-foreground">{label}</span>
                     <Switch
                       checked={sections[key]}
                       onCheckedChange={(next) => setSection(key, next)}
-                      aria-label={`Mostra la sezione ${label}`}
+                      aria-label={`Mostra la voce ${label} nel menù`}
                     />
                   </div>
                 ))}

@@ -43,6 +43,10 @@ const PROFILO: Profile = {
   show_sinner: true,
   show_f1: true,
   show_motogp: true,
+  show_home: true,
+  show_calendario: true,
+  show_streaming: true,
+  show_squadra: true,
   start_page: "home",
 };
 
@@ -248,6 +252,10 @@ describe("PROFILE_COLUMNS", () => {
       show_sinner: true,
       show_f1: true,
       show_motogp: true,
+      show_home: true,
+      show_calendario: true,
+      show_streaming: true,
+      show_squadra: true,
       start_page: true,
     };
     const lette = PROFILE_COLUMNS.split(",").map((colonna) => colonna.trim());

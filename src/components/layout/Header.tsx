@@ -15,36 +15,54 @@ import {
 } from "./BrandIcons";
 import { SparkleLoop } from "./SparkleLoop";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
-import { useUserPrefs } from "@/contexts/useUserPrefs";
+import { useUserPrefs, type SectionKey } from "@/contexts/useUserPrefs";
 import { resolveTeamStrict } from "@/lib/serieATeams";
 import { teamPath, teamSlugFromPath } from "@/lib/teamRoutes";
 import { HOME_PATH } from "@/lib/startPage";
 
 // Header non riceve piu' props: tema e preferenze sono in /preferenze.
 
+/**
+ * Le voci dell'intestazione, in ordine e con la sezione che le governa.
+ *
+ * La voce della squadra sta **dentro** l'elenco, con etichetta e indirizzo
+ * vuoti che `navItems` riempie: dipendono da un hook e non si possono
+ * scrivere qui. Prima veniva inserita dopo, con uno `splice` calcolato
+ * cercando `/formula1` — e con la Formula 1 nascosta quella ricerca falliva,
+ * mandando la squadra in fondo al menu'. Il suo posto nell'ordine e' un fatto,
+ * e i fatti si dichiarano una volta sola.
+ */
 const ALL_NAV_ITEMS = [
-  // La Home ha un indirizzo proprio: `/` e' diventata la decisione su dove
-  // atterrare, e senza `HOME_PATH` la voce del menu' non avrebbe piu' un posto
-  // dove portare chi ha scelto di aprire l'app altrove.
-  { label: "HOME", shortLabel: "HOME", path: HOME_PATH, Icon: HomeBrandIcon },
-  { label: "CALENDARIO", shortLabel: "AGENDA", path: "/calendario", Icon: CalendarBrandIcon },
-  { label: "STREAMING", shortLabel: "STREAMING", path: "/streaming", Icon: StreamingBrandIcon },
+  { section: "home", label: "HOME", shortLabel: "HOME", path: HOME_PATH, Icon: HomeBrandIcon },
   {
+    section: "calendario",
+    label: "CALENDARIO",
+    shortLabel: "AGENDA",
+    path: "/calendario",
+    Icon: CalendarBrandIcon,
+  },
+  {
+    section: "streaming",
+    label: "STREAMING",
+    shortLabel: "STREAMING",
+    path: "/streaming",
+    Icon: StreamingBrandIcon,
+  },
+  {
+    section: "sinner",
     label: "JANNIK SINNER",
     shortLabel: "SINNER",
     path: "/sinner",
     Icon: TennisBrandIcon,
-    section: "sinner",
   },
-  // La voce della squadra e' l'unica che cambia da utente a utente: si
-  // aggiunge qui sotto, in `navItems`, perche' dipende da un hook.
-  { label: "FORMULA 1", shortLabel: "F1", path: "/formula1", Icon: F1BrandIcon, section: "f1" },
+  { section: "squadra", label: "", shortLabel: "", path: "", Icon: FootballBrandIcon },
+  { section: "f1", label: "FORMULA 1", shortLabel: "F1", path: "/formula1", Icon: F1BrandIcon },
   {
+    section: "motogp",
     label: "MOTOGP",
     shortLabel: "MOTOGP",
     path: "/motogp",
     Icon: MotoGPBrandIcon,
-    section: "motogp",
   },
 ] as const;
 
@@ -53,7 +71,7 @@ interface NavItem {
   shortLabel: string;
   path: string;
   Icon: (typeof ALL_NAV_ITEMS)[number]["Icon"];
-  section?: string;
+  section: SectionKey;
 }
 
 interface Burst {
@@ -96,19 +114,21 @@ export default function Header() {
    */
   const indirizzoAttivo = location.pathname === "/" ? HOME_PATH : location.pathname;
 
-  // Le sezioni disattivate nel profilo spariscono dal menu.
-  const navItems: NavItem[] = ALL_NAV_ITEMS.filter(
-    (item) => !("section" in item) || sections[item.section as keyof typeof sections],
+  /**
+   * Le voci nascoste nelle preferenze spariscono da qui, e **solo** da qui:
+   * le pagine restano raggiungibili per indirizzo, perche' un link condiviso
+   * deve funzionare anche per chi quella voce l'ha tolta dal proprio menu'.
+   */
+  const navItems: NavItem[] = ALL_NAV_ITEMS.filter((item) => sections[item.section]).map((item) =>
+    item.section === "squadra"
+      ? {
+          ...item,
+          label: team.name.toUpperCase(),
+          shortLabel: team.name.toUpperCase(),
+          path: teamPath(team),
+        }
+      : item,
   );
-  // La voce della squadra torna dov'era: fra Sinner e Formula 1.
-  const posizioneSquadra = navItems.findIndex((item) => item.path === "/formula1");
-  const squadra: NavItem = {
-    label: team.name.toUpperCase(),
-    shortLabel: team.name.toUpperCase(),
-    path: teamPath(team),
-    Icon: FootballBrandIcon,
-  };
-  navItems.splice(posizioneSquadra === -1 ? navItems.length : posizioneSquadra, 0, squadra);
 
   const triggerBurst = (path: string, e: ReactMouseEvent<HTMLAnchorElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
