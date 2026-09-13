@@ -73,6 +73,22 @@ classifica è la stessa per tutte e venti.
   Coppa Italia) più ventiquattro sondati in modo opportunistico, ignorando i 404.
   E l'elenco delle venti squadre, in `_shared/serieATeams.ts`, copia generata di
   `src/lib/serieATeams.ts`.
+- **Punteggi (`calendar`)**: pubblicati appena la partita è **cominciata**, non
+  solo a partita finita. Fino alla 3.4.0 la funzione scriveva
+  `homeScore: isFinished ? goal : null`, quindi durante i novanta minuti il
+  risultato non usciva dal server e nessuna vista poteva mostrarlo. La regola è
+  ora in `matchStatus.ts` ed è la stessa che `match-detail` applicava già.
+  **Prima del fischio d'inizio la fonte pubblica `goal: 0`** — verificato sul
+  widget del calendario — e quello zero non è un risultato: è l'assenza di un
+  risultato, e viene servito come `null`. Se la fonte tace, tacciono entrambi i
+  punteggi: un «2 – ?» non è un risultato parziale.
+- **Stato della partita (`calendar`)**: `status` viaggia come la fonte lo
+  scrive. Sul widget del calendario sono stati osservati soltanto `PreMatch` e
+  `FullTime`; la famiglia di widget del dettaglio usa anche `SecondHalf`. Per
+  questo l'app enumera gli stati che **non** sono gioco e tratta come gioco
+  tutto il resto: un valore nuovo sbaglia così dalla parte giusta. Se il
+  calendario restasse fermo su `PreMatch` durante il gioco, l'app lo direbbe
+  comunque «in corso» (lo decide l'orologio) **senza mostrare punteggi**.
 - **HTML scrapato (`team-squad`)**: la pagina rosa di Sky,
   `sport.sky.it/calcio/squadre/{slug}/rosa`. Non è un widget e non è JSON: è una
   tabella `ftbl__team-players-table` server-rendered, parsata da

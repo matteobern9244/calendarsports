@@ -157,12 +157,29 @@ export function usePlayerStats(
  * smette di pubblicarlo, o una partita arrivata da un torneo minore — e in
  * quel caso non c'e' niente da chiedere.
  */
-export function useMatchDetail(skyMatchId: string | null | undefined) {
+export function useMatchDetail(
+  skyMatchId: string | null | undefined,
+  /**
+   * Quanto spesso richiedere il dettaglio, o `false` per non richiederlo. Il
+   * numero lo decide `intervalloLive` a partire dalla fase e dalla preferenza
+   * di risparmio: qui arriva gia' deciso, perche' questo hook resti un
+   * involucro sottile attorno a React Query.
+   *
+   * React Query non fa refetch periodici quando la scheda non e' a fuoco —
+   * `refetchIntervalInBackground` resta al suo `false` predefinito — quindi il
+   * costo segue chi sta davvero guardando, come il clock condiviso che si
+   * ferma su `visibilitychange`.
+   */
+  refetchInterval: number | false = false,
+) {
   return useQuery({
     enabled: Boolean(skyMatchId),
     queryKey: queryKeys.football.matchDetail(skyMatchId ?? ""),
     queryFn: () => footballApi.getMatchDetail(skyMatchId!),
-    staleTime: 60 * 1000,
+    // Meta' dell'intervallo: un `staleTime` pari o superiore renderebbe
+    // inutile un refetch su due, che tornerebbe dalla cache.
+    staleTime: refetchInterval === false ? 60 * 1000 : Math.floor(refetchInterval / 2),
+    refetchInterval,
   });
 }
 

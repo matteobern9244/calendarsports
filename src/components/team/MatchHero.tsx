@@ -4,10 +4,12 @@ import EventCountdown from "@/components/common/EventCountdown";
 import MatchScore from "@/components/common/MatchScore";
 import TeamLogo from "@/components/common/TeamLogo";
 import { useNowMinute } from "@/hooks/useNow";
+import { useCountdownMode } from "@/hooks/useCountdownMode";
 import { useMatchDetail } from "@/hooks/useSportsData";
 import type { FootballMatch, MatchDetail } from "@/lib/api/schemas";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { formatFootballDateTime } from "@/lib/dateUtils";
+import { intervalloLive } from "@/lib/liveRefresh";
 import { matchPhase, matchScore, type FasePartita } from "@/lib/matchPhase";
 import type { SerieATeam } from "@/lib/serieATeams";
 import { matchResultLabel, matchSide, resultOf, teamIsPlaying } from "@/lib/teamMatch";
@@ -97,7 +99,11 @@ function TestataConDettaglio({
   scoreDiRipiego: { home: number; away: number } | null;
   onRetry: () => void;
 }) {
-  const { data } = useMatchDetail(match.skyMatchId);
+  // Mentre si gioca il risultato cambia, e una pagina aperta al 20' non deve
+  // restare ferma al 20'. Fuori dalla partita l'intervallo e' `false`, e al
+  // fischio finale si spegne da solo al primo refetch che porta lo stato nuovo.
+  const { mode } = useCountdownMode();
+  const { data } = useMatchDetail(match.skyMatchId, intervalloLive(fase, mode));
   return (
     <Testata
       team={team}

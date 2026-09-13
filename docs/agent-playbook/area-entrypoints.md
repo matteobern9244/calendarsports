@@ -17,26 +17,27 @@ script disponibili.
 
 ## Mappa per dominio
 
-| Area                 | Punti di ingresso da leggere                                                                                                                                                        |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Home                 | `src/pages/Index.tsx`, `components/home/TonightTvList.tsx`, `components/common/EventCard.tsx`, hook `use*NextEvent`                                                                 |
-| Calendario aggregato | `src/pages/CalendarPage.tsx`, `src/hooks/useCalendarEvents.ts` (espansione F1 + MotoGP + squadra scelta, filtri persistiti), `components/calendar/sportStyles.ts`                   |
-| Squadra di calcio    | `src/pages/TeamPage.tsx`, `src/pages/TeamMatchPage.tsx`, `components/common/TeamRoute.tsx`, `src/lib/teamRoutes.ts`, `sports-football`, `useFootballCalendar`, `useSerieAStandings` |
-| Formula 1            | `src/pages/Formula1Page.tsx`, `sports-f1`, `src/lib/f1Utils.ts`                                                                                                                     |
-| MotoGP               | `src/pages/MotoGPPage.tsx`, `sports-motogp` (Pulselive per il calendario, Sky per le classifiche)                                                                                   |
-| Sinner               | `src/pages/SinnerPage.tsx`, `components/sinner/PlayerHeader.tsx`, `sports-tennis` (Wikipedia + dataset curato)                                                                      |
-| Streaming e TV       | `src/pages/StreamingPage.tsx`, `src/hooks/useStreamingData.ts`, `streaming-tv`, `streaming-releases`                                                                                |
-| Highlights           | `src/lib/highlightPlaylists.ts` (catalogo e corrispondenza squadra→playlist), `components/highlights/`, `highlights-youtube`, `useHighlights`                                       |
-| Notifiche push       | `src/lib/pushClient.ts`, `src/hooks/usePushNotifications.ts`, `push-subscribe`, `push-vapid-key`, `push-dispatcher`, `public/sw.js`                                                 |
-| Preferenze e tema    | `components/preferences/PreferencesPanel.tsx`, `src/contexts/UserPrefsContext.tsx`, `src/hooks/useProfile.ts`, `src/hooks/useTheme.ts` — **solo con l'accesso**                     |
-| Pagina iniziale      | `src/lib/startPage.ts`, `components/common/StartRoute.tsx`, `components/preferences/StartPageSelect.tsx`, colonna `profiles.start_page`                                             |
-| Voci del menù        | `MENU_SECTIONS` in `src/contexts/useUserPrefs.ts`, `COLONNA_SEZIONE` in `UserPrefsContext.tsx`, le sette colonne `profiles.show_*`                                                  |
-| Gesto di apertura    | `src/lib/swipeGesture.ts`, `src/hooks/useSwipeFromRight.ts`, la linguetta `components/layout/SwipeToPreferences.tsx`, `touch-action` su `body` in `src/index.css`                   |
-| Accesso e profilo    | `src/pages/AuthPage.tsx`, `src/contexts/AuthContext.tsx`, `src/hooks/useProfile.ts`, tabella `profiles` (RLS sulla propria riga)                                                    |
-| Squadra di Serie A   | `src/lib/serieATeams.ts` e la copia `supabase/functions/_shared/serieATeams.ts` con il guardiano anti-divergenza, `components/preferences/TeamSelect.tsx`                           |
-| Sincronizzazione     | `src/hooks/useSyncAll.ts`, `src/hooks/syncWarning.ts`                                                                                                                               |
-| Conto alla rovescia  | `src/lib/countdownClock.ts`, `src/hooks/useNow.ts`, `components/common/EventCountdown.tsx`                                                                                          |
-| Stato offline        | `src/hooks/useOnlineStatus.ts`, `components/common/OfflineFallback.tsx`, `OfflineIndicator.tsx`                                                                                     |
+| Area                 | Punti di ingresso da leggere                                                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Home                 | `src/pages/Index.tsx`, `components/home/TonightTvList.tsx`, `components/common/EventCard.tsx`, hook `use*NextEvent`                                                                                                      |
+| Calendario aggregato | `src/pages/CalendarPage.tsx`, `src/hooks/useCalendarEvents.ts` (espansione F1 + MotoGP + squadra scelta, filtri persistiti), `components/calendar/sportStyles.ts`                                                        |
+| Squadra di calcio    | `src/pages/TeamPage.tsx`, `src/pages/TeamMatchPage.tsx`, `components/common/TeamRoute.tsx`, `src/lib/teamRoutes.ts`, `sports-football`, `useFootballCalendar`, `useSerieAStandings`                                      |
+| Partita in corso     | `src/lib/matchPhase.ts` (la fase e il punteggio ammissibile), `components/team/MatchHero.tsx`, `MatchPhaseBadge.tsx`, `components/common/MatchScore.tsx`, `src/lib/liveRefresh.ts` (ogni quanto richiedere il dettaglio) |
+| Formula 1            | `src/pages/Formula1Page.tsx`, `sports-f1`, `src/lib/f1Utils.ts`                                                                                                                                                          |
+| MotoGP               | `src/pages/MotoGPPage.tsx`, `sports-motogp` (Pulselive per il calendario, Sky per le classifiche)                                                                                                                        |
+| Sinner               | `src/pages/SinnerPage.tsx`, `components/sinner/PlayerHeader.tsx`, `sports-tennis` (Wikipedia + dataset curato)                                                                                                           |
+| Streaming e TV       | `src/pages/StreamingPage.tsx`, `src/hooks/useStreamingData.ts`, `streaming-tv`, `streaming-releases`                                                                                                                     |
+| Highlights           | `src/lib/highlightPlaylists.ts` (catalogo e corrispondenza squadra→playlist), `components/highlights/`, `highlights-youtube`, `useHighlights`                                                                            |
+| Notifiche push       | `src/lib/pushClient.ts`, `src/hooks/usePushNotifications.ts`, `push-subscribe`, `push-vapid-key`, `push-dispatcher`, `public/sw.js`                                                                                      |
+| Preferenze e tema    | `components/preferences/PreferencesPanel.tsx`, `src/contexts/UserPrefsContext.tsx`, `src/hooks/useProfile.ts`, `src/hooks/useTheme.ts` — **solo con l'accesso**                                                          |
+| Pagina iniziale      | `src/lib/startPage.ts`, `components/common/StartRoute.tsx`, `components/preferences/StartPageSelect.tsx`, colonna `profiles.start_page`                                                                                  |
+| Voci del menù        | `MENU_SECTIONS` in `src/contexts/useUserPrefs.ts`, `COLONNA_SEZIONE` in `UserPrefsContext.tsx`, le sette colonne `profiles.show_*`                                                                                       |
+| Gesto di apertura    | `src/lib/swipeGesture.ts`, `src/hooks/useSwipeFromRight.ts`, la linguetta `components/layout/SwipeToPreferences.tsx`, `touch-action` su `body` in `src/index.css`                                                        |
+| Accesso e profilo    | `src/pages/AuthPage.tsx`, `src/contexts/AuthContext.tsx`, `src/hooks/useProfile.ts`, tabella `profiles` (RLS sulla propria riga)                                                                                         |
+| Squadra di Serie A   | `src/lib/serieATeams.ts` e la copia `supabase/functions/_shared/serieATeams.ts` con il guardiano anti-divergenza, `components/preferences/TeamSelect.tsx`                                                                |
+| Sincronizzazione     | `src/hooks/useSyncAll.ts`, `src/hooks/syncWarning.ts`                                                                                                                                                                    |
+| Conto alla rovescia  | `src/lib/countdownClock.ts`, `src/hooks/useNow.ts`, `components/common/EventCountdown.tsx`                                                                                                                               |
+| Stato offline        | `src/hooks/useOnlineStatus.ts`, `components/common/OfflineFallback.tsx`, `OfflineIndicator.tsx`                                                                                                                          |
 
 ## File e contratti speciali
 
@@ -47,6 +48,14 @@ perché **non sono deducibili dal nome della pagina**.
   solo timer per tutta l'app, che rallenta a 30 secondi se nessuno chiede la
   risoluzione al secondo e si ferma quando la scheda passa in background. Si
   legge con `useNowMinute` / `useNowSecond`, mai con `Date.now()` nel render.
+- **Fase di una partita di calcio**: `matchPhase` in `src/lib/matchPhase.ts` e'
+  l'unico posto che decide se una partita e' da giocare, in corso o finita, e
+  quale punteggio si puo' mostrare. La fonte decide; l'orologio puo' solo
+  spingere avanti — mai riportare indietro una partita data per finita, mai
+  anticiparne una che deve cominciare — e **non decide mai un punteggio**: e'
+  cio' che impedisce di trasformare in 0-0 lo zero che la fonte pubblica prima
+  del fischio d'inizio. Il vocabolario degli stati esiste in due copie, perche'
+  le edge function girano su Deno, e un guardiano le tiene allineate.
 - **Evidenziazione del "prossimo"**: `prioritizeNextUpcoming` in
   `src/lib/dateUtils.ts` è l'unico punto che decide quale evento va in testa.
   Considera in corso un evento nelle tre ore dall'inizio quando non c'è una fine

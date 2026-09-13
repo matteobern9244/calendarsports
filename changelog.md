@@ -17,6 +17,89 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [3.4.0] — Durante la partita (2026-09-13)
+
+Bump applicativo `3.3.2` → `3.4.0`. Nota di rilascio in
+[`docs/releases/3.4.0-durante-la-partita.md`](docs/releases/3.4.0-durante-la-partita.md).
+
+**Minor.** Tocca `supabase/functions/sports-football/`: **la funzione va
+distribuita a parte**, il Publish di Lovable non la porta con sé.
+
+### Corretto
+
+- **Mentre si giocava, l'app diceva che la partita doveva ancora cominciare.**
+  La card in testa alla pagina squadra annunciava «PROSSIMA PARTITA» mentre
+  tre centimetri più a destra il conto alla rovescia lampeggiava «● IN DIRETTA
+  · da 54m»; la riga di calendario della stessa partita portava la pillola
+  «PROSSIMA» e un trattino al posto del punteggio. Nessuna delle viste era
+  sbagliata da sola: si contraddicevano soltanto insieme, cioè nell'unico
+  posto dove nessun test guardava. La stessa forma del difetto casa/trasferta
+  della 3.2.1, e la stessa cura — le viste si montano insieme, in
+  `matchPhaseConsistency.test.tsx`.
+- **Il punteggio non si vedeva da nessuna parte.** Per leggerlo bisognava
+  aprire il dettaglio della partita e poi la scheda «Risultato», la quarta di
+  cinque. La causa a monte era nella edge function, che teneva i punteggi solo
+  a partita finita: durante i novanta minuti il dato non usciva nemmeno dal
+  server. Ora il punteggio compare nella card in testa, nelle righe di
+  calendario, in Home, nell'agenda di `/calendario` e nell'elenco del giorno.
+- **La Home saltava proprio la partita in corso.** Il predicato pretendeva
+  «comincia nel futuro»: al minuto del fischio d'inizio la partita usciva
+  dall'elenco e al suo posto compariva quella della settimana dopo.
+- **La riga «Stato» del dettaglio mentiva.** Cercava `status === "Live"` o
+  `"InProgress"`, due valori che la fonte non ha mai prodotto — Sky scrive
+  `PreMatch`, `SecondHalf`, `FullTime` — quindi a partita in corso diceva «In
+  programma».
+- **Il guardiano dello scorrimento orizzontale misurava una schermata vuota**
+  su due righe. «partita · formazione» e «partita · cronologia» puntavano a
+  una partita che nella fixture non ha l'identificativo della fonte: le schede
+  rendevano il messaggio «la fonte non pubblica un identificativo», e non
+  c'era niente da disporre. Verde per il motivo sbagliato, come
+  `streaming-releases` nella 3.3.0.
+
+### Aggiunto
+
+- **Il risultato in cima al dettaglio partita**: punteggio, esito, marcatori
+  con il minuto e la riga stadio·arbitro stanno sopra le schede. La scheda
+  «Risultato» è stata rimossa, perché ripeteva ciò che si vede sopra.
+- **L'aggiornamento automatico durante i novanta minuti**: il dettaglio si
+  richiede da sé ogni minuto mentre si gioca (tre minuti per chi ha scelto il
+  risparmio energetico), e si ferma da solo al fischio finale. Il calendario
+  **non** viene messo in polling: interroga tutte le competizioni, e il costo
+  verso la fonte non sarebbe giustificato.
+- **`src/lib/matchPhase.ts`**, l'unico posto che decide in che fase è una
+  partita, con l'asimmetria fra le due evidenze: la fonte decide, l'orologio
+  può solo spingere avanti — mai riportare indietro una partita data per
+  finita, mai anticiparne una che deve cominciare — e **non decide mai un
+  punteggio**. È la regola che impedisce di trasformare in 0-0 lo zero che la
+  fonte pubblica prima del fischio d'inizio.
+- Due guardiani nuovi: `matchPhaseConsistency.test.tsx` (le viste non si
+  contraddicono) e `src/test/tooling/matchStatusMirror.test.ts` (il
+  vocabolario degli stati non diverge fra app e edge function).
+
+### Cambiato
+
+- Il punteggio si scrive in un componente solo, `MatchScore`. Era ripetuto a
+  mano in tre punti, già divergenti: due usavano il trattino lungo e uno
+  quello corto, e i numeri tabellari c'erano in due su tre — motivo per cui la
+  colonna del calendario si spostava a ogni riga. E ora si fa **leggere**:
+  «2–0» per uno screen reader è «due meno zero», o niente.
+- Le fixture end-to-end dichiaravano `status: "Scheduled"`, uno stato che la
+  fonte non pubblica, e contenevano solo partite future. Ora hanno la forma di
+  un calendario vero — una giocata, una in corso, quattro da giocare — e la
+  partita in corso porta il caso peggiore di larghezza.
+- `extractTeamMatches` esce da `index.ts`, che chiama `Deno.serve` a livello
+  di modulo e non si può importare da un test: erano sessanta righe di
+  produzione senza nessuna verifica, ed erano proprio quelle del difetto.
+
+### Nota per chi aggiorna
+
+Il punteggio in tempo reale dipende da cosa pubblica il widget calendario di
+Sky **durante** i novanta minuti, che al momento del rilascio non era ancora
+stato osservato dal vivo: se la fonte restasse ferma sul prepartita, l'app
+direbbe comunque «In corso» — lo decide l'orologio — ma non mostrerebbe alcun
+punteggio finché il dettaglio partita non lo pubblica. È una degradazione
+voluta: meglio un dato assente che un dato inventato.
+
 ## [3.3.2] — La linguetta delle preferenze (2026-09-12)
 
 Bump applicativo `3.3.1` → `3.3.2`. Nota di rilascio in

@@ -150,6 +150,41 @@ describe("MatchHero", () => {
     expect(screen.queryByText(/Vittoria|Sconfitta|Pareggio/)).not.toBeInTheDocument();
   });
 
+  /**
+   * Un punteggio che non si aggiorna e' un punteggio sbagliato dopo dieci
+   * minuti, e la pagina non direbbe che e' vecchio. `intervalloLive` decide
+   * *quanto*; questo test prova che sia davvero collegato — una regola giusta
+   * e non cablata non aggiorna niente.
+   */
+  it("mentre si gioca richiede di nuovo il dettaglio da solo", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(footballApi.getMatchDetail).mockResolvedValue(
+        dettaglio({ status: "SecondHalf", score: { home: 1, away: 0 } }),
+      );
+      renderHero(match({ status: "SecondHalf", homeScore: 1, awayScore: 0, date: minutiFa(54) }));
+
+      await vi.waitFor(() => expect(footballApi.getMatchDetail).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(61_000);
+      await vi.waitFor(() => expect(footballApi.getMatchDetail).toHaveBeenCalledTimes(2));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a partita finita smette di richiedere", async () => {
+    vi.useFakeTimers();
+    try {
+      renderHero(match({ status: "FullTime", homeScore: 2, awayScore: 1, date: minutiFa(200) }));
+
+      await vi.waitFor(() => expect(footballApi.getMatchDetail).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(5 * 60_000);
+      expect(footballApi.getMatchDetail).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("senza identificativo della fonte non chiede niente e non promette niente", async () => {
     renderHero(
       match({
