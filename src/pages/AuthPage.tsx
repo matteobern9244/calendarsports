@@ -65,6 +65,17 @@ export default function AuthPage() {
       return;
     }
     if (result.redirected) return;
+    // Il flusso OAuth salva la sessione sul client generato, che e' un'istanza
+    // diversa da quella osservata da AuthContext: senza questa chiamata la
+    // navigazione alla home lascerebbe l'utente ancora non autenticato.
+    if ("tokens" in result && result.tokens) {
+      const { error: sessionError } = await supabase.auth.setSession(result.tokens);
+      if (sessionError) {
+        setBusy(false);
+        toast.error("Accesso non riuscito", { description: "Riprova più tardi." });
+        return;
+      }
+    }
     navigate("/", { replace: true });
   };
 
