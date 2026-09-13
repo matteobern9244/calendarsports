@@ -117,6 +117,19 @@ export function getDateTimestamp(dateStr?: string | null): number {
   return d ? d.getTime() : Number.POSITIVE_INFINITY;
 }
 
+/**
+ * Quanto dura un evento di cui la fonte non dichiara la fine.
+ *
+ * E' un ripiego, non una verita': una partita di calcio ne occupa due e un
+ * quarto fra intervallo e recuperi, e la mezz'ora in piu' e' prudenza. Vive
+ * qui perche' era scritta a mano in tre punti — la priorita' del «prossimo»,
+ * il chip del conto alla rovescia e la fase di una partita — e tre copie della
+ * stessa finestra sono tre occasioni di farle divergere: basterebbe che due
+ * viste accanto la leggessero diversa perche' una dica «in diretta» e l'altra
+ * no.
+ */
+export const DURATA_EVENTO_PRESUNTA_MS = 3 * 60 * 60 * 1000;
+
 export function prioritizeNextUpcoming<T>(
   items: T[],
   getDate: (item: T) => string | undefined | null,
@@ -135,7 +148,7 @@ export function prioritizeNextUpcoming<T>(
     const startTs = getDateTimestamp(getDate(item));
     if (!Number.isFinite(startTs) || startTs > now) return false;
     const endRaw = getEndDate?.(item);
-    const endTs = endRaw ? getDateTimestamp(endRaw) : startTs + 3 * 60 * 60 * 1000; // fallback: finestra di 3h per eventi single-day
+    const endTs = endRaw ? getDateTimestamp(endRaw) : startTs + DURATA_EVENTO_PRESUNTA_MS;
     return Number.isFinite(endTs) && now <= endTs;
   });
 

@@ -1,5 +1,6 @@
 import { toNumber, type FootballMatch } from "@/lib/api/schemas";
 import { matchesTeam, type SerieATeam } from "@/lib/serieATeams";
+import { faseDaStato } from "@/lib/matchPhase";
 
 /**
  * Le deduzioni sulla singola partita a partire dai nomi delle squadre come li
@@ -72,9 +73,15 @@ export function matchSide(
 /** Vittoria, Sconfitta o Pareggio dal punto di vista della squadra scelta. */
 export type MatchResult = "V" | "S" | "P";
 
-/** Solo a partita finita e con entrambi i punteggi: altrimenti null. */
+/**
+ * Solo a partita finita e con entrambi i punteggi: altrimenti null.
+ *
+ * «Finita» la dice la **fonte**, non l'orologio: un esito e' un verdetto, e
+ * al 39' la partita non l'ha ancora emesso. Per lo stesso motivo la fase non
+ * si prende da `matchPhase`, che a fonte muta ripiega sull'ora.
+ */
 export function matchResult(match: FootballMatch, team: SerieATeam): MatchResult | null {
-  if (match.status !== "FullTime") return null;
+  if (faseDaStato(match.status) !== "finita") return null;
   const { isHome } = matchSide(match, team);
   const own = toNumber(isHome ? match.homeScore : match.awayScore);
   const other = toNumber(isHome ? match.awayScore : match.homeScore);

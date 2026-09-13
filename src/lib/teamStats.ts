@@ -1,5 +1,6 @@
 import { matchesTeam, type SerieATeam } from "@/lib/serieATeams";
 import { toNumber, type FootballMatch, type FootballStandingRow } from "@/lib/api/schemas";
+import { faseDaStato } from "@/lib/matchPhase";
 
 /**
  * Le statistiche della squadra, ricavate da quello che l'app ha gia'.
@@ -194,7 +195,9 @@ export function partiteDiCampionato(
 
   for (const m of matches) {
     if (m.competition !== COMPETIZIONE_CAMPIONATO) continue;
-    if (m.status !== "FullTime") continue;
+    // Solo quello che la **fonte** dichiara concluso: le statistiche non si
+    // costruiscono su una fase dedotta dall'orologio.
+    if (faseDaStato(m.status) !== "finita") continue;
     const casa = toNumber(m.homeScore);
     const fuori = toNumber(m.awayScore);
     if (casa === null || fuori === null) continue;

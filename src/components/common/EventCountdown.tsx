@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { AlertCircle, RefreshCw, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNowSecond, subscribeCountdown } from "@/lib/countdownClock";
-import { getDateTimestamp } from "@/lib/dateUtils";
+import { DURATA_EVENTO_PRESUNTA_MS, getDateTimestamp } from "@/lib/dateUtils";
 
 export type CountdownStatus = "upcoming" | "live" | "ended";
 
@@ -68,8 +68,10 @@ export default function EventCountdown({
       const t = getDateTimestamp(endDate);
       if (Number.isFinite(t)) return t;
     }
-    // Fallback storico: finestra live = start + 3h.
-    return valid ? target + 3 * 3600 * 1000 : 0;
+    // Fallback storico: finestra live = start + la durata presunta, la stessa
+    // che legge `matchPhase`. Due viste accanto non possono dissentire su
+    // quando un evento e' finito.
+    return valid ? target + DURATA_EVENTO_PRESUNTA_MS : 0;
   }, [endDate, target, valid]);
 
   // Real-time: tutti i countdown si abbonano al clock globale a risoluzione
