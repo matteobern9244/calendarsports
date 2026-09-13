@@ -11,6 +11,8 @@ import { queryKeys } from "@/lib/queryKeys";
 import { matchesTeam, type SerieATeam } from "@/lib/serieATeams";
 import { teamMatchPath } from "@/lib/teamRoutes";
 import { matchPrefix } from "@/lib/teamMatch";
+import { useNowMinute } from "@/hooks/useNow";
+import { matchPhase, matchScore, type FasePartita } from "@/lib/matchPhase";
 
 /**
  * Tipo unificato che alimenta la vista mese del calendario
@@ -35,6 +37,12 @@ export interface CalendarItem {
   href: string;
   /** Optional: broadcaster (calcio). */
   broadcaster?: string;
+  /**
+   * Solo per il calcio: F1 e MotoGP non pubblicano ne' una fase dichiarata
+   * dalla fonte ne' un punteggio.
+   */
+  fase?: FasePartita;
+  score?: { home: number; away: number } | null;
 }
 
 const SHORT_GP = (gpName: string): string => {
@@ -164,7 +172,11 @@ function expandMotoGP(rounds: unknown[] | undefined): CalendarItem[] {
  * nome normalizzato: il `/juventus/i` di prima scambiava la Juventus Next Gen
  * per la prima squadra, e nessun test se ne sarebbe accorto.
  */
-function expandFootball(items: unknown[] | undefined, team: SerieATeam): CalendarItem[] {
+function expandFootball(
+  items: unknown[] | undefined,
+  team: SerieATeam,
+  now: number,
+): CalendarItem[] {
   if (!Array.isArray(items)) return [];
   const out: CalendarItem[] = [];
   for (const m of items as Array<Record<string, unknown>>) {
@@ -175,6 +187,13 @@ function expandFootball(items: unknown[] | undefined, team: SerieATeam): Calenda
     const competition = String(m.competition ?? "Serie A");
     const matchday = m.matchday;
     const id = String(m.id ?? `${home}-${away}-${date}`);
+    // I campi che decidono fase e punteggio, letti dalla stessa riga grezza.
+    const partita = {
+      status: typeof m.status === "string" ? m.status : null,
+      date,
+      homeScore: m.homeScore as number | string | null | undefined,
+      awayScore: m.awayScore as number | string | null | undefined,
+    };
     const isHome = matchesTeam(home, team);
     const opponent = isHome ? away : home;
     const ctxNum = matchday != null ? `Giornata ${matchday}` : "";
@@ -187,6 +206,8 @@ function expandFootball(items: unknown[] | undefined, team: SerieATeam): Calenda
       title: `${home} - ${away}`,
       href: teamMatchPath(team, id),
       broadcaster: m.broadcaster ? String(m.broadcaster) : undefined,
+      fase: matchPhase(partita, now).fase,
+      score: matchScore(partita, now),
     });
   }
   return out;
@@ -260,6 +281,10 @@ export function useCalendarEvents(team: SerieATeam) {
   // Anche quella e' stabile, ed e' il motivo per cui questo hook prende una
   // `SerieATeam` e non uno slug: l'oggetto arriva sempre da `SERIE_A_TEAMS`,
   // mentre chi lo ricostruisse a ogni render annullerebbe la memo in silenzio.
+  // L'ora entra come dipendenza della memo invece di essere letta dentro:
+  // `Date.now()` durante il render non e' riproducibile, e lo intercetta
+  // `react-hooks/purity`. Al minuto, perche' una fase non cambia al secondo.
+  const now = useNowMinute();
   const f1Data = f1.data;
   const motogpData = motogp.data;
   const footballAllData = footballAll.data;
@@ -274,11 +299,12 @@ export function useCalendarEvents(team: SerieATeam) {
           (footballAllData as unknown[] | undefined) ??
             (footballFirstData as { items?: unknown[] } | undefined)?.items,
           team,
+          now,
         ),
       ]
         .filter((e) => toRomeDate(e.date) !== null)
         .sort((a, b) => a.date.localeCompare(b.date)),
-    [f1Data, motogpData, footballAllData, footballFirstData, team],
+    [f1Data, motogpData, footballAllData, footballFirstData, team, now],
   );
 
   const { refetch: refetchF1 } = f1;

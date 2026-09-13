@@ -4,6 +4,7 @@ import { formatDayHeaderIT, romeHHMM, type RomeYMD } from "@/lib/calendarGrid";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { SPORT_BADGE, SPORT_DOT, sportLabel } from "./sportStyles";
+import MatchScore from "@/components/common/MatchScore";
 
 export interface AgendaDay {
   ymd: RomeYMD;
@@ -94,10 +95,27 @@ export default function AgendaView({
                         {sportLabel(ev.sport, team)}
                       </Badge>
                       <span className={cn("flex-1 min-w-0", past && "line-through")}>
-                        <span className="block text-sm font-semibold truncate">
-                          {ev.shortLabel}
-                          <span className="text-muted-foreground font-normal"> · {ev.context}</span>
+                        <span className="flex items-baseline gap-2 min-w-0">
+                          <span className="min-w-0 text-sm font-semibold truncate">
+                            {ev.shortLabel}
+                            <span className="text-muted-foreground font-normal">
+                              {" "}
+                              · {ev.context}
+                            </span>
+                          </span>
+                          {/*
+                            `shrink-0` sul punteggio: senza, un nome lungo lo
+                            spingerebbe fuori proprio quando c'e' qualcosa da
+                            leggere.
+                          */}
+                          <MatchScore score={ev.score ?? null} scala="riga" className="shrink-0" />
                         </span>
+                        {ev.fase === "in-corso" && (
+                          <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-heading font-bold uppercase tracking-wider text-destructive">
+                            <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+                            In corso
+                          </span>
+                        )}
                         {ev.broadcaster && (
                           <span className="block text-xs text-muted-foreground mt-0.5">
                             In TV: <span className="text-foreground/80">{ev.broadcaster}</span>

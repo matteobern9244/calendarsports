@@ -11,7 +11,6 @@ import {
   useMotoGPNextEvent,
 } from "@/hooks/useSportsData";
 import { getCurrentFootballSeason } from "@/lib/currentSeason";
-import type { FootballMatch } from "@/lib/api/schemas";
 import {
   formatDateIT,
   formatTimeIT,
@@ -30,6 +29,9 @@ import OfflineFallback from "@/components/common/OfflineFallback";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useUserPrefs } from "@/contexts/useUserPrefs";
 import { useNowMinute } from "@/hooks/useNow";
+import MatchScore from "@/components/common/MatchScore";
+import { partitaInEvidenza } from "@/lib/homeNextMatch";
+import { matchPhase, matchScore, type FasePartita } from "@/lib/matchPhase";
 
 interface UpcomingEvent {
   sport: string;
@@ -39,6 +41,9 @@ interface UpcomingEvent {
   rawDate: string;
   time?: string;
   broadcaster?: string;
+  /** Solo per il calcio: le altre fonti non dichiarano una fase. */
+  fase?: FasePartita;
+  score?: { home: number; away: number } | null;
   children?: React.ReactNode;
 }
 
@@ -114,15 +119,11 @@ export default function HomePage() {
     }
 
     if (footballCalendar && Array.isArray(footballCalendar)) {
-      // Il predicato non filtra soltanto: restringe il tipo, cosi' `date`
-      // resta una stringa fino in fondo invece di tornare opzionale un
-      // rigo piu' sotto.
-      const nextMatch = footballCalendar
-        .filter(
-          (m): m is FootballMatch & { date: string } =>
-            m.status !== "FullTime" && typeof m.date === "string" && getDateTimestamp(m.date) > now,
-        )
-        .sort((a, b) => getDateTimestamp(a.date) - getDateTimestamp(b.date))[0];
+      // La scelta sta in `homeNextMatch`, dove si prova senza montare una
+      // pagina che apre una dozzina di query. Prima il predicato pretendeva
+      // «comincia nel futuro», e al fischio d'inizio la partita spariva dalla
+      // Home proprio nel momento in cui era l'evento del giorno.
+      const nextMatch = partitaInEvidenza(footballCalendar, now);
       if (nextMatch) {
         // Le stesse deduzioni della pagina squadra, non una seconda copia:
         // il confronto e' per uguaglianza esatta, e il verso dipende da chi
@@ -138,6 +139,8 @@ export default function HomePage() {
           date: dateStr,
           time: timeStr,
           broadcaster: nextMatch.broadcaster || undefined,
+          fase: matchPhase(nextMatch, now).fase,
+          score: matchScore(nextMatch, now),
         });
       }
     }
@@ -273,7 +276,7 @@ export default function HomePage() {
               date={ev.date}
               time={ev.time}
               startDate={ev.rawDate}
-              status={undefined}
+              status={ev.fase === "in-corso" ? "in_corso" : undefined}
               highlight={idx === 0}
               onRetry={() => {
                 f1Refetch();
@@ -282,6 +285,11 @@ export default function HomePage() {
                 motogpRefetch();
               }}
             >
+              {ev.score && (
+                <div className="mb-2">
+                  <MatchScore score={ev.score} scala="card" />
+                </div>
+              )}
               {ev.broadcaster && (
                 <div className="flex flex-wrap gap-1.5">
                   {ev.broadcaster

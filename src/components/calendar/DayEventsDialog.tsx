@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SPORT_DOT, sportLabel } from "./sportStyles";
+import MatchScore from "@/components/common/MatchScore";
 
 interface DayEventsDialogProps {
   /** Il giorno aperto; `null` tiene il dialogo chiuso. */
@@ -78,12 +79,22 @@ export default function DayEventsDialog({
                         className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", SPORT_DOT[ev.sport])}
                       />
                       <span className={cn("flex-1 min-w-0", past && "line-through")}>
-                        <span className="block text-sm font-semibold truncate">
-                          {ev.shortLabel}{" "}
-                          <span className="text-muted-foreground font-normal">· {ev.context}</span>
+                        <span className="flex items-baseline gap-2 min-w-0">
+                          <span className="min-w-0 text-sm font-semibold truncate">
+                            {ev.shortLabel}{" "}
+                            <span className="text-muted-foreground font-normal">
+                              · {ev.context}
+                            </span>
+                          </span>
+                          <MatchScore score={ev.score ?? null} scala="riga" className="shrink-0" />
                         </span>
                         <span className="block text-xs text-muted-foreground font-mono mt-0.5">
                           {romeHHMM(ev.date)} · {sportLabel(ev.sport, team)}
+                          {ev.fase === "in-corso" && (
+                            <span className="ml-2 font-heading font-bold uppercase not-italic text-destructive">
+                              In corso
+                            </span>
+                          )}
                         </span>
                       </span>
                     </button>

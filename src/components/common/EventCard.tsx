@@ -57,8 +57,18 @@ export default function EventCard({
   // badge in alto a destra passa automaticamente a "IN DIRETTA" senza
   // dover ricaricare la pagina ne aspettare il prossimo refetch.
   const [liveStatus, setLiveStatus] = useState<CountdownStatus | null>(null);
+  // Chi passa `in_corso` lo sa da una fonte, non da una stima: i supplementari
+  // e le sospensioni stanno fuori dalla finestra presunta, e l'orologio
+  // direbbe «completato» mentre si sta ancora giocando. In tutti gli altri
+  // casi comanda il countdown, che cambia fase senza aspettare un refetch.
   const effectiveStatus =
-    liveStatus === "live" ? "in_corso" : liveStatus === "ended" ? "completato" : status;
+    status === "in_corso"
+      ? "in_corso"
+      : liveStatus === "live"
+        ? "in_corso"
+        : liveStatus === "ended"
+          ? "completato"
+          : status;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -109,7 +119,12 @@ export default function EventCard({
           "bg-[radial-gradient(circle_at_top,hsl(var(--gold)/0.10),transparent_60%)]",
         )}
       />
-      {highlight && (
+      {/*
+        La pillola annuncia; il badge a destra dice che si sta gia' giocando.
+        Accese insieme si contraddicevano — lo stesso difetto della card della
+        pagina squadra, su un'altra pagina.
+      */}
+      {highlight && effectiveStatus !== "in_corso" && (
         <span className="absolute -top-2.5 left-4 z-2 rounded-full bg-linear-to-r from-[hsl(var(--gold-dark))] via-[hsl(var(--gold))] to-[hsl(var(--gold-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--gold)/0.6)]">
           Prossimo
         </span>

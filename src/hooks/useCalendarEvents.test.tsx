@@ -178,4 +178,42 @@ describe("useCalendarEvents", () => {
 
     expect(calcio(result.current.events)[0].shortLabel).toBe("@ Juventus Next Gen");
   });
+
+  /**
+   * Il calendario aggregato portava solo stringhe: nessun punteggio, nessuno
+   * stato. Una partita giocata e una da giocare erano indistinguibili, e in
+   * una vista che si chiama «calendario» il risultato e' meta' del motivo per
+   * cui la si apre.
+   */
+  it("porta il punteggio e la fase di una partita giocata", async () => {
+    vi.mocked(footballApi.getCalendar).mockResolvedValue({
+      ...juventusFixture,
+      items: [
+        {
+          ...juventusFixture.items[0],
+          status: "FullTime",
+          homeScore: 3,
+          awayScore: 1,
+        },
+      ],
+    });
+
+    const { result } = renderHook(() => useCalendarEvents(JUVE), { wrapper });
+    await waitFor(() => expect(calcio(result.current.events)).toHaveLength(1));
+
+    expect(calcio(result.current.events)[0].score).toEqual({ home: 3, away: 1 });
+    expect(calcio(result.current.events)[0].fase).toBe("finita");
+  });
+
+  it("non spaccia per risultato lo zero di una partita non cominciata", async () => {
+    vi.mocked(footballApi.getCalendar).mockResolvedValue({
+      ...juventusFixture,
+      items: [{ ...juventusFixture.items[0], status: "PreMatch", homeScore: 0, awayScore: 0 }],
+    });
+
+    const { result } = renderHook(() => useCalendarEvents(JUVE), { wrapper });
+    await waitFor(() => expect(calcio(result.current.events)).toHaveLength(1));
+
+    expect(calcio(result.current.events)[0].score).toBeNull();
+  });
 });
