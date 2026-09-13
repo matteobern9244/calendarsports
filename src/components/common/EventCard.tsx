@@ -62,13 +62,11 @@ export default function EventCard({
   // direbbe «completato» mentre si sta ancora giocando. In tutti gli altri
   // casi comanda il countdown, che cambia fase senza aspettare un refetch.
   const effectiveStatus =
-    status === "in_corso"
+    status === "in_corso" || liveStatus === "live"
       ? "in_corso"
-      : liveStatus === "live"
-        ? "in_corso"
-        : liveStatus === "ended"
-          ? "completato"
-          : status;
+      : liveStatus === "ended"
+        ? "completato"
+        : status;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}

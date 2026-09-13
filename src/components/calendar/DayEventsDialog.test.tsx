@@ -77,4 +77,25 @@ describe("DayEventsDialog", () => {
     renderDialog({ day: null });
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+
+  /**
+   * Il nome accessibile diceva «, concluso» su una partita che il chip accanto
+   * dichiarava in corso: chi la pagina se la fa leggere sentiva l'esatto
+   * contrario di quello che c'era scritto.
+   */
+  it("non legge «concluso» su una partita in corso", () => {
+    renderDialog({
+      events: [evento("a", { fase: "in-corso", score: { home: 1, away: 0 } })],
+      isPast: () => true,
+    });
+
+    expect(screen.queryByRole("button", { name: /concluso/ })).toBeNull();
+    expect(screen.getByText("In corso")).toBeInTheDocument();
+  });
+
+  it("continua a dirlo su una partita davvero conclusa", () => {
+    renderDialog({ events: [evento("a")], isPast: () => true });
+
+    expect(screen.getByRole("button", { name: /concluso/ })).toBeInTheDocument();
+  });
 });

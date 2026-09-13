@@ -198,7 +198,11 @@ function expandFootball(
     const opponent = isHome ? away : home;
     const ctxNum = matchday != null ? `Giornata ${matchday}` : "";
     out.push({
-      id: `football-`,
+      // Il template era vuoto — ``football-`` per tutte — quindi ogni partita
+      // portava la stessa chiave React: due incontri nello stesso giorno si
+      // sovrapponevano, e dopo un aggiornamento il contenuto di una riga
+      // poteva restare attaccato all'altra.
+      id: `football-${id}`,
       sport: "football",
       date,
       shortLabel: `${matchPrefix(isHome)} ${opponent}`,
@@ -290,21 +294,36 @@ export function useCalendarEvents(team: SerieATeam) {
   const footballAllData = footballAll.data;
   const footballFirstData = footballFirst.data;
 
+  // Due memo e non una: solo il calcio dipende dall'ora — la fase e il
+  // punteggio cambiano mentre si gioca — mentre F1 e MotoGP dipendono dai soli
+  // dati. Tenendole insieme, il tick al minuto rimaterializzava anche le
+  // trecento e piu' sessioni delle altre due discipline, e con esse ogni memo
+  // a valle che osserva `events`.
+  const eventiSenzaOrario: CalendarItem[] = useMemo(
+    () => [
+      ...expandF1(f1Data as unknown[] | undefined),
+      ...expandMotoGP(motogpData as unknown[] | undefined),
+    ],
+    [f1Data, motogpData],
+  );
+
+  const eventiDiCalcio: CalendarItem[] = useMemo(
+    () =>
+      expandFootball(
+        (footballAllData as unknown[] | undefined) ??
+          (footballFirstData as { items?: unknown[] } | undefined)?.items,
+        team,
+        now,
+      ),
+    [footballAllData, footballFirstData, team, now],
+  );
+
   const events: CalendarItem[] = useMemo(
     () =>
-      [
-        ...expandF1(f1Data as unknown[] | undefined),
-        ...expandMotoGP(motogpData as unknown[] | undefined),
-        ...expandFootball(
-          (footballAllData as unknown[] | undefined) ??
-            (footballFirstData as { items?: unknown[] } | undefined)?.items,
-          team,
-          now,
-        ),
-      ]
+      [...eventiSenzaOrario, ...eventiDiCalcio]
         .filter((e) => toRomeDate(e.date) !== null)
         .sort((a, b) => a.date.localeCompare(b.date)),
-    [f1Data, motogpData, footballAllData, footballFirstData, team, now],
+    [eventiSenzaOrario, eventiDiCalcio],
   );
 
   const { refetch: refetchF1 } = f1;

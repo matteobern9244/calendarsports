@@ -216,4 +216,33 @@ describe("useCalendarEvents", () => {
 
     expect(calcio(result.current.events)[0].score).toBeNull();
   });
+
+  /**
+   * Ogni riga del calendario porta il proprio `id` come chiave React. Quello
+   * del calcio era ``football-`` — un template senza interpolazione — quindi
+   * tutte le partite condividevano la stessa chiave: due incontri nello stesso
+   * giorno si sovrapponevano, e dopo un «Sincronizza» React poteva tenere il
+   * contenuto di una riga attaccato all'altra.
+   */
+  it("ogni partita ha una chiave sua", async () => {
+    vi.mocked(footballApi.getCalendar).mockResolvedValue({
+      ...juventusFixture,
+      items: [
+        { ...juventusFixture.items[0], id: "juve-inter" },
+        {
+          ...juventusFixture.items[0],
+          id: "juve-milan",
+          awayTeam: "Milan",
+          date: "2026-11-08T21:00:00Z",
+        },
+      ],
+      total: 2,
+    });
+
+    const { result } = renderHook(() => useCalendarEvents(JUVE), { wrapper });
+    await waitFor(() => expect(calcio(result.current.events)).toHaveLength(2));
+
+    const chiavi = calcio(result.current.events).map((e) => e.id);
+    expect(new Set(chiavi).size, `chiavi duplicate: ${chiavi.join(", ")}`).toBe(2);
+  });
 });

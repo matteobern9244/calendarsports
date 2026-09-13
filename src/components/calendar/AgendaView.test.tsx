@@ -24,13 +24,13 @@ const giorno = (events: CalendarItem[]): AgendaDay => ({
   events,
 });
 
-function renderAgenda(days: AgendaDay[], isLoading = false, team = JUVE) {
+function renderAgenda(days: AgendaDay[], isLoading = false, team = JUVE, isPast = () => false) {
   const onSelect = vi.fn();
   render(
     <AgendaView
       agendaDays={days}
       today={{ y: 2099, m: 5, d: 1 }}
-      isPast={() => false}
+      isPast={isPast}
       onSelect={onSelect}
       isLoading={isLoading}
       monthLabel="Maggio 2099"
@@ -85,5 +85,32 @@ describe("AgendaView", () => {
   it("l'etichetta del calcio segue la squadra guardata", () => {
     renderAgenda([giorno([evento("a", { shortLabel: "@ Juventus" })])], false, NAPOLI);
     expect(screen.getByRole("button", { name: /Napoli @ Juventus/ })).toBeInTheDocument();
+  });
+
+  /**
+   * `isPast` e' «l'inizio e' passato», quindi per una partita in corso vale
+   * **vero**: la riga veniva sbiadita, resa in grigio e barrata mentre accanto
+   * pulsava il chip rosso «In corso». Due affermazioni contraddittorie nella
+   * stessa riga — lo stesso difetto della card e della riga di calendario
+   * della squadra, in una terza vista.
+   */
+  it("una partita in corso non viene barrata come se fosse conclusa", () => {
+    renderAgenda(
+      [giorno([evento("a", { fase: "in-corso", score: { home: 1, away: 0 } })])],
+      false,
+      JUVE,
+      () => true,
+    );
+
+    expect(screen.getByText("In corso")).toBeInTheDocument();
+    const riga = screen.getByRole("button", { name: /vs Milan/ });
+    expect(riga.className).not.toContain("grayscale");
+    expect(riga.querySelector(".line-through")).toBeNull();
+  });
+
+  it("una partita davvero conclusa resta barrata", () => {
+    renderAgenda([giorno([evento("a")])], false, JUVE, () => true);
+
+    expect(screen.getByRole("button", { name: /vs Milan/ }).className).toContain("grayscale");
   });
 });

@@ -69,7 +69,11 @@ export default function AgendaView({
             </header>
             <ul className="divide-y divide-border/40">
               {dayEvents.map((ev) => {
-                const past = isPast(ev.date);
+                // `isPast` guarda solo l'orario d'inizio, quindi una partita
+                // in corso e' «passata» per lui: senza questo, la riga
+                // verrebbe sbiadita e barrata mentre accanto pulsa il chip
+                // «In corso».
+                const past = isPast(ev.date) && ev.fase !== "in-corso";
                 return (
                   <li key={ev.id}>
                     <button
