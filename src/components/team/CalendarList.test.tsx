@@ -162,7 +162,21 @@ describe("CalendarList", () => {
       }),
     );
 
-    expect(screen.getByText("0 - 2")).toBeInTheDocument();
+    /*
+      Il separatore cambiato non e' un test indebolito, e' un requisito
+      cambiato: il punteggio si scriveva a mano in tre punti con due segni
+      diversi — il trattino lungo nel dettaglio e nella testata, quello corto
+      qui — e ora lo scrive `MatchScore`, con un segno solo.
+
+      E si aggiunge l'asserzione che mancava: «0–2» per uno screen reader e'
+      «zero meno due», o niente. Il punteggio e' il dato per cui si apre la
+      pagina, e non puo' essere l'unico che non arriva a chi la pagina se la fa
+      leggere.
+    */
+    // I tre pezzi stanno in nodi separati, come in ogni punteggio: si guarda
+    // il testo composto del blocco, non un nodo solo.
+    const leggibile = screen.getByText("0 a 2");
+    expect(leggibile.parentElement?.textContent).toContain("0–2");
     expect(screen.getByText("V")).toBeInTheDocument();
   });
 });

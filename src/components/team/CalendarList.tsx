@@ -11,9 +11,12 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import EventCountdown from "@/components/common/EventCountdown";
+import MatchScore from "@/components/common/MatchScore";
 import TeamLogo from "@/components/common/TeamLogo";
+import { useNowMinute } from "@/hooks/useNow";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { formatFootballDateTime } from "@/lib/dateUtils";
+import { matchPhase, matchScore } from "@/lib/matchPhase";
 import { highlightIndexOnPage, pageRange, type PaginatedCalendar } from "@/lib/teamCalendar";
 import { matchResult, matchSide } from "@/lib/teamMatch";
 import type { SerieATeam } from "@/lib/serieATeams";
@@ -42,6 +45,10 @@ export default function CalendarList({
   onChangeFilter,
   onGoToPage,
 }: CalendarListProps) {
+  // Un orologio solo per tutta la lista: le righe devono cambiare fase nello
+  // stesso istante, e un `useNowMinute` per riga sarebbe un abbonamento per
+  // riga allo stesso store.
+  const now = useNowMinute();
   const items = calendar.items;
   // The "Prossima" highlight is on the global next upcoming match — show it
   // only when the current page actually contains it.
@@ -85,7 +92,8 @@ export default function CalendarList({
         variants={{ show: { transition: { staggerChildren: 0.05 } } }}
       >
         {items.map((m, i) => {
-          const isFinished = m.status === "FullTime";
+          const { fase } = matchPhase(m, now);
+          const punteggio = matchScore(m, now);
           const { opponent, opponentLogo, prefix, venue } = matchSide(m, team);
           const result = matchResult(m, team);
           const resultColor =
@@ -135,9 +143,24 @@ export default function CalendarList({
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_top,hsl(var(--team-accent)/0.10),transparent_60%)]"
                 />
-                {isNext && (
-                  <span className="absolute -top-2.5 left-4 z-10 rounded-full bg-linear-to-r from-[hsl(var(--team-accent-dark))] via-[hsl(var(--team-accent))] to-[hsl(var(--team-accent-light))] px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground shadow-[0_4px_12px_-4px_hsl(var(--team-accent)/0.6)]">
-                    Prossima
+                {/*
+                  La pillola dice la **fase**, non un letterale fisso: era
+                  «Prossima» anche su una partita cominciata da cinquantaquattro
+                  minuti, mentre il chip due centimetri a destra lampeggiava «in
+                  diretta». A partita finita sparisce: quella evidenziata e' la
+                  prima non finita, e se l'orologio la considera conclusa non
+                  c'e' piu' niente da annunciare.
+                */}
+                {isNext && fase !== "finita" && (
+                  <span
+                    className={cn(
+                      "absolute -top-2.5 left-4 z-10 rounded-full px-2.5 py-0.5 text-[9px] font-heading font-bold uppercase tracking-widest text-primary-foreground",
+                      fase === "in-corso"
+                        ? "bg-destructive shadow-[0_4px_12px_-4px_hsl(var(--destructive)/0.6)]"
+                        : "bg-linear-to-r from-[hsl(var(--team-accent-dark))] via-[hsl(var(--team-accent))] to-[hsl(var(--team-accent-light))] shadow-[0_4px_12px_-4px_hsl(var(--team-accent)/0.6)]",
+                    )}
+                  >
+                    {fase === "in-corso" ? "In corso" : "Prossima"}
                   </span>
                 )}
                 <div className="relative z-1 shrink-0 w-8">
@@ -203,17 +226,19 @@ export default function CalendarList({
                   </div>
                 </div>
                 <div className="relative z-1 shrink-0 text-right flex flex-col items-end gap-1">
-                  {isFinished ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-heading font-bold">
-                        {m.homeScore} - {m.awayScore}
-                      </span>
-                      <span className={`text-xs font-bold ${resultColor}`}>{result}</span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
-                  {!isFinished && m.date && <EventCountdown startDate={m.date} />}
+                  <div className="flex items-center gap-2">
+                    <MatchScore
+                      score={punteggio}
+                      scala="riga"
+                      fallback={<span className="text-xs text-muted-foreground">—</span>}
+                    />
+                    {/*
+                      La lettera dell'esito solo a partita finita: «S» al 39'
+                      sarebbe un verdetto che la partita non ha ancora emesso.
+                    */}
+                    {result && <span className={`text-xs font-bold ${resultColor}`}>{result}</span>}
+                  </div>
+                  {fase !== "finita" && m.date && <EventCountdown startDate={m.date} />}
                 </div>
               </Link>
             </motion.div>
