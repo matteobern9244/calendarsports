@@ -35,14 +35,73 @@ export interface MockMatch {
 }
 
 /**
+ * L'istante da congelare (`page.clock.setFixedTime`) perche' la partita in
+ * corso della fixture sia davvero in corso: **54 minuti** dopo il suo calcio
+ * d'inizio, gli stessi della schermata da cui e' nato il lavoro.
+ *
+ * Senza congelare l'orologio una partita datata 2099 e' sempre futura, e il
+ * badge «In corso» con il punteggio accanto — cioe' proprio cio' che aggiunge
+ * larghezza alla riga e che il guardiano mobile deve misurare — non verrebbe
+ * montato mai.
+ */
+export const ORA_CON_PARTITA_IN_CORSO = "2099-04-19T19:39:00Z";
+
+/**
  * Le partite di almeno due squadre, con una in comune.
  *
  * La partita condivisa e' la parte che conta: filtrare non e' spartire un
  * elenco in gruppi disgiunti, e uno Juventus-Napoli deve comparire in
  * entrambi i calendari. Una fixture senza incroci lascerebbe passare un
  * filtro che assegna ogni partita a una squadra sola.
+ *
+ * L'elenco ha la forma di un calendario vero — qualche partita giocata, una
+ * in corso, il resto da giocare — perche' `nextUpcomingIndex` e' «la prima non
+ * finita»: con sole partite future non si sarebbe mai vista la situazione che
+ * conta davvero, quella in cui la partita in evidenza e' quella che si sta
+ * giocando.
  */
 export const FOOTBALL_CALENDAR: MockMatch[] = [
+  {
+    // Giocata: serve all'esito («Vittoria Juventus»), che prima della 3.4.0
+    // nessuna e2e aveva mai visto, perche' nessuna partita era mai finita.
+    id: "serie-a-2099-04-12-juventus-vs-inter",
+    skyMatchId: "900005",
+    matchday: 32,
+    homeTeam: "Juventus",
+    awayTeam: "Inter",
+    homeLogo: null,
+    awayLogo: null,
+    homeScore: 3,
+    awayScore: 1,
+    date: "2099-04-12T18:45:00Z",
+    status: "FullTime",
+    competition: "Serie A",
+    link: null,
+    broadcaster: "DAZN",
+  },
+  {
+    /**
+     * In corso, ed e' anche **la riga piu' larga che la fixture sappia
+     * produrre**: l'avversario dal nome piu' lungo che Sky pubblichi davvero
+     * (le altre le abbrevia), due emittenti, il badge di fase e il punteggio
+     * sulla stessa riga. Un guardiano di layout vale quanto i dati che gli si
+     * danno, e con «Milan» non avrebbe mai misurato niente.
+     */
+    id: "champions-league-2099-04-19-juventus-vs-shakhtar-donetsk",
+    skyMatchId: "900006",
+    matchday: 33,
+    homeTeam: "Juventus",
+    awayTeam: "Shakhtar Donetsk",
+    homeLogo: null,
+    awayLogo: null,
+    homeScore: 1,
+    awayScore: 2,
+    date: "2099-04-19T18:45:00Z",
+    status: "SecondHalf",
+    competition: "Champions League",
+    link: null,
+    broadcaster: "Sky Sport | Amazon Prime Video",
+  },
   {
     id: "serie-a-2099-04-26-juventus-vs-milan",
     skyMatchId: "900001",
@@ -54,7 +113,7 @@ export const FOOTBALL_CALENDAR: MockMatch[] = [
     homeScore: null,
     awayScore: null,
     date: "2099-04-26T18:45:00Z",
-    status: "Scheduled",
+    status: "PreMatch",
     competition: "Serie A",
     link: null,
     broadcaster: "DAZN | Sky Sport",
@@ -70,7 +129,7 @@ export const FOOTBALL_CALENDAR: MockMatch[] = [
     homeScore: null,
     awayScore: null,
     date: "2099-05-03T18:45:00Z",
-    status: "Scheduled",
+    status: "PreMatch",
     competition: "Champions League",
     link: null,
     broadcaster: null,
@@ -87,7 +146,7 @@ export const FOOTBALL_CALENDAR: MockMatch[] = [
     homeScore: null,
     awayScore: null,
     date: "2099-05-17T18:45:00Z",
-    status: "Scheduled",
+    status: "PreMatch",
     competition: "Serie A",
     link: null,
     broadcaster: "DAZN",
@@ -105,7 +164,7 @@ export const FOOTBALL_CALENDAR: MockMatch[] = [
     homeScore: null,
     awayScore: null,
     date: "2099-05-24T18:45:00Z",
-    status: "Scheduled",
+    status: "PreMatch",
     competition: "Serie A",
     link: null,
     broadcaster: "Sky Sport",

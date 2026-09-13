@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { installSportsApiMocks } from "./support/mockSportsApi";
+import { ORA_CON_PARTITA_IN_CORSO } from "./support/footballFixtures";
 import { accediComeUtente } from "./support/auth";
 
 /**
@@ -133,13 +134,32 @@ test("preferenze: un gesto nella direzione sbagliata non apre niente", async ({ 
  * Le pagine da visitare. Sono tutte quelle raggiungibili dal menu' piu' il
  * dettaglio di una partita, che ha una struttura sua fatta di schede.
  */
+/**
+ * La partita da misurare, e **deve avere un dettaglio da mostrare**.
+ *
+ * Prima queste righe puntavano a Inter-Juventus, che nella fixture ha
+ * `skyMatchId: null`: le schede rendevano il messaggio «la fonte non pubblica
+ * un identificativo» e il guardiano misurava la disposizione di una schermata
+ * vuota. Verde per il motivo sbagliato, come la scheda delle nuove uscite
+ * nella 3.3.0 — che rispondeva 404 e non aveva niente da disporre.
+ */
+const PARTITA = "/squadra/juventus/partite/serie-a-2099-05-17-juventus-vs-napoli";
+
+/**
+ * La partita in corso: e' lo stato piu' largo che esista, perche' alla riga si
+ * aggiungono il badge di fase e il punteggio accanto a un avversario dal nome
+ * lungo e a due emittenti.
+ */
+const PARTITA_IN_CORSO =
+  "/squadra/juventus/partite/champions-league-2099-04-19-juventus-vs-shakhtar-donetsk";
+
 const PAGINE = [
   "/",
   "/calendario",
   "/streaming",
   "/sinner",
   "/squadra/juventus",
-  "/squadra/juventus/partite/champions-league-2099-05-03-inter-vs-juventus",
+  PARTITA,
   "/formula1",
   "/motogp",
 ] as const;
@@ -217,6 +237,36 @@ for (const pagina of PAGINE) {
 }
 
 /**
+ * Le stesse pagine, con l'orologio fermo mentre si gioca.
+ *
+ * Una partita datata 2099 e' sempre futura: senza congelare l'ora il badge «In
+ * corso» e il punteggio accanto — cioe' proprio cio' che allarga la riga — non
+ * verrebbero montati mai, e il guardiano continuerebbe a misurare la sola
+ * versione stretta della pagina.
+ */
+const PAGINE_MENTRE_SI_GIOCA = ["/squadra/juventus", PARTITA_IN_CORSO, "/calendario", "/"] as const;
+
+for (const pagina of PAGINE_MENTRE_SI_GIOCA) {
+  test(`niente scorrimento orizzontale mentre si gioca: ${pagina}`, async ({ page }) => {
+    // Prima della navigazione: il primo render leggerebbe l'orologio vero.
+    await page.clock.setFixedTime(new Date(ORA_CON_PARTITA_IN_CORSO));
+    await installSportsApiMocks(page);
+    await page.goto(pagina);
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("footer")).toBeVisible();
+
+    for (const larghezza of LARGHEZZE) {
+      await page.setViewportSize({ width: larghezza, height: 780 });
+      await page.waitForFunction(
+        (attesa) => document.documentElement.clientWidth === attesa,
+        larghezza,
+      );
+      expect(await chiScorreInOrizzontale(page), `a ${larghezza}px`).toEqual([]);
+    }
+  });
+}
+
+/**
  * Gli stati che una pagina assume solo se qualcuno la tocca.
  *
  * Il guardiano sopra misura le pagine a riposo, e a riposo meta' del
@@ -224,8 +274,6 @@ for (const pagina of PAGINE) {
  * arrivano dopo un clic. Una tabella che sborda dentro una scheda chiusa non
  * si vede finche' non la si apre — ed e' esattamente li' che si nasconde.
  */
-const PARTITA = "/squadra/juventus/partite/champions-league-2099-05-03-inter-vs-juventus";
-
 const STATI: Array<{ nome: string; pagina: string; scheda: string | RegExp }> = [
   { nome: "streaming · nuove uscite", pagina: "/streaming", scheda: /Nuove uscite/i },
   { nome: "calendario · agenda", pagina: "/calendario", scheda: "Agenda" },

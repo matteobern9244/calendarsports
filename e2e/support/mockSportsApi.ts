@@ -844,6 +844,45 @@ function paginate(endpoint: EndpointName, payload: unknown, url: URL): unknown {
   return { items, total, page, pageSize, totalPages, nextUpcomingIndex };
 }
 
+/**
+ * Il dettaglio dipende dalla **partita**, come in produzione.
+ *
+ * Prima il mock rispondeva con lo stesso dettaglio `FullTime` per qualunque
+ * `matchId`: una partita in corso avrebbe mostrato in test un risultato finale,
+ * e il test sarebbe passato per il motivo sbagliato. Il default resta il
+ * dettaglio della partita giocata, cosi' le e2e che aprono le altre partite
+ * non cambiano.
+ */
+const DETTAGLIO_PREDEFINITO = payloads["sports-football:match-detail"] as Record<string, unknown>;
+
+const DETTAGLI_PER_PARTITA: Record<string, unknown> = {
+  // Juventus-Shakhtar Donetsk, in corso: il punteggio c'e' ma non e' finale, e
+  // i marcatori hanno il minuto.
+  "900006": {
+    ...DETTAGLIO_PREDEFINITO,
+    status: "SecondHalf",
+    date: "2099-04-19T18:45:00.000Z",
+    competition: "Champions League",
+    round: "33",
+    venue: "Allianz Stadium",
+    referee: "Arbitro M.",
+    score: { home: 1, away: 2 },
+    home: {
+      ...(DETTAGLIO_PREDEFINITO.home as Record<string, unknown>),
+      teamName: "Juventus",
+    },
+    away: {
+      ...(DETTAGLIO_PREDEFINITO.away as Record<string, unknown>),
+      teamName: "Shakhtar Donetsk",
+    },
+    events: [
+      { minute: 10, type: "GOAL", side: "away", player: "MarcatoreOspite" },
+      { minute: 39, type: "GOAL", side: "home", player: "MarcatoreCasa" },
+      { minute: 52, type: "GOAL", side: "away", player: "AltroOspite" },
+    ],
+  },
+};
+
 async function fulfillJson(route: Route, status: number, body: unknown) {
   await route.fulfill({
     status,
@@ -1026,6 +1065,15 @@ export async function installSportsApiMocks(page: Page, options: MockOptions = {
         success: true,
         data: paginate(endpoint, esito.matches, url),
         meta: { team: esito.team },
+      });
+      return;
+    }
+
+    if (endpoint === "sports-football:match-detail") {
+      const id = url.searchParams.get("matchId") ?? "";
+      await fulfillJson(route, 200, {
+        success: true,
+        data: DETTAGLI_PER_PARTITA[id] ?? DETTAGLIO_PREDEFINITO,
       });
       return;
     }

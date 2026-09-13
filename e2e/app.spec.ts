@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { installSportsApiMocks } from "./support/mockSportsApi";
 import { accediComeUtente } from "./support/auth";
+import { ORA_CON_PARTITA_IN_CORSO } from "./support/footballFixtures";
 
 /**
  * Una voce della barra di navigazione, comunque sia scritta a questa larghezza.
@@ -1003,4 +1004,30 @@ test("avvio: senza accesso la radice resta la Home", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("button", { name: "Preferenze" })).toHaveCount(0);
+});
+
+/**
+ * Il difetto fotografato dal proprietario, dalla parte del browser.
+ *
+ * L'orologio si congela **prima** della navigazione: il primo render leggerebbe
+ * altrimenti l'ora vera, e una partita datata 2099 sarebbe futura.
+ */
+test("durante la partita la card in cima non la chiama piu' «prossima»", async ({ page }) => {
+  await page.clock.setFixedTime(new Date(ORA_CON_PARTITA_IN_CORSO));
+  await installSportsApiMocks(page);
+  await page.goto("/squadra/juventus");
+  await expect(page.getByRole("heading", { name: "Juventus" })).toBeVisible();
+
+  // «In corso» al posto di «Prossima Partita», e il punteggio senza aprire
+  // niente: era l'unico modo per leggerlo, in fondo a una scheda del dettaglio.
+  await expect(page.getByText("In corso").first()).toBeVisible();
+  await expect(page.getByText("Prossima Partita")).toHaveCount(0);
+  await expect(page.getByText("1 a 2").first()).toBeVisible();
+});
+
+test("prima del fischio d'inizio la card resta un annuncio", async ({ page }) => {
+  // Senza orologio congelato le partite della fixture sono tutte future.
+  await installSportsApiMocks(page);
+  await page.goto("/squadra/juventus");
+  await expect(page.getByText("Prossima Partita")).toBeVisible();
 });
