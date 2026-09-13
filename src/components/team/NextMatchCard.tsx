@@ -1,13 +1,16 @@
 import { motion } from "framer-motion";
-import { CalendarClock } from "lucide-react";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import EventCountdown from "@/components/common/EventCountdown";
+import MatchScore from "@/components/common/MatchScore";
 import TeamLogo from "@/components/common/TeamLogo";
+import { useNowMinute } from "@/hooks/useNow";
 import type { FootballMatch } from "@/lib/api/schemas";
 import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { formatFootballDateTime } from "@/lib/dateUtils";
+import { matchPhase, matchScore } from "@/lib/matchPhase";
 import { matchSide } from "@/lib/teamMatch";
+import MatchPhaseBadge from "./MatchPhaseBadge";
 import type { SerieATeam } from "@/lib/serieATeams";
 import { teamMatchPath } from "@/lib/teamRoutes";
 import { cn } from "@/lib/utils";
@@ -21,11 +24,22 @@ interface NextMatchCardProps {
   onRetry: () => void;
 }
 
-/** La card «Prossima Partita» in testa alla pagina squadra. */
+/**
+ * La card della partita in evidenza, in testa alla pagina squadra.
+ *
+ * Si chiamava «Prossima Partita» e lo scriveva come letterale fisso, anche
+ * mentre il conto alla rovescia accanto lampeggiava «IN DIRETTA · da 54m». Ora
+ * l'etichetta segue la fase, e il punteggio non si deve piu' andare a cercare
+ * in fondo al dettaglio.
+ */
 export default function NextMatchCard({ team, match, onRetry }: NextMatchCardProps) {
+  const now = useNowMinute();
+  const { fase } = matchPhase(match, now);
+  const punteggio = matchScore(match, now);
   const { isHome, opponent, opponentLogo, prefix, venue } = matchSide(match, team);
   const { date: dateStr, time: timeStr } = formatFootballDateTime(match.date);
   const compColor = COMPETITION_COLORS[match.competition] || "";
+  const fraseFase = fase === "in-corso" ? ", in corso" : fase === "finita" ? ", terminata" : "";
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -46,18 +60,15 @@ export default function NextMatchCard({ team, match, onRetry }: NextMatchCardPro
       */}
       <Link
         to={teamMatchPath(team, match.id)}
-        aria-label={`Apri dettaglio ${isHome ? `${team.name} vs ${opponent}` : `${opponent} vs ${team.name}`}, ${team.name} ${venue}`}
+        aria-label={`Apri dettaglio ${isHome ? `${team.name} vs ${opponent}` : `${opponent} vs ${team.name}`}, ${team.name} ${venue}${fraseFase}`}
         className="block px-5 py-5 sm:px-6 sm:py-6 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--team-accent))] focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-2xl"
       >
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--team-accent))] to-transparent opacity-80"
         />
-        <div className="flex items-center gap-2 mb-3">
-          <CalendarClock className="h-4 w-4 text-[hsl(var(--team-accent))]" aria-hidden="true" />
-          <span className="font-heading text-[10px] tracking-[0.2em] uppercase text-[hsl(var(--team-accent-text))] font-bold">
-            Prossima Partita
-          </span>
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <MatchPhaseBadge fase={fase} />
           <Badge
             variant="outline"
             className={cn(
@@ -84,9 +95,17 @@ export default function NextMatchCard({ team, match, onRetry }: NextMatchCardPro
                 lo stemma qui accanto e' dell'avversario: nominarlo qui
                 significava mettere un nome accanto allo stemma di un altro.
               */}
-              <p className="text-xl sm:text-2xl font-heading font-bold text-foreground truncate">
-                {prefix} {opponent}
-              </p>
+              <div className="flex items-baseline gap-3 min-w-0">
+                <p className="min-w-0 text-xl sm:text-2xl font-heading font-bold text-foreground truncate">
+                  {prefix} {opponent}
+                </p>
+                {/*
+                  `shrink-0` sul punteggio e `min-w-0` sul nome tengono il
+                  troncamento dalla parte giusta: senza, un avversario dal nome
+                  lungo spingerebbe fuori proprio il numero che si cerca.
+                */}
+                <MatchScore score={punteggio} scala="card" className="shrink-0" />
+              </div>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {dateStr}
                 {timeStr ? ` · ${timeStr}` : ""}
@@ -114,7 +133,9 @@ export default function NextMatchCard({ team, match, onRetry }: NextMatchCardPro
                 </span>
               );
             })}
-            {match.date && <EventCountdown startDate={match.date} onRetry={onRetry} />}
+            {match.date && fase !== "finita" && (
+              <EventCountdown startDate={match.date} onRetry={onRetry} />
+            )}
           </div>
         </div>
       </Link>

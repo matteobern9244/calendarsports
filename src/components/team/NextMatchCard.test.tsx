@@ -152,3 +152,68 @@ describe("NextMatchCard", () => {
     expect(container.querySelector(".lucide-sparkles")).toBeNull();
   });
 });
+
+/**
+ * ## Il difetto fotografato durante Lazio-Milan
+ *
+ * La card diceva «PROSSIMA PARTITA» mentre, tre centimetri piu' a destra, il
+ * conto alla rovescia lampeggiava «● IN DIRETTA · da 54m». Due affermazioni
+ * contraddittorie nello stesso riquadro, perche' l'etichetta era un letterale
+ * fisso e la card non consultava nessuna delle deduzioni che l'app aveva gia'.
+ *
+ * Le date qui sono costruite rispetto a `Date.now()` e non scritte a mano:
+ * l'orologio condiviso fotografa l'istante all'import del modulo, e
+ * `vi.setSystemTime` da solo non lo muove finche' non arriva un tick.
+ */
+const minutiFa = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
+
+describe("NextMatchCard, mentre si gioca", () => {
+  it("non chiama «prossima» una partita cominciata da 54 minuti", () => {
+    renderCard(match({ status: "SecondHalf", date: minutiFa(54), homeScore: 2, awayScore: 0 }));
+
+    expect(screen.queryByText("Prossima Partita")).not.toBeInTheDocument();
+    expect(screen.getByText("In corso")).toBeInTheDocument();
+  });
+
+  it("mostra il punteggio senza farlo cercare nel dettaglio", () => {
+    renderCard(match({ status: "SecondHalf", date: minutiFa(54), homeScore: 2, awayScore: 0 }));
+
+    expect(screen.getByText("2 a 0")).toBeInTheDocument();
+  });
+
+  /**
+   * Il widget del calendario puo' restare fermo sul prepartita mentre si
+   * gioca. Allora l'etichetta la decide l'orologio — la partita e' cominciata,
+   * e dirlo e' corretto — ma il punteggio no: lo zero che la fonte scrive
+   * prima del fischio d'inizio non e' uno 0-0, e mostrarlo sarebbe inventare
+   * un risultato.
+   */
+  it("se la fonte e' ferma dice «In corso» ma non inventa un punteggio", () => {
+    renderCard(match({ status: "PreMatch", date: minutiFa(54), homeScore: 0, awayScore: 0 }));
+
+    expect(screen.getByText("In corso")).toBeInTheDocument();
+    expect(screen.queryByText("0 a 0")).not.toBeInTheDocument();
+  });
+
+  it("a partita finita lo dice, e tiene il risultato", () => {
+    renderCard(match({ status: "FullTime", date: minutiFa(200), homeScore: 2, awayScore: 2 }));
+
+    expect(screen.getByText("Terminata")).toBeInTheDocument();
+    expect(screen.getByText("2 a 2")).toBeInTheDocument();
+  });
+
+  it("la fase entra nel nome accessibile del collegamento", () => {
+    // Chi la pagina se la fa leggere deve sapere che si sta giocando: senza,
+    // «in corso» resterebbe un colore e un pallino che pulsa.
+    renderCard(match({ status: "SecondHalf", date: minutiFa(54), homeScore: 2, awayScore: 0 }));
+
+    expect(screen.getByRole("link", { name: /in corso/i })).toBeInTheDocument();
+  });
+
+  it("una partita futura resta annunciata come prossima", () => {
+    renderCard(match({ status: "PreMatch" }));
+
+    expect(screen.getByText("Prossima Partita")).toBeInTheDocument();
+    expect(screen.queryByText("In corso")).not.toBeInTheDocument();
+  });
+});
