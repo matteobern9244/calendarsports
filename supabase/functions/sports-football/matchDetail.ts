@@ -33,6 +33,7 @@
  */
 
 import { toPlayer, toSide, toLines, type LineupPlayer, type LineupSide } from "./lineups.ts";
+import { cominciata } from "./matchStatus.ts";
 
 export interface Marcatore {
   player: string;
@@ -136,22 +137,16 @@ function num(value: unknown): number | null {
 }
 
 /**
- * Lo stato con cui la fonte dice che la partita **non e' ancora cominciata**.
+ * Prima del fischio d'inizio `lmp-hero` pubblica `goal: 0` per entrambe le
+ * squadre, e quello zero non e' un risultato: e' l'assenza di un risultato. La
+ * fonte non ha un campo per distinguerli, e letto come punteggio fa scrivere
+ * «Risultato finale 0-0» su una partita che nessuno ha giocato.
  *
- * Serve perche' prima del fischio d'inizio `lmp-hero` pubblica `goal: 0` per
- * entrambe le squadre, e quello zero non e' un risultato: e' l'assenza di un
- * risultato. La fonte non ha un campo per distinguerli, e letto come punteggio
- * fa scrivere «Risultato finale 0-0» su una partita che nessuno ha giocato.
- *
- * Il confronto e' sul **solo** stato che significa «non iniziata», non su un
- * elenco di stati «in corso»: gli stati di gioco sono tanti — primo tempo,
- * intervallo, recuperi, supplementari — e un elenco che ne dimenticasse uno
- * nasconderebbe il risultato di una partita in corso. Dimenticare invece un
- * altro stato di attesa mostrerebbe uno 0-0 falso, ed e' l'errore piu' grave
- * dei due; per questo qui si accetta anche uno stato **assente** come «non
- * iniziata».
+ * La regola viveva qui come costante locale. Ora sta in `matchStatus.ts`,
+ * perche' il widget del **calendario** ha lo stesso problema e per anni l'ha
+ * risolto al contrario, tenendo il punteggio solo a partita finita: la stessa
+ * domanda con due risposte diverse nella stessa funzione.
  */
-const NON_COMINCIATA = "PreMatch";
 
 /** Il blocco JSON del widget, o `null`. Stessa forma di `parseLineups`. */
 function blocco(html: string): any {
@@ -348,8 +343,7 @@ export function buildMatchDetail(input: {
   }
 
   const status = hero?.status ?? official?.status ?? null;
-  const cominciata = status !== null && status !== NON_COMINCIATA;
-  const gol = hero && cominciata ? { home: hero.home.goal, away: hero.away.goal } : null;
+  const gol = hero && cominciata(status) ? { home: hero.home.goal, away: hero.away.goal } : null;
   const score =
     gol && gol.home !== null && gol.away !== null ? { home: gol.home, away: gol.away } : null;
 

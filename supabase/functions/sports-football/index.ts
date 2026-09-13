@@ -1,5 +1,5 @@
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/security.ts";
-import { buildMatchId, romeDateKeyOf } from "./matchId.ts";
+import { romeDateKeyOf } from "./matchId.ts";
 import { parseSquad, type Squad } from "./teamSquad.ts";
 import { parseLineups, type Lineups } from "./lineups.ts";
 import { buildMatchDetail, parseHero, parseOfficialLineup } from "./matchDetail.ts";
@@ -9,17 +9,17 @@ import {
   type StatistichePerCompetizione,
 } from "./playerStats.ts";
 import { matchesTeam, type SerieATeam } from "../_shared/serieATeams.ts";
+import { legaMatchInvolvesTeam, pickSeasonId, resolveRequestedTeam } from "./teamFilter.ts";
 import {
-  legaMatchInvolvesTeam,
-  matchInvolvesTeam,
-  pickSeasonId,
-  resolveRequestedTeam,
-} from "./teamFilter.ts";
+  COMPETITION_NAMES,
+  COPPA_ITALIA_COMP_ID,
+  SERIE_A_COMP_ID,
+  UCL_COMP_ID,
+  extractTeamMatches,
+} from "./calendarMatches.ts";
+import { finita } from "./matchStatus.ts";
 
 const SKY_BASE = "https://sport.sky.it";
-const SERIE_A_COMP_ID = "21";
-const UCL_COMP_ID = "5";
-const COPPA_ITALIA_COMP_ID = "259";
 const LEGA_API = "https://api-sdp.legaseriea.it/v1/serie-a/football";
 
 /**
@@ -276,12 +276,6 @@ async function fetchStadium(season: string, team: SerieATeam): Promise<StadiumIn
   }
 }
 
-const COMPETITION_NAMES: Record<string, string> = {
-  [SERIE_A_COMP_ID]: "Serie A",
-  [UCL_COMP_ID]: "Champions League",
-  [COPPA_ITALIA_COMP_ID]: "Coppa Italia",
-};
-
 type SkyWidgetResponse = {
   html: string;
   seasonUsed: string;
@@ -425,91 +419,6 @@ async function fetchBroadcasterMap(
     console.error("Lega API broadcaster fetch error:", e);
     return {};
   }
-}
-
-/**
- * Ricava il nome competizione dallo slug presente nei link partita Sky
- * (es. ".../calcio/supercoppa-italiana/partite/..." -> "Supercoppa Italiana").
- * Serve per i tornei non presenti nella mappa statica.
- */
-function competitionNameFromMatches(rounds: any[]): string | null {
-  for (const round of rounds || []) {
-    for (const matchDay of round?.matchDayList || []) {
-      for (const match of matchDay?.matchList || []) {
-        const link = String(match?.link || "");
-        const m = link.match(/\/calcio\/([^/]+)\/partite\//i);
-        if (m) {
-          return m[1]
-            .split("-")
-            .filter(Boolean)
-            .map((w) => (w.length <= 2 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
-            .join(" ");
-        }
-      }
-    }
-  }
-  return null;
-}
-
-function extractTeamMatches(
-  model: any,
-  competitionId: string,
-  broadcasterMap: Record<string, string>,
-  team: SerieATeam,
-): any[] {
-  const rounds = model.competitionMatchList || [];
-  const matches: any[] = [];
-  const competitionName =
-    COMPETITION_NAMES[competitionId] || competitionNameFromMatches(rounds) || "Altro";
-
-  for (const round of rounds) {
-    const roundNum = round.round;
-    const matchDayList = round.matchDayList || [];
-    for (const matchDay of matchDayList) {
-      const matchList = matchDay.matchList || [];
-      for (const match of matchList) {
-        if (!matchInvolvesTeam(match, team)) continue;
-        const homeName = match.home?.name || "";
-        const awayName = match.away?.name || "";
-
-        const isFinished = match.status === "FullTime";
-
-        // Broadcaster lookup (only for Serie A)
-        let broadcaster: string | null = null;
-        if (competitionId === SERIE_A_COMP_ID) {
-          if (roundNum && broadcasterMap[String(roundNum)]) {
-            broadcaster = broadcasterMap[String(roundNum)];
-          } else if (match.date) {
-            const dateKey = romeDateKeyOf(match.date);
-            broadcaster = (dateKey && broadcasterMap[`date:${dateKey}`]) || null;
-          }
-        }
-
-        matches.push({
-          id: buildMatchId(match, competitionName),
-          // L'id **di Sky**, accanto al nostro. Il nostro identifica la partita
-          // in modo stabile e leggibile e non cambia; questo e' la chiave con
-          // cui si chiedono i widget del dettaglio. Viaggia da qui perche' il
-          // widget del calendario ce l'ha gia': senza, per leggere un numero
-          // servirebbe scaricare la pagina della partita, 250 KB.
-          skyMatchId: typeof match.id === "string" ? match.id : null,
-          matchday: roundNum,
-          homeTeam: homeName,
-          awayTeam: awayName,
-          homeLogo: match.home?.logoUrl || null,
-          awayLogo: match.away?.logoUrl || null,
-          homeScore: isFinished ? match.home?.goal : null,
-          awayScore: isFinished ? match.away?.goal : null,
-          date: match.date,
-          status: match.status,
-          competition: competitionName,
-          link: match.link || null,
-          broadcaster,
-        });
-      }
-    }
-  }
-  return matches;
 }
 
 Deno.serve(async (req) => {
@@ -675,7 +584,7 @@ Deno.serve(async (req) => {
         if (url.searchParams.get("upcoming") === "1") {
           const now = Date.now();
           const upcoming = allMatches.filter((m) => {
-            if (m.status === "FullTime") return false;
+            if (finita(m.status)) return false;
             if (!m.date) return true;
             const t = new Date(m.date).getTime();
             return Number.isNaN(t) ? true : t >= now - 3 * 60 * 60 * 1000;
@@ -701,7 +610,10 @@ Deno.serve(async (req) => {
             : 1;
           // Global index of the next upcoming (non-finished) match, useful for the UI
           // landing logic. -1 when no upcoming match exists.
-          const nextUpcomingIndex = allMatches.findIndex((m) => m.status !== "FullTime");
+          // «La prossima» resta la prima non finita, quindi durante i novanta
+          // minuti e' la partita che si sta giocando: e' quella che interessa,
+          // e spostarla avanti la farebbe sparire dalla cima della pagina.
+          const nextUpcomingIndex = allMatches.findIndex((m) => !finita(m.status));
           const start = (page - 1) * pageSize;
           const items = allMatches.slice(start, start + pageSize);
           data = { items, total, page, pageSize, totalPages, nextUpcomingIndex };
