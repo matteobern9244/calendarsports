@@ -856,6 +856,26 @@ function paginate(endpoint: EndpointName, payload: unknown, url: URL): unknown {
 const DETTAGLIO_PREDEFINITO = payloads["sports-football:match-detail"] as Record<string, unknown>;
 
 const DETTAGLI_PER_PARTITA: Record<string, unknown> = {
+  // Juventus-Inter, giocata: il punteggio coincide con quello del calendario,
+  // perche' nella fixture le due fonti devono raccontare la stessa partita.
+  "900005": {
+    ...DETTAGLIO_PREDEFINITO,
+    status: "FullTime",
+    date: "2099-04-12T18:45:00.000Z",
+    round: "32",
+    venue: "Allianz Stadium",
+    referee: "Arbitro M.",
+    score: { home: 3, away: 1 },
+    home: { ...(DETTAGLIO_PREDEFINITO.home as Record<string, unknown>), teamName: "Juventus" },
+    away: { ...(DETTAGLIO_PREDEFINITO.away as Record<string, unknown>), teamName: "Inter" },
+    events: [
+      { minute: 12, type: "GOAL", side: "home", player: "MarcatoreCasa" },
+      { minute: 40, type: "YELLOW", side: "away", player: "AmmonitoOspite" },
+      { minute: 61, type: "SUB", side: "home", player: "EntraCasa", playerOut: "EsceCasa" },
+      { minute: 77, type: "GOAL", side: "away", player: "MarcatoreOspite" },
+      { minute: 88, type: "GOAL", side: "home", player: "AltroCasa" },
+    ],
+  },
   // Juventus-Shakhtar Donetsk, in corso: il punteggio c'e' ma non e' finale, e
   // i marcatori hanno il minuto.
   "900006": {

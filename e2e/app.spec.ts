@@ -865,7 +865,15 @@ test("squadra: la rosa si apre sulle statistiche del giocatore, una richiesta pe
   expect(richieste).toHaveLength(1);
 });
 
-test("dettaglio partita: le quattro schede mostrano i dati dentro l'app", async ({ page }) => {
+/**
+ * Era «le quattro schede», e cercava il risultato dentro la scheda
+ * «Risultato». **Il requisito e' cambiato, il test non e' stato indebolito**:
+ * il risultato sta in cima, sopra le schede, e quella scheda non esiste piu' —
+ * era la quarta di cinque, e per leggere un punteggio bisognava sapere dove
+ * cercarlo. Le asserzioni sul contenuto restano tutte, spostate dove il
+ * contenuto e' andato, e se ne aggiungono sul costo della richiesta.
+ */
+test("dettaglio partita: le schede mostrano i dati dentro l'app", async ({ page }) => {
   await installSportsApiMocks(page);
 
   const richieste: string[] = [];
@@ -876,12 +884,18 @@ test("dettaglio partita: le quattro schede mostrano i dati dentro l'app", async 
   await page.goto("/squadra/juventus/partite/serie-a-2099-05-17-juventus-vs-napoli");
   await expect(page.getByRole("heading", { name: /Juventus – Napoli/ })).toBeVisible();
 
-  // «Anteprima» e' la scheda predefinita e non ha bisogno del dettaglio: i tre
-  // widget insieme pesano un centinaio di kilobyte.
+  // Una partita da giocare non ha niente da chiedere al dettaglio: niente
+  // marcatori, niente arbitro, nessun punteggio. Il caso che l'ordine delle
+  // schede proteggeva — i tre widget pesano un centinaio di kilobyte — resta
+  // gratuito.
   expect(
     richieste,
-    "il dettaglio si e' scaricato senza che nessuno aprisse una scheda",
+    "il dettaglio si e' scaricato per una partita che non si e' giocata",
   ).toHaveLength(0);
+  await expect(page.getByText("vs", { exact: true })).toBeVisible();
+
+  // La scheda «Risultato» non esiste piu'.
+  await expect(page.getByRole("tab", { name: "Risultato" })).toHaveCount(0);
 
   // --- Formazione: gli undici, la panchina, l'allenatore. Dentro l'app.
   await page.getByRole("tab", { name: "Formazione" }).click();
@@ -897,13 +911,6 @@ test("dettaglio partita: le quattro schede mostrano i dati dentro l'app", async 
   await expect(page.getByText("3-5-2")).toBeVisible();
   await expect(page.getByText("Vedi modulo su Sky Sport")).toHaveCount(0);
 
-  // --- Risultato: punteggio, marcatori con il minuto, arbitro, esito.
-  await page.getByRole("tab", { name: "Risultato" }).click();
-  await expect(page.getByText("Risultato finale")).toBeVisible();
-  await expect(page.getByText("MarcatoreOspite")).toBeVisible();
-  await expect(page.getByText(/Arbitro M\./)).toBeVisible();
-  await expect(page.getByText("Vittoria Juventus")).toBeVisible();
-
   // --- Cronologia: i tre tipi di fatto, in ordine di minuto.
   await page.getByRole("tab", { name: "Cronologia eventi" }).click();
   await expect(page.getByText("Ammonizione")).toBeVisible();
@@ -914,9 +921,40 @@ test("dettaglio partita: le quattro schede mostrano i dati dentro l'app", async 
     [...numeri].sort((a, b) => a - b),
   );
 
-  // Quattro schede aperte, **una sola** richiesta: la chiave di cache e' la
-  // stessa, e React Query deduplica per chiave e non per componente.
+  // Tre schede aperte, **una sola** richiesta: la chiave di cache e' la stessa,
+  // e React Query deduplica per chiave e non per componente.
   expect(richieste, "ogni scheda si e' scaricata il dettaglio per conto suo").toHaveLength(1);
+});
+
+/**
+ * Il difetto numero due, dalla parte del browser: il risultato si leggeva solo
+ * aprendo il dettaglio e poi la sua quarta scheda.
+ */
+test("dettaglio partita: di una partita giocata il risultato si vede subito", async ({ page }) => {
+  await installSportsApiMocks(page);
+
+  const richieste: string[] = [];
+  page.on("request", (r) => {
+    if (r.url().includes("action=match-detail")) richieste.push(r.url());
+  });
+
+  await page.goto("/squadra/juventus/partite/serie-a-2099-04-12-juventus-vs-inter");
+  await expect(page.getByRole("heading", { name: /Juventus – Inter/ })).toBeVisible();
+
+  // Punteggio, esito, marcatori con il minuto e arbitro: **senza aprire
+  // niente**.
+  await expect(page.getByText("3 a 1")).toBeVisible();
+  await expect(page.getByText("Vittoria Juventus")).toBeVisible();
+  await expect(page.getByText("MarcatoreOspite")).toBeVisible();
+  await expect(page.getByText(/Arbitro M\./)).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Risultato" })).toHaveCount(0);
+
+  // Il costo: una richiesta, ed e' quella che porta cio' per cui si e' aperta
+  // la pagina. Aprire una scheda dopo non ne fa una seconda.
+  expect(richieste).toHaveLength(1);
+  await page.getByRole("tab", { name: "Cronologia eventi" }).click();
+  await expect(page.getByText("Ammonizione")).toBeVisible();
+  expect(richieste, "la scheda si e' riscaricata il dettaglio").toHaveLength(1);
 });
 
 test("dettaglio partita: senza id della fonte lo dice, invece di caricare all'infinito", async ({

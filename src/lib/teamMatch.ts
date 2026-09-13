@@ -74,6 +74,36 @@ export function matchSide(
 export type MatchResult = "V" | "S" | "P";
 
 /**
+ * La squadra scelta e' una delle due in campo.
+ *
+ * Serve a chi apre una partita da un'altra pagina: scrivere «Vittoria
+ * Juventus» sotto un Inter-Napoli sarebbe peggio del silenzio.
+ */
+export function teamIsPlaying(match: FootballMatch, team: SerieATeam): boolean {
+  return matchesTeam(match.homeTeam, team) || matchesTeam(match.awayTeam, team);
+}
+
+/** L'esito da un punteggio gia' letto, senza ridedurre da dove viene. */
+export function resultOf(score: { home: number; away: number }, isHome: boolean): MatchResult {
+  const own = isHome ? score.home : score.away;
+  const other = isHome ? score.away : score.home;
+  return own > other ? "V" : own < other ? "S" : "P";
+}
+
+/**
+ * L'esito a parole.
+ *
+ * La convenzione sta accanto alla deduzione e non nel componente che rende,
+ * per la stessa ragione di `matchPrefix` e `matchVenue`: era un letterale che
+ * stava per essere scritto in due posti.
+ */
+export function matchResultLabel(result: MatchResult, team: SerieATeam): string {
+  if (result === "V") return `Vittoria ${team.name}`;
+  if (result === "S") return `Sconfitta ${team.name}`;
+  return "Pareggio";
+}
+
+/**
  * Solo a partita finita e con entrambi i punteggi: altrimenti null.
  *
  * «Finita» la dice la **fonte**, non l'orologio: un esito e' un verdetto, e
@@ -83,10 +113,10 @@ export type MatchResult = "V" | "S" | "P";
 export function matchResult(match: FootballMatch, team: SerieATeam): MatchResult | null {
   if (faseDaStato(match.status) !== "finita") return null;
   const { isHome } = matchSide(match, team);
-  const own = toNumber(isHome ? match.homeScore : match.awayScore);
-  const other = toNumber(isHome ? match.awayScore : match.homeScore);
-  if (own === null || other === null) return null;
-  return own > other ? "V" : own < other ? "S" : "P";
+  const home = toNumber(match.homeScore);
+  const away = toNumber(match.awayScore);
+  if (home === null || away === null) return null;
+  return resultOf({ home, away }, isHome);
 }
 
 /** La differenza reti con il segno davanti quando e' positiva. */

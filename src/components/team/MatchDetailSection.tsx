@@ -1,15 +1,8 @@
 import DataSection from "@/components/common/DataSection";
-import EventCountdown from "@/components/common/EventCountdown";
 import EmptyState from "@/components/common/EmptyState";
 import { useMatchDetail } from "@/hooks/useSportsData";
 import type { FootballMatch } from "@/lib/api/schemas";
-import type { SerieATeam } from "@/lib/serieATeams";
-import {
-  SchedaCronologia,
-  SchedaFormazione,
-  SchedaModulo,
-  SchedaRisultato,
-} from "./MatchDetailPanels";
+import { SchedaCronologia, SchedaFormazione, SchedaModulo } from "./MatchDetailPanels";
 
 /**
  * Una scheda del dettaglio partita, con dentro la propria richiesta.
@@ -31,13 +24,11 @@ import {
  * smette di pubblicarlo, ed è il motivo per cui il campo è opzionale. In quel
  * caso la scheda lo dice, invece di mostrare un caricamento che non finisce.
  */
-type Scheda = "formazione" | "modulo" | "risultato" | "cronologia";
+type Scheda = "formazione" | "modulo" | "cronologia";
 
 interface MatchDetailSectionProps {
-  team: SerieATeam;
   match: FootballMatch;
   scheda: Scheda;
-  onRetry: () => void;
 }
 
 const MESSAGGI: Record<Scheda, { caricamento: string; errore: string; vuoto: string }> = {
@@ -51,11 +42,6 @@ const MESSAGGI: Record<Scheda, { caricamento: string; errore: string; vuoto: str
     errore: "Modulo non disponibile",
     vuoto: "Modulo",
   },
-  risultato: {
-    caricamento: "Caricamento risultato...",
-    errore: "Risultato non disponibile",
-    vuoto: "Risultato",
-  },
   cronologia: {
     caricamento: "Caricamento cronologia...",
     errore: "Cronologia non disponibile",
@@ -63,35 +49,13 @@ const MESSAGGI: Record<Scheda, { caricamento: string; errore: string; vuoto: str
   },
 };
 
-export default function MatchDetailSection({
-  team,
-  match,
-  scheda,
-  onRetry,
-}: MatchDetailSectionProps) {
+export default function MatchDetailSection({ match, scheda }: MatchDetailSectionProps) {
   const { data, isLoading, error, refetch } = useMatchDetail(match.skyMatchId);
   const testi = MESSAGGI[scheda];
 
   if (!match.skyMatchId) {
     return (
       <EmptyState message="La nostra fonte non pubblica un identificativo per questa partita, quindi il dettaglio non è disponibile." />
-    );
-  }
-
-  // Il risultato prima del fischio d'inizio non è un dato mancante: è una
-  // partita che non si è giocata. Il conto alla rovescia dice la stessa cosa
-  // meglio di qualunque messaggio di errore.
-  const daGiocare = !isLoading && !error && data !== undefined && data.score === null;
-  if (scheda === "risultato" && daGiocare) {
-    return (
-      <div className="space-y-4">
-        <EmptyState message="Risultato non ancora disponibile: la partita non è stata giocata." />
-        {match.date && (
-          <div className="flex justify-center">
-            <EventCountdown startDate={match.date} onRetry={onRetry} />
-          </div>
-        )}
-      </div>
     );
   }
 
@@ -113,9 +77,6 @@ export default function MatchDetailSection({
       {data && scheda === "formazione" && <SchedaFormazione detail={data} />}
       {data && scheda === "modulo" && <SchedaModulo detail={data} />}
       {data && scheda === "cronologia" && <SchedaCronologia detail={data} />}
-      {data && scheda === "risultato" && data.score && (
-        <SchedaRisultato detail={data} team={team} />
-      )}
     </DataSection>
   );
 }

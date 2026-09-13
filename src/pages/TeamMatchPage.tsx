@@ -1,34 +1,23 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router";
-import { ArrowLeft, CalendarClock, ExternalLink } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import SectionHeader from "@/components/common/SectionHeader";
-import EventCountdown from "@/components/common/EventCountdown";
 import LoadingState from "@/components/common/LoadingState";
 import ErrorState from "@/components/common/ErrorState";
-import TeamLogo from "@/components/common/TeamLogo";
 import MatchDetailSection from "@/components/team/MatchDetailSection";
+import MatchHero from "@/components/team/MatchHero";
 import { useFootballCalendar } from "@/hooks/useSportsData";
 import { type SerieATeam } from "@/lib/serieATeams";
 import { getCurrentFootballSeason } from "@/lib/currentSeason";
 import { matchesOf, type FootballCalendar, type FootballMatch } from "@/lib/api/schemas";
 import { matchSide } from "@/lib/teamMatch";
+import { matchPhase, type FasePartita } from "@/lib/matchPhase";
+import { useNowMinute } from "@/hooks/useNow";
 import { formatFootballDateTime } from "@/lib/dateUtils";
-import { getBroadcasterStyle } from "@/lib/broadcasterStyle";
 import { skyTeamPageUrl, teamPath } from "@/lib/teamRoutes";
-
-const COMPETITION_COLORS: Record<string, string> = {
-  "Serie A":
-    "bg-[hsl(var(--team-accent))]/15 text-[hsl(var(--team-accent-text))] border-[hsl(var(--team-accent))]/40",
-  "Champions League":
-    "bg-[hsl(var(--accent))]/20 text-[hsl(var(--accent))] dark:text-[hsl(var(--accent-foreground))] border-[hsl(var(--accent))]/40",
-  "Coppa Italia":
-    "bg-[hsl(var(--secondary))]/15 text-[hsl(var(--secondary))] dark:text-[hsl(var(--team-accent))] border-[hsl(var(--secondary))]/40",
-};
 
 /**
  * `matchesOf` accetta entrambe le forme che l'edge function puo'
@@ -138,6 +127,13 @@ export default function TeamMatchPage({ team }: TeamMatchPageProps) {
   return <MatchDetail team={team} match={foundMatch} onRetry={() => calendarQuery.refetch()} />;
 }
 
+/** La fase come la legge chi apre la scheda «Anteprima». */
+const STATO_A_PAROLE: Record<FasePartita, string> = {
+  prepartita: "In programma",
+  "in-corso": "In corso",
+  finita: "Terminata",
+};
+
 function MatchDetail({
   team,
   match,
@@ -147,14 +143,14 @@ function MatchDetail({
   match: FootballMatch;
   onRetry: () => void;
 }) {
-  const isFinished = match.status === "FullTime";
+  const now = useNowMinute();
+  const { fase } = matchPhase(match, now);
   // Casa/trasferta e risultato arrivano da `teamMatch`, non da un confronto
   // scritto qui: erano una seconda implementazione delle stesse due deduzioni,
   // per di piu' con `includes("juventus")`, che in Coppa Italia avrebbe preso
   // la Juve Stabia per la Juventus.
   const { isHome } = matchSide(match, team);
   const { date: dateStr, time: timeStr, full: fullStr } = formatFootballDateTime(match.date);
-  const compColor = COMPETITION_COLORS[match.competition] || "";
 
   const broadcasters: string[] = match.broadcaster
     ? String(match.broadcaster)
@@ -176,92 +172,7 @@ function MatchDetail({
 
       <SectionHeader title={`${match.homeTeam} – ${match.awayTeam}`} subtitle={fullStr} />
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className={cn(
-          "relative mt-6 mb-6 overflow-hidden rounded-2xl border border-[hsl(var(--team-accent))]/40 px-5 py-5 sm:px-6 sm:py-6",
-          "bg-linear-to-br from-[hsl(var(--team-accent))]/15 via-card to-[hsl(var(--team-accent-dark))]/20",
-          "shadow-[0_18px_44px_-22px_hsl(var(--team-accent)/0.55),0_4px_14px_-6px_hsl(var(--navy-dark)/0.45)]",
-        )}
-      >
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-[hsl(var(--team-accent))] to-transparent opacity-80"
-        />
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <CalendarClock className="h-4 w-4 text-[hsl(var(--team-accent))]" aria-hidden="true" />
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border",
-              compColor,
-            )}
-          >
-            {match.competition}
-          </Badge>
-          {match.matchday != null && (
-            <span className="text-[10px] font-heading uppercase tracking-wider text-muted-foreground">
-              {match.competition === "Serie A"
-                ? `Giornata ${match.matchday}`
-                : `Turno ${match.matchday}`}
-            </span>
-          )}
-        </div>
-
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-6">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <TeamLogo src={match.homeLogo} name={match.homeTeam} size={56} shape="circle" />
-            <p className="text-sm sm:text-base font-heading font-bold text-foreground line-clamp-2">
-              {match.homeTeam}
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center gap-1 min-w-[80px]">
-            {isFinished ? (
-              <div className="flex items-baseline gap-2 font-heading font-bold tabular-nums">
-                <span className="text-3xl sm:text-5xl">{match.homeScore}</span>
-                <span className="text-xl text-muted-foreground">–</span>
-                <span className="text-3xl sm:text-5xl">{match.awayScore}</span>
-              </div>
-            ) : (
-              <span className="text-2xl sm:text-3xl font-heading font-bold text-muted-foreground">
-                vs
-              </span>
-            )}
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {dateStr}
-              {timeStr ? ` · ${timeStr}` : ""}
-            </span>
-          </div>
-
-          <div className="flex flex-col items-center gap-2 text-center">
-            <TeamLogo src={match.awayLogo} name={match.awayTeam} size={56} shape="circle" />
-            <p className="text-sm sm:text-base font-heading font-bold text-foreground line-clamp-2">
-              {match.awayTeam}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
-          {broadcasters.map((b) => {
-            const { className } = getBroadcasterStyle(b);
-            return (
-              <span
-                key={b}
-                className={cn(
-                  "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
-                  className,
-                )}
-              >
-                {b}
-              </span>
-            );
-          })}
-          {!isFinished && match.date && <EventCountdown startDate={match.date} onRetry={onRetry} />}
-        </div>
-      </motion.div>
+      <MatchHero team={team} match={match} onRetry={onRetry} />
 
       <Tabs defaultValue="anteprima" className="w-full">
         <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1 p-1">
@@ -273,9 +184,6 @@ function MatchDetail({
           </TabsTrigger>
           <TabsTrigger value="modulo" className="font-heading text-xs tracking-wider uppercase">
             Modulo
-          </TabsTrigger>
-          <TabsTrigger value="risultato" className="font-heading text-xs tracking-wider uppercase">
-            Risultato
           </TabsTrigger>
           <TabsTrigger value="cronologia" className="font-heading text-xs tracking-wider uppercase">
             Cronologia eventi
@@ -299,16 +207,14 @@ function MatchDetail({
               label="Diretta TV"
               value={broadcasters.length > 0 ? broadcasters.join(" · ") : "—"}
             />
-            <InfoRow
-              label="Stato"
-              value={
-                isFinished
-                  ? "Terminata"
-                  : match.status === "Live" || match.status === "InProgress"
-                    ? "In corso"
-                    : "In programma"
-              }
-            />
+            {/*
+              Cercava `status === "Live" || "InProgress"`, due valori che la
+              fonte non ha mai prodotto — Sky scrive `PreMatch`, `SecondHalf`,
+              `FullTime` — quindi a partita in corso questa riga diceva «In
+              programma». Codice morto che affermava una cosa falsa proprio
+              quando era importante.
+            */}
+            <InfoRow label="Stato" value={STATO_A_PAROLE[fase]} />
           </div>
           {match.link && (
             <div className="mt-6">
@@ -323,19 +229,15 @@ function MatchDetail({
         </TabsContent>
 
         <TabsContent value="formazione">
-          <MatchDetailSection team={team} match={match} scheda="formazione" onRetry={onRetry} />
+          <MatchDetailSection match={match} scheda="formazione" />
         </TabsContent>
 
         <TabsContent value="modulo">
-          <MatchDetailSection team={team} match={match} scheda="modulo" onRetry={onRetry} />
-        </TabsContent>
-
-        <TabsContent value="risultato">
-          <MatchDetailSection team={team} match={match} scheda="risultato" onRetry={onRetry} />
+          <MatchDetailSection match={match} scheda="modulo" />
         </TabsContent>
 
         <TabsContent value="cronologia">
-          <MatchDetailSection team={team} match={match} scheda="cronologia" onRetry={onRetry} />
+          <MatchDetailSection match={match} scheda="cronologia" />
         </TabsContent>
       </Tabs>
     </div>

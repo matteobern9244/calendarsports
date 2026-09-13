@@ -1,7 +1,6 @@
 import { Lato } from "./LineupsBoard";
 import EmptyState from "@/components/common/EmptyState";
 import type { MatchDetail, MatchEvent } from "@/lib/api/schemas";
-import type { SerieATeam } from "@/lib/serieATeams";
 import { cn } from "@/lib/utils";
 
 /**
@@ -200,81 +199,6 @@ export function SchedaCronologia({ detail }: { detail: MatchDetail }) {
         Gol, cartellini e sostituzioni da Sky Sport. Non è una diretta testuale: sono i fatti della
         partita, non il racconto azione per azione.
       </p>
-    </div>
-  );
-}
-
-export function SchedaRisultato({ detail, team }: { detail: MatchDetail; team: SerieATeam }) {
-  const gol = detail.events.filter((e) => e.type === "GOAL");
-  const casa = detail.home?.teamName ?? "";
-  const trasferta = detail.away?.teamName ?? "";
-  const nostroLato = casa === team.name ? "home" : trasferta === team.name ? "away" : null;
-
-  // L'esito dal punto di vista di chi guarda. `null` quando la squadra non e'
-  // in campo — un dettaglio raggiunto da un'altra pagina — perche' scrivere
-  // «Vittoria Juventus» sotto un Inter-Napoli sarebbe peggio del silenzio.
-  const nostri = nostroLato === "home" ? detail.score!.home : detail.score!.away;
-  const loro = nostroLato === "home" ? detail.score!.away : detail.score!.home;
-  const esito = nostroLato === null ? null : nostri > loro ? "V" : nostri === loro ? "N" : "S";
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-        <div className="flex flex-col items-center gap-4">
-          <span className="text-xs font-heading uppercase tracking-wider text-muted-foreground">
-            {detail.status === "FullTime" ? "Risultato finale" : "Risultato"}
-          </span>
-          <div className="flex items-baseline gap-3 font-heading font-bold tabular-nums">
-            <span className="text-5xl sm:text-7xl">{detail.score!.home}</span>
-            <span className="text-2xl text-muted-foreground">–</span>
-            <span className="text-5xl sm:text-7xl">{detail.score!.away}</span>
-          </div>
-
-          {esito && (
-            <span
-              className={cn(
-                "font-heading text-sm font-bold uppercase tracking-widest",
-                esito === "V" && "text-success",
-                esito === "S" && "text-destructive",
-                esito === "N" && "text-muted-foreground",
-              )}
-            >
-              {esito === "V" && `Vittoria ${team.name}`}
-              {esito === "S" && `Sconfitta ${team.name}`}
-              {esito === "N" && "Pareggio"}
-            </span>
-          )}
-
-          {gol.length > 0 && (
-            <ul className="w-full max-w-md space-y-1 border-t border-border/40 pt-3 text-sm">
-              {gol.map((e, i) => (
-                <li key={`${e.minute}-${e.player}-${i}`} className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "font-heading text-xs font-bold tabular-nums",
-                      nostroLato === e.side && "text-[hsl(var(--team-accent-text))]",
-                    )}
-                  >
-                    {e.minute}'
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">{e.player}</span>
-                  <span className="text-[11px] text-muted-foreground">
-                    {e.side === "home" ? casa : trasferta}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {(detail.referee || detail.venue) && (
-            <p className="text-[11px] text-muted-foreground">
-              {[detail.venue, detail.referee && `Arbitro: ${detail.referee}`]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
