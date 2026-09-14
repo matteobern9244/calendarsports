@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Volumes/DISK/code/calendarsports/.codex/hooks/block-dangerous-bash.sh'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Volumes/DISK/code/calendarsports/.codex/hooks/format-on-edit.sh'"
+          }
+        ]
+      }
+    ]
+  }
+}
