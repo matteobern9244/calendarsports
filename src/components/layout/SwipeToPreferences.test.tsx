@@ -56,9 +56,9 @@ describe("SwipeToPreferences", () => {
     expect(linguetta).toBe(screen.getByTestId("linguetta-preferenze"));
   });
 
-  it("senza accesso non c'e': non ci sarebbe niente da aprire", () => {
+  it("senza accesso c'e' lo stesso: le preferenze vivono sul dispositivo", () => {
     rendi({ user: null });
-    expect(screen.queryByTestId("linguetta-preferenze")).toBeNull();
+    expect(screen.getByTestId("linguetta-preferenze")).toBeVisible();
   });
 
   it("con il mouse non c'e': non e' un gesto che si cerca col puntatore", () => {
