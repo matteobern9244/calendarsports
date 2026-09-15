@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
-import { useAuth } from "@/contexts/useAuth";
 import { useSwipeFromRight, useTouchDevice } from "@/hooks/useSwipeFromRight";
 
 const CHIAVE_VISTO = "cse-swipe-preferenze";
@@ -49,16 +48,14 @@ function segnaVisto() {
  */
 export default function SwipeToPreferences() {
   const { open, setOpen } = usePreferencesPanel();
-  const { user } = useAuth();
   const tattile = useTouchDevice();
   const [imparato, setImparato] = useState(giaVisto);
   const linguetta = useRef<HTMLButtonElement>(null);
   /*
-    Il gesto apre le preferenze, e le preferenze esistono solo con l'accesso:
-    senza sessione non c'e' niente da aprire, e una linguetta che non apre
-    niente e' peggio di nessuna linguetta.
+    Le preferenze vivono sul dispositivo anche senza account, quindi la
+    linguetta serve a tutti: resta solo la condizione dello schermo tattile.
   */
-  const disponibile = tattile && Boolean(user);
+  const disponibile = tattile;
 
   const apri = useCallback(() => {
     setOpen(true);

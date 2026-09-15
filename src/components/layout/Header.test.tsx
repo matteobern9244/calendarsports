@@ -212,20 +212,18 @@ describe("Header, le voci nascoste", () => {
 
 describe("Header, il varco alle preferenze", () => {
   /**
-   * Cambio di specifica: le preferenze esistono solo per chi ha effettuato
-   * l'accesso. Il pulsante che le apre non deve nemmeno comparire agli altri:
-   * un comando che apre qualcosa di vuoto e' peggio di un comando assente.
+   * Le preferenze vivono sul dispositivo anche senza account: tema, squadra,
+   * voci del menu' e notifiche funzionano per tutti, quindi il pulsante che
+   * apre il pannello compare sempre.
    */
-  it("senza accesso il pulsante Preferenze non c'e'", () => {
+  it("senza accesso il pulsante Preferenze c'e'", () => {
     intestazione("/home", NAPOLI, null, null);
-    expect(screen.queryByRole("button", { name: "Preferenze" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Preferenze" })).toBeInTheDocument();
   });
 
   /**
-   * E al suo posto ci deve essere un modo per entrare. Il collegamento
-   * all'accesso viveva **dentro** il pannello: nasconderlo senza mettere
-   * niente al suo posto avrebbe tolto a chi non e' registrato l'unica porta
-   * per diventarlo.
+   * E accanto ci deve essere un modo per entrare: chi non e' registrato deve
+   * vedere subito che puo' diventarlo, senza dover prima aprire il pannello.
    */
   it("senza accesso offre comunque la porta d'ingresso", () => {
     intestazione("/home", NAPOLI, null, null);
@@ -233,7 +231,7 @@ describe("Header, il varco alle preferenze", () => {
     expect(accedi).toHaveAttribute("href", "/accedi");
   });
 
-  it("con l'accesso torna il pulsante, e la porta non serve piu'", () => {
+  it("con l'accesso resta il pulsante, e la porta non serve piu'", () => {
     intestazione("/home", NAPOLI, null, { id: "u1" });
     expect(screen.getByRole("button", { name: "Preferenze" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Accedi" })).not.toBeInTheDocument();

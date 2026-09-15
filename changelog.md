@@ -17,6 +17,17 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [Non rilasciato]
+
+### Corretto
+
+- Le preferenze tornano accessibili a chi visita senza account: tema, squadra
+  preferita, voci del menù e notifiche si salvano sul dispositivo e non hanno
+  mai avuto bisogno dell'accesso. Il pulsante nell'intestazione, la linguetta
+  a scomparsa e l'indirizzo `/preferenze` aprono di nuovo il pannello per
+  tutti; la pagina iniziale e la gestione dell'account restano riservate a chi
+  ha effettuato l'accesso, e agli altri il pannello propone l'accesso.
+
 ## [3.4.0] — Durante la partita (2026-09-13)
 
 Bump applicativo `3.3.2` → `3.4.0`. Nota di rilascio in
