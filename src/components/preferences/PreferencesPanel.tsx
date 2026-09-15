@@ -138,13 +138,11 @@ export default function PreferencesPanel() {
   };
 
   /*
-    Il pannello esiste solo per chi ha effettuato l'accesso. Il pulsante che lo
-    apre e' gia' nascosto agli altri e il gesto e' spento, ma la guardia sta
-    anche qui: e' l'ultima porta, e una porta che si fida delle altre si apre
-    il giorno in cui una delle altre cambia.
+    Il pannello e' aperto a tutti: tema, squadra, voci del menu', countdown e
+    notifiche vivono sul dispositivo (`localStorage`) e funzionano anche senza
+    account. Chi ha effettuato l'accesso vede in piu' la pagina iniziale e la
+    gestione dell'account, che senza sessione non avrebbero dove salvarsi.
   */
-  if (!user) return null;
-
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent
@@ -319,34 +317,56 @@ export default function PreferencesPanel() {
               Account
             </h3>
             <div className="rounded-xl border border-border/60 bg-background/40 p-4 space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground break-all">
-                  Accesso effettuato come{" "}
-                  <span className="text-foreground">{user.email ?? "utente"}</span>
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="font-heading uppercase tracking-wider text-xs shrink-0"
-                  onClick={async () => {
-                    await signOut();
-                    toast.success("Sei uscito dall'account");
-                    setOpen(false);
-                  }}
-                >
-                  Esci
-                </Button>
-              </div>
+              {user ? (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground break-all">
+                    Accesso effettuato come{" "}
+                    <span className="text-foreground">{user.email ?? "utente"}</span>
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-heading uppercase tracking-wider text-xs shrink-0"
+                    onClick={async () => {
+                      await signOut();
+                      toast.success("Sei uscito dall'account");
+                      setOpen(false);
+                    }}
+                  >
+                    Esci
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    Le preferenze si salvano su questo dispositivo. Con un account le ritrovi
+                    ovunque.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="font-heading uppercase tracking-wider text-xs shrink-0"
+                    onClick={() => {
+                      setOpen(false);
+                      navigate("/accedi");
+                    }}
+                  >
+                    Accedi
+                  </Button>
+                </div>
+              )}
 
-              <div className="space-y-2">
-                <p className="text-sm font-heading uppercase tracking-wider text-foreground">
-                  Pagina iniziale
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  L'app si apre su questa pagina. La Home resta raggiungibile dal menù.
-                </p>
-                <StartPageSelect value={startPage} onChange={scegliPaginaIniziale} />
-              </div>
+              {user && (
+                <div className="space-y-2">
+                  <p className="text-sm font-heading uppercase tracking-wider text-foreground">
+                    Pagina iniziale
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    L'app si apre su questa pagina. La Home resta raggiungibile dal menù.
+                  </p>
+                  <StartPageSelect value={startPage} onChange={scegliPaginaIniziale} />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <p className="text-sm font-heading uppercase tracking-wider text-foreground">
