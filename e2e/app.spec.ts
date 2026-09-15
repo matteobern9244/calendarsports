@@ -969,20 +969,24 @@ test("dettaglio partita: senza id della fonte lo dice, invece di caricare all'in
 });
 
 /**
- * Cambio di specifica della 3.3.0: le preferenze esistono **solo** per chi ha
- * effettuato l'accesso. Il pulsante che le apre non deve comparire agli altri
- * — un comando che apre qualcosa di vuoto e' peggio di un comando assente — e
- * al suo posto ci va la porta d'ingresso, perche' il collegamento all'accesso
- * viveva dentro il pannello e toglierlo senza rimpiazzarlo lascerebbe chi non
- * e' registrato senza nessun modo di diventarlo.
+ * Le preferenze sono di tutti: tema, squadra, voci del menu' e notifiche si
+ * salvano sul dispositivo anche senza account, quindi il pulsante che apre il
+ * pannello compare sempre. Accanto, solo per chi non ha effettuato l'accesso,
+ * resta la porta d'ingresso.
  */
-test("preferenze: senza accesso non c'e' il pannello, ma c'e' la porta d'ingresso", async ({
+test("preferenze: senza accesso il pannello si apre, e c'e' la porta d'ingresso", async ({
   page,
 }) => {
   await installSportsApiMocks(page);
   await page.goto("/");
 
-  await expect(page.getByRole("button", { name: "Preferenze" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Preferenze" }).click();
+  const pannello = page.getByRole("dialog");
+  await expect(pannello.getByRole("heading", { name: "Preferenze" })).toBeVisible();
+  await expect(
+    pannello.getByRole("combobox", { name: "Squadra di calcio preferita" }),
+  ).toBeVisible();
+  await pannello.getByRole("button", { name: "Close" }).click();
 
   const accedi = page.getByRole("link", { name: "Accedi" });
   await expect(accedi).toBeVisible();
@@ -990,11 +994,13 @@ test("preferenze: senza accesso non c'e' il pannello, ma c'e' la porta d'ingress
   await expect(page).toHaveURL(/\/accedi$/);
 });
 
-/** Anche l'indirizzo diretto: chi non ha l'accesso finisce dove puo' farlo. */
-test("preferenze: /preferenze senza accesso porta alla pagina di accesso", async ({ page }) => {
+/** Anche l'indirizzo diretto: apre il pannello e torna alla home, per tutti. */
+test("preferenze: /preferenze senza accesso apre il pannello e torna alla home", async ({
+  page,
+}) => {
   await installSportsApiMocks(page);
   await page.goto("/preferenze");
-  await expect(page).toHaveURL(/\/accedi$/);
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "Preferenze" })).toBeVisible();
 });
 
 /**
