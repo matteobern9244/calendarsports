@@ -28,7 +28,9 @@ export default function RemoteImage({
   fallbackSrc,
 }: RemoteImageProps) {
   const [fontiFallite, setFontiFallite] = useState<string[]>([]);
-  const fonteAttiva = [src, fallbackSrc].find((candidate) => candidate && !fontiFallite.includes(candidate));
+  const fonteAttiva = [src, fallbackSrc].find(
+    (candidate) => candidate && !fontiFallite.includes(candidate),
+  );
 
   if (!fonteAttiva) {
     return (
