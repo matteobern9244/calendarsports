@@ -78,8 +78,8 @@ describe("MatchHero", () => {
     const lati = screen.getAllByRole("region");
 
     expect(confronto).toHaveClass("grid-cols-2");
-    expect(lati[0]).toHaveAccessibleName("Milan in casa");
-    expect(lati[1]).toHaveAccessibleName("Benfica in trasferta");
+    expect(lati[0]).toHaveAccessibleName("Juventus in casa");
+    expect(lati[1]).toHaveAccessibleName("Napoli in trasferta");
   });
 
   it("a partita finita mostra risultato, esito, marcatori e arbitro senza aprire niente", async () => {
