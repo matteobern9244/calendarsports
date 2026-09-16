@@ -27,13 +27,29 @@ function jsonError(status: number, error: string): Response {
   return new Response(JSON.stringify({ error }), { status, headers: JSON_HEADERS });
 }
 
-async function gzip(testo: string): Promise<Uint8Array> {
+async function gzip(testo: string): Promise<ArrayBuffer> {
   const stream = new Response(new TextEncoder().encode(testo)).body!.pipeThrough(
     new CompressionStream("gzip"),
   );
-  const buffer = await new Response(stream).arrayBuffer();
-  return new Uint8Array(buffer);
+  return await new Response(stream).arrayBuffer();
 }
+
+/**
+ * La forma minima del client che serve a `readTable`.
+ *
+ * I tipi generici di `SupabaseClient` descrivono uno schema che qui non c'e'
+ * (le tabelle si scoprono a runtime): si dichiara quello che si usa davvero,
+ * cosi' la funzione resta provabile e non serve `any`.
+ */
+type PaginaLetta = { data: unknown[] | null; error: { message: string } | null };
+
+type QueryLike = {
+  range(from: number, to: number): QueryLike;
+  order(colonna: string, opts: { ascending: boolean }): QueryLike;
+  then<T>(onfulfilled: (value: PaginaLetta) => T): PromiseLike<T>;
+};
+
+type DbLike = { from(tabella: string): { select(colonne: string): QueryLike } };
 
 /**
  * Legge una tabella intera a pagine da 1000 righe.
@@ -42,10 +58,7 @@ async function gzip(testo: string): Promise<Uint8Array> {
  * finche' una pagina torna piena. Qualunque errore risale, perche' un dump
  * parziale silenzioso e' peggio di un export fallito.
  */
-async function readTable(
-  sb: ReturnType<typeof createClient>,
-  info: TableInfo,
-): Promise<unknown[]> {
+async function readTable(sb: DbLike, info: TableInfo): Promise<unknown[]> {
   const ordine = orderColumns(info);
   if (ordine.length === 0) {
     throw new Error(`Tabella senza colonne ordinabili: ${info.table_name}`);
@@ -56,7 +69,7 @@ async function readTable(
     for (const colonna of ordine) {
       query = query.order(colonna, { ascending: true });
     }
-    const { data, error } = await query;
+    const { data, error } = await (query as unknown as Promise<PaginaLetta>);
     if (error) {
       throw new Error(`Tabella non leggibile: ${info.table_name} (${error.message})`);
     }
@@ -90,7 +103,9 @@ Deno.serve(async (req) => {
 
     const dati: Record<string, unknown[]> = {};
     for (const info of selezione.tables) {
-      dati[info.table_name] = await readTable(sb, info);
+      // Il client tipizzato descrive uno schema noto a compile time; qui le
+      // tabelle si scoprono a runtime, quindi si passa la forma strutturale.
+      dati[info.table_name] = await readTable(sb as unknown as DbLike, info);
     }
 
     const envelope = buildEnvelope(
