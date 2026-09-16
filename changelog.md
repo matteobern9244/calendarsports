@@ -19,7 +19,24 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Non rilasciato]
 
+### Aggiunto
+
+- Endpoint di export del database per un sistema di backup esterno, esposto
+  come edge function `ops-export-db` (questo progetto è una SPA Vite: non
+  esistono route server, quindi l'indirizzo è
+  `POST /functions/v1/ops-export-db`). Richiede l'header
+  `Authorization: Bearer <OPS_SECRET>`, confrontato a tempo costante, e
+  fallisce chiuso con `500 ops_secret_missing` se il segreto non è
+  configurato. Scopre da solo tutte le tabelle dello schema `public` tramite
+  la nuova funzione `public.ops_list_public_tables()` (eseguibile solo dal
+  ruolo di servizio), le legge a pagine da 1000 righe ordinate per chiave
+  primaria e risponde con il JSON compresso in gzip. Un errore su una sola
+  tabella fa fallire l'intero export: mai un dump parziale silenzioso. Il
+  parametro `?table=` esporta una tabella sola, e una tabella inesistente è un
+  errore esplicito. Nessuna UI, nessun link nell'app, nessun job schedulato.
+
 ### Corretto
+
 
 - Le preferenze tornano accessibili a chi visita senza account: tema, squadra
   preferita, voci del menù e notifiche si salvano sul dispositivo e non hanno

@@ -150,7 +150,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      ops_list_public_tables: {
+        Args: never
+        Returns: {
+          all_columns: string[]
+          pk_columns: string[]
+          table_name: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
