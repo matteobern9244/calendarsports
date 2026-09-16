@@ -31,7 +31,15 @@ export interface LineupPlayer {
   role: string | null;
   playerId: string | null;
   photoUrl: string | null;
+  /** Ritratto stabile per id, usato se il file indicato dal widget non risponde. */
+  fallbackPhotoUrl: string | null;
   profileUrl: string | null;
+}
+
+function clubHeadshotUrl(playerId: string | null): string | null {
+  return playerId
+    ? `https://static.sky.it/editorialstaticimages/bc29c89d1a3e47e0afbb38aed61e35b7/sport/headshots/calcio/club/${playerId}.png?im=Resize,width=270`
+    : null;
 }
 
 export interface LineupSide {
@@ -53,8 +61,8 @@ export interface LineupSide {
    * che un campo disegnato male.
    */
   lines: LineupPlayer[][];
-  /** Solo cognomi: la fonte non da' altro per queste quattro categorie. */
-  substitutes: string[];
+  /** Cognomi nelle probabili; giocatori completi nelle formazioni ufficiali. */
+  substitutes: Array<string | LineupPlayer>;
   unavailables: string[];
   disqualifieds: string[];
   doubtful: string[];
@@ -90,13 +98,15 @@ function surnameList(raw: unknown): string[] {
 }
 
 export function toPlayer(raw: any): LineupPlayer {
+  const playerId = str(raw?.id);
   return {
     name: String(raw?.fullName ?? raw?.surname ?? "").trim(),
     surname: str(raw?.surname),
     shirtNumber: num(raw?.jerseyNum),
     role: str(raw?.role),
-    playerId: str(raw?.id),
+    playerId,
     photoUrl: str(raw?.photoUrl) ?? str(raw?.fallbackPhotoUrl),
+    fallbackPhotoUrl: clubHeadshotUrl(playerId),
     profileUrl: str(raw?.playerPageLink),
   };
 }

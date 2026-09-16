@@ -248,9 +248,9 @@ function comeLineupSide(s: OfficialSide): LineupSide {
     logoUrl: s.logoUrl,
     startingLineup: s.startingLineup,
     lines: s.lines,
-    // La panchina ufficiale e' fatta di giocatori interi; qui viaggia come
-    // elenco di nomi perche' e' la forma che la scheda «Formazione» rende gia'.
-    substitutes: s.substitutes.map((p) => p.name),
+    // La panchina ufficiale conserva gli oggetti completi: numero, foto e link
+    // sono dati pubblicati e non vanno persi trasformandoli in soli nomi.
+    substitutes: s.substitutes,
     unavailables: [],
     disqualifieds: [],
     doubtful: [],

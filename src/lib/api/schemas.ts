@@ -330,6 +330,7 @@ const lineupPlayerSchema = z.looseObject({
   role: z.string().nullish(),
   playerId: z.string().nullish(),
   photoUrl: z.string().nullish(),
+  fallbackPhotoUrl: z.string().nullish(),
   profileUrl: z.string().nullish(),
 });
 
@@ -347,7 +348,7 @@ const lineupSideSchema = z
      * Il tipo lo dice — `string[]` e non un array di giocatori — cosi' nessuno
      * puo' provare a mostrarli con la stessa veste degli undici.
      */
-    substitutes: z.array(z.string()),
+    substitutes: z.array(z.union([z.string(), lineupPlayerSchema])),
     unavailables: z.array(z.string()),
     disqualifieds: z.array(z.string()),
     doubtful: z.array(z.string()),

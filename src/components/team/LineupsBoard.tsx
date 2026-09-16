@@ -31,6 +31,12 @@ function Giocatore({ p }: { p: LineupPlayer }) {
     <>
       <RemoteImage
         src={p.photoUrl}
+        fallbackSrc={
+          p.fallbackPhotoUrl ??
+          (p.playerId
+            ? `https://static.sky.it/editorialstaticimages/bc29c89d1a3e47e0afbb38aed61e35b7/sport/headshots/calcio/club/${p.playerId}.png?im=Resize,width=270`
+            : null)
+        }
         alt={p.name}
         className="h-8 w-8 shrink-0 rounded-full bg-muted object-cover sm:h-9 sm:w-9"
         fallbackClassName="h-8 w-8 shrink-0 rounded-full sm:h-9 sm:w-9"
@@ -68,6 +74,31 @@ function ElencoCognomi({ titolo, nomi }: { titolo: string; nomi: string[] }) {
       </span>
       <span className="text-foreground/80">{nomi.join(", ")}</span>
     </p>
+  );
+}
+
+function Panchina({ giocatori }: { giocatori: Array<string | LineupPlayer> }) {
+  if (giocatori.length === 0) return null;
+  if (giocatori.every((giocatore) => typeof giocatore === "string")) {
+    return <ElencoCognomi titolo="In panchina" nomi={giocatori} />;
+  }
+  return (
+    <div className="space-y-1.5 pt-1">
+      <p className="font-heading text-xs uppercase tracking-wider text-muted-foreground">
+        In panchina
+      </p>
+      <div className="grid gap-1.5 sm:grid-cols-2">
+        {giocatori.map((giocatore) =>
+          typeof giocatore === "string" ? (
+            <span key={giocatore} className="min-w-0 truncate text-xs">
+              {giocatore}
+            </span>
+          ) : (
+            <Giocatore key={giocatore.playerId ?? giocatore.name} p={giocatore} />
+          ),
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -136,7 +167,7 @@ export function Lato({ side, casa }: { side: LineupSide; casa: boolean }) {
             {side.manager}
           </p>
         )}
-        <ElencoCognomi titolo="In panchina" nomi={side.substitutes} />
+        <Panchina giocatori={side.substitutes} />
         <ElencoCognomi titolo="In dubbio" nomi={side.doubtful} />
         <ElencoCognomi titolo="Squalificati" nomi={side.disqualifieds} />
         <ElencoCognomi titolo="Indisponibili" nomi={side.unavailables} />

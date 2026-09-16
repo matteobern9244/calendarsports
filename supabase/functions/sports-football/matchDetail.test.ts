@@ -89,6 +89,13 @@ describe("buildMatchDetail", () => {
     expect(giocata.predicted).toBe(false);
     expect(giocata.home!.formation).toBe("352");
     expect(giocata.score).toEqual({ home: 3, away: 2 });
+    expect(giocata.home!.startingLineup[0].fallbackPhotoUrl).toContain(
+      `/club/${giocata.home!.startingLineup[0].playerId}.png`,
+    );
+    expect(giocata.home!.substitutes[0]).toMatchObject({
+      name: expect.any(String),
+      photoUrl: expect.any(String),
+    });
   });
 
   /**

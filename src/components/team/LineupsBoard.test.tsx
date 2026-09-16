@@ -89,10 +89,16 @@ describe("LineupsBoard", () => {
     render(<LineupsBoard lineups={formazioni({ away: null })} />);
 
     const foto = screen.getByRole("img", { name: "Gioc1 X." });
+    expect(foto).toHaveAttribute(
+      "data-fallback-src",
+      "https://static.sky.it/editorialstaticimages/bc29c89d1a3e47e0afbb38aed61e35b7/sport/headshots/calcio/club/1.png?im=Resize,width=270",
+    );
     fireEvent.error(foto);
 
-    expect(screen.queryByRole("img", { name: "Gioc1 X." })).toBeNull();
-    expect(screen.getByLabelText("Foto non disponibile per Gioc1 X.")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Gioc1 X." })).toHaveAttribute(
+      "src",
+      "https://static.sky.it/editorialstaticimages/bc29c89d1a3e47e0afbb38aed61e35b7/sport/headshots/calcio/club/1.png?im=Resize,width=270",
+    );
   });
 
   it("sostituisce anche uno stemma non caricabile", () => {
