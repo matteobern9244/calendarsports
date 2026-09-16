@@ -38,6 +38,13 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 ### Corretto
 
 
+- Nel dettaglio partita casa e trasferta restano ora in due colonne speculari
+  su mobile e desktop, come nel riepilogo della gara: stemma, modulo, undici e
+  informazioni di ciascuna squadra rimangono nel proprio lato senza richiedere
+  scorrimento orizzontale. Le foto e gli stemmi che Sky continua a indicare ma
+  che il suo CDN restituisce con errore vengono sostituiti da un segnaposto,
+  invece di lasciare visibile l'icona di immagine rotta del browser.
+
 - Le preferenze tornano accessibili a chi visita senza account: tema, squadra
   preferita, voci del menù e notifiche si salvano sul dispositivo e non hanno
   mai avuto bisogno dell'accesso. Il pulsante nell'intestazione, la linguetta

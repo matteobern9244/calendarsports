@@ -2,6 +2,7 @@ import { Lato } from "./LineupsBoard";
 import EmptyState from "@/components/common/EmptyState";
 import type { MatchDetail, MatchEvent } from "@/lib/api/schemas";
 import { cn } from "@/lib/utils";
+import RemoteImage from "./RemoteImage";
 
 /**
  * Le quattro schede del dettaglio partita, con i dati **dentro** l'app.
@@ -53,7 +54,7 @@ export function SchedaFormazione({ detail }: { detail: MatchDetail }) {
   return (
     <div className="space-y-4">
       <Intestazione detail={detail} />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4" data-testid="confronto-formazioni">
         {detail.home && <Lato side={detail.home} casa />}
         {detail.away && <Lato side={detail.away} casa={false} />}
       </div>
@@ -83,27 +84,26 @@ export function SchedaModulo({ detail }: { detail: MatchDetail }) {
   return (
     <div className="space-y-4">
       <Intestazione detail={detail} />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
         {lati.map((side) => (
           <section
             key={side!.teamName}
-            className="rounded-lg border border-border/60 bg-card/60 p-4"
+            className="min-w-0 rounded-lg border border-border/60 bg-card/60 p-2 sm:p-4"
           >
-            <header className="flex items-center gap-2">
-              {side!.logoUrl && (
-                <img
-                  src={side!.logoUrl}
-                  alt=""
-                  aria-hidden="true"
-                  className="h-6 w-6 object-contain"
-                />
-              )}
-              <h3 className="font-heading text-sm font-bold uppercase tracking-wide">
+            <header className="flex min-w-0 flex-col items-center gap-1 text-center">
+              <RemoteImage
+                src={side!.logoUrl}
+                alt={side!.teamName}
+                className="h-9 w-9 object-contain sm:h-11 sm:w-11"
+                fallbackClassName="h-9 w-9 rounded-full sm:h-11 sm:w-11"
+                decorative
+              />
+              <h3 className="w-full truncate font-heading text-sm font-bold uppercase tracking-wide">
                 {side!.teamName}
               </h3>
             </header>
 
-            <p className="mt-2 font-heading text-4xl font-bold tabular-nums text-[hsl(var(--team-accent-text))]">
+            <p className="mt-2 text-center font-heading text-3xl font-bold tabular-nums text-[hsl(var(--team-accent-text))] sm:text-4xl">
               {side!.formation ? [...side!.formation].join("-") : "—"}
             </p>
 
