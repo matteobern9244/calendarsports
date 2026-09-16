@@ -61,8 +61,8 @@ export interface LineupSide {
    * che un campo disegnato male.
    */
   lines: LineupPlayer[][];
-  /** Solo cognomi: la fonte non da' altro per queste quattro categorie. */
-  substitutes: string[];
+  /** Cognomi nelle probabili; giocatori completi nelle formazioni ufficiali. */
+  substitutes: Array<string | LineupPlayer>;
   unavailables: string[];
   disqualifieds: string[];
   doubtful: string[];
