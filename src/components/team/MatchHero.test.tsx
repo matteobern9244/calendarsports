@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -98,6 +98,18 @@ describe("MatchHero", () => {
     expect(screen.getByText("12'")).toBeInTheDocument();
     expect(screen.getByText(/Allianz Stadium/)).toBeInTheDocument();
     expect(screen.getByText(/Arbitro M\./)).toBeInTheDocument();
+  });
+
+  it("dispone i gol in colonna sotto la squadra che li ha segnati", async () => {
+    renderHero(match({ status: "FullTime", homeScore: 2, awayScore: 1, date: minutiFa(200) }));
+
+    const golCasa = await screen.findByRole("region", { name: "Gol Juventus" });
+    const golTrasferta = screen.getByRole("region", { name: "Gol Napoli" });
+
+    expect(within(golCasa).getByText("MarcatoreCasa")).toBeInTheDocument();
+    expect(within(golCasa).getByText("AltroCasa")).toBeInTheDocument();
+    expect(within(golCasa).queryByText("MarcatoreOspite")).not.toBeInTheDocument();
+    expect(within(golTrasferta).getByText("MarcatoreOspite")).toBeInTheDocument();
   });
 
   /**

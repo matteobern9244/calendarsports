@@ -140,6 +140,8 @@ function Testata({
     fase === "finita" && score && teamIsPlaying(match, team) ? resultOf(score, isHome) : null;
 
   const gol = (dettaglio?.events ?? []).filter((e) => e.type === "GOAL");
+  const golCasa = gol.filter((e) => e.side === "home");
+  const golTrasferta = gol.filter((e) => e.side === "away");
   const nomeCasa = dettaglio?.home?.teamName ?? match.homeTeam;
   const nomeTrasferta = dettaglio?.away?.teamName ?? match.awayTeam;
 
@@ -252,24 +254,51 @@ function Testata({
       )}
 
       {gol.length > 0 && (
-        <ul className="mx-auto mt-4 w-full max-w-md space-y-1 border-t border-border/40 pt-3 text-sm">
-          {gol.map((e, i) => (
-            <li key={`${e.minute}-${e.player}-${i}`} className="flex items-center gap-2 min-w-0">
-              <span
-                className={cn(
-                  "font-heading text-xs font-bold tabular-nums shrink-0",
-                  (e.side === "home") === isHome && "text-[hsl(var(--team-accent-text))]",
-                )}
-              >
-                {e.minute}'
-              </span>
-              <span className="min-w-0 flex-1 truncate">{e.player}</span>
-              <span className="shrink-0 text-[11px] text-muted-foreground truncate max-w-[40%]">
-                {e.side === "home" ? nomeCasa : nomeTrasferta}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 border-t border-border/40 pt-3 text-sm sm:gap-6">
+          <section aria-label={`Gol ${nomeCasa}`} className="min-w-0">
+            <ul className="space-y-1">
+              {golCasa.map((e, i) => (
+                <li
+                  key={`${e.minute}-${e.player}-${i}`}
+                  className="flex min-w-0 items-baseline gap-1.5"
+                >
+                  <span
+                    className={cn(
+                      "shrink-0 font-heading text-xs font-bold tabular-nums",
+                      isHome && "text-[hsl(var(--team-accent-text))]",
+                    )}
+                  >
+                    {e.minute}'
+                  </span>
+                  <span className="min-w-0 truncate">{e.player}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <span aria-hidden="true" className="w-14 sm:w-24" />
+
+          <section aria-label={`Gol ${nomeTrasferta}`} className="min-w-0 text-right">
+            <ul className="space-y-1">
+              {golTrasferta.map((e, i) => (
+                <li
+                  key={`${e.minute}-${e.player}-${i}`}
+                  className="flex min-w-0 items-baseline justify-end gap-1.5"
+                >
+                  <span className="min-w-0 truncate">{e.player}</span>
+                  <span
+                    className={cn(
+                      "shrink-0 font-heading text-xs font-bold tabular-nums",
+                      !isHome && "text-[hsl(var(--team-accent-text))]",
+                    )}
+                  >
+                    {e.minute}'
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
       )}
 
       {(dettaglio?.venue || dettaglio?.referee) && (
