@@ -2,6 +2,7 @@ import type { LineupPlayer, LineupSide, Lineups } from "@/lib/api/schemas";
 import { toNumber } from "@/lib/api/schemas";
 import { formatFootballDateTime } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
+import RemoteImage from "./RemoteImage";
 
 /**
  * Le probabili formazioni delle due squadre.
@@ -28,24 +29,13 @@ function Giocatore({ p }: { p: LineupPlayer }) {
   const etichetta = p.surname || p.name;
   const contenuto = (
     <>
-      {p.photoUrl ? (
-        <img
-          src={p.photoUrl}
-          alt=""
-          aria-hidden="true"
-          loading="lazy"
-          className="h-9 w-9 rounded-full object-cover bg-muted"
-        />
-      ) : (
-        <span className="h-9 w-9 rounded-full bg-muted" aria-hidden="true" />
-      )}
-      {/*
-        `w-full` e non solo `max-w`: il nome deve poter **scendere** sotto i
-        5.5rem, non solo restare sotto. Con la sola larghezza massima lo span
-        valeva 88px anche quando il posto assegnato al giocatore ne misurava
-        57, e undici nomi cosi' spingevano il campo fuori dallo schermo.
-      */}
-      <span className="w-full max-w-[5.5rem] truncate text-center text-[11px] leading-tight">
+      <RemoteImage
+        src={p.photoUrl}
+        alt={p.name}
+        className="h-8 w-8 shrink-0 rounded-full bg-muted object-cover sm:h-9 sm:w-9"
+        fallbackClassName="h-8 w-8 shrink-0 rounded-full sm:h-9 sm:w-9"
+      />
+      <span className="min-w-0 flex-1 truncate text-left text-[11px] leading-tight sm:text-xs">
         {numero !== null && (
           <span className="font-heading text-muted-foreground tabular-nums">{numero} </span>
         )}
@@ -59,12 +49,12 @@ function Giocatore({ p }: { p: LineupPlayer }) {
       href={p.profileUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex min-w-0 flex-1 flex-col items-center gap-1 transition-colors hover:text-primary"
+      className="flex min-w-0 items-center gap-1.5 transition-colors hover:text-primary"
     >
       {contenuto}
     </a>
   ) : (
-    <span className="flex min-w-0 flex-1 flex-col items-center gap-1">{contenuto}</span>
+    <span className="flex min-w-0 items-center gap-1.5">{contenuto}</span>
   );
 }
 
@@ -96,15 +86,22 @@ export function Lato({ side, casa }: { side: LineupSide; casa: boolean }) {
     // min-content non si comprimeva — allargava la colonna oltre il
     // contenitore, e da li' l'intera pagina. Il sintomo si vedeva sul
     // documento, la causa era qui dentro.
-    <section className="min-w-0 rounded-lg border border-border/60 bg-card/60 p-4 space-y-3">
-      <header className="flex items-center gap-2">
-        {side.logoUrl && (
-          <img src={side.logoUrl} alt="" aria-hidden="true" className="h-6 w-6 object-contain" />
-        )}
-        <h3 className="font-heading text-base font-bold uppercase tracking-wide">
+    <section
+      className="min-w-0 space-y-3 rounded-lg border border-border/60 bg-card/60 p-2 sm:p-4"
+      aria-label={`Formazione ${side.teamName}`}
+    >
+      <header className="flex min-w-0 flex-col items-center gap-1 text-center">
+        <RemoteImage
+          src={side.logoUrl}
+          alt={side.teamName}
+          className="h-9 w-9 object-contain sm:h-11 sm:w-11"
+          fallbackClassName="h-9 w-9 rounded-full sm:h-11 sm:w-11"
+          decorative
+        />
+        <h3 className="w-full truncate font-heading text-sm font-bold uppercase tracking-wide sm:text-base">
           {side.teamName}
         </h3>
-        <span className="ml-auto text-xs text-muted-foreground">
+        <span className="text-[10px] text-muted-foreground sm:text-xs">
           {casa ? "In casa" : "In trasferta"}
         </span>
         {side.formation && (
@@ -115,18 +112,9 @@ export function Lato({ side, casa }: { side: LineupSide; casa: boolean }) {
       </header>
 
       {side.lines.length > 0 ? (
-        <div
-          className={cn(
-            "rounded-md border border-border/40 bg-[hsl(var(--muted))]/20 px-2 py-4",
-            "flex flex-col gap-4",
-          )}
-        >
-          {side.lines.map((linea, i) => (
-            <div key={i} className="flex justify-around gap-1">
-              {linea.map((p) => (
-                <Giocatore key={p.playerId ?? p.name} p={p} />
-              ))}
-            </div>
+        <div className={cn("rounded-md border border-border/40 bg-muted/20 p-1.5", "space-y-1")}>
+          {side.lines.flat().map((p) => (
+            <Giocatore key={p.playerId ?? p.name} p={p} />
           ))}
         </div>
       ) : (
@@ -139,7 +127,7 @@ export function Lato({ side, casa }: { side: LineupSide; casa: boolean }) {
         </ul>
       )}
 
-      <div className="space-y-1 pt-1">
+      <div className="min-w-0 space-y-1 pt-1 [&_p]:break-words">
         {side.manager && (
           <p className="text-xs">
             <span className="font-heading uppercase tracking-wider text-muted-foreground">
@@ -173,7 +161,7 @@ export default function LineupsBoard({ lineups }: LineupsBoardProps) {
         )}
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4" data-testid="confronto-formazioni">
         {lineups.home && <Lato side={lineups.home} casa />}
         {lineups.away && <Lato side={lineups.away} casa={false} />}
       </div>
