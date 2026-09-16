@@ -288,6 +288,8 @@ const squadRowSchema = z.looseObject({
   weightKg: scrapedNumber.nullish(),
   playerId: z.string().nullish(),
   profileUrl: z.string().nullish(),
+  photoUrl: z.string().nullish(),
+  fallbackPhotoUrl: z.string().nullish(),
 });
 
 const squadPlayerSchema = squadRowSchema.extend({

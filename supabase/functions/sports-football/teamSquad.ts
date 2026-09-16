@@ -40,6 +40,10 @@ export interface SquadRow {
   /** Id della scheda atleta: lo stesso che usa il JSON delle formazioni. */
   playerId: string | null;
   profileUrl: string | null;
+  /** Ritratto con la maglia del club pubblicato dalla scheda atleta Sky. */
+  photoUrl: string | null;
+  /** Seconda fonte, usata dal client soltanto se la prima immagine fallisce. */
+  fallbackPhotoUrl: string | null;
 }
 
 export interface SquadPlayer extends SquadRow {
@@ -122,6 +126,8 @@ function parseRow(row: string): SquadRow | null {
     m[1].trim(),
   );
 
+  const playerId = href ? (/\/(\d+)\/?$/.exec(href)?.[1] ?? null) : null;
+
   return {
     name,
     shirtNumber: intBefore(numberCell, /^(\d+)$/),
@@ -129,8 +135,56 @@ function parseRow(row: string): SquadRow | null {
     ageYears: intBefore(data[0], /(\d+)\s*anni/),
     heightCm: heightToCm(data[1]),
     weightKg: intBefore(data[2], /(\d+)\s*kg/),
-    playerId: href ? (/\/(\d+)\/?$/.exec(href)?.[1] ?? null) : null,
+    playerId,
     profileUrl: href,
+    photoUrl: playerId
+      ? `https://static.sky.it/editorialstaticimages/bc29c89d1a3e47e0afbb38aed61e35b7/sport/headshots/calcio/club/${playerId}.png?im=Resize,width=270`
+      : null,
+    fallbackPhotoUrl: null,
+  };
+}
+
+export interface FallbackPlayerPhoto {
+  name: string;
+  team: string;
+  photoUrl: string;
+}
+
+function normalized(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function playerFullName(row: SquadRow): string {
+  const slug = row.profileUrl?.match(/\/calcio\/atleti\/([^/]+)\/\d+\/?$/)?.[1];
+  return normalized(slug?.replace(/-/g, " ") ?? row.name);
+}
+
+/**
+ * Unisce una seconda fonte senza somiglianze approssimative: stesso nome
+ * completo ricavato dalla scheda Sky e stesso nome squadra. Una foto di una
+ * primavera o di un omonimo e' peggio di un segnaposto.
+ */
+export function mergeFallbackPhotos(
+  squad: Squad,
+  teamName: string,
+  alternatives: FallbackPlayerPhoto[],
+): Squad {
+  const exact = new Map(
+    alternatives
+      .filter((candidate) => normalized(candidate.team) === normalized(teamName))
+      .map((candidate) => [normalized(candidate.name), candidate.photoUrl]),
+  );
+  return {
+    ...squad,
+    players: squad.players.map((player) => ({
+      ...player,
+      fallbackPhotoUrl: exact.get(playerFullName(player)) ?? null,
+    })),
   };
 }
 

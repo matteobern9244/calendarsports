@@ -6,6 +6,7 @@ import { toNumber } from "@/lib/api/schemas";
 import { skyPlayerRef } from "@/lib/teamRoutes";
 import { cn } from "@/lib/utils";
 import PlayerStatsPanel from "./PlayerStatsPanel";
+import RemoteImage from "./RemoteImage";
 
 /**
  * La rosa: reparti, allenatore e stadio.
@@ -16,8 +17,8 @@ import PlayerStatsPanel from "./PlayerStatsPanel";
  * - **si mostra l'eta', non la data di nascita**, perche' Sky da' solo
  *   «29 anni». Una data ricavata all'indietro sarebbe precisa al giorno e
  *   falsa;
- * - **niente foto**: nella tabella della rosa ci sono solo bandiere. Le foto
- *   esistono, ma nel JSON delle probabili formazioni e solo per gli undici;
+ * - **foto protette da fallback**: prima il ritratto club di Sky, poi una
+ *   seconda fonte con abbinamento esatto, infine un segnaposto esplicito;
  * - **la capienza dello stadio compare solo quando c'e'**: quattro squadre su
  *   venti non la dichiarano, e uno «0 posti» sarebbe un numero inventato.
  */
@@ -72,6 +73,15 @@ function Riga({ persona, season }: { persona: SquadRow; season: number }) {
 
   const contenuto = (
     <>
+      {persona.playerId && (
+        <RemoteImage
+          src={persona.photoUrl}
+          fallbackSrc={persona.fallbackPhotoUrl}
+          alt={persona.name}
+          className="h-14 w-14 shrink-0 rounded-md bg-muted object-cover object-top sm:h-16 sm:w-16"
+          fallbackClassName="h-14 w-14 shrink-0 rounded-md sm:h-16 sm:w-16"
+        />
+      )}
       <span className="w-7 shrink-0 text-right font-heading text-sm text-muted-foreground tabular-nums">
         {numero ?? "—"}
       </span>
