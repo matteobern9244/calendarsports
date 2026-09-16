@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import EventCountdown from "@/components/common/EventCountdown";
-import MatchScore from "@/components/common/MatchScore";
 import TeamLogo from "@/components/common/TeamLogo";
 import { useNowMinute } from "@/hooks/useNow";
 import { useCountdownMode } from "@/hooks/useCountdownMode";
@@ -186,35 +185,47 @@ function Testata({
         )}
       </div>
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-6">
-        <div className="flex flex-col items-center gap-2 text-center">
+      <div className="grid grid-cols-2 gap-3 sm:gap-6" data-testid="confronto-testata">
+        <section
+          aria-label={`${match.homeTeam} in casa`}
+          className="flex min-w-0 flex-col items-center gap-2 text-center"
+        >
           <TeamLogo src={match.homeLogo} name={match.homeTeam} size={56} shape="circle" />
-          <p className="text-sm sm:text-base font-heading font-bold text-foreground line-clamp-2">
+          <p className="w-full text-sm sm:text-base font-heading font-bold text-foreground line-clamp-2">
             {match.homeTeam}
           </p>
-        </div>
+          {score && (
+            <span aria-hidden="true" className="font-heading text-3xl font-bold tabular-nums sm:text-5xl">
+              {score.home}
+            </span>
+          )}
+        </section>
 
-        <div className="flex flex-col items-center gap-1 min-w-[80px]">
-          <MatchScore
-            score={score}
-            scala="hero"
-            fallback={
-              <span className="text-2xl sm:text-3xl font-heading font-bold text-muted-foreground">
-                vs
-              </span>
-            }
-          />
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        <section
+          aria-label={`${match.awayTeam} in trasferta`}
+          className="flex min-w-0 flex-col items-center gap-2 text-center"
+        >
+          <TeamLogo src={match.awayLogo} name={match.awayTeam} size={56} shape="circle" />
+          <p className="w-full text-sm sm:text-base font-heading font-bold text-foreground line-clamp-2">
+            {match.awayTeam}
+          </p>
+          {score && (
+            <span aria-hidden="true" className="font-heading text-3xl font-bold tabular-nums sm:text-5xl">
+              {score.away}
+            </span>
+          )}
+        </section>
+
+        <div className="col-span-2 text-center">
+          {score ? (
+            <span className="sr-only">{`${score.home} a ${score.away}`}</span>
+          ) : (
+            <span className="font-heading text-2xl font-bold text-muted-foreground sm:text-3xl">vs</span>
+          )}
+          <span className="mt-1 block text-[10px] uppercase tracking-wider text-muted-foreground">
             {dateStr}
             {timeStr ? ` · ${timeStr}` : ""}
           </span>
-        </div>
-
-        <div className="flex flex-col items-center gap-2 text-center">
-          <TeamLogo src={match.awayLogo} name={match.awayTeam} size={56} shape="circle" />
-          <p className="text-sm sm:text-base font-heading font-bold text-foreground line-clamp-2">
-            {match.awayTeam}
-          </p>
         </div>
       </div>
 
