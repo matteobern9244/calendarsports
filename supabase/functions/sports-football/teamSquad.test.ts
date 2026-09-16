@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSquad, type SquadPlayer } from "./teamSquad.ts";
+import { mergeFallbackPhotos, parseSquad, type SquadPlayer } from "./teamSquad.ts";
 import { ROSA_HTML } from "./teamSquad.fixture.ts";
 
 /**
@@ -38,8 +38,20 @@ describe("parseSquad", () => {
       heightCm: 194,
       weightKg: 83,
       playerId: "184254",
+      photoUrl:
+        "https://static.sky.it/editorialstaticimages/bc29c89d1a3e47e0afbb38aed61e35b7/sport/headshots/calcio/club/184254.png?im=Resize,width=270",
     });
     expect(vicario.profileUrl).toBe("https://sport.sky.it/calcio/atleti/guglielmo-vicario/184254");
+  });
+
+  it("abbina una foto alternativa solo allo stesso giocatore della stessa squadra", () => {
+    const arricchita = mergeFallbackPhotos(rosa, "Juventus", [
+      { name: "Guglielmo Vicario", team: "Juventus", photoUrl: "https://foto.test/vicario.png" },
+      { name: "Daniele Rugani", team: "Juventus Youth", photoUrl: "https://foto.test/youth.png" },
+    ]);
+
+    expect(arricchita.players[0].fallbackPhotoUrl).toBe("https://foto.test/vicario.png");
+    expect(arricchita.players[2].fallbackPhotoUrl).toBeNull();
   });
 
   it("trova l'allenatore, che non ha un link ma uno span", () => {
