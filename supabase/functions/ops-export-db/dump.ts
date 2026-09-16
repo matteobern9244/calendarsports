@@ -42,9 +42,7 @@ export function orderColumns(info: TableInfo): string[] {
   return info.pk_columns.length > 0 ? info.pk_columns : info.all_columns;
 }
 
-export type SelectionResult =
-  | { ok: true; tables: TableInfo[] }
-  | { ok: false; error: string };
+export type SelectionResult = { ok: true; tables: TableInfo[] } | { ok: false; error: string };
 
 /**
  * Sceglie le tabelle da esportare fra quelle scoperte.

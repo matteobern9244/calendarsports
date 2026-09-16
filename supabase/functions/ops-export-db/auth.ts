@@ -34,7 +34,10 @@ export type AuthResult = { ok: true } | { ok: false; status: number; error: stri
  * non 200 e non 401. Un endpoint di dump che diventa pubblico perche' una
  * variabile d'ambiente manca sarebbe il guasto peggiore possibile.
  */
-export function authorize(authorizationHeader: string | null, secret: string | undefined): AuthResult {
+export function authorize(
+  authorizationHeader: string | null,
+  secret: string | undefined,
+): AuthResult {
   if (!secret || secret.length === 0) {
     return { ok: false, status: 500, error: "ops_secret_missing" };
   }

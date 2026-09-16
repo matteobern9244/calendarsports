@@ -65,7 +65,10 @@ async function readTable(sb: DbLike, info: TableInfo): Promise<unknown[]> {
   }
   const righe: unknown[] = [];
   for (let offset = 0; ; offset += PAGE_SIZE) {
-    let query = sb.from(info.table_name).select("*").range(offset, offset + PAGE_SIZE - 1);
+    let query = sb
+      .from(info.table_name)
+      .select("*")
+      .range(offset, offset + PAGE_SIZE - 1);
     for (const colonna of ordine) {
       query = query.order(colonna, { ascending: true });
     }
