@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,9 +25,8 @@ export default function RemoteImage({
   fallbackClassName,
   decorative = false,
 }: RemoteImageProps) {
-  const [errore, setErrore] = useState(false);
-
-  useEffect(() => setErrore(false), [src]);
+  const [srcFallita, setSrcFallita] = useState<string | null>(null);
+  const errore = Boolean(src && srcFallita === src);
 
   if (!src || errore) {
     return (
@@ -48,7 +47,7 @@ export default function RemoteImage({
       aria-hidden={decorative || undefined}
       loading="lazy"
       className={className}
-      onError={() => setErrore(true)}
+      onError={() => setSrcFallita(src)}
     />
   );
 }

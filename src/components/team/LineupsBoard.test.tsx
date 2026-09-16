@@ -95,6 +95,30 @@ describe("LineupsBoard", () => {
     expect(screen.getByLabelText("Foto non disponibile per Gioc1 X.")).toBeInTheDocument();
   });
 
+  it("sostituisce anche uno stemma non caricabile", () => {
+    const { container } = render(
+      <LineupsBoard
+        lineups={formazioni({
+          home: lato({
+            teamName: "Sassuolo",
+            teamSlug: "sassuolo",
+            logoUrl: "https://static.sky.it/stemma-non-disponibile.png",
+          }),
+          away: null,
+        })}
+      />,
+    );
+
+    const stemma = container.querySelector<HTMLImageElement>(
+      'img[src="https://static.sky.it/stemma-non-disponibile.png"]',
+    );
+    expect(stemma).not.toBeNull();
+    if (stemma) fireEvent.error(stemma);
+    expect(
+      container.querySelector('img[src="https://static.sky.it/stemma-non-disponibile.png"]'),
+    ).toBeNull();
+  });
+
   it("una categoria vuota non lascia un'etichetta orfana", () => {
     render(<LineupsBoard lineups={formazioni()} />);
     expect(screen.queryByText(/Squalificati/)).toBeNull();
