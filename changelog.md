@@ -45,6 +45,10 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   prova automaticamente la seconda fonte; se nessuna fonte verificata copre il
   giocatore resta il segnaposto, senza associare foto di giovanili, ritirati o
   omonimi. La riga è stata ricomposta per non allargare la pagina su mobile.
+- La scheda «Formazione» mostra ora i ritratti degli undici titolari e, quando
+  la fonte pubblica i dati completi, anche dei giocatori in panchina. Se la foto
+  del widget non risponde, viene provato automaticamente il ritratto Sky legato
+  all'identificativo del giocatore prima di mostrare il segnaposto.
 
 
 - Nel dettaglio partita casa e trasferta restano ora in due colonne speculari
