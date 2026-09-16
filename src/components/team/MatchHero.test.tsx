@@ -71,6 +71,17 @@ describe("MatchHero", () => {
     vi.mocked(footballApi.getMatchDetail).mockResolvedValue(dettaglio());
   });
 
+  it("mantiene casa a sinistra e trasferta a destra anche nell'intestazione", () => {
+    renderHero(match({ status: "PreMatch" }));
+
+    const confronto = screen.getByTestId("confronto-testata");
+    const lati = screen.getAllByRole("region");
+
+    expect(confronto).toHaveClass("grid-cols-2");
+    expect(lati[0]).toHaveAccessibleName("Milan in casa");
+    expect(lati[1]).toHaveAccessibleName("Benfica in trasferta");
+  });
+
   it("a partita finita mostra risultato, esito, marcatori e arbitro senza aprire niente", async () => {
     renderHero(match({ status: "FullTime", homeScore: 2, awayScore: 1, date: minutiFa(200) }));
 
