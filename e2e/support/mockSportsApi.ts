@@ -664,6 +664,8 @@ const payloads: Record<EndpointName, unknown> = {
         weightKg: 82,
         playerId: "1",
         profileUrl: "https://sport.sky.it/calcio/atleti/portiere-juve/1",
+        photoUrl: "https://static.sky.it/foto/portiere-juve.png",
+        fallbackPhotoUrl: "https://foto-alternativa.test/portiere-juve.png",
       },
       {
         name: "Difensore Juve",
@@ -675,6 +677,8 @@ const payloads: Record<EndpointName, unknown> = {
         weightKg: 78,
         playerId: "2",
         profileUrl: null,
+        photoUrl: "https://static.sky.it/foto/difensore-juve.png",
+        fallbackPhotoUrl: null,
       },
     ],
     manager: {
@@ -686,6 +690,8 @@ const payloads: Record<EndpointName, unknown> = {
       weightKg: null,
       playerId: null,
       profileUrl: null,
+      photoUrl: null,
+      fallbackPhotoUrl: null,
     },
     stadium: {
       name: "Stadio della Juventus",

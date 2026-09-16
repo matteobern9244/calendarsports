@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { resolveTeam } from "@/lib/serieATeams";
 import type { TeamSquad } from "@/lib/api/schemas";
@@ -73,6 +73,11 @@ describe("SquadSection", () => {
     const foto = screen.getByRole("img", { name: "Vicario G." });
     expect(foto).toHaveAttribute("src", "https://static.sky.it/foto/vicario.png");
     expect(foto).toHaveAttribute("data-fallback-src", "https://foto-alternativa.test/vicario.png");
+    fireEvent.error(foto);
+    expect(screen.getByRole("img", { name: "Vicario G." })).toHaveAttribute(
+      "src",
+      "https://foto-alternativa.test/vicario.png",
+    );
     expect(screen.getByLabelText("Foto non disponibile per Kelly L.")).toBeInTheDocument();
   });
 

@@ -37,6 +37,15 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ### Corretto
 
+- Le righe della rosa mostrano ora ritratti grandi dei giocatori con il volto e
+  la maglia del club. La funzione ricava la foto Sky dall'id della scheda atleta
+  per tutta la rosa, non soltanto per gli undici delle probabili formazioni, e
+  prepara una seconda foto gratuita da TheSportsDB solo con corrispondenza
+  esatta di nome completo e squadra. Se il CDN principale fallisce il browser
+  prova automaticamente la seconda fonte; se nessuna fonte verificata copre il
+  giocatore resta il segnaposto, senza associare foto di giovanili, ritirati o
+  omonimi. La riga è stata ricomposta per non allargare la pagina su mobile.
+
 
 - Nel dettaglio partita casa e trasferta restano ora in due colonne speculari
   su mobile e desktop; nell'intestazione stemma e nome sono impilati ai lati
