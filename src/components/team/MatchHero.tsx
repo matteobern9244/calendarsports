@@ -214,7 +214,9 @@ function Testata({
               <span className="sr-only">{`${score.home} a ${score.away}`}</span>
             </>
           ) : (
-            <span className="font-heading text-2xl font-bold text-muted-foreground sm:text-3xl">vs</span>
+            <span className="font-heading text-2xl font-bold text-muted-foreground sm:text-3xl">
+              vs
+            </span>
           )}
         </div>
 
