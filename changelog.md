@@ -39,7 +39,8 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 
 - Nel dettaglio partita casa e trasferta restano ora in due colonne speculari
-  su mobile e desktop, compresa l'intestazione con stemmi, nomi e punteggio:
+  su mobile e desktop; nell'intestazione stemma e nome sono impilati ai lati
+  del punteggio centrale, come nella testata della diretta:
   modulo, undici e informazioni di ciascuna squadra rimangono nel proprio lato
   senza richiedere scorrimento orizzontale. Le foto e gli stemmi che Sky
   continua a indicare ma che il suo CDN restituisce con errore vengono

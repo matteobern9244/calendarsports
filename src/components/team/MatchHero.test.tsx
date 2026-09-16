@@ -71,15 +71,19 @@ describe("MatchHero", () => {
     vi.mocked(footballApi.getMatchDetail).mockResolvedValue(dettaglio());
   });
 
-  it("mantiene casa a sinistra e trasferta a destra anche nell'intestazione", () => {
-    renderHero(match({ status: "PreMatch" }));
+  it("impila stemma e nome ai lati del punteggio centrale come nella testata", () => {
+    renderHero(match({ status: "FullTime", homeScore: 2, awayScore: 1, skyMatchId: null }));
 
     const confronto = screen.getByTestId("confronto-testata");
     const lati = screen.getAllByRole("region");
+    const punteggio = screen.getByTestId("punteggio-testata");
 
-    expect(confronto).toHaveClass("grid-cols-2");
+    expect(confronto).toHaveClass("grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]");
     expect(lati[0]).toHaveAccessibleName("Juventus in casa");
+    expect(lati[0]).toHaveClass("flex-col");
+    expect(punteggio).toHaveTextContent("2 - 1");
     expect(lati[1]).toHaveAccessibleName("Napoli in trasferta");
+    expect(lati[1]).toHaveClass("flex-col");
   });
 
   it("a partita finita mostra risultato, esito, marcatori e arbitro senza aprire niente", async () => {

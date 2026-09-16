@@ -185,7 +185,10 @@ function Testata({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-6" data-testid="confronto-testata">
+      <div
+        className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-6"
+        data-testid="confronto-testata"
+      >
         <section
           aria-label={`${match.homeTeam} in casa`}
           className="flex min-w-0 flex-col items-center gap-2 text-center"
@@ -194,12 +197,28 @@ function Testata({
           <p className="w-full text-sm sm:text-base font-heading font-bold text-foreground line-clamp-2">
             {match.homeTeam}
           </p>
-          {score && (
-            <span aria-hidden="true" className="font-heading text-3xl font-bold tabular-nums sm:text-5xl">
-              {score.home}
+        </section>
+
+        <div
+          className="flex min-w-14 flex-col items-center justify-center pt-2 text-center sm:min-w-24"
+          data-testid="punteggio-testata"
+        >
+          {score ? (
+            <>
+              <span
+                aria-hidden="true"
+                className="whitespace-nowrap font-heading text-3xl font-bold tabular-nums sm:text-5xl"
+              >
+                {score.home} - {score.away}
+              </span>
+              <span className="sr-only">{`${score.home} a ${score.away}`}</span>
+            </>
+          ) : (
+            <span className="font-heading text-2xl font-bold text-muted-foreground sm:text-3xl">
+              vs
             </span>
           )}
-        </section>
+        </div>
 
         <section
           aria-label={`${match.awayTeam} in trasferta`}
@@ -209,20 +228,10 @@ function Testata({
           <p className="w-full text-sm sm:text-base font-heading font-bold text-foreground line-clamp-2">
             {match.awayTeam}
           </p>
-          {score && (
-            <span aria-hidden="true" className="font-heading text-3xl font-bold tabular-nums sm:text-5xl">
-              {score.away}
-            </span>
-          )}
         </section>
 
-        <div className="col-span-2 text-center">
-          {score ? (
-            <span className="sr-only">{`${score.home} a ${score.away}`}</span>
-          ) : (
-            <span className="font-heading text-2xl font-bold text-muted-foreground sm:text-3xl">vs</span>
-          )}
-          <span className="mt-1 block text-[10px] uppercase tracking-wider text-muted-foreground">
+        <div className="col-span-3 text-center">
+          <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
             {dateStr}
             {timeStr ? ` · ${timeStr}` : ""}
           </span>
