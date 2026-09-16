@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { LineupSide, Lineups } from "@/lib/api/schemas";
 import LineupsBoard from "./LineupsBoard";
@@ -72,6 +72,27 @@ describe("LineupsBoard", () => {
     expect(screen.getAllByRole("link", { name: /Gioc1/ }).length).toBeGreaterThan(0);
     const panchina = within(container).getAllByText(/Grabara, Pinsoglio/)[0];
     expect(panchina.closest("a")).toBeNull();
+  });
+
+  it("mantiene casa a sinistra e trasferta a destra anche sugli schermi piccoli", () => {
+    render(<LineupsBoard lineups={formazioni()} />);
+
+    const confronto = screen.getByTestId("confronto-formazioni");
+    const colonne = within(confronto).getAllByRole("region");
+    expect(colonne).toHaveLength(2);
+    expect(colonne[0]).toHaveAccessibleName("Formazione Sassuolo");
+    expect(colonne[1]).toHaveAccessibleName("Formazione Juventus");
+    expect(confronto).toHaveClass("grid-cols-2");
+  });
+
+  it("sostituisce una foto non caricabile senza lasciare l'immagine rotta", () => {
+    render(<LineupsBoard lineups={formazioni({ away: null })} />);
+
+    const foto = screen.getByRole("img", { name: "Gioc1 X." });
+    fireEvent.error(foto);
+
+    expect(screen.queryByRole("img", { name: "Gioc1 X." })).toBeNull();
+    expect(screen.getByLabelText("Foto non disponibile per Gioc1 X.")).toBeInTheDocument();
   });
 
   it("una categoria vuota non lascia un'etichetta orfana", () => {
