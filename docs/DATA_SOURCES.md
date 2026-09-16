@@ -94,10 +94,20 @@ classifica è la stessa per tutte e venti.
   tabella `ftbl__team-players-table` server-rendered, parsata da
   `teamSquad.ts`. Verificata dal vivo sulle venti squadre l'11 settembre 2026:
   struttura identica, quattro reparti, allenatore sempre presente.
-  **La fonte non espone la data di nascita** — solo l'età in anni — **e non
-  espone le foto dei giocatori**: la tabella ha solo bandiere. Il ruolo è una
+  **La fonte non espone la data di nascita** — solo l'età in anni. La tabella
+  non contiene foto, ma ogni link atleta porta un id con cui si costruisce il
+  ritratto `headshots/calcio/club/{id}.png` pubblicato da Sky; la UI usa immagini
+  grandi con il volto e la maglia del club. Il ruolo è una
   riga-intestazione, non una colonna, e l'allenatore chiude la tabella con il
   nome in uno `<span>` invece che in un `<a>`, perché non ha scheda atleta.
+  Come seconda copertura gratuita, `team-squad` interroga TheSportsDB: risolve
+  prima la squadra per nome esatto, poi accetta una foto soltanto se nome
+  completo e squadra coincidono esattamente con Sky. Non abbina risultati
+  giovanili, ritirati o omonimi. Il client prova questa seconda URL solo se la
+  prima fallisce; se entrambe mancano mostra un segnaposto, mai una persona o
+  una maglia potenzialmente sbagliata. Verificato sulla Juventus il 16 settembre
+  2026: 28 foto Sky valide su 32; i quattro file assenti non hanno un'alternativa
+  gratuita verificabile con la maglia corrente.
 - **API reale (`team-squad`)**: Lega Serie A `/seasons/{id}/teams` per lo
   **stadio**, che Sky non dà: nome, città, indirizzo, capienza, anno. Presente
   per tutte e venti, ma **quattro squadre non dichiarano la capienza**, che va
@@ -357,6 +367,14 @@ Non è un rinvio tecnico in attesa di uno sblocco.
 
 La Serie A è nel piano gratuito, ma rose, formazioni e statistiche giocatore
 stanno dietro un add-on a pagamento.
+
+### Foto giocatori alternative — **uso limitato e verificato**
+
+TheSportsDB è usato solo come fallback per una corrispondenza esatta di squadra
+e nome completo. ESPN e SofaScore sono stati valutati il 16 settembre 2026 ma
+rispondono `403` alle richieste server; TheSportsDB può restituire anche squadre
+giovanili e giocatori ritirati, quindi ogni corrispondenza non esatta viene
+scartata invece di mostrare una foto plausibile ma falsa.
 
 ## Riferimenti
 

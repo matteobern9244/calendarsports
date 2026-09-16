@@ -1,6 +1,11 @@
 import { buildCorsHeaders, checkRateLimit, rateLimitResponse } from "../_shared/security.ts";
 import { romeDateKeyOf } from "./matchId.ts";
-import { parseSquad, type Squad } from "./teamSquad.ts";
+import {
+  mergeFallbackPhotos,
+  parseSquad,
+  type FallbackPlayerPhoto,
+  type Squad,
+} from "./teamSquad.ts";
 import { parseLineups, type Lineups } from "./lineups.ts";
 import { buildMatchDetail, parseHero, parseOfficialLineup } from "./matchDetail.ts";
 import {
@@ -129,10 +134,55 @@ async function fetchSquad(team: SerieATeam): Promise<Squad> {
       console.warn(`Rosa non disponibile per ${team.slug}: ${res.status}`);
       return { players: [], manager: null };
     }
-    return parseSquad(await res.text());
+    const squad = parseSquad(await res.text());
+    if (squad.players.length === 0) return squad;
+    return mergeFallbackPhotos(squad, team.name, await fetchFallbackPlayerPhotos(team));
   } catch (e) {
     console.error(`Errore nel recupero della rosa di ${team.slug}:`, e);
     return { players: [], manager: null };
+  }
+}
+
+async function fetchFallbackPlayerPhotos(team: SerieATeam): Promise<FallbackPlayerPhoto[]> {
+  try {
+    const teamSearch = await fetch(
+      `https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(team.name)}`,
+    );
+    if (!teamSearch.ok) return [];
+    const teams = (await teamSearch.json())?.teams;
+    const exactTeam = Array.isArray(teams)
+      ? teams.find((candidate: unknown) => {
+          if (!candidate || typeof candidate !== "object") return false;
+          const record = candidate as Record<string, unknown>;
+          return typeof record.strTeam === "string" && matchesTeam(record.strTeam, team);
+        })
+      : null;
+    const teamId = exactTeam && typeof exactTeam.idTeam === "string" ? exactTeam.idTeam : null;
+    if (!teamId || !/^\d+$/.test(teamId)) return [];
+
+    const rosterResponse = await fetch(
+      `https://www.thesportsdb.com/api/v1/json/3/lookup_all_players.php?id=${encodeURIComponent(teamId)}`,
+    );
+    if (!rosterResponse.ok) return [];
+    const players = (await rosterResponse.json())?.player;
+    if (!Array.isArray(players)) return [];
+    return players.flatMap((candidate: unknown) => {
+      if (!candidate || typeof candidate !== "object") return [];
+      const record = candidate as Record<string, unknown>;
+      const photo = record.strCutout ?? record.strThumb;
+      if (
+        typeof record.strPlayer !== "string" ||
+        typeof record.strTeam !== "string" ||
+        typeof photo !== "string" ||
+        !/^https:\/\//.test(photo)
+      ) {
+        return [];
+      }
+      return [{ name: record.strPlayer, team: record.strTeam, photoUrl: photo }];
+    });
+  } catch (error) {
+    console.warn(`Foto alternative non disponibili per ${team.slug}:`, error);
+    return [];
   }
 }
 

@@ -8,6 +8,7 @@ interface RemoteImageProps {
   className: string;
   fallbackClassName?: string;
   decorative?: boolean;
+  fallbackSrc?: string | null;
 }
 
 /**
@@ -24,11 +25,14 @@ export default function RemoteImage({
   className,
   fallbackClassName,
   decorative = false,
+  fallbackSrc,
 }: RemoteImageProps) {
-  const [srcFallita, setSrcFallita] = useState<string | null>(null);
-  const errore = Boolean(src && srcFallita === src);
+  const [fontiFallite, setFontiFallite] = useState<string[]>([]);
+  const fonteAttiva = [src, fallbackSrc].find(
+    (candidate) => candidate && !fontiFallite.includes(candidate),
+  );
 
-  if (!src || errore) {
+  if (!fonteAttiva) {
     return (
       <span
         className={cn("grid place-items-center bg-muted text-muted-foreground", fallbackClassName)}
@@ -42,12 +46,13 @@ export default function RemoteImage({
 
   return (
     <img
-      src={src}
+      src={fonteAttiva}
+      data-fallback-src={fallbackSrc || undefined}
       alt={decorative ? "" : alt}
       aria-hidden={decorative || undefined}
       loading="lazy"
       className={className}
-      onError={() => setSrcFallita(src)}
+      onError={() => setFontiFallite((current) => [...current, fonteAttiva])}
     />
   );
 }

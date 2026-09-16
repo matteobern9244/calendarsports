@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { resolveTeam } from "@/lib/serieATeams";
 import type { TeamSquad } from "@/lib/api/schemas";
@@ -18,6 +18,8 @@ const rosa = (over: Partial<TeamSquad> = {}): TeamSquad => ({
       weightKg: 83,
       playerId: "184254",
       profileUrl: "https://sport.sky.it/calcio/atleti/guglielmo-vicario/184254",
+      photoUrl: "https://static.sky.it/foto/vicario.png",
+      fallbackPhotoUrl: "https://foto-alternativa.test/vicario.png",
     },
     {
       name: "Kelly L.",
@@ -29,6 +31,8 @@ const rosa = (over: Partial<TeamSquad> = {}): TeamSquad => ({
       weightKg: 79,
       playerId: "220001",
       profileUrl: null,
+      photoUrl: null,
+      fallbackPhotoUrl: null,
     },
   ],
   manager: {
@@ -40,6 +44,8 @@ const rosa = (over: Partial<TeamSquad> = {}): TeamSquad => ({
     weightKg: null,
     playerId: null,
     profileUrl: null,
+    photoUrl: null,
+    fallbackPhotoUrl: null,
   },
   stadium: {
     name: "Allianz Stadium",
@@ -60,6 +66,19 @@ describe("SquadSection", () => {
     expect(screen.getByText(/Portieri/)).toBeInTheDocument();
     expect(screen.getByText(/Difensori/)).toBeInTheDocument();
     expect(screen.getByText("Vicario G.")).toBeInTheDocument();
+  });
+
+  it("mostra il volto di ogni giocatore e conserva una seconda fonte", () => {
+    renderRosa();
+    const foto = screen.getByRole("img", { name: "Vicario G." });
+    expect(foto).toHaveAttribute("src", "https://static.sky.it/foto/vicario.png");
+    expect(foto).toHaveAttribute("data-fallback-src", "https://foto-alternativa.test/vicario.png");
+    fireEvent.error(foto);
+    expect(screen.getByRole("img", { name: "Vicario G." })).toHaveAttribute(
+      "src",
+      "https://foto-alternativa.test/vicario.png",
+    );
+    expect(screen.getByLabelText("Foto non disponibile per Kelly L.")).toBeInTheDocument();
   });
 
   it("l'allenatore sta fuori dai reparti", () => {

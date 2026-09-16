@@ -6,6 +6,7 @@ import { toNumber } from "@/lib/api/schemas";
 import { skyPlayerRef } from "@/lib/teamRoutes";
 import { cn } from "@/lib/utils";
 import PlayerStatsPanel from "./PlayerStatsPanel";
+import RemoteImage from "./RemoteImage";
 
 /**
  * La rosa: reparti, allenatore e stadio.
@@ -16,8 +17,8 @@ import PlayerStatsPanel from "./PlayerStatsPanel";
  * - **si mostra l'eta', non la data di nascita**, perche' Sky da' solo
  *   «29 anni». Una data ricavata all'indietro sarebbe precisa al giorno e
  *   falsa;
- * - **niente foto**: nella tabella della rosa ci sono solo bandiere. Le foto
- *   esistono, ma nel JSON delle probabili formazioni e solo per gli undici;
+ * - **foto protette da fallback**: prima il ritratto club di Sky, poi una
+ *   seconda fonte con abbinamento esatto, infine un segnaposto esplicito;
  * - **la capienza dello stadio compare solo quando c'e'**: quattro squadre su
  *   venti non la dichiarano, e uno «0 posti» sarebbe un numero inventato.
  */
@@ -72,36 +73,49 @@ function Riga({ persona, season }: { persona: SquadRow; season: number }) {
 
   const contenuto = (
     <>
-      <span className="w-7 shrink-0 text-right font-heading text-sm text-muted-foreground tabular-nums">
-        {numero ?? "—"}
-      </span>
-      {persona.countryCode && (
-        <img
-          src={`https://static.sky.it/images/skysport/it/common/flags/${persona.countryCode}.svg`}
-          alt=""
-          aria-hidden="true"
-          loading="lazy"
-          className="h-3.5 w-5 shrink-0 rounded-[2px] object-cover"
+      {persona.playerId && (
+        <RemoteImage
+          src={persona.photoUrl}
+          fallbackSrc={persona.fallbackPhotoUrl}
+          alt={persona.name}
+          className="h-14 w-14 shrink-0 rounded-md bg-muted object-cover object-top sm:h-16 sm:w-16"
+          fallbackClassName="h-14 w-14 shrink-0 rounded-md sm:h-16 sm:w-16"
         />
       )}
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">
-        {riferimento || !persona.profileUrl ? (
-          persona.name
-        ) : (
-          <a
-            href={persona.profileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-primary transition-colors"
-          >
-            {persona.name}
-          </a>
-        )}
+      <span className="w-6 shrink-0 text-right font-heading text-sm text-muted-foreground tabular-nums">
+        {numero ?? "—"}
       </span>
-      <span className="shrink-0 text-xs text-muted-foreground flex gap-2.5">
-        {eta !== null && <span className="tabular-nums">{eta} anni</span>}
-        <Misura valore={toNumber(persona.heightCm)} unita="m" />
-        <Misura valore={toNumber(persona.weightKg)} unita="kg" />
+      <span className="min-w-0 flex-1 space-y-1">
+        <span className="flex min-w-0 items-center gap-2">
+          {persona.countryCode && (
+            <img
+              src={`https://static.sky.it/images/skysport/it/common/flags/${persona.countryCode}.svg`}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              className="h-3.5 w-5 shrink-0 rounded-[2px] object-cover"
+            />
+          )}
+          <span className="min-w-0 truncate text-sm font-medium">
+            {riferimento || !persona.profileUrl ? (
+              persona.name
+            ) : (
+              <a
+                href={persona.profileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-primary"
+              >
+                {persona.name}
+              </a>
+            )}
+          </span>
+        </span>
+        <span className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-xs text-muted-foreground">
+          {eta !== null && <span className="tabular-nums">{eta} anni</span>}
+          <Misura valore={toNumber(persona.heightCm)} unita="m" />
+          <Misura valore={toNumber(persona.weightKg)} unita="kg" />
+        </span>
       </span>
     </>
   );
@@ -121,7 +135,7 @@ function Riga({ persona, season }: { persona: SquadRow; season: number }) {
         onClick={() => setAperta((v) => !v)}
         aria-expanded={aperta}
         aria-controls={idPannello}
-        className="flex w-full items-center gap-3 rounded-md py-2 text-left transition-colors hover:bg-muted/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--team-accent))]"
+        className="flex w-full min-w-0 items-center gap-2 rounded-md py-2 text-left transition-colors hover:bg-muted/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[hsl(var(--team-accent))] sm:gap-3"
       >
         {contenuto}
         <ChevronDown
