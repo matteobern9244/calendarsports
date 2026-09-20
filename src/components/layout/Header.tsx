@@ -1,5 +1,5 @@
 import { useRef, useState, MouseEvent as ReactMouseEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "@/lib/router-compat";
 import { Menu, X, Settings, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

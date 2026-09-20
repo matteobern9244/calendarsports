@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Navigate } from "react-router";
+import { Navigate } from "@/lib/router-compat";
 import LandingSpinner from "@/components/common/LandingSpinner";
 import { useUserPrefs } from "@/contexts/useUserPrefs";
 import { HOME_PATH, startPagePath } from "@/lib/startPage";

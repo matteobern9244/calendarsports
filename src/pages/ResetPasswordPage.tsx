@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "@/lib/router-compat";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import SectionHeader from "@/components/common/SectionHeader";

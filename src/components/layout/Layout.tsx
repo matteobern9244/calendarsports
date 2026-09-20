@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "react-router";
+import { Outlet, useLocation } from "@/lib/router-compat";
 import Header from "./Header";
 import { APP_NAME, APP_VERSION } from "@/lib/version";
 import OfflineIndicator from "@/components/common/OfflineIndicator";
