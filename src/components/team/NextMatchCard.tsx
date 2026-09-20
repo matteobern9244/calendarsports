@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router";
+import { Link } from "@/lib/router-compat";
 import { Badge } from "@/components/ui/badge";
 import EventCountdown from "@/components/common/EventCountdown";
 import MatchScore from "@/components/common/MatchScore";

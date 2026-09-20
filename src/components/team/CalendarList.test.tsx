@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter } from "@/lib/router-compat";
 import { describe, expect, it, vi } from "vitest";
 import type { FootballMatch } from "@/lib/api/schemas";
 import type { PaginatedCalendar } from "@/lib/teamCalendar";

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { Navigate, useNavigate } from "@/lib/router-compat";
 import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 
 /**

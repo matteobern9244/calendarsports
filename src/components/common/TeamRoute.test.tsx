@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes } from "@/lib/router-compat";
 import TeamRoute from "./TeamRoute";
 
 function renderAt(path: string, figli = (nome: string) => <p>Pagina di {nome}</p>) {

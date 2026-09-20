@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useParams } from "react-router";
+import { useParams } from "@/lib/router-compat";
 import NotFound from "@/pages/NotFound";
 import { resolveTeamStrict, type SerieATeam } from "@/lib/serieATeams";
 import { teamThemeClass, teamThemeStyle } from "@/lib/teamTheme";

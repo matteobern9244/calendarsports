@@ -9,7 +9,7 @@ import {
   type RomeYMD,
 } from "@/lib/calendarGrid";
 import { FILTERS_KEY, loadFilters } from "@/lib/calendarFilters";
-import { Link } from "react-router";
+import { Link } from "@/lib/router-compat";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";

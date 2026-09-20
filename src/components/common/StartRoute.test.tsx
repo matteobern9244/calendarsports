@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation, useNavigationType } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation, useNavigationType } from "@/lib/router-compat";
 import { DEFAULT_TEAM, resolveTeam, type SerieATeam } from "@/lib/serieATeams";
 import type { Sections } from "@/contexts/useUserPrefs";
 import type { StartPage } from "@/lib/startPage";

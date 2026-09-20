@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter } from "@/lib/router-compat";
 import { resolveTeam, type SerieATeam } from "@/lib/serieATeams";
 import Header from "./Header";
 

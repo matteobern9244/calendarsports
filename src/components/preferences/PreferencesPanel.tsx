@@ -13,7 +13,7 @@ import { usePreferencesPanel } from "@/contexts/usePreferencesPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MENU_SECTIONS, useUserPrefs } from "@/contexts/useUserPrefs";
 import { useAuth } from "@/contexts/useAuth";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "@/lib/router-compat";
 import { Button } from "@/components/ui/button";
 import { useCountdownMode } from "@/hooks/useCountdownMode";
 import TeamSelect from "@/components/preferences/TeamSelect";
