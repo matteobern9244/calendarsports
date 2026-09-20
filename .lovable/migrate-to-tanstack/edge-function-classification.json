@@ -1,0 +1,13 @@
+{"functions": [
+  {"name": "highlights-youtube", "classification": "external callers (installed PWA)", "signal": "fixed /functions/v1 URL called by the published SPA and installed PWA shells until SW update; public-endpoint contract via _shared/security.ts (CORS + rate limit 429) and meta.dataSource", "outcome": "left"},
+  {"name": "ops-export-db", "classification": "external caller (backup system)", "signal": "POST endpoint for the user's external centralized backup system, Bearer OPS_SECRET, fixed URL is load-bearing", "outcome": "left"},
+  {"name": "push-dispatcher", "classification": "cron target", "signal": "cron.schedule + net.http_post to /functions/v1/push-dispatcher in supabase/migrations (20260523084606, 20260831193100)", "outcome": "left"},
+  {"name": "push-subscribe", "classification": "push infrastructure", "signal": "invoked from src/lib/pushClient.ts but shares tables/secrets with cron-driven push-dispatcher; splitting push infra across two runtimes", "outcome": "left"},
+  {"name": "push-vapid-key", "classification": "push infrastructure", "signal": "raw fetch from src/lib/pushClient.ts; serves the VAPID key consumed by the same push stack as push-dispatcher", "outcome": "left"},
+  {"name": "sports-f1", "classification": "external callers (installed PWA)", "signal": "fixed /functions/v1 URL called by published SPA/installed PWA; _shared/security.ts contract; Jolpica cache/backoff state", "outcome": "left"},
+  {"name": "sports-football", "classification": "external callers (installed PWA)", "signal": "fixed /functions/v1 URL called by published SPA/installed PWA; _shared/security.ts contract", "outcome": "left"},
+  {"name": "sports-motogp", "classification": "external callers (installed PWA)", "signal": "fixed /functions/v1 URL called by published SPA/installed PWA; _shared/security.ts contract", "outcome": "left"},
+  {"name": "sports-tennis", "classification": "external callers (installed PWA)", "signal": "fixed /functions/v1 URL called by published SPA/installed PWA; _shared/security.ts contract", "outcome": "left"},
+  {"name": "streaming-releases", "classification": "external callers (installed PWA)", "signal": "fixed /functions/v1 URL called by published SPA/installed PWA; _shared/security.ts contract", "outcome": "left"},
+  {"name": "streaming-tv", "classification": "external callers (installed PWA)", "signal": "fixed /functions/v1 URL called by published SPA/installed PWA; _shared/security.ts contract", "outcome": "left"}
+]}
