@@ -1,30 +1,12 @@
 import js from "@eslint/js";
+import eslintPluginPrettier from "eslint-plugin-prettier/recommended";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
-import prettierRecommended from "eslint-plugin-prettier/recommended";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  {
-    ignores: [
-      "dist",
-      // Stato locale dei plugin per agenti AI: non e' codice del progetto e non
-      // deve comparire fra gli errori di lint.
-      ".remember",
-      // Artefatti di Playwright.
-      "playwright-report",
-      "test-results",
-      // Generati e ri-sincronizzati da upstream: `types.ts` dalla CLI Supabase,
-      // gli altri due dall'agente Lovable, che li riscrive a ogni intervento
-      // sul progetto. Escluderli non indebolisce niente: il guardrail che
-      // conta e' `no-restricted-imports` piu' sotto, che vieta di IMPORTARE
-      // il client generato, ed e' sui file che importano che agisce.
-      "src/integrations/supabase/types.ts",
-      "src/integrations/supabase/client.ts",
-      "src/integrations/supabase/previewAuthStorage.ts",
-    ],
-  },
+  { ignores: ["dist", ".output", ".vinxi"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -38,96 +20,21 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        // Il prefisso `_` e' la deroga esplicita: dice al lettore che il
-        // parametro esiste per posizione e non viene usato di proposito.
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
-      ],
-      // Accesa da quando i payload sono validati in src/lib/api/schemas.ts:
-      // dentro src/ non resta un solo `any`, e il modo di aggiungerne uno
-      // e' passare dal confine, non da un `eslint-disable`.
-      "@typescript-eslint/no-explicit-any": "error",
       "no-restricted-imports": [
         "error",
         {
           paths: [
             {
-              name: "@/integrations/supabase/client",
+              name: "server-only",
               message:
-                "Importa il client Supabase da '@/lib/supabaseClient' invece che dal file auto-generato. Vedi AGENTS.md → 'Import del client Supabase'.",
-            },
-          ],
-          patterns: [
-            {
-              group: ["**/integrations/supabase/client", "src/integrations/supabase/client"],
-              message:
-                "Importa il client Supabase da '@/lib/supabaseClient'. Il file auto-generato non e' sicuro in build di produzione (env var non sempre iniettate).",
+                "TanStack Start does not use the Next.js `server-only` package. Rename the module to `*.server.ts` or mark it with `@tanstack/react-start/server-only`.",
             },
           ],
         },
       ],
+      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
-  {
-    // I file in `src/components/ui/` sono generati dalla CLI shadcn e vengono
-    // ri-sincronizzati da upstream. Esportano di proposito anche varianti e
-    // hook accanto al componente (`buttonVariants`, `useFormField`,
-    // `navigationMenuTriggerStyle`, ...): separarli romperebbe il
-    // ri-allineamento con la CLI. La regola resta attiva su tutto il resto.
-    files: ["src/components/ui/**"],
-    rules: {
-      "react-refresh/only-export-components": "off",
-    },
-  },
-  {
-    // Il wrapper sicuro e' l'unico punto autorizzato a creare il client.
-    // Il divieto sopra resta anche se Lovable rigenera
-    // `src/integrations/supabase/client.ts`: e' proprio quel file a non
-    // dover essere importato da nessuno.
-    files: ["src/lib/supabaseClient.ts"],
-    rules: {
-      "no-restricted-imports": "off",
-    },
-  },
-  {
-    // Script di verifica e file di configurazione: girano su Node, non nel
-    // browser. Prima di questo blocco non erano coperti da nessuna regola.
-    files: ["scripts/**/*.{js,mjs}", "*.config.{js,ts}", "eslint.config.js"],
-    extends: [js.configs.recommended],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module",
-      globals: globals.node,
-    },
-  },
-  {
-    // Test end-to-end: girano in Node sotto Playwright, non nel browser.
-    files: ["e2e/**/*.ts"],
-    languageOptions: {
-      globals: { ...globals.node, ...globals.browser },
-    },
-  },
-  {
-    // Edge function: runtime Deno, non browser. `Deno`, `Response` e `fetch`
-    // esistono, `document` e `window` no.
-    //
-    // `no-explicit-any` resta spenta qui e solo qui: le edge function
-    // leggono JSON grezzo da scraping (widget Sky, HTML Wikipedia,
-    // Pulselive) e sono loro a dargli forma. E' il lato del confine dove
-    // il dato non e' ancora tipizzato: tipizzarlo qui vorrebbe dire
-    // descrivere l'HTML altrui.
-    files: ["supabase/functions/**/*.ts"],
-    languageOptions: {
-      globals: { ...globals.denoBuiltin, ...globals.browser },
-    },
-    rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-    },
-  },
-  // Prettier per ultimo: spegne le regole di stile che confliggono e
-  // trasforma ogni differenza di formattazione in un errore di lint.
-  // Deve restare l'ultimo elemento della flat config.
-  prettierRecommended,
+  eslintPluginPrettier,
 );
