@@ -9,16 +9,22 @@ import { useEffect, useRef, useState } from "react";
  * Limiti noti:
  * - `navigator.onLine` riflette lo stato del network adapter, non la
  *   raggiungibilita reale dei server (es. WiFi connesso ma DNS rotto).
- * - In SSR, default `true`.
+ * - Il primo render parte sempre da `true` (anche nel browser): con il
+ *   rendering lato server il primo render del client deve coincidere con
+ *   l'HTML del server, che non conosce lo stato di rete. Il valore reale
+ *   arriva subito dopo l'idratazione, nell'effetto qui sotto.
  */
 export function useOnlineStatus(): { isOnline: boolean; justReconnected: boolean } {
-  const [isOnline, setIsOnline] = useState<boolean>(() =>
-    typeof navigator !== "undefined" ? navigator.onLine : true,
-  );
+  const [isOnline, setIsOnline] = useState<boolean>(true);
   const [justReconnected, setJustReconnected] = useState<boolean>(false);
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // Allinea lo stato al valore reale del browser dopo l'idratazione.
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setIsOnline(false);
+    }
+
     const handleOnline = () => {
       setIsOnline(true);
       setJustReconnected(true);
