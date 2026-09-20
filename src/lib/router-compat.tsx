@@ -7,7 +7,6 @@ import {
   useNavigate as tsNavigate,
   useLocation as tsLocation,
   useParams as tsParams,
-  useSearch as tsSearch,
   useRouter,
   Link as TSLink,
   Navigate as TSNavigate,
