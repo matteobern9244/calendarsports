@@ -19,6 +19,15 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Non rilasciato]
 
+### Modificato
+
+- Il job `push-dispatcher` gira ora ogni 15 minuti invece che ogni 5
+  (`push-dispatcher-every-15-min`, `*/15 * * * *`): le chiamate serverless e i
+  risvegli del database scendono da 288 a 96 al giorno. La finestra di invio
+  dentro la funzione è stata allargata da 6 a 16 minuti (`WINDOW_MS`), così un
+  giro non può saltare una notifica nemmeno se parte con un minuto di ritardo.
+  Il job di pulizia `push-sent-log-retention` resta una volta a notte.
+
 ### Aggiunto
 
 - Endpoint di export del database per un sistema di backup esterno, esposto
