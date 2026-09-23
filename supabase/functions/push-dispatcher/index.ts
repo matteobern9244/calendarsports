@@ -23,10 +23,10 @@ webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
 // La finestra entro cui un evento e' considerato dovuto. L'intervallo del job
 // cron NON puo' superarla: e' l'ampiezza dell'unico intervallo in cui un giro
-// riesce a vedere un evento, non un margine attorno all'evento. Oggi il job
-// gira ogni 5 minuti; portarlo a 10 senza allargare questa costante perderebbe
-// il 30% delle notifiche, in silenzio.
-const WINDOW_MS = 6 * 60 * 1000;
+// riesce a vedere un evento, non un margine attorno all'evento. Il job gira
+// ogni 15 minuti (dal 23 settembre 2026; prima ogni 5): la finestra e' di 16
+// minuti cosi' un giro in ritardo di un minuto non perde comunque nulla.
+const WINDOW_MS = 16 * 60 * 1000;
 
 // Tetto di sicurezza all'impaginazione. Non e' la condizione di uscita reale
 // — quella e' `hasReachedHorizon` — ma impedisce a una risposta malformata di
