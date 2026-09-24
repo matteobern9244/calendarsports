@@ -88,7 +88,7 @@ function buildRouter(children: ReactNode, initialEntries: string[]) {
   const matches = router
     .matchRoutes(location)
     .map((m) => ({ ...m, status: "success" as const, isFetching: false as const }));
-  router.batch(() => {
+  if (!process.env.NOPRESET) router.batch(() => {
     stores.setMatches(matches);
     stores.resolvedLocation.set(location);
     stores.status.set("idle");
