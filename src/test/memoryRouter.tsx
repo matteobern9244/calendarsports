@@ -58,6 +58,8 @@ function collectRoutes(children: ReactNode): RouteProps[] | null {
   return found;
 }
 
+const lastAction = new WeakMap<object, "PUSH" | "REPLACE">();
+
 function buildRouter(children: ReactNode, initialEntries: string[]) {
   const declared = collectRoutes(children);
   const root = createRootRoute({ component: () => (declared ? <Outlet /> : <>{children}</>) });
@@ -70,11 +72,15 @@ function buildRouter(children: ReactNode, initialEntries: string[]) {
         }),
       )
     : [createRoute({ getParentRoute: () => root, path: "$", component: () => null })];
-  return createRouter({
+  const router = createRouter({
     routeTree: root.addChildren(leaves),
     history: createMemoryHistory({ initialEntries }),
     defaultPendingMinMs: 0,
   });
+  router.history.subscribe(({ action }) => {
+    if (action.type === "PUSH" || action.type === "REPLACE") lastAction.set(router, action.type);
+  });
+  return router;
 }
 
 export function MemoryRouter({
@@ -91,25 +97,6 @@ export function MemoryRouter({
 /** "POP" all'avvio, poi l'azione dell'ultima navigazione: "PUSH" o "REPLACE". */
 export function useNavigationType(): "POP" | "PUSH" | "REPLACE" {
   const router = useRouter();
-  useRouterState({ select: (s) => s.location.state });
-  const [initialKey] = useState(() => router.history.location.state.__TSR_index);
-  const { __TSR_index } = router.history.location.state;
-  if (__TSR_index === initialKey && router.history.length <= 1) {
-    return router.state.location.href === router.latestLocation.href &&
-      lastAction.get(router) === "REPLACE"
-      ? "REPLACE"
-      : "POP";
-  }
-  return lastAction.get(router) ?? "PUSH";
-}
-
-const lastAction = new WeakMap<object, "PUSH" | "REPLACE">();
-const origCreate = createRouter;
-void origCreate;
-
-/** Registra l'azione di ogni navigazione del router di test. */
-export function trackActions(router: ReturnType<typeof createRouter>) {
-  router.history.subscribe(({ action }) => {
-    if (action.type === "PUSH" || action.type === "REPLACE") lastAction.set(router, action.type);
-  });
+  useRouterState({ select: (s) => s.location.href });
+  return lastAction.get(router) ?? "POP";
 }
