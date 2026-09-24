@@ -20,6 +20,16 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 
 ## [Non rilasciato] — 2026-09-24
 
+### Test
+
+- Test unitari ricollegati dopo il passaggio a TanStack Start: ripristinati
+  `vitest.config.ts` e `src/test/setup.ts`; nuovo `src/test/memoryRouter.tsx`
+  (MemoryRouter/Routes/Route/useNavigationType sopra TanStack Router);
+  `sportStyles.test.ts` legge `src/styles.css`. 820/820 verdi.
+- Non ripristinati `eslint-config.test.ts`, `typecheckCoverage.test.ts` e
+  `gate.test.ts`: controllavano configurazioni rimosse (progetti TypeScript
+  separati, vecchia config ESLint, workflow CI sospesi).
+
 ### Rimosso
 
 - Notifiche push: sezione in Preferenze, funzioni `push-dispatcher`,
