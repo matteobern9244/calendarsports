@@ -80,6 +80,18 @@ function buildRouter(children: ReactNode, initialEntries: string[]) {
   router.history.subscribe(({ action }) => {
     if (action.type === "PUSH" || action.type === "REPLACE") lastAction.set(router, action.type);
   });
+  // Senza loader non c'e' niente da attendere: le corrispondenze si
+  // risolvono subito, cosi' il primo render mostra gia' la pagina, come
+  // faceva il MemoryRouter di react-router che i test si aspettano.
+  router.__store.setState((st) => ({
+    ...st,
+    status: "idle",
+    isLoading: false,
+    resolvedLocation: st.location,
+    matches: router
+      .matchRoutes(st.location)
+      .map((m) => ({ ...m, status: "success" as const, isFetching: false })),
+  }));
   return router;
 }
 
