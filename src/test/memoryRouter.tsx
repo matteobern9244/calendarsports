@@ -9,6 +9,7 @@
 import {
   Children,
   isValidElement,
+  useEffect,
   useState,
   type ReactElement,
   type ReactNode,
@@ -105,6 +106,14 @@ export function MemoryRouter({
   initialEntries?: string[];
 }) {
   const [router] = useState(() => buildRouter(children, initialEntries));
+  // Gli effetti dei figli girano prima di quelli di RouterProvider: un
+  // <Navigate> al primo render cambia la cronologia prima che il router la
+  // ascolti. Questo effetto, che gira per ultimo, recupera quel salto.
+  useEffect(() => {
+    if (router.history.location.href !== router.stores.resolvedLocation.get()?.href) {
+      void router.load();
+    }
+  }, [router]);
   return <RouterProvider router={router} />;
 }
 
