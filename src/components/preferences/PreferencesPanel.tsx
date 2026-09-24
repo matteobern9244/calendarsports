@@ -84,7 +84,7 @@ export default function PreferencesPanel() {
 
 
   /*
-    Il pannello e' aperto a tutti: tema, squadra, voci del menu', e countdown
+    Il pannello e' aperto a tutti: tema, squadra, voci del menu' e countdown
     vivono sul dispositivo (`localStorage`) e funzionano anche senza
     account. Chi ha effettuato l'accesso vede in piu' la pagina iniziale e la
     gestione dell'account, che senza sessione non avrebbero dove salvarsi.
