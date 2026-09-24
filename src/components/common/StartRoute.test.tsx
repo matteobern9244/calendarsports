@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation, useNavigationType } from "@/lib/router-compat";
+import { MemoryRouter, Route, Routes, useNavigationType } from "@/test/memoryRouter";
+import { useLocation } from "@/lib/router-compat";
 import { DEFAULT_TEAM, resolveTeam, type SerieATeam } from "@/lib/serieATeams";
 import type { Sections } from "@/contexts/useUserPrefs";
 import type { StartPage } from "@/lib/startPage";
@@ -87,10 +88,10 @@ describe("StartRoute", () => {
     expect(screen.getByText(/^Home · \/ ·/)).toBeInTheDocument();
   });
 
-  it("con un'altra preferenza porta la' , sostituendo la cronologia", () => {
+  it("con un'altra preferenza porta la' , sostituendo la cronologia", async () => {
     prefs.startPage = "calendario";
     monta();
-    expect(screen.getByText(/^Calendario · \/calendario · REPLACE$/)).toBeInTheDocument();
+    expect(await screen.findByText(/^Calendario · \/calendario · REPLACE$/)).toBeInTheDocument();
   });
 
   /**
@@ -99,11 +100,11 @@ describe("StartRoute", () => {
    * piu'. E' la stessa ragione per cui i vecchi indirizzi `/juventus`
    * sostituiscono la loro voce.
    */
-  it("la squadra e' quella preferita, non una fissa", () => {
+  it("la squadra e' quella preferita, non una fissa", async () => {
     prefs.startPage = "squadra";
     prefs.favoriteTeam = resolveTeam("napoli");
     monta();
-    expect(screen.getByText(/^Squadra · \/squadra\/napoli · REPLACE$/)).toBeInTheDocument();
+    expect(await screen.findByText(/^Squadra · \/squadra\/napoli · REPLACE$/)).toBeInTheDocument();
   });
 
   /**
@@ -126,10 +127,10 @@ describe("StartRoute", () => {
    * la pagina non e' irraggiungibile, e legare le due cose vorrebbe dire che
    * riordinare il menu' cambia di nascosto dove l'app si apre.
    */
-  it("una voce nascosta dal menu' non sposta l'atterraggio", () => {
+  it("una voce nascosta dal menu' non sposta l'atterraggio", async () => {
     prefs.startPage = "motogp";
     prefs.sections = { ...prefs.sections, motogp: false };
     monta();
-    expect(screen.getByText(/^MotoGP · \/motogp · REPLACE$/)).toBeInTheDocument();
+    expect(await screen.findByText(/^MotoGP · \/motogp · REPLACE$/)).toBeInTheDocument();
   });
 });

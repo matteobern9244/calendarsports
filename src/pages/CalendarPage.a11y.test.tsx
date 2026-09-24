@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter } from "@/lib/router-compat";
+import { MemoryRouter } from "@/test/memoryRouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { CalendarItem } from "@/hooks/useCalendarEvents";
 import CalendarPage from "./CalendarPage";

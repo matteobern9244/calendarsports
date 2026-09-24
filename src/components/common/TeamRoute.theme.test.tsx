@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { MemoryRouter, Route, Routes } from "@/lib/router-compat";
+import { MemoryRouter, Route, Routes } from "@/test/memoryRouter";
 import TeamRoute from "./TeamRoute";
 
 /**
