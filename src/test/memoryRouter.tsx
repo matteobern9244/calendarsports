@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- modulo di soli test, mai servito dal dev server: il fast refresh qui non esiste. */
 /**
  * Router in memoria per i test, sopra @tanstack/react-router.
  *
