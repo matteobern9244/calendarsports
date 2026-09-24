@@ -74,7 +74,7 @@ export function useSyncAll(team: SerieATeam) {
     const notify = silent ? silentToast : toast;
     if (!silent) {
       setSyncing(true);
-      if (!silent) setSyncProgress(0);
+      setSyncProgress(0);
     }
     const toastId = notify.loading("Avvio sincronizzazione...");
 

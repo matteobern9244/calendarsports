@@ -3,17 +3,28 @@ import Header from "./Header";
 import { APP_NAME, APP_VERSION } from "@/lib/version";
 import OfflineIndicator from "@/components/common/OfflineIndicator";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { PreferencesPanelProvider } from "@/contexts/PreferencesPanelContext";
 import PreferencesPanel from "@/components/preferences/PreferencesPanel";
 import SwipeToPreferences from "./SwipeToPreferences";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import TeamPalette from "@/components/common/TeamPalette";
+import { useSyncAll } from "@/hooks/useSyncAll";
+import { useUserPrefs } from "@/contexts/useUserPrefs";
 
 export default function Layout() {
   const { justReconnected } = useOnlineStatus();
   const location = useLocation();
+  const { favoriteTeam } = useUserPrefs();
+  const { prefetchAll } = useSyncAll(favoriteTeam);
+
+  // Tutti i dati si caricano all'arrivo sul sito, una volta per apertura:
+  // cambiando pagina sono gia' pronti. «Sincronizza» resta per ricaricarli.
+  const prefetchRef = useRef(prefetchAll);
+  useEffect(() => {
+    void prefetchRef.current();
+  }, []);
 
   useEffect(() => {
     if (justReconnected) {
