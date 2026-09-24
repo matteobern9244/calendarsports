@@ -342,7 +342,6 @@ export default function PreferencesPanel() {
               </div>
             </div>
           </section>
-
         </div>
       </SheetContent>
     </Sheet>
