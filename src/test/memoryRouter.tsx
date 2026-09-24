@@ -88,12 +88,15 @@ function buildRouter(children: ReactNode, initialEntries: string[]) {
   const matches = router
     .matchRoutes(location)
     .map((m) => ({ ...m, status: "success" as const, isFetching: false as const }));
-  if (!process.env.NOPRESET) router.batch(() => {
+  router.batch(() => {
     stores.setMatches(matches);
     stores.resolvedLocation.set(location);
     stores.status.set("idle");
     stores.isLoading.set(false);
   });
+  // Poi un caricamento vero, che completa lo stato interno delle
+  // corrispondenze: senza, le navigazioni successive restano appese.
+  void router.load();
   return router;
 }
 
