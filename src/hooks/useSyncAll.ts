@@ -31,6 +31,14 @@ import {
  * UI coerenti tra le pagine.
  */
 
+/** Stessa forma dei metodi di `toast` usati qui, ma muta. */
+const silentToast = {
+  loading: (..._args: Parameters<typeof toast.loading>) => undefined as string | number | undefined,
+  success: (..._args: Parameters<typeof toast.success>) => undefined,
+  warning: (..._args: Parameters<typeof toast.warning>) => undefined,
+  error: (..._args: Parameters<typeof toast.error>) => undefined,
+};
+
 type SportKey = "f1" | "juventus" | "sinner" | "motogp";
 
 type PrefetchTask = {
@@ -57,10 +65,18 @@ export function useSyncAll(team: SerieATeam) {
   const [syncProgress, setSyncProgress] = useState(0);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
 
-  const sync = useCallback(async () => {
-    setSyncing(true);
-    setSyncProgress(0);
-    const toastId = toast.loading("Avvio sincronizzazione...");
+  /**
+   * `silent`: il caricamento automatico all'arrivo sul sito. Stesse richieste
+   * di «Sincronizza», ma senza messaggi a schermo e senza bloccare il
+   * pulsante, che resta utilizzabile in qualunque momento.
+   */
+  const run = useCallback(async (silent: boolean) => {
+    const notify = silent ? silentToast : toast;
+    if (!silent) {
+      setSyncing(true);
+      setSyncProgress(0);
+    }
+    const toastId = notify.loading("Avvio sincronizzazione...");
 
     // Stagioni correnti calcolate al volo
     const seasonF1 = getCurrentF1Season();
@@ -245,8 +261,8 @@ export function useSyncAll(team: SerieATeam) {
 
     try {
       // === Step 1: rimuovi cache stagioni obsolete dei 4 sport ===
-      setSyncStep("Pulizia cache stagioni obsolete...");
-      toast.loading("Pulizia cache stagioni obsolete...", { id: toastId });
+      if (!silent) setSyncStep("Pulizia cache stagioni obsolete...");
+      notify.loading("Pulizia cache stagioni obsolete...", { id: toastId });
       queryClient.removeQueries({
         predicate: (q) => {
           const key = q.queryKey;
@@ -262,15 +278,15 @@ export function useSyncAll(team: SerieATeam) {
           return seasonInKey !== currentSeasonBySport[sport as SportKey];
         },
       });
-      setSyncProgress(8);
+      if (!silent) setSyncProgress(8);
 
       // === Step 2: prefetch sport per la stagione corrente ===
       const sports: SportKey[] = ["f1", "juventus", "sinner", "motogp"];
       let done = 0;
       for (const sp of sports) {
         const sportTasks = tasks.filter((t) => t.sport === sp);
-        setSyncStep(`Aggiorno ${sportLabel[sp]}...`);
-        toast.loading(`Aggiorno ${sportLabel[sp]}...`, { id: toastId });
+        if (!silent) setSyncStep(`Aggiorno ${sportLabel[sp]}...`);
+        notify.loading(`Aggiorno ${sportLabel[sp]}...`, { id: toastId });
         await Promise.all(
           sportTasks.map(async (t) => {
             try {
@@ -287,12 +303,12 @@ export function useSyncAll(team: SerieATeam) {
         );
         done += 1;
         // F1->15%, Juve->30%, Sinner->45%, MotoGP->60%
-        setSyncProgress(8 + Math.round(done * 13));
+        if (!silent) setSyncProgress(8 + Math.round(done * 13));
       }
 
       // === Step 2bis: Highlights YouTube (Juventus, F1, MotoGP) ===
-      setSyncStep("Aggiornamento highlights YouTube...");
-      toast.loading("Aggiornamento highlights YouTube...", { id: toastId });
+      if (!silent) setSyncStep("Aggiornamento highlights YouTube...");
+      notify.loading("Aggiornamento highlights YouTube...", { id: toastId });
       await Promise.all(
         (["juventus", "f1", "motogp"] as const).map(async (sport) => {
           try {
@@ -310,12 +326,12 @@ export function useSyncAll(team: SerieATeam) {
           }
         }),
       );
-      setSyncProgress(70);
+      if (!silent) setSyncProgress(70);
 
       // === Step 3: Juventus calendar — tutte le pagine ===
       const passoCalendario = `Aggiornamento calendario ${teamName} completo...`;
-      setSyncStep(passoCalendario);
-      toast.loading(passoCalendario, { id: toastId });
+      if (!silent) setSyncStep(passoCalendario);
+      notify.loading(passoCalendario, { id: toastId });
       const firstPage = queryClient.getQueryData<{ totalPages?: number }>(
         queryKeys.football.calendar(teamSlug, seasonJ, 1, 12, false),
       );
@@ -355,11 +371,11 @@ export function useSyncAll(team: SerieATeam) {
           }),
         );
       }
-      setSyncProgress(78);
+      if (!silent) setSyncProgress(78);
 
       // === Step 4: palinsesti TV — prefetch reale 5 famiglie ===
-      setSyncStep("Aggiornamento palinsesti TV...");
-      toast.loading("Aggiornamento palinsesti TV...", { id: toastId });
+      if (!silent) setSyncStep("Aggiornamento palinsesti TV...");
+      notify.loading("Aggiornamento palinsesti TV...", { id: toastId });
       await Promise.all(
         STREAMING_FAMILIES.map((f) =>
           queryClient.prefetchQuery({
@@ -369,15 +385,15 @@ export function useSyncAll(team: SerieATeam) {
           }),
         ),
       );
-      setSyncProgress(88);
+      if (!silent) setSyncProgress(88);
 
       // === Step 5: nuove uscite streaming (Catalogo Italia) ===
       // Prefetch della stessa query usata dalla pagina /streaming?tab=releases:
       // `new-italy` con i 4 provider IT (Tutti + singoli) sulla finestra di
       // default 7gg, in modo che "Sincronizza" scaldi davvero la cache che
       // l'utente vedrà al primo render.
-      setSyncStep("Aggiornamento nuove uscite streaming...");
-      toast.loading("Aggiornamento nuove uscite streaming...", { id: toastId });
+      if (!silent) setSyncStep("Aggiornamento nuove uscite streaming...");
+      notify.loading("Aggiornamento nuove uscite streaming...", { id: toastId });
       const today = todayRomeISO();
       const dateTo7 = addDaysISO(today, 7);
       const italyProviderIds: Array<"all" | (typeof STREAMING_PROVIDERS)[number]["id"]> = [
@@ -400,7 +416,7 @@ export function useSyncAll(team: SerieATeam) {
           }),
         ),
       );
-      setSyncProgress(100);
+      if (!silent) setSyncProgress(100);
       setLastSyncAt(new Date());
 
       // Toast finale: success se tutto live, warning se ci sono fallback
@@ -408,18 +424,18 @@ export function useSyncAll(team: SerieATeam) {
         (sp) => fallbackBySport[sp].size > 0,
       );
       if (sportsWithFallback.length === 0) {
-        toast.success("Tutti i dati sono stati aggiornati!", { id: toastId });
+        notify.success("Tutti i dati sono stati aggiornati!", { id: toastId });
       } else {
         const list = sportsWithFallback.map((sp) => sportLabel[sp]).join(", ");
-        toast.warning(
+        notify.warning(
           `Sincronizzazione completata. Dati non live per: ${list}. Riprova più tardi.`,
           { id: toastId, duration: 8000 },
         );
       }
     } catch {
-      toast.error("Errore durante la sincronizzazione", { id: toastId });
+      notify.error("Errore durante la sincronizzazione", { id: toastId });
     } finally {
-      setSyncStep("");
+      if (!silent) setSyncStep("");
       setSyncing(false);
       setTimeout(() => setSyncProgress(0), 600);
     }
@@ -429,5 +445,8 @@ export function useSyncAll(team: SerieATeam) {
     // richieste andrebbero comunque a buon fine.
   }, [queryClient, teamSlug, teamName]);
 
-  return { sync, syncing, syncStep, syncProgress, lastSyncAt };
+  const sync = useCallback(() => run(false), [run]);
+  const prefetchAll = useCallback(() => run(true), [run]);
+
+  return { sync, prefetchAll, syncing, syncStep, syncProgress, lastSyncAt };
 }

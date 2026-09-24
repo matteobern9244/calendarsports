@@ -14,7 +14,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { UserPrefsProvider } from "@/contexts/UserPrefsContext";
-import { isPreviewOrIframe } from "@/lib/pushClient";
+import { isPreviewOrIframe } from "@/lib/previewEnv";
 import { reportLovableError } from "@/lib/lovable-error-reporting";
 import NotFound from "@/pages/NotFound";
 import appCss from "../styles.css?url";
@@ -141,6 +141,13 @@ function initMainPortato() {
     navigator.serviceWorker
       .register(`/sw.js?build=${encodeURIComponent(__BUILD_ID__)}`, { updateViaCache: "none" })
       .then((registrazione) => {
+        // Notifiche push rimosse: chi le aveva attive viene disiscritto.
+        registrazione.pushManager
+          ?.getSubscription()
+          .then((s) => s?.unsubscribe())
+          .catch(() => {
+            /* nessuna iscrizione da togliere */
+          });
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {
             registrazione.update().catch(() => {

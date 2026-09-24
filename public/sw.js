@@ -1,7 +1,7 @@
 /* Service Worker - Calendar Events
  *
- * Fa due cose distinte: le notifiche push e la cache che permette all'app
- * installata di aprirsi senza rete.
+ * Tiene la cache che permette all'app installata di aprirsi senza rete.
+ * Le notifiche push sono state rimosse il 24 settembre 2026.
  *
  * ---------------------------------------------------------------------------
  * Le strategie, e perche' sono quelle
@@ -220,44 +220,4 @@ self.addEventListener("fetch", (event) => {
   if (isCacheableStatic(url)) {
     event.respondWith(cacheFirstForAsset(request));
   }
-});
-
-/* -------------------------------------------------------------------------
- * Notifiche push
- * ---------------------------------------------------------------------- */
-
-self.addEventListener("push", (event) => {
-  let data = { title: "Calendar Events", body: "", url: "/" };
-  try {
-    if (event.data) data = { ...data, ...event.data.json() };
-  } catch (_) {}
-  const opts = {
-    body: data.body,
-    icon: "/favicon.png",
-    badge: "/favicon.png",
-    tag: data.tag,
-    data: { url: data.url || "/" },
-  };
-  event.waitUntil(self.registration.showNotification(data.title, opts));
-});
-
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const url = event.notification.data?.url || "/";
-  event.waitUntil(
-    (async () => {
-      const all = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      for (const c of all) {
-        try {
-          const u = new URL(c.url);
-          if (u.origin === self.location.origin) {
-            await c.focus();
-            if ("navigate" in c) await c.navigate(url);
-            return;
-          }
-        } catch (_) {}
-      }
-      await self.clients.openWindow(url);
-    })(),
-  );
 });

@@ -271,7 +271,7 @@ export default function Header() {
         <div className="flex items-center gap-2 shrink-0">
           {/*
             Le preferenze sono di tutti: tema, squadra, voci del menu' e
-            notifiche si salvano sul dispositivo anche senza account, quindi
+            countdown si salvano sul dispositivo anche senza account, quindi
             il pulsante che apre il pannello compare sempre.
 
             Accanto, solo per chi non ha effettuato l'accesso, resta la porta

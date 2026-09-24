@@ -213,7 +213,7 @@ describe("Header, le voci nascoste", () => {
 describe("Header, il varco alle preferenze", () => {
   /**
    * Le preferenze vivono sul dispositivo anche senza account: tema, squadra,
-   * voci del menu' e notifiche funzionano per tutti, quindi il pulsante che
+   * voci del menu' e countdown funzionano per tutti, quindi il pulsante che
    * apre il pannello compare sempre.
    */
   it("senza accesso il pulsante Preferenze c'e'", () => {
