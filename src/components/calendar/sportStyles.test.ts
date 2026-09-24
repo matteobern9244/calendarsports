@@ -28,7 +28,7 @@ describe("sportLabel", () => {
 /**
  * I colori non passano da TypeScript: `SPORT_DOT` e `SPORT_BADGE` scrivono
  * `hsl(var(--sport-football))` dentro una stringa di classi, e il valore lo
- * definisce `index.css`. Fra i due file non c'e' nessun legame che il
+ * definisce `styles.css`. Fra i due file non c'e' nessun legame che il
  * compilatore possa controllare.
  *
  * Sbagliare quel nome non produce un errore: `hsl(var(--niente))` e' una
@@ -41,10 +41,10 @@ describe("sportLabel", () => {
  */
 describe("token dei colori", () => {
   const ROOT = resolve(import.meta.dirname, "../../..");
-  const css = readFileSync(join(ROOT, "src/index.css"), "utf8");
+  const css = readFileSync(join(ROOT, "src/styles.css"), "utf8");
   const stili = readFileSync(join(ROOT, "src/components/calendar/sportStyles.ts"), "utf8");
 
-  it("ogni token usato dal calendario e' definito in index.css", () => {
+  it("ogni token usato dal calendario e' definito in styles.css", () => {
     const usati = [...new Set([...stili.matchAll(/--sport-[a-z0-9-]+/g)].map((m) => m[0]))];
     expect(usati.length, "nessun token trovato: la ricerca non funziona piu'").toBeGreaterThan(0);
     for (const token of usati) {
@@ -56,10 +56,10 @@ describe("token dei colori", () => {
    * Da quando il calcio segue la squadra, `sportStyles.ts` legge anche
    * `--team-accent` e `--team-accent-text`. Quelle variabili le scrive
    * `TeamPalette` su `<html>` a runtime, ma **devono esistere anche senza**:
-   * il ripiego su `:root` in `index.css` e' cio' che tiene in vita il pallino
+   * il ripiego su `:root` in `styles.css` e' cio' che tiene in vita il pallino
    * prima che React monti, e in una pagina che `TeamPalette` non raggiungesse.
    */
-  it("anche i token della squadra hanno un ripiego in index.css", () => {
+  it("anche i token della squadra hanno un ripiego in styles.css", () => {
     const usati = [...new Set([...stili.matchAll(/--team-[a-z0-9-]+/g)].map((m) => m[0]))];
     expect(usati.length, "il calcio non legge piu' nessun token squadra").toBeGreaterThan(0);
     for (const token of usati) {

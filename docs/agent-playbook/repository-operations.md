@@ -28,7 +28,7 @@ Ruleset gate di tipo `pull_request` o `required_status_checks`: renderebbero
 impossibile la sincronizzazione diretta di Lovable, che è il motivo per cui il
 Ruleset è minimale.
 
-Il guardiano è [`.github/workflows/guard-main-source.yml`](../../.github/workflows/guard-main-source.yml),
+Il guardiano è `.github/workflows/guard-main-source.yml` (oggi sospeso: la cartella dei workflow è stata rimossa),
 che fa fallire ogni PR verso `main` che non parta da `develop`.
 
 ### Bun è il package manager, e ce n'è uno solo
