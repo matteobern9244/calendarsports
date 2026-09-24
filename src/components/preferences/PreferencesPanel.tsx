@@ -82,7 +82,6 @@ export default function PreferencesPanel() {
     });
   };
 
-
   /*
     Il pannello e' aperto a tutti: tema, squadra, voci del menu' e countdown
     vivono sul dispositivo (`localStorage`) e funzionano anche senza

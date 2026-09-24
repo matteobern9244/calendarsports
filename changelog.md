@@ -17,6 +17,22 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+
+## [Non rilasciato] — 2026-09-24
+
+### Rimosso
+
+- Notifiche push: sezione in Preferenze, funzioni `push-dispatcher`,
+  `push-subscribe`, `push-vapid-key` (anche dal backend), gestori push nel
+  service worker. Le iscrizioni esistenti vengono disiscritte al primo accesso;
+  righe di `push_subscriptions` e `push_sent_log` cancellate, tabelle marcate
+  DEPRECATED. Nessuna attività pianificata resta attiva (0 cron).
+
+### Modificato
+
+- All'arrivo sul sito vengono caricati in silenzio i dati di tutte le sezioni
+  (stesse richieste di «Sincronizza», che resta disponibile).
+
 ## [Non rilasciato]
 
 ### Modificato
