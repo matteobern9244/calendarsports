@@ -141,6 +141,13 @@ function initMainPortato() {
     navigator.serviceWorker
       .register(`/sw.js?build=${encodeURIComponent(__BUILD_ID__)}`, { updateViaCache: "none" })
       .then((registrazione) => {
+        // Notifiche push rimosse: chi le aveva attive viene disiscritto.
+        registrazione.pushManager
+          ?.getSubscription()
+          .then((s) => s?.unsubscribe())
+          .catch(() => {
+            /* nessuna iscrizione da togliere */
+          });
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {
             registrazione.update().catch(() => {
