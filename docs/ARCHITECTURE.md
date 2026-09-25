@@ -18,38 +18,43 @@ file divergono, vince il codice: aggiornare qui.
 │  React Query  ──▶  sportsApi  ──▶  fetch con retry 502/503/504 │
 │  React Query  ──▶  supabase.from("profiles")  (solo preferenze) │
 │  countdownClock (un timer per tutta l'app)                     │
-│  service worker: notifiche push + cache offline di documento,  │
-│                  asset con hash e font ospitati               │
+│  service worker: cache offline di documento, asset con hash    │
+│                  e font ospitati                              │
 └────────────────────────────┬──────────────────────────────────┘
                              │  HTTPS, anon key
 ┌────────────────────────────▼──────────────────────────────────┐
 │  Supabase Edge Functions (Deno)                               │
 │  sports-f1 · sports-football · sports-motogp · sports-tennis  │
 │  streaming-tv · streaming-releases · highlights-youtube        │
-│  push-subscribe · push-vapid-key · push-dispatcher             │
+│  ops-export-db (backup esterno, segreto in header)             │
 │  _shared/security.ts: CORS + rate limit                        │
 │  _shared/serieATeams.ts: le venti squadre, copia di src/lib/    │
 └──────┬─────────────────────────────────────┬──────────────────┘
        │                                      │
 ┌──────▼──────────────────┐        ┌──────────▼─────────────────┐
 │ Postgres                │        │ Terze parti                │
-│ push_subscriptions      │        │ Jolpica · OpenF1 · Sky     │
-│ push_sent_log           │        │ Lega Serie A · Pulselive   │
-│ profiles  (RLS: la tua) │        │ Wikipedia · TMDB · YouTube │
-│ Supabase Auth           │        │ Google · Apple (accesso)   │
-│ pg_cron ogni 5 min      │        │                            │
+│ profiles  (RLS: la tua) │        │ Jolpica · OpenF1 · Sky     │
+│ Supabase Auth           │        │ Lega Serie A · Pulselive   │
+│ nessun job pg_cron      │        │ Wikipedia · TMDB · YouTube │
+│ (push_*: dismesse)      │        │ Google · Apple (accesso)   │
 └─────────────────────────┘        └────────────────────────────┘
 ```
 
 Il punto da tenere a mente: **il database non contiene eventi sportivi**. Ospita
-le iscrizioni alle notifiche push, il registro degli invii e — dalla 2.10.0 — le
-preferenze degli utenti registrati. Tutto il resto è effimero, recuperato a ogni
+le preferenze degli utenti registrati (dalla 2.10.0) e nient'altro di vivo: le
+tabelle delle notifiche push sono state svuotate il 24 settembre 2026, quando le
+push sono state rimosse, e restano solo come relitti marcati `DEPRECATED`. Tutto il resto è effimero, recuperato a ogni
 richiesta e tenuto in cache per pochi minuti nella memoria dell'isolate che
 serve la funzione.
 
 Una sola tabella si raggiunge dal browser: `profiles`, protetta da RLS sulla
-riga di chi è collegato. Alle altre due arrivano soltanto le edge function con
-la service role key.
+riga di chi è collegato. Le due tabelle push dismesse non le legge né le scrive
+più nessuno.
+
+**Nessun lavoro gira quando nessuno usa l'app.** Non ci sono job pianificati:
+all'arrivo sul sito `Layout` lancia in silenzio `prefetchAll` di `useSyncAll`,
+cioè le stesse richieste del pulsante «Sincronizza», e da lì in poi ogni pagina
+trova i dati già in cache. «Sincronizza» resta per ricaricarli a mano.
 
 ## Organizzazione di `src/`
 
@@ -66,8 +71,7 @@ src/
 ├── hooks/          useSportsData, useStreamingData, useSyncAll, useNow, ...
 ├── lib/            logica pura: dateUtils, currentSeason, countdownClock,
 │                   serieATeams (le venti squadre), queryKeys,
-│                   queryPlaceholder, api/sportsApi, supabaseClient,
-│                   pushClient
+│                   queryPlaceholder, api/sportsApi, supabaseClient
 ├── contexts/       sessione (AuthContext), preferenze utente
 │                   (UserPrefsContext), pannello preferenze
 └── integrations/   types.ts generato da Supabase
@@ -178,11 +182,14 @@ aggiornano la cache **in anticipo sul server** (`onMutate`), perché
 
 ## Schema database
 
-Tre tabelle, con **due regimi diversi**.
+Una tabella viva, `profiles`, più due relitti delle notifiche push.
 
-`push_subscriptions` e `push_sent_log` hanno RLS attiva e nessuna policy
-permissiva: i ruoli `anon` e `authenticated` non le vedono affatto, ci arrivano
-solo le edge function con la service role key.
+`push_subscriptions` e `push_sent_log` sono **dismesse dal 24 settembre 2026**:
+righe cancellate, commento `DEPRECATED` sulla tabella
+(`drizzle/migrations/0000_remove_push_notifications.sql`), nessun codice che le
+usi. Restano con RLS attiva e nessuna policy permissiva, quindi `anon` e
+`authenticated` non le vedono. Lo schema qui sotto le descrive per chi le
+ritrova nel database, non perché servano.
 
 `profiles` invece è fatta per essere letta e scritta dal browser, ma **solo la
 propria riga**: quattro policy, una per operazione, tutte per il solo ruolo
@@ -232,23 +239,16 @@ promozione, rendendo non aggiornabile la preferenza di chi tifa una squadra
 retrocessa. La validazione vive in `src/lib/serieATeams.ts`, e in lettura passa
 da `resolveTeam`, che è totale — qualunque valore inatteso ricade sul default.
 
-Le notifiche push **non** conoscono l'utente: una subscription è identificata
-solo dal suo endpoint push, e `push_subscriptions` non ha una colonna utente.
-Chi cambia squadra continua quindi a ricevere le notifiche della Juventus.
-
-`push_sent_log.event_id` è costruito dal dispatcher (`f1-{round}-{sessione}`,
-`motogp-{round}-{tipo}`, `juve-{matchId}`) e non ha integrità referenziale verso
-nulla: se una fonte a monte cambia il modo di identificare un evento, il
-meccanismo anti-duplicato smette di riconoscerlo.
-
 ## Cron
 
-Un solo job: `push-dispatcher-every-5-min`, `*/5 * * * *`, che chiama la funzione
-`push-dispatcher` via `net.http_post` con un segreto condiviso nell'header.
+**Nessuno.** Il 24 settembre 2026 sono stati tolti tutti i job `pg_cron`
+(prima `push-dispatcher`, passato da ogni 5 a ogni 15 minuti il 23, e la pulizia
+notturna `push-sent-log-retention`) insieme alle notifiche push e alle funzioni
+`push-dispatcher`, `push-subscribe` e `push-vapid-key`, anche dal backend. Lo
+scopo era azzerare il consumo di Lovable Cloud a riposo: il dispatcher faceva
+centinaia di giri al giorno per mandare una manciata di notifiche.
 
-La finestra di selezione degli eventi è di sei minuti mentre il cron scatta ogni
-cinque: le esecuzioni si sovrappongono di proposito, per non perdere eventi al
-confine.
+I dati si caricano quando qualcuno apre l'app (vedi sopra), mai in background.
 
 ## Build e strumenti
 
@@ -263,7 +263,8 @@ React Compiler, Vitest 4 su jsdom, Playwright su Chromium.
 `public/manifest.webmanifest` dichiara l'app installabile, in italiano, verticale,
 con tema `#0B1A33`.
 
-`public/sw.js` fa due cose: le notifiche push e la cache offline. Il documento
+`public/sw.js` fa una cosa sola: la cache offline (i gestori delle notifiche push
+sono stati rimossi il 24 settembre 2026). Il documento
 è network-first (la copia in cache serve solo senza rete), gli asset con hash
 nel nome sono cache-first. I dati sportivi non entrano mai in cache.
 
@@ -274,8 +275,10 @@ nuovo è uno script che il browser deve scaricare, senza aspettare la scadenza
 della cache HTTP. Lo script nuovo fa `skipWaiting` e `clients.claim`, e quando
 prende il controllo la pagina si ricarica, una volta sola e solo se c'era già
 un controllore. Al ritorno in primo piano la registrazione chiede
-un aggiornamento, per la PWA lasciata aperta per giorni. Lo scope resta `/`:
-la registrazione, e con lei l'iscrizione push, è sempre la stessa.
+un aggiornamento, per la PWA lasciata aperta per giorni. Lo scope resta `/`,
+quindi la registrazione è sempre la stessa. Al primo accesso dopo la rimozione
+delle push, `src/routes/__root.tsx` disiscrive l'eventuale iscrizione push
+rimasta nel browser.
 
 La registrazione si disattiva dentro l'iframe di Lovable e sugli host di
 preview, dove anzi rimuove le registrazioni esistenti.

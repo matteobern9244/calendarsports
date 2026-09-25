@@ -284,21 +284,18 @@ Azioni: `new-today`, `new-italy`, `details`, `credits`.
   titolo «Highlights».
 - **Cache**: nessuna in memoria; la risposta porta `Cache-Control: max-age=600`.
 
-### Funzioni push
+### Quando si interrogano le fonti
 
-`push-subscribe` (registra una subscription, service role, 30 richieste al
-minuto), `push-vapid-key` (restituisce la chiave pubblica; **unica funzione senza
-rate limit**), `push-dispatcher` (non pubblica: protetta da segreto condiviso,
-invocata da pg_cron ogni cinque minuti, legge i calendari chiamando le altre
-funzioni di questo stesso progetto).
+Solo quando qualcuno usa l'app. Dal 24 settembre 2026 non esiste più nessun
+lavoro in background: le funzioni push (`push-subscribe`, `push-vapid-key`,
+`push-dispatcher`) e il loro job `pg_cron`, che interrogava i calendari ogni
+cinque minuti anche a sito chiuso, sono stati rimossi per azzerare il consumo di
+Lovable Cloud a riposo.
 
-Ogni iscrizione porta la **squadra seguita** (`team`, slug dalla whitelist) e
-tre interruttori (`notify_football`, `notify_f1`, `notify_motogp`), tutti
-accesi di default. Il dispatcher legge prima gli iscritti e poi scarica un
-calendario `sports-football?team=…` per ogni squadra seguita da almeno uno di
-loro con il calcio acceso; F1 e MotoGP si scaricano solo se qualcuno li vuole.
-Fino alla 3.3.0 leggeva soltanto la Juventus, qualunque squadra fosse stata
-scelta nelle preferenze.
+All'arrivo sul sito `Layout` chiama in silenzio `prefetchAll` di
+`src/hooks/useSyncAll.ts`, cioè le stesse richieste del pulsante «Sincronizza»:
+tutte le sezioni si scaricano una volta per apertura, e le pagine le trovano già
+in cache. Le cache delle singole funzioni, descritte sopra, restano quelle.
 
 ## Quello che invecchia
 

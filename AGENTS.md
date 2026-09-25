@@ -112,8 +112,6 @@ Documentazione tecnica di approfondimento: [`README.md`](README.md),
   aggiunge una correttiva.
 - `supabase/functions/_shared/security.ts` — CORS e rate limit di tutte le
   funzioni pubbliche.
-- `supabase/functions/push-dispatcher/*` — gira con la service role key ed è
-  protetto da un segreto condiviso.
 - `.github/workflows/guard-main-source.yml` e `enable-pr-automerge.yml` —
   proteggono la policy su `main`.
 - L'allowlist di `scripts/check-italian-ui.mjs` — allargarla va motivato nel

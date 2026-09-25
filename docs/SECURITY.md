@@ -29,7 +29,10 @@ sessione dell'utente, l'esposizione delle edge function e i segreti.
 
 ## Accesso al database
 
-Le tabelle sono tre, e **non hanno tutte lo stesso regime**.
+Le tabelle sono tre, e **non hanno tutte lo stesso regime**. Due, quelle delle
+notifiche push, sono dismesse dal 24 settembre 2026: svuotate, marcate
+`DEPRECATED` e non più usate da nessun codice, ma ancora presenti con le difese
+descritte qui sotto.
 
 `push_subscriptions` e `push_sent_log` hanno RLS attiva e **nessuna policy
 permissiva**. La prima migration ne aveva create due
@@ -85,6 +88,11 @@ Entrambe le migration usano `ADD COLUMN IF NOT EXISTS` e sono quindi
 rieseguibili su un database vuoto, come richiede il contratto.
 
 ### Retention di `push_sent_log`
+
+> **Superato il 24 settembre 2026.** Con la rimozione delle notifiche push la
+> tabella è stata svuotata e il job `push-sent-log-retention` tolto insieme a
+> tutti gli altri: oggi non gira nessun job `pg_cron`. La sezione resta come
+> storia della scelta.
 
 `supabase/migrations/20260905184700_push_sent_log_retention.sql` aggiunge un job
 `pg_cron` giornaliero che cancella le righe più vecchie di trenta giorni, più
@@ -148,7 +156,8 @@ Due ragioni, entrambe verificate:
    `REVOKE` fatto da chi non è owner né ha `GRANT OPTION` emette un warning e
    prosegue: nessun errore, nessun effetto. È il modo peggiore in cui una
    migration può sbagliare — applicata, sembra riuscita.
-2. **La revoca corretta fermerebbe le notifiche.** L'ACL reale è
+2. **La revoca corretta avrebbe fermato le notifiche** (fino al 24 settembre
+   2026; oggi non ci sono più job cron né notifiche). L'ACL reale è
    `=X/supabase_admin`: il grantee vuoto significa `PUBLIC`, e `anon` non ha
    nessun grant diretto — eredita da lì. Ma nella stessa ACL non compare
    `postgres`, che è il ruolo con cui gira il job cron del dispatcher.
@@ -203,29 +212,35 @@ collegato non supera le policy.
 `supabase/functions/_shared/security.ts` fornisce CORS e rate limit a ogni
 funzione pubblica.
 
-**Rate limit**: 60 richieste al minuto per IP, per funzione (`push-subscribe`
-scende a 30). È in memoria e per isolate: si azzera a ogni cold start e non è
+**Rate limit**: 60 richieste al minuto per IP, per funzione. È in memoria e per isolate: si azzera a ogni cold start e non è
 condiviso fra istanze concorrenti. L'IP arriva dall'header `x-forwarded-for`, che
 il client può scrivere. **È un ammortizzatore, non un controllo di sicurezza**:
 niente di importante deve dipenderne.
 
 ### Punti aperti dichiarati
 
-| Cosa                                                                                                  | Perché è aperto                                                                                                      |
-| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| L'allowlist CORS accetta qualunque sottodominio `.lovable.app`, `.lovableproject.com`, `.lovable.dev` | copre anche progetti Lovable di altri utenti. Restringerla ai domini propri richiede di conoscerli tutti             |
-| Gli `origin` di localhost sono ammessi anche in produzione                                            | comodo in sviluppo, inutile e non necessario in produzione                                                           |
-| `push-vapid-key` non ha rate limit                                                                    | restituisce solo una chiave pubblica, ma è un'incoerenza rispetto a tutte le altre                                   |
-| `push-subscribe` non verifica il possesso dell'endpoint                                               | chi conosce l'endpoint push di un altro browser può disattivargli le notifiche, cambiargli gli anticipi o la squadra |
-| `verify_jwt` non è dichiarato in `supabase/config.toml`                                               | la configurazione reale vive nella dashboard: la posture non è riproducibile dal repository                          |
+| Cosa                                                                                                  | Perché è aperto                                                                                          |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| L'allowlist CORS accetta qualunque sottodominio `.lovable.app`, `.lovableproject.com`, `.lovable.dev` | copre anche progetti Lovable di altri utenti. Restringerla ai domini propri richiede di conoscerli tutti |
+| Gli `origin` di localhost sono ammessi anche in produzione                                            | comodo in sviluppo, inutile e non necessario in produzione                                               |
+| `verify_jwt` non è dichiarato in `supabase/config.toml`                                               | la configurazione reale vive nella dashboard: la posture non è riproducibile dal repository              |
 
-Nessuno di questi tocca i profili: riguardano tutti le notifiche push e il
-CORS, cioè la metà dell'app che non ha utenti. Il danno possibile resta spam di
-notifiche e consumo di quota. Le preferenze sono protette da RLS sul database,
+Nessuno di questi tocca i profili: riguardano il CORS e la configurazione delle
+funzioni, cioè la metà dell'app che non ha utenti. Il danno possibile resta
+consumo di quota. Le due voci sulle funzioni push (`push-vapid-key` senza rate
+limit, `push-subscribe` senza verifica del possesso dell'endpoint) sono uscite
+dalla tabella il 24 settembre 2026, insieme alle funzioni. Le preferenze sono protette da RLS sul database,
 non dalla configurazione delle funzioni, e nessuna di queste incoerenze le
 raggiunge.
 
 ## Il segreto del dispatcher
+
+> **Il dispatcher non esiste più.** Il 24 settembre 2026 `push-dispatcher` è
+> stato rimosso dal repository e dal backend insieme al suo job `pg_cron`, per
+> azzerare il consumo di Lovable Cloud a riposo. `DISPATCH_SECRET` e la voce
+> `dispatch_secret` del Vault non servono più a niente: se sono ancora presenti
+> si possono cancellare. Quanto segue è la storia del segreto, tenuta perché il
+> valore compromesso resta nella storia di Git.
 
 `push-dispatcher` non è pubblica: richiede l'header `x-dispatch-secret`
 confrontato con la variabile d'ambiente `DISPATCH_SECRET`. È la sua **unica**
@@ -312,7 +327,7 @@ rispondere 401.
 | ----------------------- | ------------------------------------------------------------------------------------------------------- |
 | `.env` (tracciato)      | solo valori pubblici: URL del progetto, anon key, project id                                            |
 | `.env.local` (ignorato) | sovrascritture personali                                                                                |
-| Secrets Supabase        | `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `TMDB_API_KEY`, `DISPATCH_SECRET` |
+| Secrets Supabase        | `SUPABASE_SERVICE_ROLE_KEY`, `TMDB_API_KEY`; `VAPID_*` e `DISPATCH_SECRET` non più usati dal 2026-09-24 |
 
 `.env` è tracciato di proposito: serve a Lovable per il build. L'anon key è
 progettata per viaggiare nel bundle del browser e le tabelle sono in diniego
@@ -325,9 +340,6 @@ ruotata, una build senza le variabili d'ambiente continuerebbe a usare quella
 vecchia **senza fallire**. Un errore di configurazione diventa silenzioso invece
 che rumoroso.
 
-`push-dispatcher/env.ts` fa la cosa giusta: solleva all'avvio se un segreto
-manca, invece di proseguire con `undefined`.
-
 ## Validazione degli input
 
 È la parte più solida del backend. Ogni funzione valida i parametri con
@@ -336,9 +348,6 @@ espressioni regolari strette prima di interpolarli in una URL a monte —
 sono confrontati con un elenco chiuso, `page` e `pageSize` sono limitati. I
 commenti nel codice dichiarano che la ragione è impedire la path injection verso
 i provider.
-
-`push-subscribe` limita la lunghezza dell'endpoint a 2000 caratteri, tronca lo
-user agent a 500 e accetta come anticipo solo i tre valori previsti.
 
 `sports-football` accetta anche `team`, confrontato con l'elenco chiuso di
 `_shared/serieATeams.ts`: fuori elenco risponde `400`, non un calendario vuoto.
@@ -355,7 +364,7 @@ nessuna chiave API viene mai riflessa in una risposta.
 
 ## File da non modificare a mano
 
-`supabase/functions/_shared/security.ts`, `supabase/functions/push-dispatcher/*`,
+`supabase/functions/_shared/security.ts`,
 `src/lib/supabaseClient.ts` (unico punto autorizzato a creare il client),
 `src/integrations/supabase/types.ts` (generato), e le migration già applicate.
 

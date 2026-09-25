@@ -24,9 +24,10 @@ errori e non ha cambiato niente**. Le funzioni appartengono a `supabase_admin`,
 le migration girano come `postgres`, e in PostgreSQL un `REVOKE` da chi non è
 owner emette un warning e prosegue.
 
-E la revoca corretta — da `PUBLIC`, perché è da lì che `anon` eredita —
-**fermerebbe le notifiche**: nella stessa ACL non compare `postgres`, che è il
-ruolo del job cron.
+La revoca corretta — da `PUBLIC`, perché è da lì che `anon` eredita — fino al
+24 settembre 2026 avrebbe fermato le notifiche, perché nella stessa ACL non
+compare `postgres`, il ruolo del job cron. Oggi non c'è più nessun job cron, e
+quell'ostacolo è caduto; resta il costo qui sotto.
 
 Il rischio reale è misurato: con la anon key, `POST /rest/v1/rpc/http_post`
 risponde 404 e forzando lo schema PostgREST risponde «Only the following
@@ -43,86 +44,16 @@ stata svuotata e lasciata come nota.
 
 **Costo**: richiede `supabase_admin`, che i progetti non hanno.
 
-### Il dispatcher: il codice c'è, il deploy no
+### Le voci sulle notifiche push sono chiuse
 
-**Scritto, testato e su `main` — non distribuito.** Commit `5e1d794`. Finché
-non viene ridistribuito, in produzione gira la versione vecchia: questa voce
-resta aperta per il deploy, non per il codice.
-
-Il problema misurato: fra il 31 agosto e il 5 settembre 2026 il dispatcher ha
-fatto **1404 giri per mandare 10 notifiche**, lo 0,7%, ricaricando l'intera
-stagione della Juventus a ogni giro — **sei chiamate a monte**, quattro a
-`sports-football` più una a `sports-f1` e una a `sports-motogp`.
-
-La correzione fa due cose che funzionano solo insieme: `upcoming=1`, che
-`sports-football` offriva già e nessuno usava, fa scartare a monte le partite
-già giocate; l'uscita anticipata (`calendarWindow.ts`, otto test) smette di
-chiedere pagine appena la data letta supera `now + 1440 min`. Da sola la
-seconda sarebbe inutile per metà stagione — il calendario è ordinato per data
-crescente, quindi a maggio ci sarebbero trenta partite passate davanti.
-
-**La misura che dirà se il deploy è arrivato**, da fare dopo:
-
-| Segnale                                          | Prima | Atteso dopo |
-| ------------------------------------------------ | ----- | ----------- |
-| `eventsConsidered` nella risposta del dispatcher | 339   | ~304        |
-| invocazioni orarie di `sports-football`          | ~43   | ~12         |
-
-Il primo si legge in `net._http_response`, il secondo nella pagina Edge
-functions del progetto.
-
-**Come si distribuisce, e come no.** Verificato il 6 settembre 2026: allineare
-`main` e pubblicare da Lovable **non ridistribuisce le edge function** — dopo
-la pubblicazione la pagina della funzione segnava ancora «Last updated 16
-giorni fa» e `eventsConsidered` era invariato su due giri. La pagina Edge
-functions è di sola lettura: offre _Copy URL_, _View logs_, _View code_, e
-nessun pulsante di deploy. Serve la CLI Supabase — che su questa macchina non
-è installata, come non lo è Docker:
-
-```
-supabase functions deploy push-dispatcher --project-ref jxijruuclgskxlbqittk
-```
-
-**Costo**: basso, ormai è solo il deploy. **Perché non è urgente**: nessuno se
-ne accorge, e da quando il timeout è a 120 secondi non fa fallire niente.
-
-### Non far girare il cron meno spesso senza toccare il codice
-
-Sta qui perché è la trappola in cui questi documenti erano già caduti, e
-qualcuno la riproporrà.
-
-La condizione di invio in `push-dispatcher/index.ts` prende un evento solo se
-il giro cade dentro `[t − preavviso, t − preavviso + WINDOW_MS]`. La finestra
-non è un margine attorno all'evento: è l'ampiezza dell'unico intervallo in cui
-un giro riesce a vederlo. Quindi **è l'intervallo del cron a non poter
-superare la finestra**, non il contrario, e i preavvisi non c'entrano —
-spostano la finestra, non la allargano.
-
-Simulato il 5 settembre 2026 su una giornata intera, minuto per minuto, per
-tutti e tre i preavvisi: `*/5` e `*/6` non perdono niente, **`*/10` perde 432
-notifiche su 1440, il 30%**, senza un errore da nessuna parte. Passare a dieci
-minuti richiede di portare `WINDOW_MS` ad almeno dieci minuti nel codice.
-`*/6` funzionerebbe senza toccare niente e risparmierebbe un giro su sei, ma
-consuma tutto il margine fra intervallo e finestra: scartato.
-
-### Le notifiche push restano della Juventus
-
-La squadra di calcio sta diventando una preferenza dell'utente, ma
-`push_subscriptions` **non ha una colonna utente né una colonna squadra**: una
-iscrizione è identificata solo dal suo endpoint push, e `push-dispatcher`
-interroga il calendario con la squadra predefinita. Chi sceglie il Napoli
-continuerà quindi a ricevere le notifiche della Juventus, senza che niente glielo
-dica.
-
-**Costo**: medio, e non è codice di frontend. Serve una migration che aggiunga la
-squadra all'iscrizione, un modo per collegarla alla preferenza del profilo
-quando l'utente è collegato (e per lasciarla scegliere quando non lo è), e una
-modifica a `push-dispatcher`, che gira con la service role key ed è fra i file
-delicati. Cambia anche il tag di dedup: oggi è `juve-{matchId}`.
-
-**Perché non ora**: il dispatcher non si tocca finché la propagazione della
-squadra nell'app non è finita e stabile. Un difetto qui non si vede in pagina, si
-vede come notifica mancata o sbagliata a casa di qualcuno.
+Il 24 settembre 2026 le notifiche push sono state rimosse per intero — funzioni
+`push-dispatcher`, `push-subscribe` e `push-vapid-key`, sezione in Preferenze,
+gestori nel service worker e tutti i job `pg_cron` — per azzerare il consumo di
+Lovable Cloud a riposo. Con loro sono uscite da qui tre voci che non hanno più
+un oggetto: il deploy mancato del dispatcher alleggerito (`5e1d794`), la
+trappola dell'intervallo del cron più largo della finestra di invio, e le
+notifiche che restavano della Juventus per chi seguiva un'altra squadra. Se le
+push tornassero, quelle tre lezioni sono nella storia di questo file.
 
 ## Priorità bassa
 
@@ -177,5 +108,5 @@ visitava) e la selezione del programma di prima serata di
 | Gestione offline nelle pagine         | c'è in tutte, `StreamingPage` compresa da agosto 2026                                       |
 | Un orologio per i conti alla rovescia | `src/lib/countdownClock.ts`: un timer per tutta l'app, adattivo, che si ferma in background |
 | Validazione dei parametri edge        | ogni funzione valida con regex strette prima di interpolare nelle URL a monte               |
-| RLS sulle tabelle push                | attiva, con diniego totale per i ruoli client e una policy restrittiva sopra                |
+| RLS sulle tabelle push (dismesse)     | attiva, con diniego totale per i ruoli client e una policy restrittiva sopra                |
 | Test sul fuso orario                  | `src/lib/timezoneConsistency.test.ts`, che copre formattazione **e** confronti              |

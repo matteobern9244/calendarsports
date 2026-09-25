@@ -165,6 +165,10 @@ porta d'ingresso verso `/accedi`.
 Funzionalita' trasversali:
 
 - tema light/dark;
+- **tutti i dati si caricano all'arrivo sul sito**: `Layout` lancia in
+  silenzio le stesse richieste di «Sincronizza» (`prefetchAll` in
+  `src/hooks/useSyncAll.ts`), una volta per apertura, così ogni pagina li trova
+  già in cache; il pulsante «Sincronizza» resta per ricaricarli a mano;
 - sincronizzazione client-side tramite invalidazione delle query;
 - selezione stagione per ogni sezione;
 - UI costruita con componenti shadcn/ui e Radix;
@@ -292,6 +296,15 @@ Queste funzioni si occupano di:
 - fare scraping di provider esterni;
 - applicare mapping statici e fallback;
 - uniformare il payload verso il frontend.
+
+**Nessun lavoro in background.** Dal 24 settembre 2026 non gira nessun job
+`pg_cron` e non esistono più le notifiche push: le funzioni `push-dispatcher`,
+`push-subscribe` e `push-vapid-key`, la sezione notifiche in Preferenze e i
+gestori push del service worker sono stati rimossi, e le tabelle
+`push_subscriptions` e `push_sent_log` svuotate e marcate `DEPRECATED`. Lo scopo
+era azzerare il consumo di Lovable Cloud quando nessuno usa l'app: le funzioni
+girano solo quando un browser le chiama. Il service worker resta, per la sola
+cache offline. Dettaglio in [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ## Fonti dati e affidabilita'
 
