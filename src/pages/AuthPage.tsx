@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SectionHeader from "@/components/common/SectionHeader";
 import { supabase } from "@/lib/supabaseClient";
-import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/contexts/useAuth";
 
 type Mode = "accedi" | "registrati";
@@ -54,29 +53,20 @@ export default function AuthPage() {
     }
   };
 
-  const handleOAuth = async (provider: "google" | "apple") => {
+  // Il login con Google passa direttamente da Supabase, non dal broker OAuth di
+  // Lovable: quel broker rilascia sessioni del progetto Lovable Cloud, che il
+  // progetto personale rifiuta. Il browser lascia la pagina e torna sull'app,
+  // dove il client legge la sessione dall'URL e AuthContext la riceve.
+  const handleGoogle = async () => {
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
     });
-    if (result.error) {
+    if (error) {
       setBusy(false);
       toast.error("Accesso non riuscito", { description: "Riprova più tardi." });
-      return;
     }
-    if (result.redirected) return;
-    // Il flusso OAuth salva la sessione sul client generato, che e' un'istanza
-    // diversa da quella osservata da AuthContext: senza questa chiamata la
-    // navigazione alla home lascerebbe l'utente ancora non autenticato.
-    if ("tokens" in result && result.tokens) {
-      const { error: sessionError } = await supabase.auth.setSession(result.tokens);
-      if (sessionError) {
-        setBusy(false);
-        toast.error("Accesso non riuscito", { description: "Riprova più tardi." });
-        return;
-      }
-    }
-    navigate("/", { replace: true });
   };
 
   const handleReset = async () => {
@@ -111,18 +101,9 @@ export default function AuthPage() {
           variant="outline"
           className="w-full h-11 font-heading uppercase tracking-wider"
           disabled={busy}
-          onClick={() => handleOAuth("google")}
+          onClick={handleGoogle}
         >
           Continua con Google
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full h-11 font-heading uppercase tracking-wider"
-          disabled={busy}
-          onClick={() => handleOAuth("apple")}
-        >
-          Continua con Apple
         </Button>
       </div>
 

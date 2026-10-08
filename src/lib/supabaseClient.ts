@@ -1,29 +1,23 @@
-// Safe Supabase client wrapper.
+// Client Supabase dell'app: l'unico punto da cui si importa.
 //
-// In production builds the Vite env vars (`VITE_SUPABASE_URL`,
-// `VITE_SUPABASE_PUBLISHABLE_KEY`) may not be injected into the bundle,
-// which causes the auto-generated `src/integrations/supabase/client.ts`
-// to instantiate a broken client (URL/key === undefined).
+// Dal 9 ottobre 2026 il backend e' un progetto Supabase personale. Il progetto
+// Lovable resta collegato al suo Lovable Cloud, che continua a generare
+// `.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) e
+// `src/integrations/supabase/client.ts` con l'indirizzo del progetto vecchio, e
+// li riscrive a ogni modifica fatta dal suo agente. Per questo qui URL e chiave
+// sono costanti e le variabili d'ambiente non si leggono: se le leggessimo, la
+// build di Lovable riporterebbe l'app sul database vecchio senza nessun errore.
 //
-// We re-create the client here using the same public anon key as
-// fallback, so any direct call to the Supabase JS SDK (auth, realtime,
-// functions.invoke, storage, db) keeps working even when env vars are
-// missing at build time.
-//
-// The auto-generated `client.ts` is read-only and must not be edited;
-// new code should import `supabase` from THIS file instead.
+// Il guardiano e' `src/test/tooling/supabaseProject.test.ts`.
 
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
-// Public values — safe to expose in a client bundle.
-const FALLBACK_SUPABASE_URL = "https://jxijruuclgskxlbqittk.supabase.co";
-const FALLBACK_SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4aWpydXVjbGdza3hsYnFpdHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MDc1ODksImV4cCI6MjA5MDM4MzU4OX0.DHIimVDItkhF1o9e6NK71BKjNkVP2EHsJpJyJIqgiSE";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL;
+// Valori pubblici: la anon key finisce comunque nel bundle del browser, e
+// l'accesso ai dati lo decidono le policy RLS, non la segretezza della chiave.
+const SUPABASE_URL = "https://jhrpalouxwntkimacqkg.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_SUPABASE_ANON_KEY;
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpocnBhbG91eHdudGtpbWFjcWtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0OTExMTgsImV4cCI6MjEwNzA2NzExOH0.lBuPqLr_XsRLppIwZhrL8kzE_wchOuaeGL6VMU0WdIQ";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {

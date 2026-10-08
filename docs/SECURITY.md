@@ -18,7 +18,7 @@ diverse: **i dati sportivi non hanno utenti, le preferenze sì**.
 
 Tutto ciò che l'app mostra — calendari, classifiche, risultati, streaming — è
 pubblico, effimero e non è mai stato legato a una persona. Dal rilascio 2.10.0
-esiste però un accesso con email e password (o Google, o Apple), gestito da
+esiste però un accesso con email e password (o Google), gestito da
 Supabase Auth, e una tabella `profiles` che conserva **le preferenze
 dell'utente**: tema, squadra di calcio, sezioni visibili, e il nome mostrato se
 lo si scrive. Non ci sono altri dati personali: nessun pagamento, nessuna
@@ -189,8 +189,12 @@ migration fra sei mesi.
 
 ## La sessione dell'utente
 
-L'autenticazione è interamente di Supabase Auth: email e password, Google e
-Apple. Il progetto non scrive codice di verifica delle credenziali, non conserva
+L'autenticazione è interamente di Supabase Auth: email e password, e Google.
+Dal 9 ottobre 2026 Google passa direttamente da Supabase, con un client OAuth
+registrato dal proprietario del progetto, e non più dal broker OAuth di
+Lovable: quel broker rilasciava sessioni del progetto Lovable Cloud, che il
+progetto attuale rifiuta. L'accesso con Apple è stato tolto insieme al broker.
+Il progetto non scrive codice di verifica delle credenziali, non conserva
 password e non emette token per conto proprio; `src/contexts/AuthContext.tsx` si
 limita ad ascoltare `onAuthStateChange`.
 
@@ -223,13 +227,15 @@ niente di importante deve dipenderne.
 | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | L'allowlist CORS accetta qualunque sottodominio `.lovable.app`, `.lovableproject.com`, `.lovable.dev` | copre anche progetti Lovable di altri utenti. Restringerla ai domini propri richiede di conoscerli tutti |
 | Gli `origin` di localhost sono ammessi anche in produzione                                            | comodo in sviluppo, inutile e non necessario in produzione                                               |
-| `verify_jwt` non è dichiarato in `supabase/config.toml`                                               | la configurazione reale vive nella dashboard: la posture non è riproducibile dal repository              |
 
 Nessuno di questi tocca i profili: riguardano il CORS e la configurazione delle
 funzioni, cioè la metà dell'app che non ha utenti. Il danno possibile resta
 consumo di quota. Le due voci sulle funzioni push (`push-vapid-key` senza rate
 limit, `push-subscribe` senza verifica del possesso dell'endpoint) sono uscite
-dalla tabella il 24 settembre 2026, insieme alle funzioni. Le preferenze sono protette da RLS sul database,
+dalla tabella il 24 settembre 2026, insieme alle funzioni. Quella su `verify_jwt`
+è uscita il 9 ottobre 2026: `supabase/config.toml` dichiara ora l'unica
+eccezione, `ops-export-db`, e tutte le altre funzioni restano con la verifica
+attiva. Le preferenze sono protette da RLS sul database,
 non dalla configurazione delle funzioni, e nessuna di queste incoerenze le
 raggiunge.
 
@@ -325,20 +331,22 @@ rispondere 401.
 
 | Dove                    | Cosa contiene                                                                                           |
 | ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `.env` (tracciato)      | solo valori pubblici: URL del progetto, anon key, project id                                            |
+| `.env` (tracciato)      | valori pubblici di Lovable Cloud, scritti da Lovable: l'app non li legge                                |
 | `.env.local` (ignorato) | sovrascritture personali                                                                                |
 | Secrets Supabase        | `SUPABASE_SERVICE_ROLE_KEY`, `TMDB_API_KEY`; `VAPID_*` e `DISPATCH_SECRET` non più usati dal 2026-09-24 |
 
-`.env` è tracciato di proposito: serve a Lovable per il build. L'anon key è
-progettata per viaggiare nel bundle del browser e le tabelle sono in diniego
-totale, quindi la sua presenza nel repository non aggiunge esposizione. La stessa
-chiave compare come valore di fallback in `src/lib/supabaseClient.ts` e in
-`index.html`.
+Dal 9 ottobre 2026 il backend è un progetto Supabase personale
+(`jhrpalouxwntkimacqkg`), non più quello di Lovable Cloud. Il progetto Lovable
+però resta collegato al suo Cloud, che continua a scrivere `.env` con
+l'indirizzo vecchio: per questo `src/lib/supabaseClient.ts` porta URL e anon
+key come costanti e **non legge** le variabili `VITE_SUPABASE_*`. Se le
+leggesse, la build di Lovable riporterebbe l'app sul database vecchio senza
+nessun errore. Il guardiano è `src/test/tooling/supabaseProject.test.ts`.
 
-Quel fallback ha però un effetto collaterale: se un giorno l'anon key venisse
-ruotata, una build senza le variabili d'ambiente continuerebbe a usare quella
-vecchia **senza fallire**. Un errore di configurazione diventa silenzioso invece
-che rumoroso.
+L'anon key è progettata per viaggiare nel bundle del browser e l'accesso alle
+righe lo decidono le policy RLS, quindi averla nel repository non aggiunge
+esposizione. Il rovescio è che se un giorno venisse ruotata, l'app va
+ricompilata con quella nuova: non c'è una variabile d'ambiente da cambiare.
 
 ## Validazione degli input
 

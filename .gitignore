@@ -17,10 +17,11 @@ test-results
 .playwright-cli/
 .playwright-mcp/
 *.local
-# `.env` e' tracciato di proposito: serve a Lovable per il build e contiene
-# solo valori pubblici (URL del progetto Supabase e anon key, gia' presenti
-# nel bundle client). I segreti veri non ci vanno mai: quelli delle edge
-# function stanno nei secrets di Supabase, quelli personali in `.env.local`.
+# `.env` e' tracciato di proposito: lo scrive Lovable Cloud e contiene solo
+# valori pubblici. Dal 9 ottobre 2026 l'app non lo legge: il progetto Supabase
+# e' fissato in `src/lib/supabaseClient.ts`. I segreti veri non ci vanno mai:
+# quelli delle edge function stanno nei secrets di Supabase, quelli personali
+# in `.env.local`.
 .env.local
 .env.*.local
 
@@ -28,6 +29,12 @@ test-results
 # fuori solo le personalizzazioni della singola macchina.
 .claude/settings.local.json
 CLAUDE.local.md
+.claude.local.md
+
+# Dump del database e stato locale della CLI Supabase: contengono dati degli
+# utenti e il riferimento al progetto collegato.
+*.backup
+supabase/.temp/
 
 # Editor directories and files
 .vscode/*
@@ -39,3 +46,7 @@ CLAUDE.local.md
 *.njsproj
 *.sln
 *.sw?
+
+# Output di build di TanStack Start/Nitro e cache di Wrangler.
+.output/
+.wrangler/

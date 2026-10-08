@@ -1,1 +1,9 @@
-project_id = "jxijruuclgskxlbqittk"
+project_id = "jhrpalouxwntkimacqkg"
+
+# La verifica del JWT resta attiva su tutte le funzioni pubbliche: il frontend
+# le chiama con la anon key in `Authorization` (vedi `src/lib/api/sportsApi.ts`).
+# `ops-export-db` e' l'unica eccezione: il chiamante e' un collettore esterno
+# che mette `OPS_SECRET` nello stesso header, e quello non e' un JWT. Il
+# gateway la rifiuterebbe prima di eseguirla; la barriera vera e' `auth.ts`.
+[functions.ops-export-db]
+verify_jwt = false

@@ -6,11 +6,11 @@ della tua squadra di Serie A, della Formula 1 e della MotoGP, oltre a
 palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `3.4.0` (mentre una partita si gioca l'app lo
+Versione repository corrente: `3.5.0` (mentre una partita si gioca l'app lo
 dice e mostra il punteggio — nella card in testa alla pagina squadra, nelle
 righe di calendario, in Home e nell'agenda — e nel dettaglio il risultato è in
 cima invece che dentro una scheda). Il footer dell'app mostra la versione
-leggendola da `src/lib/version.ts` nel formato `Calendar Events · v3.4.0` (con
+leggendola da `src/lib/version.ts` nel formato `Calendar Events · v3.5.0` (con
 `v` minuscola).
 
 Questa riga è sorvegliata da `src/test/tooling/version.test.ts`: era rimasta
@@ -275,10 +275,9 @@ Il frontend non chiama direttamente le fonti esterne. Passa da:
 - [src/lib/api/sportsApi.ts](./src/lib/api/sportsApi.ts)
 - [src/hooks/useSportsData.ts](./src/hooks/useSportsData.ts)
 
-Le richieste browser puntano alle Edge Functions Supabase via:
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
+Le richieste browser puntano alle Edge Functions del progetto Supabase
+fissato in [src/lib/supabaseClient.ts](./src/lib/supabaseClient.ts), che non
+legge variabili d'ambiente (vedi sotto).
 
 ### Backend leggero
 
@@ -604,17 +603,15 @@ Per qualunque uso del client Supabase JS SDK (auth, realtime,
 `functions.invoke`, storage, query DB) importa sempre da
 `@/lib/supabaseClient`, non da `@/integrations/supabase/client`.
 
-Il file `src/integrations/supabase/client.ts` e' auto-generato e read-only,
-e legge `import.meta.env.VITE_SUPABASE_URL` /
-`VITE_SUPABASE_PUBLISHABLE_KEY` direttamente. In alcuni build di produzione
-queste variabili non vengono iniettate nel bundle: il client viene quindi
-creato con `URL = undefined` e le richieste finiscono su
-`https://<host>/undefined/functions/v1/...` (fallback HTML 200, mai JSON,
-React Query in loading infinito).
+Il file `src/integrations/supabase/client.ts` e' auto-generato da Lovable e
+legge `import.meta.env.VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`,
+che Lovable scrive con l'indirizzo del suo Lovable Cloud.
 
-`src/lib/supabaseClient.ts` ricrea il client usando le stesse variabili
-con fallback hardcoded sui valori pubblici (project URL e anon key),
-garantendo che funzioni in qualunque build. Esporta inoltre
+Dal 9 ottobre 2026 il backend e' invece un progetto Supabase personale
+(`jhrpalouxwntkimacqkg`): `src/lib/supabaseClient.ts` porta URL e anon key
+come costanti e non legge le variabili d'ambiente, cosi' nessuna
+rigenerazione di Lovable puo' riportare l'app sul progetto vecchio. Il
+guardiano e' `src/test/tooling/supabaseProject.test.ts`. Esporta inoltre
 `SUPABASE_PROJECT_URL` e `SUPABASE_ANON_KEY` per chiamate `fetch` manuali
 verso le edge functions (gia' usate da `src/lib/api/sportsApi.ts`).
 
@@ -629,10 +626,12 @@ import { supabase } from "@/integrations/supabase/client";
 Il repo non contiene una documentazione operativa completa per sviluppo edge
 locale. In pratica oggi il percorso piu' lineare e':
 
-1. usare un progetto Supabase gia' configurato;
-2. esporre nel frontend le variabili `VITE_SUPABASE_*`;
-3. verificare che le Edge Functions corrispondenti siano deployate su quel
-   progetto.
+1. usare il progetto Supabase fissato in `src/lib/supabaseClient.ts`;
+2. distribuire le funzioni con
+   `bunx supabase functions deploy --project-ref jhrpalouxwntkimacqkg --use-api`
+   (`supabase/config.toml` dichiara `verify_jwt = false` solo per
+   `ops-export-db`);
+3. verificare che le Edge Functions rispondano su quel progetto.
 
 ## GitHub, branch e relazione con Lovable
 
