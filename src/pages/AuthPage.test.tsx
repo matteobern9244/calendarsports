@@ -49,4 +49,17 @@ describe("AuthPage", () => {
 
     expect(screen.queryByRole("button", { name: /apple/i })).not.toBeInTheDocument();
   });
+
+  // Email e password non portano da nessuna parte: gli account esistenti sono
+  // nati con Google e non hanno password, e il servizio email gratuito di
+  // Supabase spedisce conferme e reset solo ai membri del team. Un form che
+  // accetta una registrazione mai confermabile e' peggio di nessun form.
+  it("offre solo Google: niente email, password, registrazione o reset", () => {
+    render(<AuthPage />);
+
+    expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /registrati/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/password dimenticata/i)).not.toBeInTheDocument();
+  });
 });

@@ -6,11 +6,11 @@ della tua squadra di Serie A, della Formula 1 e della MotoGP, oltre a
 palinsesti TV serali e nuove uscite
 sui principali provider streaming.
 
-Versione repository corrente: `3.5.0` (mentre una partita si gioca l'app lo
+Versione repository corrente: `3.5.1` (mentre una partita si gioca l'app lo
 dice e mostra il punteggio — nella card in testa alla pagina squadra, nelle
 righe di calendario, in Home e nell'agenda — e nel dettaglio il risultato è in
 cima invece che dentro una scheda). Il footer dell'app mostra la versione
-leggendola da `src/lib/version.ts` nel formato `Calendar Events · v3.5.0` (con
+leggendola da `src/lib/version.ts` nel formato `Calendar Events · v3.5.1` (con
 `v` minuscola).
 
 Questa riga è sorvegliata da `src/test/tooling/version.test.ts`: era rimasta

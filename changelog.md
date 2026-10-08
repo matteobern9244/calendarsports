@@ -17,6 +17,16 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [3.5.1] — Solo Google (2026-10-09)
+
+### Rimosso
+
+- Accesso e registrazione con email e password, «Password dimenticata?» e la
+  pagina `/reimposta-password`. Gli account esistenti sono nati con Google e
+  non hanno password, e il servizio email gratuito di Supabase spedisce
+  conferme e reset solo ai membri del team: una registrazione con email
+  restava in attesa di una conferma che non arrivava mai.
+
 ## [3.5.0] — Supabase personale (2026-10-09)
 
 ### Modificato
