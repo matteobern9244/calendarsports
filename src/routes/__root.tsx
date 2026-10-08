@@ -81,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://image.tmdb.org", crossOrigin: "anonymous" },
       {
         rel: "preconnect",
-        href: "https://jxijruuclgskxlbqittk.supabase.co",
+        href: "https://jhrpalouxwntkimacqkg.supabase.co",
         crossOrigin: "anonymous",
       },
       { rel: "dns-prefetch", href: "https://upload.wikimedia.org" },

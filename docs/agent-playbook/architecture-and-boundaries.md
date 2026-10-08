@@ -40,8 +40,15 @@ React Query non vedeva un errore: vedeva una risposta valida che non era JSON, e
 restava in caricamento per sempre. Un guasto che dalla UI sembra lentezza.
 
 Il divieto è una regola ESLint (`no-restricted-imports` in
-[`eslint.config.js`](../../eslint.config.js)) e vale anche ora che il file
-generato non esiste: serve proprio a coprire il caso in cui Lovable lo rigeneri.
+[`eslint.config.js`](../../eslint.config.js)) e serve proprio a coprire il caso
+in cui Lovable lo rigeneri.
+
+Dal 9 ottobre 2026 c'è una ragione in più: il backend è un progetto Supabase
+personale, mentre Lovable scrive `.env` e il file generato con l'indirizzo del
+suo Lovable Cloud. Per questo `supabaseClient.ts` porta URL e anon key come
+costanti e **non legge** `VITE_SUPABASE_*`, e nessun file dell'app deve
+nominare il progetto vecchio. Il controllo eseguibile è
+`src/test/tooling/supabaseProject.test.ts`.
 
 ### I dati arrivano solo da React Query
 

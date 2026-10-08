@@ -36,7 +36,7 @@ file divergono, vince il codice: aggiornare qui.
 │ profiles  (RLS: la tua) │        │ Jolpica · OpenF1 · Sky     │
 │ Supabase Auth           │        │ Lega Serie A · Pulselive   │
 │ nessun job pg_cron      │        │ Wikipedia · TMDB · YouTube │
-│ (push_*: dismesse)      │        │ Google · Apple (accesso)   │
+│ (push_*: dismesse)      │        │ Google (accesso)           │
 └─────────────────────────┘        └────────────────────────────┘
 ```
 

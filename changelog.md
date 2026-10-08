@@ -17,6 +17,26 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
 > commit si chiamano tutti «Changes», quindi la ricostruzione descrive **i file
 > cambiati**, non le intenzioni di chi li ha cambiati.
 
+## [3.5.0] — Supabase personale (2026-10-09)
+
+### Modificato
+
+- Il backend passa da Lovable Cloud a un progetto Supabase personale
+  (`jhrpalouxwntkimacqkg`). Profili e utenti sono stati ripristinati dal dump di
+  Lovable con gli stessi ID, le otto edge function distribuite e verificate una
+  per una. Chi aveva un account rifà il login una volta e ritrova le sue
+  preferenze.
+- `src/lib/supabaseClient.ts` fissa URL e anon key del progetto e non legge più
+  `VITE_SUPABASE_*`: quelle variabili le scrive Lovable con l'indirizzo del suo
+  Cloud. Nuovo guardiano `src/test/tooling/supabaseProject.test.ts`.
+- «Continua con Google» passa direttamente da Supabase, con un client OAuth del
+  proprietario, invece che dal broker OAuth di Lovable.
+- `supabase/config.toml` punta al progetto nuovo e dichiara `verify_jwt = false`
+  per `ops-export-db`, l'unica funzione chiamata con un segreto che non è un JWT.
+
+### Rimosso
+
+- Accesso con Apple.
 
 ## [Non rilasciato] — 2026-09-24
 
@@ -84,7 +104,6 @@ dataset statici o policy sensibili su `main`, questo viene esplicitato.
   la fonte pubblica i dati completi, anche dei giocatori in panchina. Se la foto
   del widget non risponde, viene provato automaticamente il ritratto Sky legato
   all'identificativo del giocatore prima di mostrare il segnaposto.
-
 
 - Nel dettaglio partita casa e trasferta restano ora in due colonne speculari
   su mobile e desktop; nell'intestazione stemma e nome sono impilati ai lati
