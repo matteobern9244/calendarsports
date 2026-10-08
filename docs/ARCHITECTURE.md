@@ -96,7 +96,6 @@ Tutte figlie di `Layout`, tranne il catch-all.
 | `/motogp`                             | `MotoGPPage`                              |
 | `/preferenze`                         | `PreferencesPage`                         |
 | `/accedi`                             | `AuthPage`                                |
-| `/reimposta-password`                 | `ResetPasswordPage`                       |
 | `*`                                   | `NotFound`                                |
 
 Routing dichiarativo con react-router 8: nessun data router, nessun loader.

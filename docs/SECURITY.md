@@ -18,7 +18,7 @@ diverse: **i dati sportivi non hanno utenti, le preferenze sì**.
 
 Tutto ciò che l'app mostra — calendari, classifiche, risultati, streaming — è
 pubblico, effimero e non è mai stato legato a una persona. Dal rilascio 2.10.0
-esiste però un accesso con email e password (o Google), gestito da
+esiste però un accesso con Google, gestito da
 Supabase Auth, e una tabella `profiles` che conserva **le preferenze
 dell'utente**: tema, squadra di calcio, sezioni visibili, e il nome mostrato se
 lo si scrive. Non ci sono altri dati personali: nessun pagamento, nessuna
@@ -189,11 +189,14 @@ migration fra sei mesi.
 
 ## La sessione dell'utente
 
-L'autenticazione è interamente di Supabase Auth: email e password, e Google.
+L'autenticazione è interamente di Supabase Auth, e dalla 3.5.1 solo con Google.
 Dal 9 ottobre 2026 Google passa direttamente da Supabase, con un client OAuth
 registrato dal proprietario del progetto, e non più dal broker OAuth di
 Lovable: quel broker rilasciava sessioni del progetto Lovable Cloud, che il
-progetto attuale rifiuta. L'accesso con Apple è stato tolto insieme al broker.
+progetto attuale rifiuta. L'accesso con Apple è stato tolto insieme al broker,
+e nella 3.5.1 anche email e password: il servizio email gratuito di Supabase
+spedisce conferme e reset solo ai membri del team, quindi una registrazione
+con email non poteva mai essere confermata.
 Il progetto non scrive codice di verifica delle credenziali, non conserva
 password e non emette token per conto proprio; `src/contexts/AuthContext.tsx` si
 limita ad ascoltare `onAuthStateChange`.
